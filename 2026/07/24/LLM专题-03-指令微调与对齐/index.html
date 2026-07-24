@@ -1,0 +1,1011 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="指令微调与对齐 (Instruction Tuning &amp; Alignment) 1. RLHF 对齐范式的奠基之作Training Language Models to Follow Instructions with Human Feedback (InstructGPT) arXiv: 2203.02155 发表: NeurIPS 2022 作者: Long Ouyang, Jeff">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LLM专题-03：指令微调与对齐 —— 如何让模型听话、有用、无害？">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/LLM%E4%B8%93%E9%A2%98-03-%E6%8C%87%E4%BB%A4%E5%BE%AE%E8%B0%83%E4%B8%8E%E5%AF%B9%E9%BD%90/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="指令微调与对齐 (Instruction Tuning &amp; Alignment) 1. RLHF 对齐范式的奠基之作Training Language Models to Follow Instructions with Human Feedback (InstructGPT) arXiv: 2203.02155 发表: NeurIPS 2022 作者: Long Ouyang, Jeff">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T02:03:00.000Z">
+<meta property="article:modified_time" content="2026-07-24T15:20:02.305Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="LLM,LLM专题,对齐,RLHF,DPO,指令微调">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>LLM专题-03：指令微调与对齐 —— 如何让模型听话、有用、无害？ - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="LLM专题-03：指令微调与对齐 —— 如何让模型听话、有用、无害？"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 10:03" pubdate>
+          2026年7月24日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          63 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">LLM专题-03：指令微调与对齐 —— 如何让模型听话、有用、无害？</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="指令微调与对齐-Instruction-Tuning-Alignment"><a href="#指令微调与对齐-Instruction-Tuning-Alignment" class="headerlink" title="指令微调与对齐 (Instruction Tuning &amp; Alignment)"></a>指令微调与对齐 (Instruction Tuning &amp; Alignment)</h1><hr>
+<h2 id="1-RLHF-对齐范式的奠基之作"><a href="#1-RLHF-对齐范式的奠基之作" class="headerlink" title="1. RLHF 对齐范式的奠基之作"></a>1. RLHF 对齐范式的奠基之作</h2><h3 id="Training-Language-Models-to-Follow-Instructions-with-Human-Feedback-InstructGPT"><a href="#Training-Language-Models-to-Follow-Instructions-with-Human-Feedback-InstructGPT" class="headerlink" title="Training Language Models to Follow Instructions with Human Feedback (InstructGPT)"></a>Training Language Models to Follow Instructions with Human Feedback (InstructGPT)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2203.02155">2203.02155</a></li>
+<li><strong>发表</strong>: NeurIPS 2022</li>
+<li><strong>作者</strong>: Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray 等, OpenAI</li>
+<li><strong>简介</strong>: 提出了从人类反馈中进行强化学习（RLHF）的完整三阶段流水线——监督微调（SFT）→ 奖励模型训练（RM）→ PPO 策略优化，使得 1.3B 的 InstructGPT 模型在人类评估中被认为优于 175B 的原始 GPT-3。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>RLHF 三阶段流水线</strong>：阶段 1（SFT）用人工编写的高质量指令-回答对微调基础模型；阶段 2（RM Training）让标注员对同一个指令的多个回答进行质量排序，训练奖励模型学习人类偏好；阶段 3（PPO）使用 PPO（Proximal Policy Optimization）算法在奖励模型的指导下继续优化语言模型策略，同时加入 KL 散度惩罚项防止策略偏离 SFT 模型过远。这三个阶段构成了一套可复用的对齐流程。</li>
+<li><strong>小模型超越大模型的”对齐红利”</strong>：人类评估员在绝大多数维度上（真实性、有帮助性、无害性、遵循指令的能力）一致偏好 1.3B 的 InstructGPT 超过 175B 的 GPT-3，尽管前者参数量仅后者的 0.75%。这证明了对齐（alignment）可以胜过规模（scale）——一个会”好好听话”的小模型比一个不会”听话”的大模型更受用户喜爱。</li>
+<li><strong>泛化到未见过的人类偏好</strong>：尽管只在实验室标注员的偏好数据上训练，InstructGPT 在评测中展示出了对”保留集标注员”（未参与训练的标注员）偏好的良好泛化，且能更好地拒绝不当请求（如产生攻击性内容），减少幻觉。这表明通过学习一组标注员的偏好，模型习得的是更通用的”有帮助且无害”的行为准则，而非仅仅记忆特定个人的偏好。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: InstructGPT 是 ChatGPT 的直接技术前身。2022 年 11 月 ChatGPT 的发布引爆了全球 AI 热潮，而其背后运转的正是论文中描述的 RLHF 技术。这篇论文的意义不仅在于它提出了一个有效的技术方案，更在于它让 AI 社区认识到——拥有强大能力的基础模型（如 GPT-3）只是一个起点，如何让模型”愿意按照人类期望的方式使用这些能力”是同等甚至更重要的挑战。RLHF 从此成为对齐研究中最核心的技术范式，被 Anthropic（Claude）、Google（Bard/Gemini）、Meta（LLaMA 2-Chat）等几乎所有主要 AI 公司采纳。论文中提出的帮助性（helpfulness）与无害性（harmlessness）的双重目标，也奠定了 AI 对齐的目标框架。</li>
+</ul>
+<hr>
+<h2 id="2-指令微调的规模化探索"><a href="#2-指令微调的规模化探索" class="headerlink" title="2. 指令微调的规模化探索"></a>2. 指令微调的规模化探索</h2><h3 id="Scaling-Instruction-Finetuned-Language-Models-FLAN"><a href="#Scaling-Instruction-Finetuned-Language-Models-FLAN" class="headerlink" title="Scaling Instruction-Finetuned Language Models (FLAN)"></a>Scaling Instruction-Finetuned Language Models (FLAN)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2210.11416">2210.11416</a></li>
+<li><strong>发表</strong>: JMLR, Volume 25, 2024</li>
+<li><strong>作者</strong>: Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus, Yunxuan Li 等（30+ 位作者）, Google Research</li>
+<li><strong>简介</strong>: 系统性地研究了指令微调的三个关键维度——任务数量、模型规模和思维链数据——证明了在这三个维度上同时扩展可以显著提升零样本和少样本性能。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>任务多样性的规模化效应</strong>：将指令微调中使用的任务数量从早期的几十个（如 FLAN 原始版本）扩展到 1836 个，涵盖推理、问答、翻译、摘要、情感分析、常识推理等所有主流 NLP 任务类型。论文发现，增加任务多样性带来的收益远大于在同一任务上增加训练样本——泛化能力来自”见过足够多不同类型的任务”，而非”在每个任务上训练得更好”。</li>
+<li><strong>思维链微调（CoT Fine-Tuning）</strong>：在指令微调中混合包含逐步推理过程的思维链数据（约 9 个推理数据集），使模型学会”边思考边回答”的模式。结果表明，CoT 微调不仅提升了数学和逻辑推理任务的性能，还让模型在面对复杂指令时更倾向于自动进行分解和逐步求解。</li>
+<li><strong>开源 Flan-T5 模型系列</strong>：论文开源了基于 T5 的 Flan-T5 系列模型（small 到 XXL），这些模型虽然基于较老的 T5 架构，但经过指令微调后，在零样本场景下竟能超越未经指令微调的更大模型（如 PaLM 62B）。这使得指令微调的能力被学术界和工业界广泛验证和应用。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: FLAN 论文确立了”指令微调”作为一个独立研究方向的地位。在它之前，社区对”微调基线模型来改善零样本表现”只有零散的经验；在它之后，”指令微调”成为每个 LLM 项目不可或缺的环节。FLAN 的系统性实验设计——分离变量、大规模对照、明确量化每个因素的贡献——为后续研究提供了方法论范本。Flan-PaLM 540B 在 MMLU 上的 75.2%（五样本）是 2022 年的 SOTA，其工作流程直接启发了后来的 Flan-UL2、Flan-T5-XXL、以及 Gemini 系列的对齐策略。更重要的是，FLAN 证明了”不改变模型架构、不增加参数，仅通过改变训练方式”就能带来巨大的性能跃迁。</li>
+</ul>
+<hr>
+<h2 id="3-从人类反馈到AI反馈"><a href="#3-从人类反馈到AI反馈" class="headerlink" title="3. 从人类反馈到AI反馈"></a>3. 从人类反馈到AI反馈</h2><h3 id="Constitutional-AI-Harmlessness-from-AI-Feedback"><a href="#Constitutional-AI-Harmlessness-from-AI-Feedback" class="headerlink" title="Constitutional AI: Harmlessness from AI Feedback"></a>Constitutional AI: Harmlessness from AI Feedback</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2212.08073">2212.08073</a></li>
+<li><strong>发表</strong>: Anthropic, 2022 年 12 月</li>
+<li><strong>作者</strong>: Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell 等（50+ 位作者）, Anthropic</li>
+<li><strong>简介</strong>: 提出用 AI 反馈替代人类反馈进行对齐训练——通过一组明确的宪法原则（Constitutional Principles）指导模型进行自我批评和自我修正，辅以 RLAIF（Reinforcement Learning from AI Feedback）。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>宪法驱动的自我批评与修正</strong>：传统 RLHF 依赖大量人类标注员对可能有害的模型输出进行标记——这昂贵、缓慢且可能带有标注者偏见。CAI 的核心是用一套书面的”宪法”原则（如”不要给出可能用于制造武器的信息”、”对所有人都保持尊重”等 16 条核心原则）来引导模型自己评判和重写回复。在监督学习阶段，模型首先生成一个回复，然后按照宪法原则对这个回复进行自我批评，再基于批评生成修正版本——全程无需人类参与。</li>
+<li><strong>RLAIF：从 AI 反馈中进行强化学习</strong>：在 RL 阶段，CAI 用基于宪法的 AI 反馈替代人类偏好数据来训练奖励模型。具体做法是让模型根据宪法原则对不同回复生成偏好判断，然后用这些 AI 生成的偏好数据训练奖励模型，再进行 PPO 优化。实验证明 RLAIF 在对齐效果上与 RLHF 几乎同等有效，但大幅降低了人类标注的成本和伦理争议。</li>
+<li><strong>帮助性与无害性的分解处理</strong>：论文提出了一个巧妙的训练安排——先用 RLHF 训练一个”有帮助”的模型（仅关注有用性），再叠加 CAI 训练注入”无害性”约束。这种分阶段策略可以有效避免在单一训练中两种目标相互干扰的问题——模型不会因为过度追求无害而变得过度拒绝和缺乏帮助。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Constitutional AI 不仅是 Anthropic 公司 Claude 系列模型对齐方法的核心技术基础，它更代表了 AI 对齐研究的一个重要哲学转向——“让模型自己学会对齐，而不是由人类手把手教”。这种可扩展的对齐方法随着模型能力的增长变得更加重要，因为人类可能最终无法理解或评估超越自身能力的 AI 系统的输出质量。CAI 的宪法原则设计框架也被后续的集体宪法 AI（Collective Constitutional AI）工作扩展，尝试将更广泛的社会价值观纳入 AI 行为准则中。</li>
+</ul>
+<hr>
+<h2 id="4-对齐技术的简化革命"><a href="#4-对齐技术的简化革命" class="headerlink" title="4. 对齐技术的简化革命"></a>4. 对齐技术的简化革命</h2><h3 id="Direct-Preference-Optimization-DPO-Your-Language-Model-is-Secretly-a-Reward-Model"><a href="#Direct-Preference-Optimization-DPO-Your-Language-Model-is-Secretly-a-Reward-Model" class="headerlink" title="Direct Preference Optimization (DPO): Your Language Model is Secretly a Reward Model"></a>Direct Preference Optimization (DPO): Your Language Model is Secretly a Reward Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2305.18290">2305.18290</a></li>
+<li><strong>发表</strong>: NeurIPS 2023</li>
+<li><strong>作者</strong>: Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher D. Manning, Chelsea Finn, Stanford University</li>
+<li><strong>简介</strong>: 证明在 Bradley-Terry 偏好模型下，语言模型策略与其隐含的奖励函数之间存在显式的数学映射关系，从而无需单独训练奖励模型即可直接从偏好数据中优化模型策略。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>策略即奖励模型的数学洞见</strong>：论文的核心数学发现是——在 RLHF 的 PPO 优化中，给定参考模型和偏好数据，最优策略与奖励函数之间存在封闭形式的映射关系。这意味着可以直接定义一个”策略损失函数”来最大化偏好对中”好回答”相对于”差回答”的概率，而完全不需要显式地训练奖励模型的阶段。这一数学变换将 RLHF 的两阶段优化（训练 RM + PPO 策略优化），简化为一个简单的分类损失。</li>
+<li><strong>极简的实现复杂度</strong>：DPO 的实现仅需要在标准监督微调代码基础上增加约 20 行代码——本质上就是一个二分类交叉熵损失，其中正样本是偏好的回答，负样本是不偏好的回答，参考模型提供正则化项。这完全消除了 RLHF 中 4 个模型（策略模型、参考模型、奖励模型、价值模型）同时加载内存的复杂训练设置。</li>
+<li><strong>与 PPO-RLHF 的理论等价性与实证优势</strong>：论文证明了在 Bradley-Terry 偏好模型下，DPO 的最优解与 RLHF 的最优解完全相同。而在实际实验中，DPO 在可控文本生成和摘要任务上的表现不仅不逊于 PPO-RLHF，在某些设置下甚至更稳定，且对超参数更不敏感。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DPO 的发布引发了 LLM 对齐方法的重大转变。在此之前，PPO-RLHF 尽管是行业标准，但其复杂性令许多团队望而却步——需要并行训练多个大模型、面临奖励 hacking（奖励作弊）、训练不稳定等问题。DPO 将整个流程简化为一个稳定的分类损失，使其可以像普通的监督微调一样容易实施。这极大降低了 LLM 对齐的门槛，使得开源社区、学术实验室和中小公司都能进行模型对齐。自发布以来，DPO 已被 LLaMA 2、LLaMA 3、Qwen、Yi 等几乎所有开源 LLM 项目采纳为核心对齐方法。DPO 也被选为 NeurIPS 2023 Oral Paper（录取率约 1%），体现了其在学术界的极高认可。</li>
+</ul>
+<hr>
+<h2 id="5-开源对齐的参考实现"><a href="#5-开源对齐的参考实现" class="headerlink" title="5. 开源对齐的参考实现"></a>5. 开源对齐的参考实现</h2><h3 id="LLaMA-2-Open-Foundation-and-Fine-Tuned-Chat-Models"><a href="#LLaMA-2-Open-Foundation-and-Fine-Tuned-Chat-Models" class="headerlink" title="LLaMA 2: Open Foundation and Fine-Tuned Chat Models"></a>LLaMA 2: Open Foundation and Fine-Tuned Chat Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2307.09288">2307.09288</a></li>
+<li><strong>发表</strong>: Meta AI, 2023 年 7 月</li>
+<li><strong>作者</strong>: Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi 等（70+ 位作者）, Meta AI</li>
+<li><strong>简介</strong>: 发布了 7B-70B 参数的 LLaMA 2 系列模型，并详细公开了其 RLHF 对齐流程、奖励模型训练方案以及对话一致性技术，成为开源对齐的事实标准参考。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>完全开放的 RLHF 方案</strong>：LLaMA 2 论文提供了业界最详细的公开 RLHF 配方——包括数据收集策略（帮助性数据和安全性数据分开收集，总计超过 100 万条人类偏好标注）、奖励模型架构（两个独立的奖励模型分别优化帮助性和安全性）、PPO 训练的超参数（学习率调度、KL 系数、批次大小等）。这种透明度在闭源的前沿模型中极其罕见。</li>
+<li><strong>Ghost Attention（GAtt）多轮一致性</strong>：为了解决 LLM 在多轮对话中逐渐遗忘初始指令（如”请用 JSON 格式回复”）的问题，论文提出了 Ghost Attention 技术——在多轮对话的训练数据中，将原始系统指令隐式地附加到每一轮的用户输入中，但不在输出中显示。模型由此学会了在对话全程中持续遵循初始约束，极大提升了多轮交互体验。</li>
+<li><strong>双奖励模型的安全对齐策略</strong>：采用两个独立的奖励模型——帮助性奖励模型关注回答的质量、准确性和实用性；安全性奖励模型关注回答是否无害。生成时，以帮助性得分为主，若安全性得分低于阈值则触发安全筛选。这种分离设计允许独立优化两个经常冲突的目标，并灵活调整安全阈值以适应不同应用场景。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: LLaMA 2 的发布是 2023 年 AI 开源社区最重要的事件之一。它不仅是当时性能最强的开源模型（LLaMA 2-Chat 70B 在多项人类评估中接近或达到 GPT-3.5-turbo 的水平），更重要的是，它将完整的对齐方法论公之于众。大公司（OpenAI、Anthropic、Google）的对齐方案几乎是黑箱的，学术界和开源社区只能猜测和推断。LLaMA 2 论文则提供了可复现的配方，直接促进了 Alpaca、Vicuna、Orca 等社区模型的对齐质量提升，也间接推动了 Mistral、Qwen、DeepSeek 等后续开源模型的快速发展。它也被广泛认为是开源 LLM 对齐工作的”必读文献”。</li>
+</ul>
+<hr>
+<h2 id="6-自我奖励与迭代自进化"><a href="#6-自我奖励与迭代自进化" class="headerlink" title="6. 自我奖励与迭代自进化"></a>6. 自我奖励与迭代自进化</h2><h3 id="Self-Rewarding-Language-Models"><a href="#Self-Rewarding-Language-Models" class="headerlink" title="Self-Rewarding Language Models"></a>Self-Rewarding Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.10020">2401.10020</a></li>
+<li><strong>发表</strong>: Meta / NYU, 2024 年 1 月</li>
+<li><strong>作者</strong>: Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, Jason Weston, Meta AI / New York University</li>
+<li><strong>简介</strong>: 提出让 LLM 自己通过”LLM-as-Judge”提示为其自身生成提供奖励信号，然后在 DPO 框架下进行迭代式自我改进，无需外部人类或 AI 反馈系统。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>模型自评的迭代 DPO</strong>：在每一轮迭代中，模型同时扮演三个角色——生成者（为指令生成多个候选回答）、评判者（用 LLM-as-Judge 提示对这些回答打分排序）、学习者（将被偏好-不被偏好配对用于 DPO 训练）。这一过程完全闭环，不需要任何外部的人类标注者或辅助奖励模型。实验从 LLaMA 2 70B 开始，经过三轮自我对弈训练后，模型在 AlpacaEval 2.0 上的胜率超过了 Claude 2、Gemini Pro 和 GPT-4 0613。</li>
+<li><strong>评判能力的同步提升</strong>：最有趣的现象是——随着生成能力的提升，模型的评判能力也同步提升。在每一轮迭代中，新模型不仅生成更好的回答，它对回答质量的 pairwise 排名准确率也随之提高。这意味着”成为一个更好的法官”和”成为一个更好的生成者”这两种能力存在正反馈循环，使得自我改进可以持续进行。</li>
+<li><strong>后训练效率的重新定义</strong>：传统观点认为后训练的改进效果是递减的——每一轮微调带来的增益越来越小。但 Self-Rewarding 的实验表明，通过让模型同时提升”生成能力”和”评判能力”，可以打破这种递减曲线。这为超人类对齐（superalignment）提供了一个潜在路径——模型可能在人类无法有效评估的领域，仍然通过自我评估实现持续改进。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Self-Rewarding 论文的关键价值在于挑战了一个基本假设——“对齐需要人类信号”。如果模型可以自己评判自己，并且评判标准变得越来越好，那么对齐就可能从”人教 AI”转向”AI 自我进化”。这既是一个激动人心的前景（AI 可以在人类能力边界之外的领域继续自我提升），也是一个需要审慎对待的担忧（自我强化循环可能产生难以预测的漂移）。论文的后续工作——Meta-Rewarding Language Models（让模型不仅评判回答，还评判自己的评判能力），进一步增强了这个框架的可行性。这一系列工作是”Self-Play Alignment”方向（SPIN、SPPO 等）的核心代表，正逐渐成为对齐研究的前沿热点。</li>
+</ul>
+<hr>
+<h2 id="7-在线迭代-RLHF-的系统性研究"><a href="#7-在线迭代-RLHF-的系统性研究" class="headerlink" title="7. 在线迭代 RLHF 的系统性研究"></a>7. 在线迭代 RLHF 的系统性研究</h2><h3 id="RLHF-Workflow-From-Reward-Modeling-to-Online-RLHF"><a href="#RLHF-Workflow-From-Reward-Modeling-to-Online-RLHF" class="headerlink" title="RLHF Workflow: From Reward Modeling to Online RLHF"></a>RLHF Workflow: From Reward Modeling to Online RLHF</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.07863">2405.07863</a></li>
+<li><strong>发表</strong>: TMLR (Transactions on Machine Learning Research), 2024</li>
+<li><strong>作者</strong>: Hanze Dong, Wei Xiong, Bo Pang, Haoxiang Wang, Han Zhao, Yingbo Zhou, Nan Jiang, Doyen Sahoo, Caiming Xiong, Tong Zhang, Salesforce AI Research / UIUC</li>
+<li><strong>简介</strong>: 提供了从奖励模型训练到在线迭代 RLHF 的完整、可复现的工作流程，系统地展示了在线 RLHF 相比离线 DPO 的显著优势，使用完全开源的数据集和模型实现了大模型级别的对齐效果。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>在线 vs. 离线 RLHF 的系统对比</strong>：论文的核心实验发现是——在线迭代 RLHF（模型在每轮迭代中使用当前策略在线生成回复并获取奖励）在对话质量上显著优于等量的离线 DPO（仅在固定的历史数据上训练）。在”LC AlpacaEval-V2”和”MT-Bench”上，他们用 LLaMA-3-8B 基础模型训练的在线迭代 DPO 模型分别取得了 37.2 和 8.46 的成绩，超越同等大小的 SOTA 模型（包括 LLaMA-3-8B-it）以及 GPT-3.5-turbo。</li>
+<li><strong>完全开源的对齐方案</strong>：与大多数依赖专有人类标注或商业模型的 RLHF 研究不同，论文的整个工作流使用百分百开源资源——开源基础模型（LLaMA-3）、开源偏好数据集（如 UltraFeedback）、开源奖励模型等。所有代码、权重和训练流程在 GitHub 上完全公开。这为学术界和开源社区提供了端到端的、可精确复现的对齐方案。</li>
+<li><strong>统一工作流设计</strong>：论文不是零散地分析 RLHF 的某一个环节，而是覆盖了完整的流水线——数据收集与合成 → 奖励模型训练与评估 → 离线/在线策略优化 → 多轮迭代 → 评估。这种端到端的视角让读者能够完整地理解现代 RLHF 的工作机制以及每个环节之间的耦合关系。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 这篇论文弥补了 RLHF 理论与实践之间的鸿沟。虽然 InstructGPT 和 LLaMA 2 描述了 RLHF 的基本原理，但它们的生产级实现在许多细节上是模糊的（数据配比、迭代策略、超参数选择等）。本工作用透明的实验和开源代码填补了这些空白。更重要的是，它用数据证明了”在线探索”的对齐优势——在与环境（奖励模型）的持续交互中更新的模型，比仅从固定历史数据中学习的模型质量更高。这对正在进行对齐工作的团队具有直接的指导意义——花费努力搭建在线 RL 基础设施是值得的。</li>
+</ul>
+<hr>
+<p><strong>LLM 专题系列导航</strong>：<a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-02-%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/">← 上一篇：规模定律</a> | <a href="/2026/07/24/LLM-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-04-%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B/">下一篇：推理能力 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/LLM-LLM%E4%B8%93%E9%A2%98-%E5%AF%B9%E9%BD%90-RLHF-DPO-%E6%8C%87%E4%BB%A4%E5%BE%AE%E8%B0%83/" class="print-no-link">#LLM,LLM专题,对齐,RLHF,DPO,指令微调</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>LLM专题-03：指令微调与对齐 —— 如何让模型听话、有用、无害？</div>
+      <div>https://w2ongq6.github.io/2026/07/24/LLM专题-03-指令微调与对齐/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-04-%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B/" title="LLM专题-04：推理能力 —— LLM 如何学会一步步思考？">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">LLM专题-04：推理能力 —— LLM 如何学会一步步思考？</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-02-%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/" title="LLM专题-02：规模定律 —— 越大越好？计算最优在哪？">
+                        <span class="hidden-mobile">LLM专题-02：规模定律 —— 越大越好？计算最优在哪？</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
