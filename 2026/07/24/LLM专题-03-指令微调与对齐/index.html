@@ -27,7 +27,7 @@
 <meta property="og:description" content="指令微调与对齐 (Instruction Tuning &amp; Alignment) 1. RLHF 对齐范式的奠基之作Training Language Models to Follow Instructions with Human Feedback (InstructGPT) arXiv: 2203.02155 发表: NeurIPS 2022 作者: Long Ouyang, Jeff">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T02:03:00.000Z">
-<meta property="article:modified_time" content="2026-07-24T15:20:02.305Z">
+<meta property="article:modified_time" content="2026-07-24T16:00:21.995Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="LLM,LLM专题,对齐,RLHF,DPO,指令微调">
 <meta name="twitter:card" content="summary_large_image">
@@ -442,7 +442,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          7.5k 字
+          13k 字
         
       </span>
     
@@ -453,7 +453,7 @@ mjx-container[display="true"] + br {
         
         
         
-          63 分钟
+          107 分钟
         
       </span>
     
@@ -594,6 +594,76 @@ mjx-container[display="true"] + br {
 </ul>
 </li>
 <li><strong>代表意义</strong>: 这篇论文弥补了 RLHF 理论与实践之间的鸿沟。虽然 InstructGPT 和 LLaMA 2 描述了 RLHF 的基本原理，但它们的生产级实现在许多细节上是模糊的（数据配比、迭代策略、超参数选择等）。本工作用透明的实验和开源代码填补了这些空白。更重要的是，它用数据证明了”在线探索”的对齐优势——在与环境（奖励模型）的持续交互中更新的模型，比仅从固定历史数据中学习的模型质量更高。这对正在进行对齐工作的团队具有直接的指导意义——花费努力搭建在线 RL 基础设施是值得的。</li>
+</ul>
+<hr>
+<h2 id="8-无需参考模型的对齐优化"><a href="#8-无需参考模型的对齐优化" class="headerlink" title="8. 无需参考模型的对齐优化"></a>8. 无需参考模型的对齐优化</h2><h3 id="ORPO-Monolithic-Preference-Optimization-without-Reference-Model"><a href="#ORPO-Monolithic-Preference-Optimization-without-Reference-Model" class="headerlink" title="ORPO: Monolithic Preference Optimization without Reference Model"></a>ORPO: Monolithic Preference Optimization without Reference Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.07691">2403.07691</a></li>
+<li><strong>发表</strong>: 2024 年 3 月（EMNLP 2024 Oral），KAIST / NAVER</li>
+<li><strong>作者</strong>: Jiwoo Hong, Noah Lee, James Thorne, KAIST</li>
+<li><strong>简介</strong>: 提出 ORPO（Odds Ratio Preference Optimization），将监督微调（SFT）和偏好优化统一到一个损失函数中，完全消除了对参考模型（reference model）的需求，在更简单的训练配置下取得了优于 DPO 和 RLHF 的对齐效果。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>以一个统一的损失函数替代两阶段训练</strong>：传统对齐流程需要先 SFT 再偏好优化（DPO/PPO），且偏好优化需要一个冻结的参考模型来提供 KL 正则化。ORPO 将 SFT 的交叉熵损失和偏好优化的 odds ratio 损失合并为单一目标函数——模型在一次前向传播中同时学习”生成正确的 token”（SFT 部分）和”区分好回答与坏回答”（偏好优化部分）。这消除了 DPO 中参考模型的内存开销和额外的推理开销。</li>
+<li><strong>Odds Ratio 作为偏好信号的数学设计</strong>：ORPO 使用 odds ratio（几率比）而非 DPO 的对数概率差来衡量偏好。OR = [P(chosen)/(1-P(chosen))] / [P(rejected)/(1-P(rejected))]。这个设计的好处是——当模型已经很强地偏好 chosen 回答时，OR 趋于无穷大，损失梯度自动减小（自适应的学习信号强度）；当模型对 chosen 和 rejected 的概率相近时，梯度最大（最强的学习信号）。这比 DPO 的固定比例梯度更加自适应当前对齐状态。</li>
+<li><strong>更优的对齐效率</strong>：在多个基准上的实验表明，ORPO 不仅训练效率更高（因为在一次前向传播中完成 SFT + 对齐），而且对齐效果更好——在 AlpacaEval 2.0 和 MT-Bench 上超过同配置的 DPO 模型。在 Phi-2 和 LLaMA 系列上的实验显示了跨模型规模的通用性。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: ORPO 代表了对齐技术从”复杂 RL 流水线”走向”单一损失函数”的极致简化趋势。在 DPO 已经将 RLHF 的 4 个模型简化为 2 个之后，ORPO 进一步简化为 1 个模型、1 个损失函数。这种简化不仅是工程上的便利（降低训练开销），更有理论上的启发——对齐本质上可以在 SFT 的过程中自然发生，不需要先”教会模型不偏不倚地生成”，再”告诉模型如何区分好坏”。两个目标可以被一个巧妙设计的损失函数统一。</li>
+</ul>
+<hr>
+<h2 id="9-无需偏好对的单边对齐"><a href="#9-无需偏好对的单边对齐" class="headerlink" title="9. 无需偏好对的单边对齐"></a>9. 无需偏好对的单边对齐</h2><h3 id="KTO-Model-Alignment-as-Prospect-Theoretic-Optimization"><a href="#KTO-Model-Alignment-as-Prospect-Theoretic-Optimization" class="headerlink" title="KTO: Model Alignment as Prospect Theoretic Optimization"></a>KTO: Model Alignment as Prospect Theoretic Optimization</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.01306">2402.01306</a></li>
+<li><strong>发表</strong>: 2024 年 2 月（ICML 2024 接收），Contextual AI / Stanford</li>
+<li><strong>作者</strong>: Kawin Ethayarajh, Winnie Xu, Aaron Jaech 等</li>
+<li><strong>简介</strong>: 提出 KTO（Kahneman-Tversky Optimization），借鉴行为经济学中的前景理论（Prospect Theory），仅需”这个回答是好的”或”这个回答是坏的”的单边二元标签即可进行偏好优化，完全不需要构造偏好对，极大简化了对齐数据的收集要求。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>前景理论启发的损失函数设计</strong>：KTO 从卡尼曼和特沃斯基的前景理论中汲取灵感——人类对”损失”的感受比”收益”更强烈（损失厌恶），且决策参考点至关重要。KTO 将参考模型提供的”期望质量”设为参考点，将”回答好于预期”映射为收益（以风险规避函数处理，梯度递减），将”回答差于预期”映射为损失（以损失函数处理，梯度很大）。这种非对称设计使模型对不良回答比 DPO 更加敏感。</li>
+<li><strong>从偏好对到单边标签的训练数据革命</strong>：DPO 和 RLHF 都依赖偏好对（chosen vs rejected），这需要标注者仔细比较两个回答。KTO 仅需要知道”这个回答总体上是好还是坏”——这类信号更容易大规模获取，例如从点赞/点踩（thumbs up/down）、评分（1-5 星）、或用户的隐式行为信号（点击/停留/复制）中提取。这使得对齐数据可以从任何有用户反馈的 LLM 产品中持续收集。</li>
+<li><strong>非对称损失带来更好的安全性</strong>：实验意外发现，KTO 在提升帮助性的同时，对安全性的提升尤为显著——因为”拒绝回答”或”有害回答”这类负面信号在 KTO 的非对称损失中获得了比 DPO 更强的惩罚。在 Anthropic 的 HH-RLHF 安全性基准和 TruthfulQA 上，KTO 的安全性指标普遍优于同条件 DPO。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: KTO 将对齐从”需要精心标注的偏好对数据”的阶段，推进到”任何形式的反馈数据都可以用”的阶段。在实际产品中，用户通常不会费心比较两个回答，但很愿意点”赞”或”踩”。KTO 让这些大规模但质量较低的”弱信号”可以直接用于对齐训练。它代表了对齐研究的”数据民主化”方向——降低对齐数据的要求，让更多团队和产品能够进行持续的对齐优化。</li>
+</ul>
+<hr>
+<h2 id="10-直接偏好优化的理论优化"><a href="#10-直接偏好优化的理论优化" class="headerlink" title="10. 直接偏好优化的理论优化"></a>10. 直接偏好优化的理论优化</h2><h3 id="SimPO-Simple-Preference-Optimization-with-a-Reference-Free-Reward"><a href="#SimPO-Simple-Preference-Optimization-with-a-Reference-Free-Reward" class="headerlink" title="SimPO: Simple Preference Optimization with a Reference-Free Reward"></a>SimPO: Simple Preference Optimization with a Reference-Free Reward</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.14734">2405.14734</a></li>
+<li><strong>发表</strong>: 2024 年 5 月（NeurIPS 2024 接收），Princeton University</li>
+<li><strong>作者</strong>: Yu Meng, Mengzhou Xia, Danqi Chen, Princeton University</li>
+<li><strong>简介</strong>: 提出 SimPO，使用生成回答的平均对数概率作为隐式奖励信号，再加上长度归一化来纠正偏好模型中”偏爱长回答”的偏差，在 AlpacaEval 2 和 Arena-Hard 上以显著优势超越了 DPO。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>长度归一化的隐式奖励</strong>：DPO 使用参考模型提供隐式奖励，SimPO 则完全放弃了参考模型——直接使用模型自己生成回答的平均对数概率作为奖励信号，并将该概率除以回答长度（token 数量）进行归一化。这个设计的动机来自一个关键观察——标准 DPO 严重偏向于产生更长的回答（因为长回答有更多的总对数概率），导致被优化的模型变得越来越 verbose。SimPO 的长度归一化有效纠正了这种”废话倾向”。</li>
+<li><strong>参考模型消除的意义</strong>：消除参考模型不仅是工程简化，更有理论和实际意义。理论上，DPO 的参考模型是一个”冻结的历史快照”，它会随着训练进行而越来越不准确——因为模型已经进化了，但参考模型还停留在过去的分布。SimPO 完全在线，没有这个过时问题。实践上，消除参考模型将对齐训练的内存需求减半，使更大模型的对齐在有限的 GPU 资源下可行。</li>
+<li><strong>目标奖励边际（Target Reward Margin）</strong>：SimPO 引入了一个直观的超参数——目标奖励边际（γ），控制 chosen 和 rejected 回答之间至少应该有多大的奖励差距。这直接告诉模型”好的回答至少要比坏的回答好多少”，比 DPO 的隐式正则化更加直接可理解。实验证明 γ 在合理范围内（0.5-1.5）不敏感，模型训练稳定。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: SimPO 代表了偏好优化方法的”极简主义”方向。它直接面对并解决了 DPO 的两个核心问题——长度偏差和参考模型过期——用最直接的方式给出解决方案。在 2024 年的 AlpacaEval 2.0 排行榜上，SimPO 训练的开源模型长期占据前列位置，迫使社区重新思考”对齐到底需要多复杂的损失函数”这一问题。它的”用长度归一化对抗废话”这一简单而有效的思想，已被后续多个对齐方法采纳为标准组件。</li>
+</ul>
+<hr>
+<h2 id="11-自我对弈的迭代对齐"><a href="#11-自我对弈的迭代对齐" class="headerlink" title="11. 自我对弈的迭代对齐"></a>11. 自我对弈的迭代对齐</h2><h3 id="SPIN-Self-Play-Fine-Tuning-Converts-Weak-Language-Models-to-Strong-Language-Models"><a href="#SPIN-Self-Play-Fine-Tuning-Converts-Weak-Language-Models-to-Strong-Language-Models" class="headerlink" title="SPIN: Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models"></a>SPIN: Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.01335">2401.01335</a></li>
+<li><strong>发表</strong>: 2024 年 1 月（ICML 2024 接收），UCLA / Microsoft</li>
+<li><strong>作者</strong>: Zixiang Chen, Yihe Deng, Huizhuo Yuan 等</li>
+<li><strong>简介</strong>: 提出 SPIN（Self-Play fIne-tuNing），将模型对齐形式化为一个生成对抗式的自我对弈过程——模型与自己之前版本的输出对抗，主模型试图区分”人类编写的回答”和”旧版本模型生成的回答”，通过这种自我博弈在无外部监督信号的情况下持续自我改进。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>自我对弈的正则化微调框架</strong>：SPIN 的核心机制是——在当前迭代 t，使用模型 θ_t 作为”判别器”，其任务是区分 SFT 数据中的真实人类回答（正样本）和上一个版本模型 θ_{(t-1)} 生成的回答（负样本）。模型通过最大化这种区分能力来更新参数，形成 θ_{(t+1)}。然后下一个迭代 t+1 中，新的 θ_{(t+1)} 生成的回答成为新的”负样本”，模型需要在区分更难的任务上继续进步。这种”与昨天的自己对抗”的机制在理论上保证了收敛到人类偏好分布。</li>
+<li><strong>与 DPO 的理论连接</strong>：论文从理论上证明了在特定假设下，SPIN 的自我对弈过程等价于在动态更新的偏好数据上进行 DPO。实际上 SPIN 和 DPO 不是互斥的，可以视为互补——DPO 从固定的偏好数据中学习，SPIN 从不断更新的自我生成数据中学习。两者的结合可以实现更全面、更持续的对齐改进。</li>
+<li><strong>跨领域的通用性</strong>：在 GSM8K（数学）、HumanEval（代码）、TruthfulQA（真实性）和 MT-Bench（对话质量）等多个维度的实验证明，SPIN 的自我对弈过程在几乎所有维度上都带来了正向增益，且增益随着迭代次数累积。更重要的是，SPIN 提升的主模型在各领域的平衡性——没有发现任何一个维度在自我对弈中出现倒退。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: SPIN 代表了”没有更强模型或人类监督时如何继续进步”这一根本性问题的优雅解决方案。它利用了一个古老的智慧——“今天的你要比昨天的你更强，你只需要能区分昨天的你的回答和真正好的回答”。这一范式对于超人类对齐（模型超越人类评估能力后如何继续改进）具有重要的理论意义。SPIN 与 Self-Rewarding Language Models 同属 2024 年”迭代自我改进”方向的代表作，共同定义了后 RLHF 时代对齐研究的前沿范式。</li>
+</ul>
+<hr>
+<h2 id="12-对齐评估的统一与奖励模型的多目标优化"><a href="#12-对齐评估的统一与奖励模型的多目标优化" class="headerlink" title="12. 对齐评估的统一与奖励模型的多目标优化"></a>12. 对齐评估的统一与奖励模型的多目标优化</h2><h3 id="ArmoRM-and-RewardBench-A-Safety-Utility-Reward-Model-and-Evaluating-Reward-Models"><a href="#ArmoRM-and-RewardBench-A-Safety-Utility-Reward-Model-and-Evaluating-Reward-Models" class="headerlink" title="ArmoRM and RewardBench: A Safety-Utility Reward Model and Evaluating Reward Models"></a>ArmoRM and RewardBench: A Safety-Utility Reward Model and Evaluating Reward Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.13799">2403.13799</a> 和 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.05517">2406.05517</a></li>
+<li><strong>发表</strong>: 2024 年（ArmoRM 2024 年 3 月、RewardBench 2024 年 6 月），Allen Institute for AI (AI2)</li>
+<li><strong>作者</strong>: Haoxiang Wang, Wei Xiong, Tengyang Xie 等（ArmoRM）；Nathan Lambert, Valentina Pyatkin, Jacob Morrison 等（RewardBench）</li>
+<li><strong>简介</strong>: ArmoRM 提出了一个多目标奖励模型，将帮助性、安全性、诚实性、一致性和冗余性等多个对齐维度统一到单个模型中；RewardBench 则建立了首个系统化的奖励模型评估基准，定义了评判”哪个奖励模型更好”的标准。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>多目标奖励模型的解耦设计</strong>：ArmoRM 的核心是 MoE 架构的奖励模型——多个”专家头”分别学习不同维度（帮助性、安全性、诚实性等）的偏好信号，通过一个路由器组合为最终的奖励分数。这种解耦设计有两大优势：一是训练时可以为不同维度使用不同的训练数据，互不干扰；二是推理时可以根据场景需求调整维度权重（例如对医疗应用提高安全性权重、对创意写作降低一致性约束），实现了灵活的多维度对齐。</li>
+<li><strong>绝对评分与相对偏好的统一</strong>：ArmoRM 创新性地同时训练两个输出头——绝对质量评分（这个回答本身有多好）和 pairwise 偏好判别（A 和 B 哪个更好）。这使得 ArmoRM 既可以作为奖励模型（在 RLHF 中提供绝对信号），又可以作为评判模型（在评估中提供 pairwise 比较），两个功能共享同一个底座模型，效率和一致性兼得。</li>
+<li><strong>RewardBench 的系统化评估</strong>：RewardBench 构建了包含约 3000 个精心挑选的偏好对的评测基准，覆盖对话（Chat）、安全（Safety）、推理（Reasoning）和先验编码（Prior Sets）四个类别。通过对 40+ 个奖励模型的系统评估，论文揭示了三个核心发现——（1）大模型作为奖励模型不一定更好，专用训练优于纯规模；（2）奖励模型在安全类别上的性能显著弱于对话质量类别；（3）DPO 训练的隐式奖励模型在需要”公平比较”的任务上表现不佳。这些发现直接指导了后续奖励模型的改进方向。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: ArmoRM + RewardBench 的组合代表了 LLM 对齐评估的”度量衡”工作——不仅是提供一个更好的度量工具，更是提出”好的度量工具应该是什么样”的标准。在对齐技术日益复杂的 2024 年，如何评估对齐效果本身成为了一个方法论挑战。ArmoRM 的多目标解耦和 RewardBench 的系统化基准，共同为对齐研究提供了更精确的”温度计”，使得研究者能够准确判断一个新提出的对齐方法是否是真正的改进、在哪些维度上改进、在哪些维度上可能退步。</li>
 </ul>
 <hr>
 <p><strong>LLM 专题系列导航</strong>：<a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-02-%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/">← 上一篇：规模定律</a> | <a href="/2026/07/24/LLM-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-04-%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B/">下一篇：推理能力 →</a></p>

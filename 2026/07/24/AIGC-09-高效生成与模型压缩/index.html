@@ -1,0 +1,1125 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="高效生成与模型压缩 (Efficient Generation &amp; Model Compression) 概述扩散模型生成一张高质量图像需要数十甚至数百步迭代去噪，这对实时应用（如交互式创作、视频生成）构成了根本性瓶颈。高效生成方向的研究试图在保持生成质量的前提下，将采样步数从几十步压缩到 1-4 步，从而实现实时甚至即时生成。从知识蒸馏到一致性模型、再到训练无关的缓存加速，这个方向的进展">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AIGC-09：高效生成与模型压缩">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/AIGC-09-%E9%AB%98%E6%95%88%E7%94%9F%E6%88%90%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%8E%8B%E7%BC%A9/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="高效生成与模型压缩 (Efficient Generation &amp; Model Compression) 概述扩散模型生成一张高质量图像需要数十甚至数百步迭代去噪，这对实时应用（如交互式创作、视频生成）构成了根本性瓶颈。高效生成方向的研究试图在保持生成质量的前提下，将采样步数从几十步压缩到 1-4 步，从而实现实时甚至即时生成。从知识蒸馏到一致性模型、再到训练无关的缓存加速，这个方向的进展">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T04:09:00.000Z">
+<meta property="article:modified_time" content="2026-07-24T16:04:25.883Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="AIGC,生成式AI,模型压缩,高效生成">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>AIGC-09：高效生成与模型压缩 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="AIGC-09：高效生成与模型压缩"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 12:09" pubdate>
+          2026年7月24日 中午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          10k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          84 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">AIGC-09：高效生成与模型压缩</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="高效生成与模型压缩-Efficient-Generation-Model-Compression"><a href="#高效生成与模型压缩-Efficient-Generation-Model-Compression" class="headerlink" title="高效生成与模型压缩 (Efficient Generation &amp; Model Compression)"></a>高效生成与模型压缩 (Efficient Generation &amp; Model Compression)</h1><hr>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>扩散模型生成一张高质量图像需要数十甚至数百步迭代去噪，这对实时应用（如交互式创作、视频生成）构成了根本性瓶颈。高效生成方向的研究试图在保持生成质量的前提下，将采样步数从几十步压缩到 1-4 步，从而实现实时甚至即时生成。从知识蒸馏到一致性模型、再到训练无关的缓存加速，这个方向的进展正在从根本上改变 AIGC 的应用场景。</p>
+<hr>
+<h3 id="Progressive-Distillation-for-Fast-Sampling-of-Diffusion-Models"><a href="#Progressive-Distillation-for-Fast-Sampling-of-Diffusion-Models" class="headerlink" title="Progressive Distillation for Fast Sampling of Diffusion Models"></a>Progressive Distillation for Fast Sampling of Diffusion Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2202.00512">2202.00512</a></li>
+<li><strong>发表</strong>: ICLR 2022 (Spotlight)</li>
+<li><strong>作者</strong>: Tim Salimans, Jonathan Ho, Google Research</li>
+<li><strong>简介</strong>: 将扩散模型的数千步采样逐步蒸馏到少至 2 步的学生模型中，每次蒸馏将采样步数减半，是扩散模型蒸馏领域的开创性工作。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>渐进式减半蒸馏</strong>：不是一次性从 1000 步跳到 4 步，而是逐步进行——1000步-&gt;500步-&gt;250步-&gt;…-&gt;4步，每步训练学生模型以匹配教师模型的对应输出</li>
+<li><strong>确定性采样参数化</strong>：提出新的扩散模型参数化方法，在极少步数时仍能保持采样稳定性</li>
+<li><strong>蒸馏成本可控</strong>：整个蒸馏过程的总训练时间不超过训练原始模型所需时间，实现了高效训练与高效推理的双赢</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 这是扩散模型蒸馏方向的奠基之作。它将采样步数从 8192 步压缩到 4 步，CIFAR-10 上达到 FID 3.0，证明了”慢训练得到的质量可以用快速采样来重现”。后续几乎所有加速方法（一致性模型、LCM、ADD）都可以视为这一思路的延伸或改进。</li>
+</ul>
+<hr>
+<h3 id="Consistency-Models"><a href="#Consistency-Models" class="headerlink" title="Consistency Models"></a>Consistency Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.01469">2303.01469</a></li>
+<li><strong>发表</strong>: ICML 2023</li>
+<li><strong>作者</strong>: Yang Song, Prafulla Dhariwal, Mark Chen, Ilya Sutskever, OpenAI</li>
+<li><strong>简介</strong>: 提出一致性模型——一个全新的生成模型家族，将扩散模型的 ODE 轨迹上任意点直接映射到原点，实现单步生成的同时保持多步采样的质量提升能力。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>一致性映射（Consistency Mapping）</strong>：沿着概率流 ODE 轨迹，任意噪声点都映射到同一个数据点——模型学习这个”一致性函数”，天然支持单步生成</li>
+<li><strong>两种训练范式</strong>：一致性蒸馏（CD, 从预训练扩散模型蒸馏）和一致性训练（CT, 从零训练生成模型），后者不依赖任何预训练扩散模型</li>
+<li><strong>零样本编辑</strong>：一致性模型天然支持图像修复、上色、超分辨率等任务，无需针对特定任务重新训练</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 一致性模型代表了与蒸馏不同的加速思路——不压缩已有模型，而是定义一个新的生成模型类别。CIFAR-10 单步 FID 3.55、ImageNet 64x64 单步 FID 6.20，均为当时最佳非对抗单步生成结果。它为后续的 LCM 和 Consistency Trajectory Models 提供了理论基础。</li>
+</ul>
+<hr>
+<h3 id="Latent-Consistency-Models-LCM"><a href="#Latent-Consistency-Models-LCM" class="headerlink" title="Latent Consistency Models (LCM)"></a>Latent Consistency Models (LCM)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.04378">2310.04378</a></li>
+<li><strong>发表</strong>: 技术报告, 2023 年 10 月</li>
+<li><strong>作者</strong>: Simian Luo, Yiqin Tan, Longbo Huang, Jian Li, Hang Zhao, 清华大学交叉信息研究院 (IIIS)</li>
+<li><strong>简介</strong>: 将一致性模型应用于 Stable Diffusion 的潜在空间，实现 1-4 步高质量文生图，后续 LCM-LoRA 实现了即插即用的通用加速模块。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>潜在空间一致性蒸馏</strong>：在预训练 Stable Diffusion 的潜在空间（而非像素空间）进行一致性蒸馏，直接利用 SD 学到的语义先验，大幅降低训练难度</li>
+<li><strong>单阶段引导蒸馏</strong>：将无分类器引导（CFG）直接蒸馏进模型输入，无需在推理时额外计算 CFG，仅需 32 A100 GPU 小时完成训练</li>
+<li><strong>LCM-LoRA 即插即用加速</strong>：将 LCM 的加速能力通过 LoRA 权重形式封装为通用适配器，可直接与任意 SD 风格 LoRA 组合，无需对每个风格重新蒸馏</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: LCM 是 2023 年底在开源社区爆火的工作，HuggingFace 模型下载超 20 万次。它真正将”实时文生图”从实验室带到了大众用户手中——传统 50 步的 SD 推理被压缩到 2-4 步，速度提升 5-10 倍。LCM-LoRA 的即插即用设计更是建立了”生成加速基础设施”的概念。</li>
+</ul>
+<hr>
+<h3 id="ADD-Adversarial-Diffusion-Distillation"><a href="#ADD-Adversarial-Diffusion-Distillation" class="headerlink" title="ADD: Adversarial Diffusion Distillation"></a>ADD: Adversarial Diffusion Distillation</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2311.17042">2311.17042</a></li>
+<li><strong>发表</strong>: 技术报告, 2023 年 11 月; 产品化为 SDXL Turbo</li>
+<li><strong>作者</strong>: Axel Sauer, Dominik Lorenz, Andreas Blattmann, Robin Rombach, Stability AI</li>
+<li><strong>简介</strong>: 将得分蒸馏与对抗损失相结合，实现仅需 1 步的高质量图像生成，产物 SDXL Turbo 是首个使用基础模型实现单步实时生成的公开模型。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>得分蒸馏 + 对抗训练的融合</strong>：用大规模预训练扩散模型（SDXL）作为教师提供得分蒸馏信号，同时引入 GAN 风格的判别器进行对抗训练，确保极低步数下的图像保真度</li>
+<li><strong>单步生成的突破</strong>：1 步生成质量超越当时所有少步方法（LCM、GANs），4 步生成质量直接匹敌完整的 SDXL 模型（~50 步）</li>
+<li><strong>无引导蒸馏</strong>：蒸馏过程中丢弃 CFG（guidance scale = 1.0），模型隐式学会了高质量生成，无需推理时额外计算引导信号</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: ADD 是分数蒸馏与对抗训练两个范式结合的标志性工作。SDXL Turbo 证明了”让扩散模型像 GAN 一样快”是可行的——首次将基础模型的单步实时生成变为现实。这为后续 FLUX 等模型的 Turbo 变体建立了工程范式。</li>
+</ul>
+<hr>
+<h3 id="StreamingT2V-Consistent-Dynamic-and-Extendable-Long-Video-Generation"><a href="#StreamingT2V-Consistent-Dynamic-and-Extendable-Long-Video-Generation" class="headerlink" title="StreamingT2V: Consistent, Dynamic, and Extendable Long Video Generation"></a>StreamingT2V: Consistent, Dynamic, and Extendable Long Video Generation</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.14773">2403.14773</a></li>
+<li><strong>发表</strong>: CVPR 2025</li>
+<li><strong>作者</strong>: Roberto Henschel, Levon Khachatryan, Daniil Hayrapetyan, Hayk Poghosyan, Vahram Tadevosyan, Zhangyang Wang, Shant Navasardyan, Humphrey Shi, Picsart AI Research / UT Austin / Georgia Tech</li>
+<li><strong>简介</strong>: 通过条件注意力与外观保持模块实现自回归长视频生成（1200+ 帧约 2 分钟），解决传统方法的长视频平滑过渡与一致性难题。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>条件注意力模块（CAM）</strong>：短期记忆机制——当前块生成时通过注意力机制从上一块的特征中获取条件信息，确保块间平滑过渡，SCuts 分数降低 88%</li>
+<li><strong>外观保持模块（APM）</strong>：长期记忆机制——从第一个视频块提取高层场景/物体特征，防止自回归生成过程中模型”遗忘”初始场景</li>
+<li><strong>随机混合（Randomized Blending）</strong>：使视频增强器可自回归应用于无限长视频，无块间不一致性</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: StreamingT2V 将长视频生成从”拼接短视频”的 hack 方案提升为真正的自回归时空一致生成。它属于高效生成范畴，因为它展示了”无需重新训练整个视频模型, 用记忆模块就能实现长视频”的效率理念。同时也可作为 AnimateLCM (arXiv 2402.00769, SIGGRAPH Asia 2024) 的替代选择——后者将 LCM 蒸馏引入视频生成，实现 1-4 步视频生成。</li>
+</ul>
+<hr>
+<h3 id="Stable-Diffusion-3-5-Turbo-变体与-SD-生态系统中的高效推理"><a href="#Stable-Diffusion-3-5-Turbo-变体与-SD-生态系统中的高效推理" class="headerlink" title="Stable Diffusion 3.5 / Turbo 变体与 SD 生态系统中的高效推理"></a>Stable Diffusion 3.5 / Turbo 变体与 SD 生态系统中的高效推理</h3><ul>
+<li><strong>arXiv</strong>: 无单一论文，涵盖 SD3.5 系列 (2024 年 10 月发布) 及社区量化工作</li>
+<li><strong>发表</strong>: Stability AI, 2024 年</li>
+<li><strong>作者</strong>: Stability AI</li>
+<li><strong>简介</strong>: SD3.5 系列在同一架构（MMDiT + 三个文本编码器）上提供了从大型高质量到 Turbo 快速生成的完整选择，并通过社区量化（GGUF、NF4）大幅降低硬件门槛。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>架构统一化</strong>：SD3.5 Large (8B)、Large Turbo (4 步), Medium (2.5B) 均使用同一 MMDiT 架构和三个文本编码器（OpenCLIP-ViT/G + CLIP-ViT/L + T5-xxl），仅通过蒸馏和量化区分速度-质量层级</li>
+<li><strong>ADD 蒸馏的规模化应用</strong>：SD3.5 Large Turbo 将 ADD 蒸馏应用于 8B 参数模型，4 步采样即可完成生成，相比教师模型加速约 18 倍</li>
+<li><strong>社区量化生态</strong>：GGUF 量化版（FP16/Q8_0/Q4_0 等）通过 stable-diffusion.cpp 在 CPU 上运行，4-bit NFQ 量化 + bitsandbytes 将大模型压缩到低 VRAM GPU 可运行</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: SD3.5 系列代表了高速推理在工业级扩散模型中的”标配化”——不再把 Turbo 当作一个特殊变体，而是作为产品线中自然的速度选项。它与 FLUX 系列的快速变体一起，标志着扩散模型”实时化”从学术突破到工程落地。</li>
+</ul>
+<hr>
+<h3 id="DeepCache-Accelerating-Diffusion-Models-for-Free"><a href="#DeepCache-Accelerating-Diffusion-Models-for-Free" class="headerlink" title="DeepCache: Accelerating Diffusion Models for Free"></a>DeepCache: Accelerating Diffusion Models for Free</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.00858">2312.00858</a></li>
+<li><strong>发表</strong>: CVPR 2024</li>
+<li><strong>作者</strong>: Xinyin Ma, Gongfan Fang, Xinchao Wang, 新加坡国立大学 (NUS) Learning and Vision Lab</li>
+<li><strong>简介</strong>: 利用扩散模型去噪过程中深层特征的时序冗余性，通过缓存和复用高层特征实现 2-5 倍加速，无需任何重新训练。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>特征时序冗余洞察</strong>：发现相邻去噪步之间 U-Net 深层特征变化极小——高层语义在几十步内几乎稳定，只有浅层细节在每步变化</li>
+<li><strong>缓存-检索加速策略</strong>：每 N 步完整计算一次 U-Net 全部层（填充缓存），中间步仅计算浅层，深层直接复用缓存特征</li>
+<li><strong>完全无训练（Training-Free）</strong>：不需要蒸馏、微调、量化，无需任何模型修改，可直接应用于任何已部署的扩散模型</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DeepCache 代表了”零成本加速”理念——不修改模型，不重训模型，只是更聪明地用现有计算资源。CVPR 2024 发表，已被 ComfyUI 和 Diffusers 等主流框架集成，348+ 引用。在 Stable Diffusion v1.5 上实现 2.3 倍加速（CLIP 分数仅降 0.05），在 LDM-4-G 上实现 4.1 倍加速（FID 仅增 0.22）。</li>
+</ul>
+<hr>
+<hr>
+<h3 id="SD3-Turbo-and-Flux-Schnell-Instant-Text-to-Image-with-Distillation"><a href="#SD3-Turbo-and-Flux-Schnell-Instant-Text-to-Image-with-Distillation" class="headerlink" title="SD3-Turbo and Flux-Schnell: Instant Text-to-Image with Distillation"></a>SD3-Turbo and Flux-Schnell: Instant Text-to-Image with Distillation</h3><ul>
+<li><strong>技术报告</strong>: SD3-Turbo (2024) / Flux-Schnell (2024)</li>
+<li><strong>发表</strong>: Stability AI / Black Forest Labs 产品发布</li>
+<li><strong>作者</strong>: Stability AI / Black Forest Labs</li>
+<li><strong>简介</strong>: SD3-Turbo 和 Flux-Schnell 分别代表了 8B 和 12B 参数 DiT 模型的极速蒸馏变体——仅需 1-4 步采样即可生成高质量图像，将最先进的文生图能力从”等待数秒”推向”几乎即时”，建立了”顶级质量+实时生成”的新范式。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>ADD 蒸馏在大规模 DiT 上的应用——SD3-Turbo 将 ADD（Adversarial Diffusion Distillation）蒸馏技术应用于 SD3 的 8B 参数 MMDiT 架构，仅 1-4 步即可生成图像，相比教师模型（SD3 Large）加速约 20 倍。</li>
+<li>Flux-Schnell 采用逐步蒸馏方案——从 50 步到 25 步到 4 步到 1 步，多阶段渐进式蒸馏，每阶段的教师-学生差距较小，蒸馏效果比”一步到位”方案更好，且最终模型以 Apache 2.0 开源。</li>
+<li>质量保持的极致——尽管步数压缩了 20-50 倍，Turbo/Schnell 变体的生成质量在大多数场景下与完整教师模型接近，仅在极细粒度纹理和复杂文字渲染上略有差距。</li>
+<li>引导信号的隐式蒸馏——CFG 引导强度被蒸馏到模型权重中，推理时不需要额外的引导计算，不仅减少了步数也去除了引导过程中的额外计算开销。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: SD3-Turbo 和 Flux-Schnell 是”蒸馏加速”路线的工程巅峰。它们证明——即使是 8B-12B 参数的大规模 DiT 模型，也可以通过蒸馏在 1-4 步内产生高质量输出。Schnell 的 Apache 2.0 开源尤其意义重大，它使顶级文生图能力的实时交互式部署从”大厂闭源服务”变成了”任何人可自建的基础设施”。</li>
+</ul>
+<hr>
+<h3 id="AnimateLCM-Accelerating-the-Animation-of-Personalized-Diffusion-Models"><a href="#AnimateLCM-Accelerating-the-Animation-of-Personalized-Diffusion-Models" class="headerlink" title="AnimateLCM: Accelerating the Animation of Personalized Diffusion Models"></a>AnimateLCM: Accelerating the Animation of Personalized Diffusion Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.00769">2402.00769</a></li>
+<li><strong>发表</strong>: SIGGRAPH Asia 2024</li>
+<li><strong>作者</strong>: Fu-Yun Wang, Zhaoyang Huang, Xiaoyu Shi 等（香港大学 / 商汤科技）</li>
+<li><strong>简介</strong>: 将 LCM（Latent Consistency Model）的蒸馏加速范式引入视频生成——通过解耦一致性学习（Decoupled Consistency Learning），将视频扩散模型的采样步数从数十步压缩到 1-4 步，同时保持帧间时间一致性，实现实时视频生成。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>解耦一致性学习——将视频模型的空间质量学习和时间一致性学习解耦为两个独立的一致性目标：空间一致性确保每帧图像质量，时间一致性确保帧间过渡平滑——避免了两者同时蒸馏导致的梯度冲突。</li>
+<li>即插即用视频加速器——AnimateLCM 可作为通用视频加速器应用于任何基于 Stable Diffusion 的视频模型（如 AnimateDiff、SVD），无需对每个视频模型重新蒸馏。</li>
+<li>CFG 增强蒸馏——在蒸馏过程中将 CFG 引导强度编码为学生模型的内部参数，推理时无需额外 CFG 计算，进一步加速视频生成。</li>
+<li>1-4 步生成 16 帧 512x512 视频，速度提升 5-10 倍，帧间一致性与完整教师模型持平。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: AnimateLCM 是视频加速领域的重要突破，它将图像加速（LCM）成功泛化到了视频加速。其”解耦一致性学习”的设计洞察——空间和时间不能混在一起蒸馏——对后续视频加速工作具有普遍的参考价值。SIGGRAPH Asia 2024 的录用体现了图形学界对 AI 实时视频生成技术的高度关注。</li>
+</ul>
+<hr>
+<h3 id="StreamDiffusion-A-Pipeline-Level-Solution-for-Real-Time-Interactive-Generation"><a href="#StreamDiffusion-A-Pipeline-Level-Solution-for-Real-Time-Interactive-Generation" class="headerlink" title="StreamDiffusion: A Pipeline-Level Solution for Real-Time Interactive Generation"></a>StreamDiffusion: A Pipeline-Level Solution for Real-Time Interactive Generation</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.12491">2312.12491</a></li>
+<li><strong>发表</strong>: ECCV 2024 (Oral)</li>
+<li><strong>作者</strong>: Akio Kodaira, Chenfeng Xu, Toshiki Hazama 等（东京大学 / Google / 日本 AI 初创公司）</li>
+<li><strong>简介</strong>: 提出流水线级别的实时交互式生成方案——不是修改模型架构或蒸馏，而是通过批处理去噪策略、残差无分类器引导和随机相似性滤波等工程优化，使 Stable Diffusion 在消费级 GPU 上达到毫秒级延迟和每秒 60+ 帧的生成速度。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>批处理去噪策略（Batch Denoising Strategy）——将多个顺序的去噪步骤批量化为一次神经网络前向传播，通过输入-输出队列将 U-Net 的批处理能力最大化利用，GPU 利用率从 ~30% 提升到接近 100%。</li>
+<li>残差无分类器引导（RCFG）——将 CFG 的计算从每次采样转移到残差形式，只需在噪声预测残差上施加引导，避免了额外的完整前向传播，减少了近 50% 的 CFG 计算开销。</li>
+<li>随机相似性滤波（Stochastic Similarity Filter）——监控连续帧之间的特征空间相似性，自动跳过足够相似的帧（如在视频实时渲染中当场景静止时暂停重新生成），进一步降低无效计算。</li>
+<li>配合 LCM 或 Turbo 蒸馏模型可实现 60+ FPS 的实时交互式图像生成——用户拖动滑块或修改 prompt，图像近乎实时更新。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: StreamDiffusion 代表了”不做模型层面的改动，通过系统级优化也能实现实时生成”的工程路线。它巧妙地将传统图形学流水线思路（批处理、缓存、滤波）与扩散模型推理结合，证明了即使不蒸馏不量化，扩散模型也可以是实时的。ECCV 2024 Oral 的荣誉反映了审稿人对其工程精巧性的高度赞赏。</li>
+</ul>
+<hr>
+<h3 id="Token-Merging-ToMe-and-Fast-DiT-Efficient-Attention-in-Diffusion-Transformers"><a href="#Token-Merging-ToMe-and-Fast-DiT-Efficient-Attention-in-Diffusion-Transformers" class="headerlink" title="Token Merging (ToMe) and Fast-DiT: Efficient Attention in Diffusion Transformers"></a>Token Merging (ToMe) and Fast-DiT: Efficient Attention in Diffusion Transformers</h3><ul>
+<li><strong>arXiv</strong>: ToMe (2303.17604 图像, 2406 扩展到视频/DiT) / Fast-DiT (2406.12894)</li>
+<li><strong>发表</strong>: NeurIPS 2023 (ToMe) / NeurIPS 2024 (Fast-DiT)</li>
+<li><strong>作者</strong>: Daniel Bolya, Cheng-Yang Fu 等 (MIT / Georgia Tech) / Zhihao Zhao 等 (华为)</li>
+<li><strong>简介</strong>: Token Merging (ToMe) 和 Fast-DiT 代表了通过在 Transformer 内部进行 token 合并和注意力优化来加速 DiT 推理的路线——不是蒸馏模型或缓存特征，而是在不改变模型质量的前提下减少自注意力的计算量。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>ToMe for DiT——将 Token Merging 从 ViT 推广到 DiT：在 Transformer 的每层自注意力中，通过相似性匹配将冗余的图像 token 合并（bipartite soft matching），在几乎不损失图像质量的情况下减少 30-50% 的 token 数量，自注意力计算量随 token 数平方降低。</li>
+<li>Fast-DiT 提出频率自适应注意力——在 Transformer 深层（处理高层语义）使用更稀疏的注意力模式，在浅层（处理细节纹理）使用完整注意力，通过频率分析识别不同层对注意力的需求差异。</li>
+<li>两者均无需重新训练——直接应用于预训练 DiT（如 DiT-XL/2、SD3），作为推理时的加速开关。</li>
+<li>ToMe 在 SD3 上减少 40% token 后 FID 仅增加 0.15，Fast-DiT 在 ImageNet DiT 上加速 1.8 倍且质量无损。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: ToMe 和 Fast-DiT 是”零成本加速”路线的延续（与 DeepCache 共享理念），但操作在更底层——不是跳过计算，而是合并冗余的 token 使计算更高效。在 DiT 架构主导文生图领域的 2024-2025 年，这类针对 Transformer 注意力机制的加速方案比 U-Net 时代的缓存方案更加关键。</li>
+</ul>
+<hr>
+<h3 id="SANA-Efficient-High-Resolution-Image-Synthesis-with-Linear-Diffusion-Transformers"><a href="#SANA-Efficient-High-Resolution-Image-Synthesis-with-Linear-Diffusion-Transformers" class="headerlink" title="SANA: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformers"></a>SANA: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformers</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2410.10629">2410.10629</a></li>
+<li><strong>发表</strong>: CVPR 2025</li>
+<li><strong>作者</strong>: Enze Xie, Junsong Chen, Junyu Chen 等（NVIDIA / 华为）</li>
+<li><strong>简介</strong>: 提出”线性 DiT”——用线性注意力替代 DiT 中计算复杂度为 O(n^2) 的标准自注意力，将高分辨率 DiT 推理的内存和计算开销大幅降低，使 4K 图像生成只需 16GB VRAM（此前同样分辨率需要 40GB+）。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>线性自注意力在 DiT 中的应用——将标准自注意力的 softmax(QK^T/sqrt(d))V 替换为线性注意力 phi(Q)(phi(K)^T V)，使注意力计算从 O(n^2) 降为 O(n)，在 4K 分辨率下 token 数 n 极大（约 16K）时效果尤为显著。</li>
+<li>深度压缩文本编码器——将 T5-XXL 的文本表示通过一个可训练的压缩模块压缩到极低维度（如 8-16 个文本 token），大幅减少交叉注意力的文本侧计算量。</li>
+<li>高效的混合精度训练与推理——结合 FP8 训练、INT8 推理、FlashAttention-2 等工程优化，使 0.6B 参数的 SANA 在 4K 分辨率下生成质量超越 2.6B 参数的 PixArt-Σ。</li>
+<li>极致的硬件效率——SANA 0.6B 在消费级 GPU（16GB VRAM）上即可生成高质量 4K 图像，训练成本约为同质量水平 DiT 模型的 1/10。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: SANA 是 CVPR 2025 论文，代表了”效率至上的 DiT”路线的极值。它的信息非常清晰——不是所有场景都需要 12B 参数的 Flux，通过架构创新（线性注意力、文本压缩），0.6B 的精巧模型可以在 4K 分辨率下超过 2.6B 的通用模型。这对资源有限的研究团队和想要本地部署的用户来说是重大利好。</li>
+</ul>
+<hr>
+<h3 id="LinFusion-and-Delta-DiT-Pushing-Efficient-Diffusion-to-New-Extremes"><a href="#LinFusion-and-Delta-DiT-Pushing-Efficient-Diffusion-to-New-Extremes" class="headerlink" title="LinFusion and Delta-DiT: Pushing Efficient Diffusion to New Extremes"></a>LinFusion and Delta-DiT: Pushing Efficient Diffusion to New Extremes</h3><ul>
+<li><strong>arXiv</strong>: LinFusion (2409.02097) / Delta-DiT (2406.07384)</li>
+<li><strong>发表</strong>: NeurIPS 2024 (LinFusion) / CVPR 2025 (Delta-DiT)</li>
+<li><strong>作者</strong>: LinFusion（英伟达 / 斯坦福）/ Delta-DiT（北京大学 / 字节跳动）</li>
+<li><strong>简介</strong>: 两篇将不同加速策略推向极致的工作——LinFusion 通过将扩散推理重新形式化为线性注意力下的特征蒸馏实现了跨架构通用加速，Delta-DiT 通过增量参数传递降低 DiT 推理中的冗余计算。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>LinFusion 提出”特征蒸馏加速”——预训练老师模型的特征被蒸馏为学生模型（线性复杂度）的近似版本，在推理时用轻量的学生替代昂贵的老师做特征计算，加速比达 2-3 倍且适用于任何 DiT 架构。</li>
+<li>Delta-DiT 洞察”DiT 层间特征高度冗余”——相邻 Transformer 层的输出差异（Delta）远小于输出本身，因此推导出只需要传递”差异”而非”全量”的算法，大幅减少了逐层特征传递的计算和带宽开销。</li>
+<li>两者都实现了”训练一次，加速任意模型”的通用性——不针对特定 DiT 模型或分辨率做优化，而是提供了通用的加速原语。</li>
+<li>LinFusion 在 SD3、Flux 等多个 DiT 模型上验证了有效性，Delta-DiT 在多个 DiT 和 VideoDiT 模型上实现 1.5-2 倍加速且无质量损失。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: LinFusion 和 Delta-DiT 代表了加速研究的”通用化”趋势——不再为每个模型定制加速方案，而是寻找跨模型通用的加速原理。这在 DiT 生态日益碎片化（SD3、Flux、PixArt、Hunyuan-DiT 各用各的实现）的背景下尤其重要。</li>
+</ul>
+<hr>
+<h3 id="Stable-Fast-and-ONNX-TensorRT-Optimizations-System-Level-Deployment-Acceleration"><a href="#Stable-Fast-and-ONNX-TensorRT-Optimizations-System-Level-Deployment-Acceleration" class="headerlink" title="Stable Fast and ONNX/TensorRT Optimizations: System-Level Deployment Acceleration"></a>Stable Fast and ONNX/TensorRT Optimizations: System-Level Deployment Acceleration</h3><ul>
+<li><strong>技术报告</strong>: 开源项目, 2024 年</li>
+<li><strong>发表</strong>: 社区项目 + NVIDIA 官方优化</li>
+<li><strong>作者</strong>: 社区开发者（chengzeyi 等）/ NVIDIA</li>
+<li><strong>简介</strong>: 系统级推理加速工具链——Stable Fast 通过 CUDA 图优化、算子融合、内存池化等技术使扩散模型推理加速 30-60%，配合 ONNX/TensorRT 编译优化可进一步获得 1.5-2 倍的额外加速，代表了模型无关的系统级工程优化路线。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Stable Fast 的 CUDA 图捕获——将扩散模型的反复去噪步骤编译为 CUDA Graph，消除每一步的 Python 解释器开销和 kernel launch 延迟，将 CPU-GPU 同步点最小化。</li>
+<li>算子融合——将 U-Net/DiT 中的多层卷积/注意力、残差连接、归一化操作融合为单个 CUDA kernel，减少中间结果的显存读写次数。</li>
+<li>内存池化（Memory Pooling）——预分配显存块并在去噪步骤间复用，避免每一步的 cudaMalloc/cudaFree 开销，在高分辨率生成时效果尤为显著。</li>
+<li>TensorRT 编译——将 PyTorch 模型编译为 TensorRT 引擎，利用 NVIDIA GPU 的硬件特定优化（INT8 量化、kernel 自动调优），进一步压榨推理性能。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 系统级优化是所有加速方法中最”朴实无华”但最”通用可靠”的一类。与蒸馏（需要训练）、一致性模型（需要新架构）、缓存方法（有质量 trade-off）不同，系统级优化不需要改变模型，加速幅度稳定可预测，且与所有其他加速方法正交叠加。在工业部署中，系统级优化 + 蒸馏 + 量化是最常见的加速组合。</li>
+</ul>
+<hr>
+<h2 id="方向总结"><a href="#方向总结" class="headerlink" title="方向总结"></a>方向总结</h2><p>扩散模型的加速从”让模型变小”（量化、剪枝）发展到”让模型更聪明”（蒸馏、一致性映射）再发展到”让计算更有用”（缓存复用），三者各有适用范围。2024-2025 年，加速研究呈现出四个新趋势：(1) DiT 专用加速（ToMe for DiT、SANA、LinFusion），替代了 U-Net 时代的传统加速方案；(2) 视频实时化（AnimateLCM、StreamDiffusion），将图像加速的经验扩展到时域；(3) 超高分辨率低资源化（SANA 让 4K 生成只需 16GB VRAM）；(4) 系统级通用加速（Stable Fast、TensorRT），与模型无关的持久加速基础。蒸馏类方法（Progressive Distillation, LCM, ADD）能实现最大加速比但需要训练；一致性模型提供了不需要扩散模型的新范式；DeepCache 零训练成本但加速比有限。工业实践中，三种路线经常叠加使用——SD3.5 Turbo 本质上是 ADD 蒸馏 + 社区量化的组合产物。</p>
+<hr>
+<h2 id="文章导航"><a href="#文章导航" class="headerlink" title="文章导航"></a>文章导航</h2><ul>
+<li><a href="/AIGC-08-%E5%A4%9A%E6%A8%A1%E6%80%81%E7%94%9F%E6%88%90">上一篇：AIGC-08：图像/视频理解与多模态生成</a></li>
+<li><a href="/AIGC-10-%E5%AE%89%E5%85%A8%E6%A3%80%E6%B5%8B%E4%B8%8E%E7%89%88%E6%9D%83">下一篇：AIGC-10：AIGC 安全、检测与版权</a></li>
+<li><a href="/AIGC-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97">返回目录：AIGC 经典论文全景指南</a></li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/AIGC-%E7%94%9F%E6%88%90%E5%BC%8FAI-%E6%A8%A1%E5%9E%8B%E5%8E%8B%E7%BC%A9-%E9%AB%98%E6%95%88%E7%94%9F%E6%88%90/" class="print-no-link">#AIGC,生成式AI,模型压缩,高效生成</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>AIGC-09：高效生成与模型压缩</div>
+      <div>https://w2ongq6.github.io/2026/07/24/AIGC-09-高效生成与模型压缩/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/AIGC-10-%E5%AE%89%E5%85%A8%E6%A3%80%E6%B5%8B%E4%B8%8E%E7%89%88%E6%9D%83/" title="AIGC-10：AIGC 安全、检测与版权">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AIGC-10：AIGC 安全、检测与版权</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/AIGC-08-%E5%A4%9A%E6%A8%A1%E6%80%81%E7%94%9F%E6%88%90/" title="AIGC-08：图像/视频理解与多模态生成">
+                        <span class="hidden-mobile">AIGC-08：图像/视频理解与多模态生成</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

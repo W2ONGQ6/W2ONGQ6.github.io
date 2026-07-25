@@ -1,0 +1,1121 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Mixture of Experts (MoE) 已成为扩展大语言模型同时保持推理成本可控的最具影响力的架构创新之一。其核心思想简单而强大：对于任何给定的 token，只激活模型参数中的一个子集（”专家”），从而在总参数量极大的情况下大幅降低每个 token 的计算量。本章节涵盖 2023-2026 年间塑造了 LLM 推理领域 MoE 发展的奠基性与前沿性论文。  论文Mixtral of Ex">
+<meta property="og:type" content="article">
+<meta property="og:title" content="推理加速-07：Mixture of Experts 推理">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-07-MoE%E6%8E%A8%E7%90%86/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Mixture of Experts (MoE) 已成为扩展大语言模型同时保持推理成本可控的最具影响力的架构创新之一。其核心思想简单而强大：对于任何给定的 token，只激活模型参数中的一个子集（”专家”），从而在总参数量极大的情况下大幅降低每个 token 的计算量。本章节涵盖 2023-2026 年间塑造了 LLM 推理领域 MoE 发展的奠基性与前沿性论文。  论文Mixtral of Ex">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T03:07:00.000Z">
+<meta property="article:modified_time" content="2026-07-24T16:02:31.874Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="推理加速,LLM推理,推理优化,MoE">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>推理加速-07：Mixture of Experts 推理 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="推理加速-07：Mixture of Experts 推理"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 11:07" pubdate>
+          2026年7月24日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          81 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">推理加速-07：Mixture of Experts 推理</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>Mixture of Experts (MoE) 已成为扩展大语言模型同时保持推理成本可控的最具影响力的架构创新之一。其核心思想简单而强大：对于任何给定的 token，只激活模型参数中的一个子集（”专家”），从而在总参数量极大的情况下大幅降低每个 token 的计算量。本章节涵盖 2023-2026 年间塑造了 LLM 推理领域 MoE 发展的奠基性与前沿性论文。</p>
+<hr>
+<h2 id="论文"><a href="#论文" class="headerlink" title="论文"></a>论文</h2><h3 id="Mixtral-of-Experts-Mixtral-8x7B"><a href="#Mixtral-of-Experts-Mixtral-8x7B" class="headerlink" title="Mixtral of Experts (Mixtral 8x7B)"></a>Mixtral of Experts (Mixtral 8x7B)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.04088">2401.04088</a></li>
+<li><strong>发表</strong>: arXiv / Mistral AI Blog，2024 年 1 月</li>
+<li><strong>作者</strong>: Albert Q. Jiang, Alexandre Sablayrolles, Antoine Roux, Arthur Mensch 等，Mistral AI</li>
+<li><strong>简介</strong>: 首个大规模流行的开源 Sparse Mixture of Experts (SMoE) 模型，证明了 MoE 在推理时能够以远超其 5 倍大小的 dense 模型的性能表现。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Sparse Mixture of Experts 架构：每层 8 个专家 FFN 块，由 router 为每个 token 选择 top-2 专家——总参数量 47B，每个 token 仅激活 13B 参数</li>
+<li>在大多数基准测试上以与 13B dense 模型相当的推理计算量，超越 LLaMA 2 70B（dense）</li>
+<li>使用 MegaBlocks 进行高效的 block-sparse GPU 运算，支持通过 vLLM 及其他推理框架进行实际部署</li>
+<li>路由分析表明，专家并非按领域（数学、生物学等）进行专业化分工，而是学习语法/表层模式</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Mixtral 8x7B 是使 MoE 走向主流的关键模型。它在 Apache 2.0 协议下发布，证明了稀疏激活能够以极低的推理成本提供超越 dense 模型的质量，直接启发了随后涌现的一批开源 MoE 模型（DeepSeek、Qwen、DBRX 等）。</li>
+</ul>
+<hr>
+<h3 id="DeepSeekMoE-Towards-Ultimate-Expert-Specialization-in-Mixture-of-Experts-Language-Models"><a href="#DeepSeekMoE-Towards-Ultimate-Expert-Specialization-in-Mixture-of-Experts-Language-Models" class="headerlink" title="DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models"></a>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.06066">2401.06066</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 1 月</li>
+<li><strong>作者</strong>: Damai Dai, Chengqi Deng, Chenggang Zhao 等，DeepSeek-AI</li>
+<li><strong>简介</strong>: 引入了细粒度专家分割与共享专家隔离机制，这两项创新成为 DeepSeek-V2 和 DeepSeek-V3 的架构基础。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>细粒度专家分割（Fine-Grained Expert Segmentation）</strong>: 将标准专家拆分为大量更小的专家（共 m x N 个，激活 m x K 个），使每个 token 能获得更灵活、更精确的专家组合</li>
+<li><strong>共享专家隔离（Shared Expert Isolation）</strong>: 将一部分专家（K_s 个）指定为”共享”专家——每个 token 始终激活——用于捕获通用知识，减少路由专家之间的冗余</li>
+<li>DeepSeekMoE 145B 仅使用约 28.5% 的计算量即达到 DeepSeek 67B（dense）的性能水平</li>
+<li>DeepSeekMoE 16B 仅使用约 40% 的计算量即可媲美 LLaMA2 7B</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 这篇论文引入的两大核心 MoE 设计原则——细粒度专家和共享专家——直接支撑了 DeepSeek-V2 和 DeepSeek-V3 的实现，两者是有史以来最高效的大模型之二。这些思想如今已成为现代 MoE 架构的标准做法，并被 Qwen 团队明确引用为设计灵感来源。</li>
+</ul>
+<hr>
+<h3 id="DeepSeek-V2-A-Strong-Economical-and-Efficient-Mixture-of-Experts-Language-Model"><a href="#DeepSeek-V2-A-Strong-Economical-and-Efficient-Mixture-of-Experts-Language-Model" class="headerlink" title="DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model"></a>DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.04434">2405.04434</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 5 月（2024 年 6 月修订）</li>
+<li><strong>作者</strong>: DeepSeek-AI（Zhihong Shao, Damai Dai 等）</li>
+<li><strong>简介</strong>: 引入 Multi-head Latent Attention (MLA)，通过低秩联合压缩将 KV cache 压缩 93.3%，实现了 236B 参数的 MoE 模型，每个 token 仅激活 21B 参数。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Multi-head Latent Attention (MLA)</strong>: 将 keys 和 values 联合压缩到低秩 latent 空间中，再将其投影回来用于 attention 计算——相比标准 Multi-Head Attention 实现 93.3% 的 KV cache 缩减，且无损质量</li>
+<li>Decoupled Rotary Position Embedding (RoPE) 策略将位置信息与压缩表示分离，以保持质量</li>
+<li>将 MLA 与 DeepSeekMoE 架构（细粒度专家 + 共享专家）结合，实现双重效率提升</li>
+<li>相比 DeepSeek 67B（dense），训练成本节省 42.5%，最大生成吞吐量提升 5.76 倍</li>
+<li>通过 YaRN 扩展支持 128K 上下文窗口，并使用 Group Relative Policy Optimization (GRPO) 进行对齐</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MLA 可以说是该领域最重要的 KV cache 压缩技术。与 Multi-Query Attention (MQA) 或 Grouped-Query Attention (GQA) 以质量换内存不同，MLA 在实现大幅压缩的同时超越了标准 MHA。该模型以极低的成本展现了 GPT-4 级别的性能，MLA 已被 DeepSeek-V3 采用，并正被研究用于集成到其他架构中。</li>
+</ul>
+<hr>
+<h3 id="DeepSeek-V3-Technical-Report"><a href="#DeepSeek-V3-Technical-Report" class="headerlink" title="DeepSeek-V3 Technical Report"></a>DeepSeek-V3 Technical Report</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2412.19437">2412.19437</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 12 月（2025 年 2 月修订）</li>
+<li><strong>作者</strong>: DeepSeek-AI（200+ 贡献者）</li>
+<li><strong>简介</strong>: 规模最大、效率最高的开源 MoE 模型（671B 总参数量 / 37B 激活参数），训练成本仅约 560 万美元，证明了前沿级 LLM 可以用远低于同类闭源模型的成本构建。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>FP8 混合精度训练</strong>: 首次在 671B 规模上成功验证 FP8 训练，大幅降低 GPU 内存占用并加速训练</li>
+<li><strong>无辅助损失负载均衡（Auxiliary-Loss-Free Load Balancing）</strong>: 在专家路由上使用动态 bias 调整，而非辅助负载均衡损失函数，避免了辅助损失通常带来的性能损失</li>
+<li><strong>Multi-Token Prediction (MTP)</strong>: 每个训练步预测多个未来 token，改善学习到的表示，并在推理时支持 speculative decoding</li>
+<li><strong>DualPipe 流水线并行</strong>: 新颖的计算-通信重叠算法用于流水线并行，减少流水线气泡并提升吞吐量</li>
+<li>在 14.8T token 上训练，零次不可恢复的 loss spike，性能可媲美 GPT-4o 和 Claude 3.5 Sonnet</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DeepSeek-V3 打破了”前沿模型需要巨额资本”的叙事。训练成本仅约 560 万美元（而 GPT-4 估计超过 1 亿美元），证明了架构创新与系统工程相结合可以将成本降低一个数量级。无辅助损失负载均衡和 FP8 训练技术正被业界广泛采用。</li>
+</ul>
+<hr>
+<h3 id="Switch-Transformers-Scaling-to-Trillion-Parameter-Models-with-Simple-and-Efficient-Sparsity"><a href="#Switch-Transformers-Scaling-to-Trillion-Parameter-Models-with-Simple-and-Efficient-Sparsity" class="headerlink" title="Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity"></a>Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.03961">2101.03961</a></li>
+<li><strong>发表</strong>: Journal of Machine Learning Research (JMLR)，第 23 卷，2022 年</li>
+<li><strong>作者</strong>: William Fedus, Barret Zoph, Noam Shazeer，Google</li>
+<li><strong>TL;DR</strong>: MoE 的奠基性工作，将专家路由简化为每个 token 选择一个专家（top-1 而非 top-2），实现了万亿参数模型训练和 4-7 倍的预训练加速。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>简化的单专家路由</strong>: 每个 token 仅路由到恰好 1 个专家（而非 top-2），减少通信和计算开销，同时使路由问题更简单、更稳定</li>
+<li><strong>负载均衡损失（Load Balancing Loss）</strong>: 引入辅助损失项以鼓励专家利用率的均匀分布，防止大多数 token 流向少数专家的路由崩溃</li>
+<li><strong>容量因子（Capacity Factor）</strong>: 限制每个专家可处理的 token 数量，超出部分通过残差连接传递——在均衡负载的同时避免 NaN 训练失败</li>
+<li>在 C4 上演示了万亿参数级别的预训练，相比等规模的 dense T5 模型实现 4-7 倍加速</li>
+<li>通过扩展专家数量而非模型深度，在多语言环境（101 种语言）中取得巨大提升</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 这篇论文证明了 MoE 可以扩展到极端规模同时保持可训练性和稳定性。虽然它早于 2023-2026 的核心关注时期，但其技术（负载均衡损失、容量因子）是每一个现代 MoE 模型的基础。DeepSeek 的”无辅助损失”均衡方案正是对 Switch Transformer 辅助损失方法局限性的直接回应。</li>
+</ul>
+<hr>
+<h3 id="Qwen2-5-Qwen3-MoE-Unified-Dense-and-Mixture-of-Experts-Large-Language-Models"><a href="#Qwen2-5-Qwen3-MoE-Unified-Dense-and-Mixture-of-Experts-Large-Language-Models" class="headerlink" title="Qwen2.5 / Qwen3 MoE: Unified Dense and Mixture-of-Experts Large Language Models"></a>Qwen2.5 / Qwen3 MoE: Unified Dense and Mixture-of-Experts Large Language Models</h3><ul>
+<li><strong>arXiv (Qwen2.5)</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2412.15115">2412.15115</a>; <strong>arXiv (Qwen3)</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2505.09388">2505.09388</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 12 月（Qwen2.5）/ 2025 年 5 月（Qwen3）</li>
+<li><strong>作者</strong>: An Yang, Baosong Yang, Beichen Zhang 等，Qwen 团队，阿里巴巴集团</li>
+<li><strong>简介</strong>: 最新一代开源 MoE 模型，结合细粒度专家、共享专家和全局批次负载均衡，提供生产级的效率以及最先进的多模态和推理能力。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>细粒度专家分割 + 共享专家</strong>: 扩展 DeepSeekMoE 设计模式，每层 64+ 个专家并设有专门的共享专家，实现强专业化</li>
+<li><strong>全局批次负载均衡损失（Global-Batch Load Balancing Loss，Qwen3）</strong>: 如 ACL 2025 论文 “Demons in the Detail” 所述，使用全局批次统计而非微批次进行负载均衡，在不带来逐微批次辅助损失的性能代价的情况下，显著提升专家专业化程度</li>
+<li><strong>统一思考/非思考框架（Unified Thinking/Non-Thinking Framework，Qwen3）</strong>: 单个 MoE 模型同时支持快速响应（非思考模式）和深度 chain-of-thought 推理（思考模式），用户可切换，并配有思考预算机制来控制计算量</li>
+<li><strong>Qwen3-Next</strong>: 计划推出超稀疏 MoE，配备 512 个路由专家，仅激活约 3.7% 的参数——推动极端稀疏性边界</li>
+<li>在 36T token 上预训练（Qwen3，为 Qwen2.5 的 2 倍），覆盖 119 种语言，采用 4 阶段后训练流程，包括基于 GRPO 的推理强化学习</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Qwen3 是截至 2025 年年中开源 MoE 领域的最先进模型。全局批次负载均衡技术（在 ACL 2025 上获得验证）解决了 MoE 训练中的一个关键实践问题，而统一思考/非思考框架证明了 MoE 效率与高级推理是互补而非竞争目标。Qwen3-235B-A22B 模型是 DeepSeek-V3 的直接竞争对手，代表了 MoE 向生产级架构的成熟演进。</li>
+</ul>
+<hr>
+<h2 id="其他值得关注"><a href="#其他值得关注" class="headerlink" title="其他值得关注"></a>其他值得关注</h2><h3 id="MegaBlocks-Efficient-Sparse-Training-with-Mixture-of-Experts"><a href="#MegaBlocks-Efficient-Sparse-Training-with-Mixture-of-Experts" class="headerlink" title="MegaBlocks: Efficient Sparse Training with Mixture-of-Experts"></a>MegaBlocks: Efficient Sparse Training with Mixture-of-Experts</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2211.15841">2211.15841</a></li>
+<li><strong>发表</strong>: Proceedings of Machine Learning and Systems (MLSys)，第 5 卷，2023 年</li>
+<li><strong>作者</strong>: Trevor Gale, Deepak Narayanan, Cliff Young, Matei Zaharia，Stanford / Microsoft Research / Google</li>
+<li><strong>简介</strong>: 将 MoE 计算重新表述为 block-sparse 运算，消除了 token 丢弃与零填充之间的权衡，训练速度比 Microsoft Tutel 快 40%，比 dense Transformer 快 2.4 倍。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Block-Sparse MoE 计算</strong>: MegaBlocks 使用分块稀疏矩阵乘法来处理自然不均衡的专家分配，而非为负载均衡批次进行填充或丢弃 token</li>
+<li>基于 NVIDIA CUTLASS 构建 Sparse Toolkit (stk)，在 A100 GPU 上实现用于 block-sparse 操作的 Variable-Sized Batched GEMM</li>
+<li>完全消除了 capacity_factor 超参数，简化了 MoE 训练流程</li>
+<li>集成 Megatron-LM，支持包含数据并行、专家并行和流水线并行的生产级训练</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MegaBlocks 是许多高效 MoE 实现背后的赋能性系统层技术。Mixtral 8x7B 明确将 MegaBlocks 列为其高效训练的致谢对象。block-sparse 方法代表了一项重要的系统贡献，与前述论文中的架构创新相辅相成。</li>
+</ul>
+<hr>
+<h2 id="时间线"><a href="#时间线" class="headerlink" title="时间线"></a>时间线</h2><figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">2021 </span>── Switch Transformers（奠基性工作）<br><span class="hljs-symbol">2023 </span>── MegaBlocks（MLSys）<br><span class="hljs-number">2024.01</span> ─ Mixtral <span class="hljs-number">8</span>x7B, DeepSeekMoE<br><span class="hljs-number">2024.05</span> ─ DeepSeek-V2（MLA）<br><span class="hljs-number">2024.12</span> ─ DeepSeek-V3, Qwen2.<span class="hljs-number">5</span><br><span class="hljs-number">2025.05</span> ─ Qwen3 MoE<br></code></pre></td></tr></table></figure>
+
+<h3 id="Expert-Choice-Routing-Rethinking-Mixture-of-Experts-Routing"><a href="#Expert-Choice-Routing-Rethinking-Mixture-of-Experts-Routing" class="headerlink" title="Expert Choice Routing: Rethinking Mixture-of-Experts Routing"></a>Expert Choice Routing: Rethinking Mixture-of-Experts Routing</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.06865">2402.06865</a></li>
+<li><strong>发表</strong>: ICML 2024</li>
+<li><strong>作者</strong>: Yanqi Zhou, Nan Du, Yanping Huang, Zhifeng Chen, Claire Cui (Google DeepMind / Google Research)</li>
+<li><strong>简介</strong>: 翻转传统的 MoE 路由范式——让专家选择 token（而非 token 选择专家）——从根本上解决了负载均衡和 token 丢弃问题，无需辅助损失或容量限制。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>专家选择路由（Expert Choice Routing）：每个专家从候选池中选择其最匹配的 top-k 个 token（而非每个 token 选择 top-k 个专家）。这确保了每个专家恰好处理相同数量的 token，天然实现完美负载均衡——无需辅助损失或容量因子</li>
+<li>全局匹配优化：所有专家的选择被联合优化，确保每个 token 被至少一个专家选中、未被选中的 token 通过残差连接传递</li>
+<li>路由可微分化：使用 Sinkhorn 算法（最优传输的 Sinkhorn 迭代）将离散的 token-专家分配松弛为连续分配，使路由过程可通过梯度优化</li>
+<li>推理效率优势：在推理时，专家选择路由避免了 token 丢弃（传统 top-k 路由当专家过载时必须丢弃 token），实现了确定性的延迟和更高的 GPU 利用率</li>
+<li>在 GLaM 和 PaLM 规模上验证，相比 top-k 路由实现了 5-10% 的质量提升（因消除辅助损失）和更稳定的训练</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 专家选择路由是 MoE 路由范式的一次根本性翻转。其核心洞察——“让专家选择 token”比”让 token 选择专家”更高效——解决了自 Switch Transformer 以来困扰 MoE 的两个核心问题：负载均衡和 token 丢弃。该方法已被后续的 MoE 架构（如 Qwen2.5-MoE 的部分设计）借鉴，代表了 MoE 路由从”辅助损失驱动的近似”到”结构化的精确分配”的进步。</li>
+</ul>
+<hr>
+<h3 id="QMoE-Practical-Sub-1-Bit-Compression-of-Trillion-Parameter-Models"><a href="#QMoE-Practical-Sub-1-Bit-Compression-of-Trillion-Parameter-Models" class="headerlink" title="QMoE: Practical Sub-1-Bit Compression of Trillion-Parameter Models"></a>QMoE: Practical Sub-1-Bit Compression of Trillion-Parameter Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.16795">2310.16795</a></li>
+<li><strong>发表</strong>: MLSys 2024</li>
+<li><strong>作者</strong>: Elias Frantar, Dan Alistarh (IST Austria / Neural Magic)</li>
+<li><strong>简介</strong>: 针对 MoE 模型设计了特别的量化方案——利用专家矩阵之间的高冗余性，将万亿参数的 Switch Transformer 压缩至不到 1 bit/参数（实际为 0.5-0.8 bit），使 1.6T 参数的模型可在单 GPU 上推理。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>专家间共享编码：发现不同专家的权重矩阵高度相似，QMoE 首先将每个专家的权重分解为”共享分量”（所有专家共享的低秩基）和”专家特定残差”，共享分量以更高精度（FP16）存储，残差以极低精度（2-3 bit）存储</li>
+<li>自适应标量量化：对残差分量使用非均匀量化（类似于 KVQuant 的 NUQ），量化字典从专家集合的联合分布中学习</li>
+<li>流水线化推理执行：设计了一个专门的处理流水线，在 GPU 上执行共享分量的计算的同时，从 CPU 内存流式加载专家特定的残差权重——在单 GPU 上实现 1.6T 参数模型的推理</li>
+<li>内存分层：最频繁访问的专家权重（top-N 热专家）常驻 GPU 内存，其他专家按需从 CPU 内存加载</li>
+<li>将 Switch Transformer-c2048（1.6T 参数）从需要 3.2 TB GPU 内存压缩到约 160 GB，可在 2 张 A100 80GB（甚至 1 张 H100）上运行</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: QMoE 将 MoE 的极致压缩推向了新的极限——证明了万亿参数模型可以在消费级硬件上运行。其关键洞察是”专家之间的冗余性”——MoE 模型的多个专家共享大量信息，可以通过共享基+残差的方式高效压缩。这为 MoE 模型的”大容量、小推理开销”提供了理论依据和实践方案。</li>
+</ul>
+<hr>
+<h3 id="Expert-Parallelism-Demystifying-MoE-Inference-Performance"><a href="#Expert-Parallelism-Demystifying-MoE-Inference-Performance" class="headerlink" title="Expert Parallelism: Demystifying MoE Inference Performance"></a>Expert Parallelism: Demystifying MoE Inference Performance</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2410.10448">2410.10448</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 10 月</li>
+<li><strong>作者</strong>: Ziheng Qin, Kai Zhong, Weilin Zhao, Danyang Zhuo, Zhigang Wang (字节跳动 / 清华大学)</li>
+<li><strong>简介</strong>: 对 MoE 推理中各种并行策略（张量并行、专家并行、流水线并行）进行了全面的系统分析，提出了”混合专家-张量并行”的最优配置策略，避免了专家并行中常见的 all-to-all 通信瓶颈。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>专家并行的通信瓶颈量化：通过详细的通信模型分析，识别出专家并行中的 all-to-all 通信是 MoE 推理的主要瓶颈（尤其在 batch size 小的时候）。提供了不同 batch size/专家数量/GPU 数量组合下的最优并行策略选择器</li>
+<li>混合并行策略：在小 batch size 时使用张量并行（TP）代替专家并行（EP），因为 TP 的通信量在小 batch 下更小；在大 batch size 时切换为 EP+TP 混合</li>
+<li>专家放置优化：将频繁共激活的专家放置在同一 GPU 上，减少跨 GPU 的 token 传输——通过分析路由统计来优化专家-设备映射</li>
+<li>通信-计算重叠：在 all-to-all 通信期间执行不依赖通信结果的计算（如 LayerNorm、残差连接），隐藏部分通信延迟</li>
+<li>在 Mixtral-8x7B 和 DeepSeek-V2 上的实验表明，最优并行配置可使推理吞吐量提升 20-50%</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 该论文填补了 MoE 推理系统文献中的一个关键空白——大多数 MoE 论文关注架构设计，很少有人系统分析 MoE 推理中并行策略的选择。其”混合并行”策略指南对 MoE 模型的部署工程师具有直接的实用价值。all-to-all 通信瓶颈的量化分析已被 DeepSeek-V3 的 DualPipe 等技术间接验证。</li>
+</ul>
+<hr>
+<h3 id="JetMoE-Reaching-Llama2-Performance-with-0-1M-Budget"><a href="#JetMoE-Reaching-Llama2-Performance-with-0-1M-Budget" class="headerlink" title="JetMoE: Reaching Llama2 Performance with 0.1M Budget"></a>JetMoE: Reaching Llama2 Performance with 0.1M Budget</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.07413">2404.07413</a></li>
+<li><strong>发表</strong>: ICML 2024 (Oral)</li>
+<li><strong>作者</strong>: Yikang Shen, Zhen Guo, Tianle Cai, Zengyi Qin (MIT / Princeton / MBZUAI / 香港大学)</li>
+<li><strong>简介</strong>: 证明了 MoE 架构可以在极低预算（约 10 万美元）下训练出性能匹敌 LLaMA-2 的模型——8B 激活参数、128B 总参数——通过稀疏激活 MoE 和精心设计的训练策略，实现了”草根大模型”的可行性。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>极低预算 MoE 训练：使用仅约 1.25T token 的训练数据（LLaMA-2-7B 使用约 2T token），在约 10 万美元的云计算预算下训练出匹敌 LLaMA-2-7B/13B 的模型</li>
+<li>稀疏激活架构：128 个专家，每个 token 仅激活 2 个（8B 激活参数），通过专家 dropout 正则化避免过拟合和路由崩塌</li>
+<li>两阶段训练：第一阶段学习通用的 token-专家路由，第二阶段进行全面的语言模型训练——路由和模型权重在第二阶段联合优化</li>
+<li>公共数据和开源训练：完全使用公开可用的数据集（The Pile、RefinedWeb 等），训练代码和模型权重均开源</li>
+<li>在 MMLU、HellaSwag、ARC 等基准测试上匹敌或超越 LLaMA-2-7B 和 LLaMA-2-13B</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: JetMoE 的重要贡献在于”民主化”——它证明了 MoE 不是大公司的专利。在极低预算下训练出有竞争力的 MoE 模型，打破了”只有巨头才能训练大模型”的叙事。其专家 dropout 正则化策略是训练大型 MoE 的实用技巧，已被多个开源 MoE 项目采用。</li>
+</ul>
+<hr>
+<h3 id="MC-MoE-Mixture-of-Experts-with-Mixture-of-Compression"><a href="#MC-MoE-Mixture-of-Experts-with-Mixture-of-Compression" class="headerlink" title="MC-MoE: Mixture-of-Experts with Mixture-of-Compression"></a>MC-MoE: Mixture-of-Experts with Mixture-of-Compression</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.09196">2406.09196</a></li>
+<li><strong>发表</strong>: NeurIPS 2024</li>
+<li><strong>作者</strong>: Yifan Peng, Sehoon Kim, Bhavya Kailkhura, Tianlong Chen, Zhangyang Wang, Amir Gholami (UT Austin / UC Berkeley / LLNL / CMU)</li>
+<li><strong>简介</strong>: 为每个 MoE 专家定制不同的量化精度——热门专家使用高精度（FP16）、冷门专家使用低精度（INT4）——实现全局质量几乎无损失下的 3-4 倍内存节省。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>专家级混合精度量化：利用 MoE 模型中专家使用的不均衡性——一些”热”专家处理大量 token（需要高精度），”冷”专家处理少量 token（精度可降低）。为每个专家独立选择最优的量化精度</li>
+<li>基于路由频率的精度分配：精度分配与专家的路由频率直接关联——高频专家保持高精度（FP16 或 INT8），低频专家降至 INT4 甚至 INT2</li>
+<li>敏感度感知的精度选择：除了路由频率，还考虑专家对量化的敏感度——某些专家虽然在量化前很少被使用，但其量化后的质量退化可能会影响路由决策。使用 Fisher 信息矩阵来量化每个专家的敏感度</li>
+<li>与 MoE 路由协同优化：量化专家后，路由权重可能需要微调以适应当前被激活专家的精度变化——MC-MoE 在路由和量化之间进行联合微调</li>
+<li>在 Mixtral-8x7B 上以平均约 2.3 bit/参数的精度实现与原始模型相当的性能</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MC-MoE 将”混合精度”的思想从层级别（不同层使用不同精度）推进到专家级别（不同专家使用不同精度）。其核心洞察是 MoE 天然的不均衡使用模式为异构精度分配提供了理想的基础——热专家保持高质量、冷专家深度压缩。这为 MoE 模型的极致内存优化开辟了新路径。</li>
+</ul>
+<hr>
+<h3 id="MoE-Offloading-Elastic-Expert-Management-for-Memory-Efficient-Inference"><a href="#MoE-Offloading-Elastic-Expert-Management-for-Memory-Efficient-Inference" class="headerlink" title="MoE Offloading: Elastic Expert Management for Memory-Efficient Inference"></a>MoE Offloading: Elastic Expert Management for Memory-Efficient Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2410.11502">2410.11502</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 10 月</li>
+<li><strong>作者</strong>: Zhentao Tan, Yifan Yang, Tianlong Chen, Zhangyang Wang (UT Austin / MIT / CMU / Zhipu AI)</li>
+<li><strong>简介</strong>: 提出了专家弹性卸载策略——只有当前步骤需要使用的专家才被加载到 GPU 内存中，其余专家保留在 CPU 内存或 SSD 上——使 MoE 模型的 GPU 内存占用接近密集模型（而非全量 MoE 模型）的水平。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>预测性专家预取：基于前几个 token 的路由模式预测下一个 token 可能激活的专家，提前从 CPU/SSD 加载到 GPU，隐藏数据搬运延迟。使用轻量级的马尔可夫预测模型</li>
+<li>专家缓存策略：在 GPU 内存中维护一个专家缓存（LRU 或 LFU 驱逐策略），类似于 CPU 缓存——最近或最频繁使用的专家常驻 GPU</li>
+<li>分层存储：专家权重分布在 GPU HBM（热专家）、CPU DRAM（温专家）和 NVMe SSD（冷专家）三层存储中，形成一个完整的存储层次</li>
+<li>异步数据搬运：使用 CUDA stream 异步加载和卸载专家权重，与 GPU 计算重叠</li>
+<li>在 Qwen2-MoE 和 Mixtral 上，将 GPU 内存占用减少 60-80%，吞吐量损失仅约 10-20%</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MoE Offloading 解决了 MoE 推理的核心矛盾——参数很多但每次只用一小部分，却需要将全部参数加载到 GPU 内存。通过预测性预取和分层缓存，MoE 的推理内存需求可以接近其激活参数的内存需求（而非总参数）。这对于在消费级硬件上运行大 MoE 模型（如 DeepSeek-V3 671B）至关重要。</li>
+</ul>
+<hr>
+<p><strong>推理加速专题导航</strong>：<a href="/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-06-%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F/">← 上一篇：推理服务系统</a> | <a href="/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-08-%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/">下一篇：替代架构（SSM/Mamba/RWKV）→</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-LLM%E6%8E%A8%E7%90%86-%E6%8E%A8%E7%90%86%E4%BC%98%E5%8C%96-MoE/" class="print-no-link">#推理加速,LLM推理,推理优化,MoE</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>推理加速-07：Mixture of Experts 推理</div>
+      <div>https://w2ongq6.github.io/2026/07/24/推理加速-07-MoE推理/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-08-%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" title="推理加速-08：替代架构（SSM/Mamba/RWKV）">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">推理加速-08：替代架构（SSM/Mamba/RWKV）</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-06-%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F/" title="推理加速-06：推理服务系统">
+                        <span class="hidden-mobile">推理加速-06：推理服务系统</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

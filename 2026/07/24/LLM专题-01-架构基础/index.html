@@ -27,7 +27,7 @@
 <meta property="og:description" content="架构基础 (Architecture Foundations) 1. 注意力机制的革命Attention Is All You Need arXiv: 1706.03762 发表: NeurIPS 2017 作者: Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Luk">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T02:01:00.000Z">
-<meta property="article:modified_time" content="2026-07-24T15:18:34.163Z">
+<meta property="article:modified_time" content="2026-07-24T15:58:11.207Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="LLM,LLM专题,架构,Transformer,BERT,GPT">
 <meta name="twitter:card" content="summary_large_image">
@@ -442,7 +442,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          7.8k 字
+          15k 字
         
       </span>
     
@@ -453,7 +453,7 @@ mjx-container[display="true"] + br {
         
         
         
-          66 分钟
+          123 分钟
         
       </span>
     
@@ -608,6 +608,90 @@ mjx-container[display="true"] + br {
 </ul>
 </li>
 <li><strong>代表意义</strong>: Mamba 是多年以来对 Transformer 架构最具实质性的挑战。虽然线性注意力、状态空间模型（S4 系列）、RWKV、RetNet 等都曾试图超越 Transformer，但 Mamba 是第一个在语言建模（3B 参数）、音频、基因组学等多个模态上真正匹敌甚至超越同等规模 Transformer 的非注意力架构。它的线性推理能力使超长上下文处理（百万级 token）首次在单 GPU 上变得经济可行。Mamba 的后续变体（Mamba-2、Jamba、Falcon Mamba 等）正在快速迭代，如果这一方向的 scaling 特性在新代际 GPU 上持续成立，它有可能成为下一代基础模型的标准架构选择。</li>
+</ul>
+<hr>
+<h2 id="9-注意力机制的效率革命：MLA"><a href="#9-注意力机制的效率革命：MLA" class="headerlink" title="9. 注意力机制的效率革命：MLA"></a>9. 注意力机制的效率革命：MLA</h2><h3 id="DeepSeek-V2-A-Strong-Economical-and-Efficient-Mixture-of-Experts-Language-Model"><a href="#DeepSeek-V2-A-Strong-Economical-and-Efficient-Mixture-of-Experts-Language-Model" class="headerlink" title="DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model"></a>DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.04434">2405.04434</a></li>
+<li><strong>发表</strong>: 2024 年 5 月，DeepSeek-AI</li>
+<li><strong>作者</strong>: DeepSeek-AI</li>
+<li><strong>简介</strong>: 提出多头潜在注意力（Multi-head Latent Attention, MLA），将 KV Cache 压缩至标准多头注意力的约 7%，在保持模型质量的前提下大幅降低推理显存开销，成为后续 DeepSeek-V3 和 R1 的核心架构组件。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>多头潜在注意力（MLA）的核心数学设计</strong>：传统多头注意力为每个注意力头独立存储键（K）和值（V），导致 KV Cache 随序列长度和头数线性膨胀。MLA 的核心洞见是将键和值投影到一个远小于原始维度的”潜在空间”——通过学习一个低秩的降维矩阵，将每个 token 的 KV 表示压缩为一个紧凑的潜在向量，在推理时通过升维矩阵恢复到全尺寸进行注意力计算。对于 128 个头、每个头 128 维的典型配置，KV Cache 从每 token 约 32KB 压缩到约 2KB，减少约 93%。</li>
+<li><strong>解耦 RoPE 策略解决位置编码难题</strong>：Rotary Position Embedding（RoPE）通过旋转变换将位置信息注入查询和键矩阵，但这与低秩压缩存在根本性矛盾——RoPE 要求键保持原始维度以进行旋转变换，而低秩压缩恰恰要降低维度。MLA 的解决方案是将键分为两部分：”内容键”通过低秩压缩存储（不施加 RoPE），”位置键”保持原始维度并施加 RoPE，两者拼接后用于注意力计算。这一精巧设计同时实现了压缩效率与位置感知。</li>
+<li><strong>与 DeepSeekMoE 架构的深度协同</strong>：MLA 并非孤立的技术改进，而是与 DeepSeekMoE（细粒度专家路由、共享专家隔离）深度耦合设计。MoE 架构使模型拥有巨大容量但激活参数少，MLA 则使推理所需缓存的参数更少，两者叠加产生了乘法效应——DeepSeek-V2 拥有 236B 总参数但仅激活 21B，KV Cache 仅为同级模型的 1/15 左右。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MLA 是自 FlashAttention 以来注意力机制工程化最重要的突破。它不仅被 DeepSeek 自己的 V3 和 R1 采用，其思想——通过低秩压缩缓解 KV Cache 瓶颈——也直接影响了后续多个模型架构。在长上下文推理日益重要的今天（10K、128K 甚至 1M token 窗口），KV Cache 已成为 LLM 部署的核心成本瓶颈，MLA 的低秩压缩范式为此提供了优雅且可规模化的解决方案。2024 年下半年，MLA 已被多篇独立研究引用并尝试复现和改进，成为注意力机制效率研究的核心方向之一。</li>
+</ul>
+<hr>
+<h2 id="10-状态空间模型与-Transformer-的混合架构"><a href="#10-状态空间模型与-Transformer-的混合架构" class="headerlink" title="10. 状态空间模型与 Transformer 的混合架构"></a>10. 状态空间模型与 Transformer 的混合架构</h2><h3 id="Jamba-A-Hybrid-Transformer-Mamba-Language-Model"><a href="#Jamba-A-Hybrid-Transformer-Mamba-Language-Model" class="headerlink" title="Jamba: A Hybrid Transformer-Mamba Language Model"></a>Jamba: A Hybrid Transformer-Mamba Language Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.19887">2403.19887</a></li>
+<li><strong>发表</strong>: 2024 年 3 月，AI21 Labs</li>
+<li><strong>作者</strong>: Opher Lieber, Barak Lenz, Hofit Bata 等，AI21 Labs</li>
+<li><strong>简介</strong>: 首次将 Mamba 状态空间层与 Transformer 注意力层交替堆叠，构建了 Jamba 混合架构——在长序列推理上达到 Mamba 级的效率，同时保留 Transformer 的上下文理解能力，单 GPU 可处理 256K token 上下文。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>交替层叠的混合架构设计</strong>：Jamba 的基础模块（Jamba Block）由 Mamba 状态空间层和 Transformer 注意力层按 1:7 的比例交替组成——每 8 层中，7 层使用 Mamba 进行高效序列建模，1 层使用 Transformer 多头注意力进行全局信息聚合。这种设计利用了两种架构的互补优势：Mamba 的线性复杂度使其擅长处理长程序列，但缺乏全局内容感知；Transformer 的 O(n²) 复杂度限制了长序列使用，但注意力机制天然适合全局上下文建模。</li>
+<li><strong>Mixture-of-Experts 与混合序列层的协同</strong>：Jamba 在 Mamba 层中使用 MoE 前馈网络（16 个专家，每 token 激活 top-2），在 Transformer 层使用密集前馈网络。这种混合使模型在 52B 总参数下仅激活约 12B 参数，兼得 MoE 的大容量和混合序列层的灵活性。推理时 Mamba 层的线性计算和 MoE 的稀疏激活共同作用，使吞吐量达到同等大小密集 Transformer 的 3 倍。</li>
+<li><strong>单 GPU 256K 长上下文</strong>：得益于 Mamba 层的线性复杂度和仅 1/8 层的注意力，Jamba 在单块 80GB A100 GPU 上可处理 256K token 上下文——这是同等规模的纯 Transformer 模型（如 LLaMA 2 70B）无法做到的（后者在 128K 上下文时即超出显存）。在 Long Range Arena 长程依赖基准和 Needle-in-a-Haystack 检索测试上，Jamba 均达到或超过纯 Transformer 基线。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Jamba 是”混合架构”路线中最具里程碑意义的工作。它证明了一个核心命题——不需要在 Transformer 和 Mamba 之间二选一，两者可以互补共生。在 Transformer 的选择性注意力能力与 Mamba 的线性长序列效率之间，Jamba 找到了一条高性价比的工程路径。它的设计理念直接影响了后续 Falcon Mamba、Zamba 等混合架构模型，为「后 Transformer」时代的架构探索提供了重要的参考范式。AI21 Labs 将完整模型以 Apache 2.0 协议开源，进一步加速了这一方向的社区研究。</li>
+</ul>
+<hr>
+<h2 id="11-循环神经网络在-LLM-时代的回归"><a href="#11-循环神经网络在-LLM-时代的回归" class="headerlink" title="11. 循环神经网络在 LLM 时代的回归"></a>11. 循环神经网络在 LLM 时代的回归</h2><h3 id="xLSTM-Extended-Long-Short-Term-Memory"><a href="#xLSTM-Extended-Long-Short-Term-Memory" class="headerlink" title="xLSTM: Extended Long Short-Term Memory"></a>xLSTM: Extended Long Short-Term Memory</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.04517">2405.04517</a></li>
+<li><strong>发表</strong>: 2024 年 5 月（NeurIPS 2024 接收），NNAISENSE / JKU Linz</li>
+<li><strong>作者</strong>: Maximilian Beck, Korbinian Pöppel, Markus Spanring 等，Johannes Kepler University Linz / NNAISENSE</li>
+<li><strong>简介</strong>: 对经典 LSTM 架构进行两项关键改造——指数门控和矩阵存储——使其在语言建模和长序列任务上达到与 Transformer 和 Mamba 相当甚至更优的性能，证明 RNN 家族在 LLM 时代仍有生命力。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>指数门控（Exponential Gating）</strong>：传统 LSTM 使用 sigmoid 门控来调节信息流，门控值在 (0,1) 区间。xLSTM 的关键洞察是引入指数函数（exp）作为门控激活函数，使门控值可以大于 1 或非常接近 0。这带来两个根本性改进：一是允许模型更激进地”保留”或”遗忘”信息，解决了传统 LSTM 长序列梯度消失的固有问题；二是指数门控在数学上赋予了模型在状态空间中实现类似于自注意力的内容感知选择能力。</li>
+<li><strong>矩阵存储单元（Matrix Memory）</strong>：传统 LSTM 的存储单元是向量形式，每个时间步将所有信息压缩为一个固定维度的向量。xLSTM 将存储单元升级为矩阵形式（mLSTM 变体），使用外积更新规则——每个 token 的键向量与值向量求外积后添加到存储矩阵中，检索时通过查询向量与存储矩阵的乘积读取。这在数学上完全等价的协方差形式的线性注意力，赋予了 xLSTM 与 Transformer 同等的并行训练能力和相似的表征能力。</li>
+<li><strong>双变体互补架构（sLSTM + mLSTM）</strong>：sLSTM（标量记忆）保留传统 LSTM 的时序逻辑但引入指数门控，适合需要精确记忆少量信息的任务；mLSTM（矩阵记忆）用全并行矩阵运算替代时序依赖，适合大规模文本建模。xLSTM 块将两者交替堆叠，获得了互补的优势。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: xLSTM 是对”LSTM 已死”这一流行观点最有力的反驳。它证明了 1997 年提出的 LSTM 架构经过适当的现代化改造——指数门控解决梯度问题、矩阵记忆实现并行训练——可以在 2024 年的语言建模基准上与最新 Transformer 和 Mamba 架构同台竞技。xLSTM 作者团队在 125M 到 1.3B 参数规模上验证了缩放趋势，结果显示 xLSTM 的性能随着规模增长至少与 Transformer 同样稳定。虽然目前还没有超大规模（&gt;7B）xLSTM 的验证报告，但其理论基础和在中等规模上的实证表现使其成为”下一个基础架构”的有力候选者之一。</li>
+</ul>
+<hr>
+<h2 id="12-1-bit-权重大规模架构"><a href="#12-1-bit-权重大规模架构" class="headerlink" title="12. 1-bit 权重大规模架构"></a>12. 1-bit 权重大规模架构</h2><h3 id="The-Era-of-1-bit-LLMs-All-Large-Language-Models-are-in-1-58-Bits-BitNet-b1-58"><a href="#The-Era-of-1-bit-LLMs-All-Large-Language-Models-are-in-1-58-Bits-BitNet-b1-58" class="headerlink" title="The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits (BitNet b1.58)"></a>The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits (BitNet b1.58)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.17764">2402.17764</a></li>
+<li><strong>发表</strong>: 2024 年 2 月，Microsoft Research / 中国科学院大学</li>
+<li><strong>作者</strong>: Shuming Ma, Hongyu Wang, Lingxiao Ma 等，Microsoft Research</li>
+<li><strong>简介</strong>: 提出 BitNet b1.58，将 LLM 的每一个权重参数限制为三个值（-1, 0, +1），即 1.58 位，在保持与全精度模型同等性能的前提下将推理能耗降低至原来的 1/10 以下，定义了 1-bit LLM 规模化架构标准。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>三值权重（-1, 0, +1）的数学设计</strong>：每个权重参数被量化为三元值，用 1.58 bits 表示（log₂3 ≈ 1.58）。+1 和 -1 代表正向和负向连接，0 代表无连接（等价于稀疏性）。关键在于：三值权重之间的矩阵乘法可以完全转化为整数加法（+1 → 加、-1 → 减、0 → 跳过），彻底消除了乘法运算——而乘法是深度学习中最耗能的算术操作。这一设计使推理在 CPU 和专用硬件上均获得数量级的能效提升。</li>
+<li><strong>端到端从头训练的量化方案</strong>：不同于大多数量化方法（先训练全精度模型再压缩），BitNet b1.58 从随机初始化起就在三值约束下训练。这需要特殊的参数化——保持一个全精度”潜在权重”用于梯度累积和更新，但前向传播时将其绝对均值归一化后量化为 ±1/0。训练完成后只保留三值权重，模型大小仅为 BF16 模型的约 1/10。</li>
+<li><strong>规模化的实证证据</strong>：在 700M 到 3.9B 参数规模上进行系统实验，BitNet b1.58 在语言建模困惑度上全面匹配全精度 Transformer，在零样本常识推理任务上甚至轻微领先。更重要的是，随着模型扩大，BitNet b1.58 的性能优势（在能效指标上）持续放大，显示出良好的缩放特性。推理延迟减少 2.4-4.5 倍，内存消耗减少 3.3-8.2 倍，能耗减少 7-17 倍。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: BitNet b1.58 代表了 LLM 硬件效率的究极方向——当权重只需要三个值时，模型推理本质上变得接近于”查找表加整数加法”，这使得在普通 CPU、手机芯片甚至定制 ASIC 上高效运行 LLM 成为现实。虽然其训练仍然需要 GPU，但推理的极致轻量化使其特别适合端侧部署、边缘计算和大规模云推理（降低服务成本）。微软随后推出的 BitNet.cpp 推理框架进一步降低了 1-bit 模型的运行门槛。这一系列工作可能成为未来”本地 LLM”设备的标准引擎，彻底改变 LLM 的部署形态。</li>
+</ul>
+<hr>
+<h2 id="13-测试时训练的-Transformer-替代架构"><a href="#13-测试时训练的-Transformer-替代架构" class="headerlink" title="13. 测试时训练的 Transformer 替代架构"></a>13. 测试时训练的 Transformer 替代架构</h2><h3 id="Learning-to-Learn-at-Test-Time-RNNs-with-Expressive-Hidden-States"><a href="#Learning-to-Learn-at-Test-Time-RNNs-with-Expressive-Hidden-States" class="headerlink" title="Learning to (Learn at Test Time): RNNs with Expressive Hidden States"></a>Learning to (Learn at Test Time): RNNs with Expressive Hidden States</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.04620">2407.04620</a></li>
+<li><strong>发表</strong>: 2024 年 7 月（NeurIPS 2024 接收），Stanford University / UC San Diego / UC Berkeley</li>
+<li><strong>作者</strong>: Yu Sun, Xinhao Li, Koustubh Dalal 等，Stanford University</li>
+<li><strong>简介</strong>: 提出 TTT（Test-Time Training）层，将隐藏状态升级为可训练的机器学习模型（线性模型或小型 MLP），在前向传播中通过自监督学习对每个序列进行在线更新，使 RNN 的隐藏状态具有与 Transformer 自注意力同等的表达力，但保持线性复杂度。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>隐藏状态建模为可训练的神经网络</strong>：传统 RNN 的隐藏状态是一个固定维度的向量，由参数化的更新规则控制。TTT 层的核心思想是将隐藏状态替换为一个可以通过梯度下降训练的小型模型（如线性模型 W₂W₃），其”权重”即为隐藏状态。在处理序列时，每遇到一个新的 token，TTT 层以自监督任务（如从前一个 token 预测当前 token 的特征）为目标，对”隐藏模型”执行一步梯度更新，然后再用更新后的模型进行前向推理。这个循环使得隐藏状态不仅”记住”了信息，而且能主动”学习”序列的模式。</li>
+<li><strong>双视角等价性——RNN 与在线学习的统一</strong>：TTT 层在计算上是一个 RNN（隐藏状态随时间步更新），但在数学上等价于一个在线学习器（每步都在解决一个自监督优化问题）。这种统一赋予了它独特优势：RNN 的线性计算效率 + 通过梯度下降实现的强大序列建模能力。每个时间步开销为 O(d²)，与自注意力的 O(T²) 相比在与序列长度 T 相关的维度上是线性的。</li>
+<li><strong>TTT-Linear vs TTT-MLP</strong>：论文提出两种变体——TTT-Linear 的隐藏模型是一个线性层（权重矩阵 W），隐藏状态大小 O(d²)，计算极快；TTT-MLP 的隐藏模型是一个二层 MLP，隐藏状态更大（O(d²d_mlp)），表达力更强。实验在中等到大规模（125M 到 1.3B）上与 Transformer 和 Mamba 进行了对比，TTT 在长序列任务上展现出明显优势，短序列上与 Transformer 持平或略优。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: TTT 代表的是一种全新的序列建模哲学——“不要让模型仅在训练时学习，让模型在推理时也持续学习”。这一范式打破了”模型在部署后冻结”的惯例，赋予了模型在推理时根据上下文自适应调整的能力。TTT 与 Transformer 的注意力机制在表达力上是可比的（均可在 O(d²) 维度上表示任意依赖），但计算复杂度从 O(T²) 降至 O(Td²)，在极长序列场景下优势极大。TTT 可以视为连接 RNN、注意力机制和元学习的一条桥梁，为下一代序列模型架构提供了极具灵感的方向。</li>
+</ul>
+<hr>
+<h2 id="14-字节级语言模型的崛起"><a href="#14-字节级语言模型的崛起" class="headerlink" title="14. 字节级语言模型的崛起"></a>14. 字节级语言模型的崛起</h2><h3 id="Byte-Latent-Transformer-Patches-Scale-Better-Than-Tokens"><a href="#Byte-Latent-Transformer-Patches-Scale-Better-Than-Tokens" class="headerlink" title="Byte Latent Transformer: Patches Scale Better Than Tokens"></a>Byte Latent Transformer: Patches Scale Better Than Tokens</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2412.09871">2412.09871</a></li>
+<li><strong>发表</strong>: 2024 年 12 月，Meta AI</li>
+<li><strong>作者</strong>: Artidoro Pagnoni, Ram Pasunuru, Pedro Rodriguez 等，Meta AI / University of Washington</li>
+<li><strong>简介</strong>: 提出直接从原始字节编码文本而非固定词汇表 token 进行语言建模的新范式——Byte Latent Transformer（BLT），使用动态分块策略将字节序列编码为可变长度的”patch”，在同等计算预算下性能超越基于 tokenization 的最佳模型，且完全消除 tokenizer 带来的种种问题。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>熵驱动的动态分块（Entropy-Based Patching）</strong>：BLT 不再依赖固定的 tokenizer 将文本切分为离散 token，而是将字节序列输入到一个轻量级的”分块器”（patchers）中。分块器根据每个位置的信息熵动态决定边界——高熵区域（如新单词的中间）需要更小的块以保留精细信息，低熵区域（如常见词的后续部分）可以组成更大的块以节省计算。这使 BLT 能够对信息密度不同的文本片段分配不同的计算资源，类似于 Fovea 结构在视觉模型中的作用。</li>
+<li><strong>三组件架构（全局编码器 + 潜在 Transformer + 全局解码器）</strong>：字节序列首先通过全局编码器转为 patch 表示（基于熵动态分块），然后由核心的潜在 Transformer 在 patch 空间处理（这是模型的主体，结构与标准 Transformer 相同），最后通过全局解码器还原为字节级预测。潜在 Transformer 的操作空间（patch 数量）远小于原始字节数量，实现了高效计算。</li>
+<li><strong>消除 tokenizer 的全部缺点</strong>：BLT 彻底解决了传统 LLM 依赖固定 tokenizer 的六大痛点——（1）tokenizer 偏差（bias），训练语言偏向特定语言的切分方式；（2）对拼写错误和罕见词鲁棒性差；（3）多语言场景下词汇表膨胀；（4）代码和格式化文本处理效率低下；（5）tokenizer 本身成为”黑箱”难以改进；（6）无法灵活增大或减小”token”粒度。实验证明 BLT 对输入噪声、代码和混合语言文本的鲁棒性远超基于 tokenization 的模型。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Byte Latent Transformer 是语言模型预处理范式的一次”归零重启”。自 2015 年以来，几乎所有现代 NLP 模型都依赖某种形式的 tokenization（BPE、WordPiece、SentencePiece），这几乎成为不可动摇的基础设施。BLT 证明这并非必要——直接操作字节，配合智能的动态分块策略，不仅可行而且在效率和质量上均更优。作为 Meta AI 的重量级工作，BLT 可能开启”后 tokenization 时代”，改变未来 LLM 预处理的设计标准。其动态分块的理念也为后续研究打开了新方向——语言建模中的”计算效率”与”信息密度”如何在架构层面进行统一优化。</li>
 </ul>
 <hr>
 <p><strong>LLM 专题系列导航</strong>：<a href="/2026/07/24/LLM-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/LLM%E4%B8%93%E9%A2%98-02-%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/">下一篇：规模定律 →</a></p>
