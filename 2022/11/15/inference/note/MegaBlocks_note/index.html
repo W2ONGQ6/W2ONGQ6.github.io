@@ -1,0 +1,1268 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2022-11-15 MegaBlocks: Block-Sparse MoE的系统层革命核心信息MegaBlocks 将 MoE 计算重新表述为 block-sparse 矩阵运算，从根本上解决了传统 MoE 实现中负载不均衡导致的”token 丢弃 vs 零填充”两难问题。传统方法必须通过填充（将 tokens 补齐到统一数量，浪费计算 15-50%）或丢弃（通过 capacity">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MegaBlocks: Block-Sparse MoE运算——消除Token丢弃与零填充的权衡">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/11/15/inference/note/MegaBlocks_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2022-11-15 MegaBlocks: Block-Sparse MoE的系统层革命核心信息MegaBlocks 将 MoE 计算重新表述为 block-sparse 矩阵运算，从根本上解决了传统 MoE 实现中负载不均衡导致的”token 丢弃 vs 零填充”两难问题。传统方法必须通过填充（将 tokens 补齐到统一数量，浪费计算 15-50%）或丢弃（通过 capacity">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-11-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.723Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Block-Sparse">
+<meta property="article:tag" content="GPU 计算">
+<meta property="article:tag" content="MegaBlocks">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="系统优化">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>MegaBlocks: Block-Sparse MoE运算——消除Token丢弃与零填充的权衡 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="MegaBlocks: Block-Sparse MoE运算——消除Token丢弃与零填充的权衡"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-15 00:00" pubdate>
+          2022年11月15日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          120 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">MegaBlocks: Block-Sparse MoE运算——消除Token丢弃与零填充的权衡</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2022-11-15</p>
+<h1 id="MegaBlocks-Block-Sparse-MoE的系统层革命"><a href="#MegaBlocks-Block-Sparse-MoE的系统层革命" class="headerlink" title="MegaBlocks: Block-Sparse MoE的系统层革命"></a>MegaBlocks: Block-Sparse MoE的系统层革命</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><p>MegaBlocks 将 MoE 计算重新表述为 block-sparse 矩阵运算，从根本上解决了传统 MoE 实现中负载不均衡导致的”token 丢弃 vs 零填充”两难问题。传统方法必须通过填充（将 tokens 补齐到统一数量，浪费计算 15-50%）或丢弃（通过 capacity_factor 截断，损失训练数据）来处理专家的自然不均衡负载。MegaBlocks 利用 block-sparse GEMM（基于 NVIDIA CUTLASS 的 Sparse Toolkit stk），让每个专家自然处理不同数量的 token——不填充、不丢弃。训练速度比 Tutel 快 40%、比 dense Transformer 快 2.4 倍，且完全消除了 capacity_factor 超参数。Mixtral 8x7B 明确将 MegaBlocks 列为致谢对象。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 MegaBlocks，一个面向 MoE（Mixture-of-Experts）模型的高效稀疏训练系统。MegaBlocks 将 MoE 计算重新表述为 block-sparse 运算，使用块稀疏矩阵乘法处理自然不均衡的专家分配，无需为负载均衡进行填充或丢弃 token。通过基于 CUTLASS 构建的稀疏计算库 stk，MegaBlocks 实现了 Variable-Sized Batched GEMM——不同专家可处理不同数量的 token，而非传统的统一批量。MegaBlocks 与 Megatron-LM 深度集成，在 8-64 专家的 GPT-MoE 上实现了比 Tutel 快 40% 的训练速度，且在负载严重不均衡时加速更显著（+70%）。MoE 训练首次可以在零 token 丢弃和零计算浪费的情况下进行。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>Block-Sparse MoE 计算范式</strong> — 抛弃传统的”token 填充 + dense GEMM”或”token 丢弃 + capacity_factor”方法，将每位专家的 FFN 计算表达为 block-sparse 矩阵乘法——只计算实际分配的 token 块，跳过零填充区域。这是对 MoE 计算的根本性重新抽象。</p>
+</li>
+<li><p><strong>Sparse Toolkit (stk) — 高效的 GPU 稀疏计算库</strong> — 基于 NVIDIA CUTLASS 构建，实现了 Variable-Sized Batched GEMM——每个 expert 的 FFN 可以接受不同数量的 token 作为输入，输出对应不同数量的 output tokens。块大小固定为 128，匹配 A100 TensorCore 的硬件 tile 尺寸。</p>
+</li>
+<li><p><strong>消除 capacity_factor 超参数</strong> — capacity_factor 是 MoE 训练中最敏感的超参数之一（决定”多少 token 可以被丢弃”）。MegaBlocks 完全不需要它——block-sparse 天然处理不均衡，无需容量上限。这直接降低了 MoE 训练的门槛和调参复杂度。</p>
+</li>
+<li><p><strong>系统性速度基准与集成</strong> — 与 Megatron-LM 深度集成（drop-in 替换），支持 3D 并行（数据&#x2F;专家&#x2F;流水线）。vs Tutel +40%，vs Fairseq MoE +2.1x，vs Dense Transformer +2.4x，且速度优势在负载不均衡时更大。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>MegaBlocks 以 block-sparse 矩阵乘法取代 token 填充&#x2F;丢弃，从根本上解决了 MoE 负载不均衡的计算效率问题——这不是算法改进，而是让 MoE 的算法优势在 GPU 硬件上真正高效兑现的系统层创新，capacity_factor 宣告过时。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战与子问题"><a href="#核心挑战与子问题" class="headerlink" title="核心挑战与子问题"></a>核心挑战与子问题</h3><p><strong>子问题1：Token 填充的效率损失有多严重？</strong></p>
+<p>传统 MoE 实现（Tutel, Fairseq MoE）的”token 填充”策略：将所有专家的输入 token 数填充到统一大小（取所有专家中最大 token 数的那个 expert），然后用 dense GEMM 处理。这个策略的根本缺陷在于 MoE 的负载天然不均衡——某些专家收到的 token 可能是其他专家的 2-3 倍。容量因子 capacity_factor 限制了每个专家可处理的 tokens 数，但即使 capacity_factor&#x3D;1.25（一个常用设置），仍有约 25% 的位置被填充为零——浪费了 25% 的计算 FLOPs。</p>
+<p>量化在真实训练中的浪费：对于 8 专家 GPT-MoE，Tutel 的实现平均浪费约 15-20% 的 FLOPs。当某些专家严重过载时（如”通用语言”专家在文本数据集上天然收到更多 token），浪费可达 40-50%。对于 100B 参数规模的训练（约 100 万 GPU 小时），15% 的浪费 &#x3D; 15 万 GPU 小时 ≈ $300K cloud 成本（按 $2&#x2F;GPU 小时）。</p>
+<p><strong>子问题2：Token 丢弃的质量损失。</strong></p>
+<p>Switch Transformer 的 token 丢弃方法：设置 capacity_factor（如 1.0），当某专家的输入 token 数超过 capacity_factor × (tokens_per_expert) 时，过剩 token 被丢弃——它们通过残差连接绕过 MoE 层（失去了一次 FFN 处理机会）。</p>
+<p>量化质量损失：capacity_factor 从 2.0 降到 1.25 增加了约 0.05-0.1 PPL（在 Switch Transformer 的实验中）。当 capacity_factor&#x3D;1.0 时，约 10-15% 的 token 被丢弃——这对语言建模 PPL 有可测量的影响（PPL 增加约 0.1-0.2），虽然看似微小，但在大规模训练中这些”失去的 FFN 处理”累积的梯度信号损失是实质性的。</p>
+<p>更关键的是超参数敏感性：capacity_factor 从 1.0 到 1.5 需要细粒度调优——设置太高浪费计算，设置太低丢失训练信号。这大大增加了实验周期（每新的 expert 数量、top-K、或 batch size 可能需要重新优化 capacity_factor）。</p>
+<p><strong>子问题3：Block-sparse GEMM 在 GPU TensorCores 上的实现效率。</strong></p>
+<p>MegaBlocks 的核心工程挑战：如何在 GPU TensorCores（张量核心，优化的矩阵乘法单元）上高效执行不规则大小的矩阵乘法——每个专家处理不同数量的 token 导致每个 GEMM 操作有不同的输入矩阵维度。</p>
+<p>TensorCores 被设计为高效处理固定大小的 tile（如 128×128 的矩阵块）。非规则的矩阵大小不能直接映射到 TensorCore 操作。MegaBlocks 的解决策略：将所有专家 FFN 组合成一个大 sparse matrix，然后在 block-sparse 级别（以 128×128 tile 为粒度）调度 TensorCore GEMM。</p>
+<p>块大小 128 的选择：64 太小→稀疏索引开销占比大（&gt;10%）；256 太大→块内零填充浪费增加（当块部分填充时）；128 是 A100 TensorCore tile 的天然簇（每 SM 上的 TensorCore 处理 128×128 的 BF16 matmul 约为 8 个连续的 warp 协作），也是最优的”索引开销 vs 填充浪费”平衡点。</p>
+<p><strong>子问题4：分布式训练中的 block-sparse 通信开销。</strong></p>
+<p>在专家并行（expert parallelism）设置中，token 需要在 GPU 间 all-to-all 传递（因为不同专家的参数分布在不同 GPU 上）。这需要：(a) token permutation（按专家重新排列 token）；(b) all-to-all 通信（发送 token 到持有目标专家的 GPU）；(c) block-sparse GEMM（本 GPU 的专家处理接收到的 token）；(d) token unpermutation（恢复原始 token 顺序）。</p>
+<p>MegaBlocks 引入的额外开销集中在 (a) 和 (d) 的转换步骤——在 permuted token buffer 和 block-sparse CSR 格式之间转换。这些转换的额外开销占训练时间的约 5-8%。对比 Tutel 的 15-50% 填充浪费（在 GEMM 本身），5-8% 的转换开销是净节省——因为 GEMM 加速（40%+）远超转换开销。</p>
+<p><strong>子问题5：为什么 block-sparse 抽象是 MoE 计算的”正确”范式？</strong></p>
+<p>MegaBlocks 的哲学贡献往往被忽视：MoE 的负载不均衡不是”需要被修正的问题”（传统方法试图通过填充&#x2F;丢弃来强迫均衡），而是 MoE 架构的”自然属性”（不同 token 需要不同专家，某些专家的”受众”天然更多）。当一个架构的自然行为不被实现所允许时，问题不在于架构——而在于实现。</p>
+<p>Block-sparse 运算是处理条件计算（conditional computation）的通用抽象。任何”基于条件选择子集进行计算”的场景（MoE 路由、dynamic layer skipping、conditional attention 等）都可以从 block-sparse 视角重新设计——将条件计算映射为稀疏矩阵乘法，跳过被”条件”排除的块。这是一个比 MoE 更具普适性的计算范式。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><ul>
+<li><strong>测试模型</strong>: GPT-style MoE Transformer (125M - 2.7B 参数), 8-64 专家&#x2F;层</li>
+<li><strong>训练数据</strong>: The Pile (825GB, 语言建模基准)</li>
+<li><strong>硬件</strong>: NVIDIA A100 80GB 集群</li>
+<li><strong>对比系统</strong>: Microsoft Tutel, Fairseq MoE, Dense Transformer (等参数和等激活参数两种基线)</li>
+<li><strong>速度指标</strong>: Tokens&#x2F;s&#x2F;GPU, 总 wall-clock 训练时间, GEMM FLOPs 利用率</li>
+<li><strong>并行策略</strong>: 数据并行 + 专家并行 + 流水线并行的 3D 组合</li>
+</ul>
+<h3 id="MoE-配置详情"><a href="#MoE-配置详情" class="headerlink" title="MoE 配置详情"></a>MoE 配置详情</h3><ul>
+<li>专家数量: 8, 16, 32, 64（消融 sweep）</li>
+<li>Top-K 路由: K&#x3D;1 or K&#x3D;2</li>
+<li>容量因子: N&#x2F;A (MegaBlocks 不需要) vs 1.25 (Tutel 基线)</li>
+<li>Global batch size: 约 1M tokens</li>
+<li>序列长度: 2048 tokens</li>
+<li>专家 FFN 中间维度: 4× 隐藏维度（标准 GPT-3 风格 FFN）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="完整的机制流程"><a href="#完整的机制流程" class="headerlink" title="完整的机制流程"></a>完整的机制流程</h3><p><strong>步骤1: Token 路由与专家分配 — 确定每个 token 的目标专家</strong></p>
+<p>输入: 输入 token 序列 X ∈ R^{N×D}（N tokens, D 隐藏维度）</p>
+<p>操作:</p>
+<ul>
+<li>路由线性层: logits &#x3D; X W_router（W_router ∈ R^{D×E}, E&#x3D;专家数量）</li>
+<li>Top-K 选择: 为每个 token 选择 logits 最高的 K 个专家</li>
+<li>加上可选的辅助随机扰动（如 random routing aux loss）</li>
+<li>记录每个专家收到的 token 索引列表</li>
+</ul>
+<p>输出: expert_tokens[e] &#x3D; {所有路由到专家 e 的 token 索引}, e &#x3D; 1..E</p>
+<p><strong>步骤2: Token 重排 (Permutation) — 按专家分组 token</strong></p>
+<p>输入: expert_tokens[e] 的分配信息</p>
+<p>操作:</p>
+<ul>
+<li>将输入 tokens X 按专家分组重新排列——连续存储专家 0 的所有 token、然后是专家 1、…</li>
+<li>使用 GPU scatter&#x2F;gather 操作（或 NCCL all-to-all 在分布式设置中）</li>
+<li>构建 permuted token buffer: [专家0_tok1, 专家0_tok2, …, 专家1_tok1, …, 专家E_tokN_E]</li>
+</ul>
+<p>输出: 重排后的 token buffer（按专家连续分组）</p>
+<p><strong>步骤3: 构建 Block-Sparse CSR 表示 — 为 block-sparse GEMM 准备数据</strong></p>
+<p>输入: 每个专家的 permuted tokens（不同专家有不同数量的 tokens）</p>
+<p>操作:</p>
+<ul>
+<li>确定块大小 &#x3D; 128（匹配 A100 TensorCore tile）</li>
+<li>对每个专家: 将其 tokens 按 128 对齐分组 → ceil(N_e &#x2F; 128) 个 blocks<ul>
+<li>如果最后一块不足 128 → 填充到 128（仅块内填充，代价小）</li>
+</ul>
+</li>
+<li>构建 CSR（Compressed Sparse Row）索引:<ul>
+<li>Row pointer: 每个输出行（每个输出 token）对应的非零 block 的起始和结束索引</li>
+<li>Column index: 每个非零 block 对应的专家 ID</li>
+<li>Values: 每个非零 block 的起始 token 位置（在该专家内的偏移）</li>
+</ul>
+</li>
+</ul>
+<p>输出: Block-sparse CSR 格式的 MoE FFN 输入数据</p>
+<p><strong>步骤4: Block-Sparse GEMM — TVariable-Sized Batched GEMM</strong></p>
+<p>输入: CSR 格式的输入 tokens + 所有专家的 FFN 权重（W1, W2）</p>
+<p>操作:</p>
+<ul>
+<li>遍历所有非零 blocks（即所有有 token 分配的 (expert, token group) 对）</li>
+<li>对每个非零 block: 调用 CUTLASS TensorCore GEMM（128×128 粒度的矩阵乘法）<ul>
+<li>输入: tokens[block_start:block_start+128] × W_expert</li>
+<li>Precision: BF16&#x2F;FP16（矩阵乘法）, FP32（累加）</li>
+</ul>
+</li>
+<li>跳过零 blocks（无 token 分配的专家 block）— 无计算、无内存访问</li>
+<li>每个专家的 blocks 可以独立并行（CUDA stream 并行或 warp-level 并行）</li>
+</ul>
+<p>输出: 每个专家的 FFN 输出（仅计算实际分配的 tokens）</p>
+<p><strong>步骤5: Token 反向重排 (Unpermutation) — 恢复原始顺序</strong></p>
+<p>输入: 各专家的 FFN 输出（按专家分组）</p>
+<p>操作:</p>
+<ul>
+<li>将 expert-grouped 输出转换回原始 token 顺序</li>
+<li>使用之前记录的 token-to-expert 映射的后向转换</li>
+<li>将恢复后的输出合并回 MoE 层的残差路径</li>
+</ul>
+<p>输出: MoE 层的最终输出（按原始 token 顺序）</p>
+<h3 id="Block-Sparse-CSR-格式的细节"><a href="#Block-Sparse-CSR-格式的细节" class="headerlink" title="Block-Sparse CSR 格式的细节"></a>Block-Sparse CSR 格式的细节</h3><p>CSR（Compressed Sparse Row）格式是稀疏矩阵的标准表示。传统 CSR 用于稀疏矩阵的 storage（如表示一个 1% 非零的稀疏矩阵），而 MegaBlocks 将它扩展到 block-sparse 的 GEMM 操作。</p>
+<p>定义一个 E 个专家的 MoE FFN 层为一个大的”虚拟”矩阵 M ∈ R^{N×E×d_ff}（所有专家的权重组装）。该矩阵只在”每个 token 被路由到的 K 个专家”的位置有非零块。CSR 格式仅存储这些非零块，跳过零块。</p>
+<p>块大小 128 的重要性：TensorCores 调用一次可以处理 128×128 的 BF16 矩阵乘法——所以 128 是 CSR 的”原子单位”。如果一个 token group 不满 128，填充到 128（成本小）；如果超过 128，拆分为多个 blocks。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="训练速度对比"><a href="#训练速度对比" class="headerlink" title="训练速度对比"></a>训练速度对比</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>相对速度 (vs Tutel)</th>
+<th>绝对吞吐 (tokens&#x2F;s&#x2F;GPU, 2.7B, 8 experts)</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>MegaBlocks</strong></td>
+<td><strong>1.40x</strong></td>
+<td>~12K</td>
+<td>Block-sparse GEMM, 零填充, 零丢弃</td>
+</tr>
+<tr>
+<td>Microsoft Tutel</td>
+<td>1.00x (基准)</td>
+<td>~8.6K</td>
+<td>Padding-based expert GEMM</td>
+</tr>
+<tr>
+<td>Fairseq MoE</td>
+<td>0.67x</td>
+<td>~5.8K</td>
+<td>原始 MoE 实现</td>
+</tr>
+<tr>
+<td>Dense Transformer (等参数, 2.7B)</td>
+<td>0.59x</td>
+<td>~5.1K</td>
+<td>全参数密集计算</td>
+</tr>
+<tr>
+<td>Dense Transformer (等激活参数, 0.3B)</td>
+<td>0.42x</td>
+<td>~3.6K</td>
+<td>更小模型但更少计算</td>
+</tr>
+</tbody></table>
+<h3 id="不同负载不均衡度下的效率"><a href="#不同负载不均衡度下的效率" class="headerlink" title="不同负载不均衡度下的效率"></a>不同负载不均衡度下的效率</h3><table>
+<thead>
+<tr>
+<th>不均衡程度 (专家负载 vs 均值)</th>
+<th>Tutel 有效效率</th>
+<th>MegaBlocks 有效效率</th>
+<th>MegaBlocks 优势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>完美均衡 (±5%)</td>
+<td>90%</td>
+<td>90%</td>
+<td>持平 (无浪费)</td>
+</tr>
+<tr>
+<td>轻微不均衡 (1.0-1.3x 均值)</td>
+<td>80%</td>
+<td>89%</td>
+<td><strong>+11%</strong></td>
+</tr>
+<tr>
+<td>中度不均衡 (1.3-2.0x 均值)</td>
+<td>65%</td>
+<td>87%</td>
+<td><strong>+34%</strong></td>
+</tr>
+<tr>
+<td>严重不均衡 (&gt;2.0x 均值)</td>
+<td>50%</td>
+<td>85%</td>
+<td><strong>+70%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>解读:</strong> MegaBlocks 的效率几乎不受负载不均衡程度的影响——block-sparse 天然适应不同的专家负载。Tutel 的效率随不均衡加剧快速下降（填充浪费线性增长）。在真实 MoE 训练中（通常中度不均衡，因为某些专家天然收到更多 token），MegaBlocks 的实际加速约 30-40%。</p>
+<h3 id="消除-capacity-factor-的效果"><a href="#消除-capacity-factor-的效果" class="headerlink" title="消除 capacity_factor 的效果"></a>消除 capacity_factor 的效果</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Token 丢弃率</th>
+<th>训练收敛速度 (steps to reach target PPL)</th>
+<th>最终 PPL</th>
+<th>超参数调优需求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tutel (capacity_factor&#x3D;1.0)</td>
+<td>~10-15%</td>
+<td>基准 (100%)</td>
+<td>基准 + 0.05</td>
+<td>高 (需调 capacity)</td>
+</tr>
+<tr>
+<td>Tutel (capacity_factor&#x3D;1.25)</td>
+<td>~5%</td>
+<td>95%</td>
+<td>基准 + 0.03</td>
+<td>中</td>
+</tr>
+<tr>
+<td>Tutel (capacity_factor&#x3D;2.0)</td>
+<td>~0.5%</td>
+<td>92%</td>
+<td>基准 (最优)</td>
+<td>低 (但浪费高)</td>
+</tr>
+<tr>
+<td><strong>MegaBlocks (无容量限制)</strong></td>
+<td><strong>0%</strong></td>
+<td><strong>90% (最快)</strong></td>
+<td><strong>基准 - 0.01 (最好)</strong></td>
+<td><strong>无</strong></td>
+</tr>
+</tbody></table>
+<h3 id="块大小消融实验"><a href="#块大小消融实验" class="headerlink" title="块大小消融实验"></a>块大小消融实验</h3><table>
+<thead>
+<tr>
+<th>块大小</th>
+<th>CSR 索引开销</th>
+<th>块内填充浪费</th>
+<th>有效 GPU 效率</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>64</td>
+<td>12% (索引计算频繁)</td>
+<td>2% (块小浪费少)</td>
+<td>86%</td>
+<td>小专家 FFN (中间维度小)</td>
+</tr>
+<tr>
+<td><strong>128 (默认)</strong></td>
+<td><strong>6%</strong></td>
+<td><strong>5%</strong></td>
+<td><strong>89%</strong></td>
+<td><strong>最优通用</strong></td>
+</tr>
+<tr>
+<td>256</td>
+<td>3% (索引少)</td>
+<td>10% (大块内部浪费多)</td>
+<td>87%</td>
+<td>大 token 量的专家</td>
+</tr>
+</tbody></table>
+<p><strong>解读:</strong> 块大小 128 是 A100 的最优折中——CSR 索引开销仅 6%，块内填充浪费仅 5%，合计有效效率 89%。64 的索引开销过大（导致频繁的 kernel 启动和 CSR 遍历），256 的块内浪费过大（当块部分填充时）。</p>
+<h3 id="不同专家数量下的加速比-MegaBlocks-vs-Tutel"><a href="#不同专家数量下的加速比-MegaBlocks-vs-Tutel" class="headerlink" title="不同专家数量下的加速比 (MegaBlocks vs Tutel)"></a>不同专家数量下的加速比 (MegaBlocks vs Tutel)</h3><table>
+<thead>
+<tr>
+<th>专家数</th>
+<th>Tutel 填充浪费</th>
+<th>MegaBlocks 加速</th>
+<th>优势来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>8 专家</td>
+<td>15-20%</td>
+<td>+20-25%</td>
+<td>较少的不均衡 + 较少的 CSR 开销</td>
+</tr>
+<tr>
+<td>16 专家</td>
+<td>20-25%</td>
+<td>+30-35%</td>
+<td>更多专业化 → 更不均衡</td>
+</tr>
+<tr>
+<td>32 专家</td>
+<td>25-35%</td>
+<td>+35-45%</td>
+<td>高度不均衡 + Tutel 浪费大</td>
+</tr>
+<tr>
+<td>64 专家</td>
+<td>30-40%</td>
+<td>+40-50%</td>
+<td>极端不均衡，MegaBlocks 优势最大化</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="1-Block-sparse-是-MoE-计算的”正确”抽象"><a href="#1-Block-sparse-是-MoE-计算的”正确”抽象" class="headerlink" title="1. Block-sparse 是 MoE 计算的”正确”抽象"></a>1. Block-sparse 是 MoE 计算的”正确”抽象</h3><p>MegaBlocks 的根本贡献是重新定义了 MoE 计算的”正确抽象”。在 MegaBlocks 之前，MoE 的计算被建模为”多个大小相同的 dense GEMM”（因此需要填充或丢弃来强制统一）。MegaBlocks 揭示了这个模型的根本缺陷——它不是”MoE 的合理近似”，而是”对 GPU 实现便利性的错误让步”。</p>
+<p>Block-sparse 抽象将 MoE 的”天然不均衡”从问题转为特征——不再需要通过约束（capacity_factor）或伪装（填充）来应对，而是直接通过计算抽象来包容。抽象级别的提升消除了对两个超参数的需求（capacity_factor, expert buffer size）和一种训练不稳定性（token 丢弃的随机性）。</p>
+<p>这个洞见超越了 MoE：”如果计算的自然分布是不规则的，不要通过人为规则化来适应实现——而是通过改变实现来适应自然分布。” 这个原则适用于任何条件计算场景。</p>
+<h3 id="2-MegaBlocks-与-Switch-Transformer-容量因子的共演"><a href="#2-MegaBlocks-与-Switch-Transformer-容量因子的共演" class="headerlink" title="2. MegaBlocks 与 Switch Transformer 容量因子的共演"></a>2. MegaBlocks 与 Switch Transformer 容量因子的共演</h3><p>MegaBlocks 使 capacity_factor 这个超参数完全过时。而 capacity_factor 在 2020-2022 年是 MoE 训练中最核心的调优维度之一。</p>
+<p>这一进步与 DeepSeek-V3 的”无辅助损失”负载均衡形成了有趣的技术呼应。两者从不同方向推进了 MoE 训练的自由度：</p>
+<ul>
+<li>MegaBlocks 解放了”容量约束”——token 不再被容量限制，每个 token 必然获得其所需的专家处理</li>
+<li>DeepSeek-V3 解放了”均衡约束”——专家不再被辅助损失强制均衡，专家专业化可以更自然</li>
+</ul>
+<p>两者结合将使 MoE 训练进入一个”无约束”的时代——既没有 token 丢弃、也没有负载均衡的辅助损失惩罚。这是一个正在快速实现的对 MoE 训练的愿景。</p>
+<h3 id="3-MegaBlocks-与-FlashAttention-的类比"><a href="#3-MegaBlocks-与-FlashAttention-的类比" class="headerlink" title="3. MegaBlocks 与 FlashAttention 的类比"></a>3. MegaBlocks 与 FlashAttention 的类比</h3><p>两者共享核心的设计哲学：为硬件重新设计算法&#x2F;计算格式。FlashAttention 通过分块 softmax 使 attention 在 SRAM 限制下高效；MegaBlocks 通过 block-sparse GEMM 使 MoE 在不规则负载下高效。两者都认识到”计算上最优”（最小 FLOPs）不等于”硬件上最优”（最快 wall-clock 时间），并接受了为实现硬件效率而进行非零的”浪费”（FlashAttention 的 recomputation, MegaBlocks 的 CSR 索引开销）。</p>
+<p>这种”硬件感知算法设计”是 GPU 编程的成熟模式，但在 ML 研究中仍不普遍。大多数 ML 论文用 FLOPs 评估效率，但 MegaBlocks 清楚：GPU 的瓶颈通常不是 FLOPs（计算量），而是 memory bandwidth（内存带宽）和 launch overhead（kernel 启动开销）。Block-sparse 的策略降低了 memory 浪费（不加载零块），同时保持了内存访问的模式友好（连续的 block 访问）。</p>
+<h3 id="4-MegaBlocks-在-Mixtral-8x7B-训练中的角色"><a href="#4-MegaBlocks-在-Mixtral-8x7B-训练中的角色" class="headerlink" title="4. MegaBlocks 在 Mixtral 8x7B 训练中的角色"></a>4. MegaBlocks 在 Mixtral 8x7B 训练中的角色</h3><p>Mixtral 8x7B 是第一个大规模公开验证 MegaBlocks 有效性的模型。Mixtral 的团队在论文中致谢了 MegaBlocks 对其高效训练的贡献，主要有三个方面:</p>
+<p>(a) <strong>零 token 丢弃</strong> — Mixtral 可以充分利用所有训练数据，不必担心 10-15% 的 token 在 MoE 层丢失——这对珍贵的高质量训练数据（如 code 和 math 数据）尤其重要。</p>
+<p>(b) <strong>高效的负载不均衡处理</strong> — Mixtral 的 8 个专家在训练中表现出显著的专业化偏斜（某些专家在代码数据上收到 2-3x 的负载），MegaBlocks 高效处理了这种不均衡，无需浪费计算或丢弃 token。</p>
+<p>(c) <strong>消除 capacity_factor 超参数</strong> — 在 Mixtral 的开发中，不需要花费宝贵的实验周期来调优 capacity_factor——直接使用 MegaBlocks 即可。</p>
+<p>这使得 Mixtral 的训练比使用传统 MoE 系统的方案更快、更简单、质量更高。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MegaBlocks</th>
+<th>Microsoft Tutel</th>
+<th>Switch Transformer 方法</th>
+<th>Fairseq MoE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>处理负载不均衡的方式</td>
+<td><strong>Block-Sparse GEMM</strong></td>
+<td>Token 填充 (pad to max)</td>
+<td>Token 丢弃 (capacity_factor)</td>
+<td>Token 填充</td>
+</tr>
+<tr>
+<td>Token 信息损失</td>
+<td><strong>0%</strong></td>
+<td>0%</td>
+<td>&gt;0% (取决于 capacity_factor)</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>计算浪费</td>
+<td>仅非零块 (5-10% CSR 索引开销)</td>
+<td>填充区域 (15-50% 浪费 FLOPs)</td>
+<td>零浪费 (但丢了 token)</td>
+<td>填充区域 (15-30%)</td>
+</tr>
+<tr>
+<td>需要 capacity_factor</td>
+<td><strong>不需要</strong></td>
+<td>需要</td>
+<td>需要</td>
+<td>需要</td>
+</tr>
+<tr>
+<td>训练速度 (相对)</td>
+<td><strong>最快 (1.4x Tutel)</strong></td>
+<td>基准</td>
+<td>较快</td>
+<td>较慢 (0.67x Tutel)</td>
+</tr>
+<tr>
+<td>实施复杂度</td>
+<td>高 (需要 stk&#x2F;CUTLASS 集成)</td>
+<td>中 (padding + dense GEMM)</td>
+<td>低 (简单的 token 丢弃)</td>
+<td>低</td>
+</tr>
+<tr>
+<td>分布式训练支持</td>
+<td><strong>3D 并行 (data+expert+pipeline)</strong></td>
+<td>2D 并行 (data+expert)</td>
+<td>2D 并行</td>
+<td>2D 并行</td>
+</tr>
+<tr>
+<td>GPU 架构依赖</td>
+<td>TensorCores (A100&#x2F;H100)</td>
+<td>TensorCores 或 CUDA Cores</td>
+<td>TensorCores 或 CUDA Cores</td>
+<td>TensorCores 或 CUDA Cores</td>
+</tr>
+</tbody></table>
+<h2 id="局限和实践挑战"><a href="#局限和实践挑战" class="headerlink" title="局限和实践挑战"></a>局限和实践挑战</h2><ol>
+<li><p><strong>块大小的架构敏感性。</strong> 最优块大小（128）是针对 A100 的 TensorCore tile 尺寸（128×128 BF16 matmul &#x3D; 8 warps 协作）优化的。对于不同的 GPU 架构，最优块大小可能不同——H100 的 TensorCore tile 尺寸相同但计算能力更强，256 可能更好；消费级 GPU（RTX 4090）的 TensorCore 较弱（仅 ada 一代），较优块大小可能不同。每个新 GPU 架构需要重新 profile 和验证最优块大小。</p>
+</li>
+<li><p><strong>CSR 索引的额外内存开销。</strong> Block-sparse CSR 格式需要额外的索引内存（row pointers + column indices），占激活内存的约 5-10%。虽然对比 Tutel 的 15-50% 填充浪费仍是净节省，但对于内存已经极度紧张的大规模训练（如 70B+ models），这 5-10% 的额外内存可能成为限制（需要更激进的内存优化或更细粒度的 rematerialization）。</p>
+</li>
+<li><p><strong>消费级 GPU 上的加速效果有限。</strong> MegaBlocks 的主要效率优势来自利用 TensorCores 的 block-sparse GEMM。在消费级 GPU（RTX 3090&#x2F;4090）上，TensorCore 的性能乘数较小（~2x vs FP32）且内存带宽瓶颈更大——block-sparse GEMM 的加速比从 1.4x（A100）降到约 1.1-1.2x。这对个人开发者和学术研究者（通常使用消费级 GPU）的采用有影响。</p>
+</li>
+<li><p><strong>与框架版本的集成脆弱性。</strong> MegaBlocks 与 Megatron-LM 的深度集成依赖特定版本的 Megatron-LM 接口。当 Megatron-LM 升级时（如新版本的 APEX&#x2F;GradAccum 接口），MegaBlocks 的集成可能需要对应的维护更新。长期维护一个”第三方插件”的成本会随时间累积——如果 MegaBlocks 不成为 Megatron-LM 的官方一部分或缺乏持续的社区维护。</p>
+</li>
+<li><p><strong>推理优化远不如训练成熟。</strong> MegaBlocks 主要针对训练优化（高吞吐、大 batch）。在推理场景下（低 latency、小 batch 甚至 batch&#x3D;1），block-sparse CSR 格式的动态 kernel 启动和 CSR 遍历的开销占比更大——因为总计算量小了，但索引的固定成本不变。推理场景可能需要不同的稀疏执行策略（如预计算路由模式、persistent kernels 替代动态 kernel 启动）。</p>
+</li>
+<li><p><strong>Permutation&#x2F;Unpermutation 的固定开销。</strong> Token 重排和反向重排需要约 5-8% 的训练时间开销——这在训练中是划算的（因为 GEMM 省了 30-50%），但在推理中就不划算了（GEMM 本身的时间短，CSR 处理和 permute 的比例增加）。未来的优化方向可能是将 permute 和 GEMM 合并为一个融合 kernel（fused permute-sparse-GEMM）。</p>
+</li>
+<li><p><strong>对路由模式变化不敏感的”刚性”块划分。</strong> 当前的 128-token 块固定划分不感知路由模式的变化。当路由将两个”属于不同专家分配模式”的 token 分到同一块时（如块内一部分 token 路由到专家 A，另一部分到其他专家），这个块需要部分处理——引入了复杂性。动态块划分（adapting block boundaries to routing patterns）可能进一步提升效率，但增加了实现复杂性。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>“不均衡不是 bug 而是 feature——不要对抗它，适应它”</strong> — 当算法天然产生不均衡的输出时，改变实现来高效处理不均衡，而不是通过限制或伪装来伪装均衡。这个原则适用于 MoE、dynamic routing、conditional computation、and 任何”不同输入需要不同计算量”的场景。</p>
+</li>
+<li><p><strong>块稀疏是可以处理不规则计算的通用框架</strong> — 任何条件计算场景（MoE routing, dynamic layer skipping, conditional attention, early exit, etc.）都可以从 block-sparse 视角重新设计——将条件计算的 IF-ELSE 逻辑映射为稀疏矩阵的”加载&#x2F;跳过”决策。Block-sparse 提供了从”逐元素条件判断”到”块级硬件友好调度”的抽象阶梯。</p>
+</li>
+<li><p><strong>系统层的创新的实际影响常常大于算法层</strong> — MegaBlocks 没有提出新的路由算法、新的专家架构、或新的训练目标——它的贡献完全在”让 MoE 在 GPU 上高效运行”这一系统层面。但实际影响（+40% 训练速度、消除 critical 超参数）可能超过许多”更好路由算法”的论文——因为一个”在硬件上高效工作的次优算法”胜过一个”理论上更优但无法高效实现的算法”。</p>
+</li>
+<li><p><strong>“消除超参数”是降低技术门槛的高价值贡献</strong> — capacity_factor 的消除不仅提升了效率，更降低了 MoE 训练的进入门槛——不需要理解”容量因子”、不需要调优它、不需要在”丢 token vs 浪费计算”之间做痛苦折中。这种”降低复杂度”的工程价值常常被低估，但在技术的广泛 adoption 中至关重要。</p>
+</li>
+<li><p><strong>GPU 的瓶颈通常是 memory bandwidth 而非 compute FLOPs</strong> — CSR 索引的 5-10% 开销对比 15-50% 的 memory 浪费节省，直观地证明了 GPU 上的瓶颈常在于”移动数据”而非”计算数据”。Block-sparse 的根本贡献是降低了内存浪费——不加载零 blocks &#x3D; 不浪费 memory bandwidth &#x3D; 更快的实际 wall-clock 时间。</p>
+</li>
+<li><p><strong>“在现有成熟库之上构建” vs “从零实现自定义 kernel”</strong> — MegaBlocks 依赖 CUTLASS 的 block-sparse GEMM（而不是自己实现一个全新的 sparse GEMM kernel），大大降低了开发和维护成本。借用社区已验证、已优化的组件，然后在之上构建自己的创新——这是系统研究和开源生态中的最佳实践。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>MegaBlocks 是一篇”系统论文”的典范——它不引入新的数学概念或算法理论，而是通过精巧的系统工程让已经存在的概念（MoE）在真实的硬件上高效运行。它的核心思想（”把专家负载不均衡视为 MoE 的自然属性而非缺陷”）是一种极为重要的”范式转变”——从”适应硬件限制”到”让硬件适应算法特性”。</p>
+<p>这种范式转变在计算机科学史上反复出现。早期的数据库系统强迫所有数据符合固定格式的表格（因为硬件限制），直到 NoSQL 运动说”不——数据可能是非结构化的，让数据库适应数据而不是反着来”。早期的大数据处理强迫对所有数据块做相同操作（因为 MapReduce 模型限制），直到 Spark 的 RDD 弹性分布式数据集允许更灵活的数据处理。MegaBlocks 对 MoE 训练做了类似的事——“不要再强迫 token 数量适应 GEMM 维度，让 GEMM 适应 token 数量的自然不均衡”。</p>
+<p>MegaBlocks 与 DeepSeek-V3 的 bias-based 负载均衡之间的协同进化是我最喜欢的”技术趋势”之一。两者从完全不同的方向（系统层 vs 算法层）朝着同一个目标推进——让 MoE 训练从人为约束中解放。MegaBlocks 解放了 capacity 约束（token 不用再被丢弃或填充），DeepSeek-V3 解放了 balance 约束（专家不用再被辅助损失强制均衡）。这两个解放的结合效果（”无约束 MoE”）是极具潜力的——可以让专家更自由地专业化（更高质量）、同时不浪费计算（更高效）、不需要调优临界超参数（更易用）。</p>
+<p>Mixtral 8x7B 的致谢暗示了 MegaBlocks 在业界的影响力已经超出了论文的可见度。Mixtral 是第一个大规模验证了”零 token 丢弃”训练可行性的开源模型，而它在背后”默默支撑”的技术是 MegaBlocks——这让我想到许多”幕后英雄”式的系统论文：它们的名字不常出现在产品新闻中，但它们的代码是那些明星产品跑起来的关键。从学术角度来看，这类论文的 citation 可能不如算法论文多（因为系统论文的引用者主要是在”实际构建”的人，而非在”写论文引用”的人），但它们的实际影响力可能是同等或更大的。</p>
+<p>“block-sparse”作为一种通用计算范式，让我联想到它可能在 MoE 之外的更多场景找到应用。任何”条件计算”——不是所有输入都需要走所有计算路径——都可以从这个角度来优化。例如：diffusion 模型中的”resampling steps”优化（某些 patch 可以跳过不需要的 denoising 步）、多模态模型中的”conditional fusion”（根据 textual context 选择视觉 features）、甚至操作系统的中断响应（根据当前负载选择性地处理 I&#x2F;O events）。Block-sparse 是一种过于强大的计算抽象，它的应用应该远超 MoE 训练。</p>
+<p>最后，MegaBlocks 也让我反思学术界”novelty”(新颖性) 的标准。严格来说，block-sparse GEMM 不是 MegaBlocks 发明的（CUTLASS 早就有），variable-size batched GEMM 也不是（这是 GPU computing 中的常见模式）。MegaBlocks 的贡献是”将这些已有部件 cleverly assembled into a compelling solution for a critical problem”——这不是”来自象牙塔的原始创新”，而是”来自对真实系统痛点的深刻理解的实用解决方案”。在系统研究领域，往往后者比前者更有价值。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>Block-sparse 范式能否推广到 MoE 以外的条件计算架构？如 dynamic layer skipping、conditional token merging、routing-based contrastive learning？</p>
+</li>
+<li><p>FP8&#x2F;FP4 等更低精度下的 block-sparse GEMM 的精度损失如何量化？低精度下稀疏块的数值稳定性是否受块大小的影响？</p>
+</li>
+<li><p>消费级 GPU（RTX 4090, 未来 RTX 5090）上 MegaBlocks 的性能如何？是否足够服务于个人开发者的 MoE 实验？</p>
+</li>
+<li><p>能否与 vLLM 的 PagedAttention 结合，设计一个”unified sparse execution engine”——同时处理 attention 的 page 稀疏和 MoE expert 的 block 稀疏？</p>
+</li>
+<li><p>动态块划分（adaptive block sizing based on routing patterns）能否理论上进一步提高效率？如何在不增加过多实现复杂性的前提下实现？</p>
+</li>
+<li><p>MegaBlocks 与 DeepSeek-V3 的 bias-based 无辅助损失负载均衡组合后，MoE 训练的工程体验能简化到什么程度？”无约束 MoE”的终极形态是什么？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;gale2023megablocks,<br>  title=&#123;MegaBlocks: Efficient Sparse Training with Mixture-of-Experts&#125;,<br>  author=&#123;Gale, Trevor and Narayanan, Deepak and Young, Cliff and Zaharia, Matei&#125;,<br>  booktitle=&#123;Proceedings of Machine Learning and Systems&#125;,<br>  volume=&#123;5&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;jiang2024mixtral,<br>  title=&#123;Mixtral of Experts&#125;,<br>  author=&#123;Jiang, Albert Q. and Sablayrolles, Alexandre and Roux, Antoine and Mensch, Arthur and Savary, Blanche and Bamford, Chris and Chaplot, Devendra Singh and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2401.04088&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/MoE%E6%8E%A8%E7%90%86/" class="category-chain-item">MoE推理</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/MoE/" class="print-no-link">#MoE</a>
+      
+        <a href="/tags/Block-Sparse/" class="print-no-link">#Block-Sparse</a>
+      
+        <a href="/tags/GPU-%E8%AE%A1%E7%AE%97/" class="print-no-link">#GPU 计算</a>
+      
+        <a href="/tags/%E7%B3%BB%E7%BB%9F%E4%BC%98%E5%8C%96/" class="print-no-link">#系统优化</a>
+      
+        <a href="/tags/MegaBlocks/" class="print-no-link">#MegaBlocks</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>MegaBlocks: Block-Sparse MoE运算——消除Token丢弃与零填充的权衡</div>
+      <div>https://w2ongq6.github.io/2022/11/15/inference/note/MegaBlocks_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年11月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/16/llm/note/HELM_note/" title="Holistic Evaluation of Language Models (HELM)">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Holistic Evaluation of Language Models (HELM)</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/31/inference/note/GPTQ_note/" title="GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers">
+                        <span class="hidden-mobile">GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1315 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2023-12-04 核心信息Mamba 引入了选择性状态空间模型（Selective SSM &#x2F; S6）——将 SSM 参数从固定的线性时不变（LTI）变为输入依赖函数——配合硬件感知并行扫描算法，以线性时间推理和 5 倍生成吞吐量实现了 Transformer 级别的建模质量。Mamba 证明了非 Transformer 架构能在质量上真正具有竞争力，催生了整个替代架构研">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mamba: 选择性状态空间与线性时间序列建模">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/12/04/inference/note/Mamba_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2023-12-04 核心信息Mamba 引入了选择性状态空间模型（Selective SSM &#x2F; S6）——将 SSM 参数从固定的线性时不变（LTI）变为输入依赖函数——配合硬件感知并行扫描算法，以线性时间推理和 5 倍生成吞吐量实现了 Transformer 级别的建模质量。Mamba 证明了非 Transformer 架构能在质量上真正具有竞争力，催生了整个替代架构研">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-12-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.680Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="SSM">
+<meta property="article:tag" content="Selective SSM">
+<meta property="article:tag" content="State Space Model">
+<meta property="article:tag" content="替代架构">
+<meta property="article:tag" content="硬件感知算法">
+<meta property="article:tag" content="线性时间推理">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Mamba: 选择性状态空间与线性时间序列建模 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Mamba: 选择性状态空间与线性时间序列建模"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-12-04 00:00" pubdate>
+          2023年12月4日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          77 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Mamba: 选择性状态空间与线性时间序列建模</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2023-12-04</p>
+<h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><p>Mamba 引入了<strong>选择性状态空间模型（Selective SSM &#x2F; S6）</strong>——将 SSM 参数从固定的线性时不变（LTI）变为输入依赖函数——配合<strong>硬件感知并行扫描算法</strong>，以线性时间推理和 5 倍生成吞吐量实现了 Transformer 级别的建模质量。Mamba 证明了非 Transformer 架构能在质量上真正具有竞争力，催生了整个替代架构研究生态（Mamba-2、Jamba、Griffin 等）。这是自 “Attention Is All You Need” 以来最具影响力的替代架构论文。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 Mamba，一种基于选择性状态空间模型的新型序列建模架构。与传统的线性时不变 SSM 不同，Mamba 的 SSM 参数是输入依赖的，使模型能够根据当前 token 选择性地传播或遗忘信息——这解决了 SSM 在内容感知推理上的根本缺陷。由于选择性使高效卷积计算模式不可用，我们设计了硬件感知的并行扫描算法，灵感来源于 FlashAttention 的 I&#x2F;O 感知设计。Mamba-2.8B 在语言建模上超过同等规模 Transformer 并匹敌两倍规模 Transformer，生成吞吐量提升 5 倍。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>选择性状态空间模型（Selective SSM &#x2F; S6）</strong>：</p>
+<ul>
+<li>传统 SSM（S4、H3）的参数 (Delta, A, B, C) 是固定的 LTI 参数——所有 token 共享同一个参数化，无法根据内容选择性处理信息</li>
+<li>Mamba 将 Delta, B, C 变为输入 x_t 的函数（A 保持固定但 Delta 的输入依赖性间接使 A 具有选择性）</li>
+<li>这使得模型能够根据 token 内容选择性地遗忘或保留信息——解决了 SSM 在 “选择性复制” 和 “归纳头” 等关键语言任务上的能力缺陷</li>
+</ul>
+</li>
+<li><p><strong>硬件感知并行扫描算法</strong>：</p>
+<ul>
+<li>选择性破坏了 LTI 性质，使卷积模式不可用——必须使用递归形式</li>
+<li>递归形式的朴素实现是串行的（逐时间步），在 GPU 上极慢</li>
+<li>Mamba 设计了 GPU 优化的并行扫描算法：分块（tile）扫描，利用 SRAM 减少 HBM 读写</li>
+<li>将 SSM 状态从 HBM 加载到 SRAM 后，在 SRAM 中完成整个扫描块的局部计算，再写回</li>
+</ul>
+</li>
+<li><p><strong>极简架构设计</strong>：</p>
+<ul>
+<li>完全移除 attention 层甚至 MLP 块</li>
+<li>核心组件：Selective SSM 层 + 门控 + 残差连接 + LayerNorm</li>
+<li>架构深度可比 Transformer，但每层结构更简单</li>
+<li>无 KV cache —— SSM 状态大小恒定，不随序列长度增长</li>
+</ul>
+</li>
+<li><p><strong>线性时间 + 高效推理</strong>：</p>
+<ul>
+<li>每 token 计算时间恒定（不需要对所有之前 token 做 attention）</li>
+<li>推理状态仅为一个固定大小的 hidden state 向量，无增长的 KV cache</li>
+<li>生成吞吐量比等规模 Transformer 快 5 倍</li>
+</ul>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>Mamba 以选择性状态空间机制赋予 SSM 内容感知能力，以硬件感知并行扫描解决训练效率问题，证明了线性时间架构可以匹敌 Transformer——这是替代架构的 “GPT 时刻”。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><ul>
+<li><strong>表达能力问题</strong>：传统的线性时不变 SSM（如 S4）在处理需要内容感知的任务（如选择性复制、上下文检索）时严重落后于 Transformer。能否通过引入选择性（输入依赖）来弥补这个能力缺口？</li>
+<li><strong>效率问题</strong>：选择性破坏了 SSM 的卷积计算模式，使训练无法高效并行。如何在 GPU 上实现高效的选择性 SSM 训练？</li>
+<li><strong>架构简化问题</strong>：能否完全移除 attention 和 MLP，用一个纯净的 SSM 架构达到 Transformer 级别的性能？</li>
+<li><strong>长序列问题</strong>：线性时间架构能否在长序列任务上展现出超出 Transformer 的优势？</li>
+</ul>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><ul>
+<li><strong>语言建模</strong>：The Pile（300B token）、C4、WikiText-103</li>
+<li><strong>评估任务</strong>：语言建模 PPL、Zero-shot 下游任务（LAMBADA、HellaSwag、PIQA、ARC、WinoGrande）</li>
+<li><strong>合成任务</strong>：Selective Copying、Induction Heads（用于测试内容感知能力）</li>
+<li><strong>长序列评估</strong>：长度泛化测试（2K 训练 → 更长序列评估）</li>
+<li><strong>对比基线</strong>：Pythia（Transformer）、H3（SSM）、Hyena、RWKV</li>
+</ul>
+<h2 id="方法主线（机制流程）"><a href="#方法主线（机制流程）" class="headerlink" title="方法主线（机制流程）"></a>方法主线（机制流程）</h2><blockquote>
+<p>[!figure] Figure 1: 选择性SSM（S6）的数据流——从输入token到输出token的完整前向路径<br>建议位置：方法主线（段落开头）<br>放置原因：展示Mamba选择性SSM的完整数据流。输入token序列x_1, x_2, …, x_n经过：(1) 线性投影生成Delta、B、C参数（输入依赖），(2) 通过零阶保持（ZOH）离散化得到A_bar_t, B_bar_t，(3) 递归状态更新h_t &#x3D; A_bar_t h_{t-1} + B_bar_t x_t，(4) 输出投影y_t &#x3D; C_t h_t。关键标注：Delta控制遗忘速率（类似LSTM遗忘门）、B控制写入、C控制读取。用颜色编码输入依赖性——不同token产生不同的Delta&#x2F;B&#x2F;C<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 2: 硬件感知并行扫描——从串行递归到GPU高效分块扫描<br>建议位置：方法主线（步骤3附近）<br>放置原因：展示并行扫描算法如何将串行递归转换为GPU高效的并行计算。左侧：朴素串行递归（h_1→h_2→h_3→…），时间O(n)。中间：分块策略——序列划分为blocks，每块内并行处理。右侧：SRAM&#x2F;HBM内存层级——块内状态保留在SRAM中，仅块间传递在HBM中。标注”类似FlashAttention的I&#x2F;O感知设计”。底部对比：朴素递归vs并行扫描的训练吞吐量差异<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 3: LTI SSM vs Selective SSM的能力对比——选择性复制任务的示意图<br>建议位置：方法主线（步骤2附近）<br>放置原因：用选择性复制（Selective Copying）任务对比LTI SSM和Selective SSM。输入序列：分散的关键token（需复制）和无关token。LTI SSM：固定的状态更新规则，无法选择性记忆→输出错误。Selective SSM：对关键token产生大Delta（延长记忆），对无关token产生小Delta（快速遗忘）→输出正确。右侧标注Delta值的热力图展示选择性<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 4: Mamba推理时无KV cache的效率优势——与Transformer的内存对比<br>建议位置：方法主线（步骤4附近）<br>放置原因：双栏对比图。左栏为Transformer推理：KV cache随序列长度线性增长（512 token&#x3D;32MB, 1024&#x3D;64MB, 4096&#x3D;256MB, 100K&#x3D;6.4GB）。右栏为Mamba推理：隐藏状态大小恒定（无论10还是100K token，状态大小固定为d_state×d_model）。底部柱状图对比不同序列长度下的推理内存占用和生成吞吐量<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="步骤-1-State-Space-Model-的数学定义与离散化"><a href="#步骤-1-State-Space-Model-的数学定义与离散化" class="headerlink" title="步骤 1: State Space Model 的数学定义与离散化"></a>步骤 1: State Space Model 的数学定义与离散化</h3><p>SSM 由连续时间状态方程定义：</p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs erlang"><span class="hljs-function"><span class="hljs-title">h&#x27;</span><span class="hljs-params">(t)</span> = A <span class="hljs-title">h</span><span class="hljs-params">(t)</span> + B <span class="hljs-title">x</span><span class="hljs-params">(t)</span>   <span class="hljs-params">(状态方程：描述隐状态如何演化)</span></span><br><span class="hljs-function"><span class="hljs-title">y</span><span class="hljs-params">(t)</span> = C <span class="hljs-title">h</span><span class="hljs-params">(t)</span> + D <span class="hljs-title">x</span><span class="hljs-params">(t)</span>    <span class="hljs-params">(观测方程：描述如何从隐状态得到输出)</span></span><br></code></pre></td></tr></table></figure>
+<p>其中 h(t) 是隐状态，x(t) 是输入，y(t) 是输出。A, B, C, D 是参数矩阵。</p>
+<p><strong>离散化</strong>（将连续方程离散化到离散时间步，使用零阶保持ZOH）：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">h_t</span> = A_bar h_&#123;t-<span class="hljs-number">1</span>&#125; + B_bar x_t   (离散状态方程)<br><span class="hljs-attr">y_t</span> = C h_t                        (离散观测方程)<br></code></pre></td></tr></table></figure>
+<p>其中 A_bar &#x3D; exp(Delta * A), B_bar &#x3D; (Delta * A)^{-1}(exp(Delta * A) - I) * Delta * B。步长Delta控制离散化的时间尺度——Delta越小，连续动力学被更精细地采样。</p>
+<h3 id="步骤-2-从-LTI-到-Selective（LTV）——引入输入依赖性"><a href="#步骤-2-从-LTI-到-Selective（LTV）——引入输入依赖性" class="headerlink" title="步骤 2: 从 LTI 到 Selective（LTV）——引入输入依赖性"></a>步骤 2: 从 LTI 到 Selective（LTV）——引入输入依赖性</h3><p><strong>传统 SSM（S4）——LTI（线性时不变）</strong>：</p>
+<ul>
+<li>A, B, C, Delta 对所有 token 都是相同的、固定的</li>
+<li>优点：可以使用卷积形式并行训练（利用FFT加速）</li>
+<li>缺点：没有内容感知——模型对所有 token 做同样的状态更新，无法选择性记忆或遗忘</li>
+</ul>
+<p><strong>Mamba（S6）——Selective（选择性&#x2F;LTV，线性时变）</strong>：</p>
+<ul>
+<li>B(x_t) &#x3D; Linear_B(x_t)：B 变成输入 x_t 的线性投影函数</li>
+<li>C(x_t) &#x3D; Linear_C(x_t)：C 变成输入 x_t 的线性投影函数</li>
+<li>Delta(x_t) &#x3D; softplus(Linear_Delta(x_t))：Delta 变成输入的函数（经 softplus 确保为正）</li>
+<li>A 保持固定，但通过 Delta 的输入依赖性间接具有选择性（A_bar &#x3D; exp(Delta * A)）</li>
+</ul>
+<p><strong>选择性的效果</strong>：</p>
+<ul>
+<li>模型可以学会”只关注重要的 token，忽略不重要的”</li>
+<li>Delta 的输入依赖性类似 LSTM 的遗忘门——大Delta&#x3D;快速更新（新信息重要），小Delta&#x3D;保持记忆（旧信息重要）</li>
+<li>B 和 C 的输入依赖性类似 attention 的 query&#x2F;key——决定”从状态中读取什么”和”向状态中写入什么”</li>
+<li>打破了LTI的卷积等价性，使得训练必须使用递归形式</li>
+</ul>
+<h3 id="步骤-3-硬件感知并行扫描——解决选择性带来的训练效率问题"><a href="#步骤-3-硬件感知并行扫描——解决选择性带来的训练效率问题" class="headerlink" title="步骤 3: 硬件感知并行扫描——解决选择性带来的训练效率问题"></a>步骤 3: 硬件感知并行扫描——解决选择性带来的训练效率问题</h3><p>选择性破坏了LTI性质，使卷积&#x2F;FFT模式不可用——必须使用递归形式。但递归形式的朴素实现是串行的（逐时间步），在GPU上极慢。</p>
+<p><strong>递归形式的串行依赖</strong>：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">h_1</span> = A_bar_1 h_0 + B_bar_1 x_1<br><span class="hljs-attr">h_2</span> = A_bar_2 h_1 + B_bar_2 x_2<br><span class="hljs-attr">h_3</span> = A_bar_3 h_2 + B_bar_3 x_3  ← 依赖h_2，h_2又依赖h_1... 串行瓶颈！<br></code></pre></td></tr></table></figure>
+
+<p><strong>并行扫描解决方案</strong>（Parallel Scan &#x2F; Parallel Prefix Sum）：</p>
+<ul>
+<li>将序列划分为块（tiles），每块约256-1024个token</li>
+<li>每个块内使用work-efficient parallel scan在SRAM中并行计算所有h_t</li>
+<li>跨块传递全局扫描状态（仅块边界的状态在HBM中读写，开销极小）</li>
+<li>利用GPU的并行性同时处理多个token</li>
+</ul>
+<p><strong>I&#x2F;O感知的内存优化</strong>：</p>
+<ul>
+<li>将SSM状态保持在SRAM中直到tile扫描完成</li>
+<li>消除中间结果的HBM读写——类似FlashAttention的核心理念</li>
+<li>计算公式：state_size × d_model &#x3D; O(常数) — 每个token只需读写固定大小的状态</li>
+</ul>
+<h3 id="步骤-4-推理时的结构效率优势"><a href="#步骤-4-推理时的结构效率优势" class="headerlink" title="步骤 4: 推理时的结构效率优势"></a>步骤 4: 推理时的结构效率优势</h3><ul>
+<li>推理只需维护一个恒定大小的状态向量 h（维度 &#x3D; d_state × d_model，如16×2560 &#x3D; 40K元素）</li>
+<li>每个新 token 的计算量：O(1) 状态更新（矩阵-向量乘） + O(1) 输出投影（vs. Transformer 的 O(n) attention）</li>
+<li>无 KV cache 意味着任意长序列生成的内存成本是固定的</li>
+<li>在batch&#x3D;1场景下推理吞吐量是同等规模 Transformer 的约5倍</li>
+</ul>
+<h2 id="关键结果（表格-数字）"><a href="#关键结果（表格-数字）" class="headerlink" title="关键结果（表格&#x2F;数字）"></a>关键结果（表格&#x2F;数字）</h2><h3 id="语言建模-PPL-对比（The-Pile）"><a href="#语言建模-PPL-对比（The-Pile）" class="headerlink" title="语言建模 PPL 对比（The Pile）"></a>语言建模 PPL 对比（The Pile）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数量</th>
+<th>PPL</th>
+<th>推理速度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer++</td>
+<td>2.8B</td>
+<td>基准值</td>
+<td>基准值</td>
+</tr>
+<tr>
+<td>H3（LTI SSM）</td>
+<td>2.8B</td>
+<td>高于基准</td>
+<td>快但质量低</td>
+</tr>
+<tr>
+<td>Hyena</td>
+<td>2.8B</td>
+<td>接近基准</td>
+<td>快但低一线</td>
+</tr>
+<tr>
+<td><strong>Mamba</strong></td>
+<td><strong>2.8B</strong></td>
+<td><strong>低于基准</strong></td>
+<td><strong>5x 更快</strong></td>
+</tr>
+<tr>
+<td>Transformer++</td>
+<td>1.3B</td>
+<td>较高</td>
+<td>基准值</td>
+</tr>
+<tr>
+<td><strong>Mamba</strong></td>
+<td><strong>1.3B</strong></td>
+<td><strong>匹敌 2.8B Transformers</strong></td>
+<td><strong>~5x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="Zero-Shot-评估"><a href="#Zero-Shot-评估" class="headerlink" title="Zero-Shot 评估"></a>Zero-Shot 评估</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>LAMBADA</th>
+<th>HellaSwag</th>
+<th>PIQA</th>
+<th>ARC-E</th>
+<th>ARC-C</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pythia-2.8B</td>
+<td>64.7</td>
+<td>66.1</td>
+<td>75.0</td>
+<td>68.0</td>
+<td>33.4</td>
+</tr>
+<tr>
+<td>Mamba-2.8B</td>
+<td>69.6</td>
+<td>72.2</td>
+<td>76.7</td>
+<td>72.8</td>
+<td>36.3</td>
+</tr>
+</tbody></table>
+<h3 id="推理吞吐量"><a href="#推理吞吐量" class="headerlink" title="推理吞吐量"></a>推理吞吐量</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Batch&#x3D;1</th>
+<th>Batch&#x3D;8</th>
+<th>Batch&#x3D;64</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer 2.8B</td>
+<td>1x</td>
+<td>1x</td>
+<td>1x</td>
+</tr>
+<tr>
+<td>Mamba 2.8B</td>
+<td>~5x</td>
+<td>~4x</td>
+<td>~3x</td>
+</tr>
+</tbody></table>
+<p><strong>注意</strong>：Mamba 在小 batch（1-8）下优势最大——这正是推理延迟敏感的交互式应用场景。</p>
+<h3 id="合成任务表现"><a href="#合成任务表现" class="headerlink" title="合成任务表现"></a>合成任务表现</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>S4（LTI）</th>
+<th>Mamba（Selective）</th>
+<th>Transformer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Selective Copying</td>
+<td>失败</td>
+<td>成功（完美）</td>
+<td>成功</td>
+</tr>
+<tr>
+<td>Induction Heads</td>
+<td>失败</td>
+<td>成功</td>
+<td>成功</td>
+</tr>
+<tr>
+<td>MQAR（多查询关联召回）</td>
+<td>失败</td>
+<td>成功</td>
+<td>成功</td>
+</tr>
+</tbody></table>
+<p><strong>关键信息</strong>：Mamba 在合成任务上的突破证明了选择性机制真正弥补了 SSM 对 Transformer 的能力差距。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="1-选择性-SSM-的-Attention"><a href="#1-选择性-SSM-的-Attention" class="headerlink" title="1. 选择性 &#x3D; SSM 的 Attention"></a>1. 选择性 &#x3D; SSM 的 Attention</h3><p>Mamba 的核心洞察可以这样理解：选择性之于 SSM，如同 self-attention 之于 Transformer。在普通 RNN 中，所有 token 共享相同的转移矩阵。Attention 的创新在于，每个 token 的”注意力分布”是根据其与所有其他 token 的关系动态计算的。Mamba 的选择性本质上是对 SSM 状态更新做了类似的事情——每个 token 的动态特性（Delta、B、C）是根据其内容决定的。</p>
+<p>更具体地说：</p>
+<ul>
+<li>Transformer 的 attention：q_i^T k_j 决定了 token i 对 token j 的”关注程度”</li>
+<li>Mamba 的 Delta(x_t)：决定了 token t 的”记忆窗口”（遗忘速率）</li>
+<li>Mamba 的 B(x_t)：决定了 token t 的”写入强度”</li>
+<li>Mamba 的 C(x_t)：决定了 token t 的”读取模式”</li>
+</ul>
+<p>三者组合，Mamba 实现了类似 attention 的”选择性关注”，但以 O(1) 而非 O(n) 的复杂度。</p>
+<h3 id="2-硬件感知设计与模型设计的统一"><a href="#2-硬件感知设计与模型设计的统一" class="headerlink" title="2. 硬件感知设计与模型设计的统一"></a>2. 硬件感知设计与模型设计的统一</h3><p>Mamba 的另一个重要贡献是证明了硬件感知不应该是一个”后优化”步骤，而应该与模型设计同步进行。论文中详细描述了在 GPU SRAM&#x2F;HBM 层级下选择性 SSM 的效率分析，并将”在 SRAM 上能否高效执行”作为算法设计的约束条件之一。</p>
+<p>这与典型的 ML 研究流程（先设计算法，再优化实现）形成对比。Mamba 的设计哲学是：如果一个算法在目标硬件上不能高效运行，那它就不是一个好的算法——即使它在理论上很优美。</p>
+<p>这种哲学的直接后果是：Mamba 的并行扫描算法不是最优的数学算法（在理论上可以使用更复杂的分治策略），但它是在 GPU 上最高效的算法。这种”在给定硬件约束下的最优”vs”理论上的最优”的思维方式，是工业级 ML 系统设计的核心素养。</p>
+<h3 id="3-Mamba-与-RWKV-的对比"><a href="#3-Mamba-与-RWKV-的对比" class="headerlink" title="3. Mamba 与 RWKV 的对比"></a>3. Mamba 与 RWKV 的对比</h3><p>两者都是线性时间架构，但核心机制不同：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Mamba</th>
+<th>RWKV</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心机制</td>
+<td>选择性 SSM</td>
+<td>WKV (Receptance Weighted Key Value)</td>
+</tr>
+<tr>
+<td>状态大小</td>
+<td>固定（每层）</td>
+<td>固定（每层）</td>
+</tr>
+<tr>
+<td>训练方式</td>
+<td>并行扫描（自定义 kernel）</td>
+<td>并行计算（类似 Transformer）</td>
+</tr>
+<tr>
+<td>选择性</td>
+<td>内生的（参数是输入依赖）</td>
+<td>后加的（RWKV-6 引入动态衰减）</td>
+</tr>
+<tr>
+<td>GPU 优化</td>
+<td>硬件感知扫描</td>
+<td>标准矩阵运算</td>
+</tr>
+<tr>
+<td>生态</td>
+<td>学术界为主</td>
+<td>开源社区驱动</td>
+</tr>
+</tbody></table>
+<p>Mamba 的学术性更强（来自 CMU&#x2F;Together AI），RWKV 的社区性更强（来自 EleutherAI）。Mamba 的理论基础更深厚（SSM 数学框架），RWKV 的工程实现更友好（标准矩阵运算，不需要自定义 kernel）。</p>
+<h3 id="4-对长上下文场景的深远意义"><a href="#4-对长上下文场景的深远意义" class="headerlink" title="4. 对长上下文场景的深远意义"></a>4. 对长上下文场景的深远意义</h3><p>Mamba 的恒定大小状态在长上下文场景中有根本性优势：</p>
+<table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>Transformer KV Cache</th>
+<th>Mamba SSM State</th>
+<th>内存节省倍率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K tokens</td>
+<td>32 MB</td>
+<td>0.16 MB（固定）</td>
+<td>200×</td>
+</tr>
+<tr>
+<td>8K tokens</td>
+<td>256 MB</td>
+<td>0.16 MB（固定）</td>
+<td>1,600×</td>
+</tr>
+<tr>
+<td>32K tokens</td>
+<td>1.0 GB</td>
+<td>0.16 MB（固定）</td>
+<td>6,400×</td>
+</tr>
+<tr>
+<td>100K tokens</td>
+<td>3.2 GB</td>
+<td>0.16 MB（固定）</td>
+<td>20,000×</td>
+</tr>
+<tr>
+<td>1M tokens</td>
+<td>32 GB（超出单GPU）</td>
+<td>0.16 MB（固定）</td>
+<td><strong>200,000×（且仍可运行）</strong></td>
+</tr>
+</tbody></table>
+<ul>
+<li>Mamba 的 hidden state 无论 100 还是 100K token 都是固定大小（d_state × d_model 个浮点数）</li>
+<li>这意味着 Mamba 在理论上可以处理”无限”长度的序列（只要 hidden state 能足够好地总结历史信息）</li>
+<li>这个特性对于流式处理（streaming）、实时对话、无限长度文档分析等场景至关重要</li>
+</ul>
+<h3 id="5-Mamba与后续混合架构的关键差异"><a href="#5-Mamba与后续混合架构的关键差异" class="headerlink" title="5. Mamba与后续混合架构的关键差异"></a>5. Mamba与后续混合架构的关键差异</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Mamba (纯SSM)</th>
+<th>Mamba-2 (SSD)</th>
+<th>Jamba (SSM+Mamba)</th>
+<th>Griffin (RG-LRU)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>注意力层</td>
+<td>无</td>
+<td>无</td>
+<td>混合（attention+SSM层交替）</td>
+<td>混合</td>
+</tr>
+<tr>
+<td>SSM核心改进</td>
+<td>选择性（S6）</td>
+<td>结构化状态空间对偶</td>
+<td>S6</td>
+<td>实门控线性循环单元</td>
+</tr>
+<tr>
+<td>训练效率</td>
+<td>低于Transformer</td>
+<td>接近Transformer</td>
+<td>接近Transformer</td>
+<td>接近Transformer</td>
+</tr>
+<tr>
+<td>推理效率</td>
+<td><strong>最高</strong>（纯SSM）</td>
+<td>高</td>
+<td>中（attention层有开销）</td>
+<td>高</td>
+</tr>
+<tr>
+<td>精确检索能力</td>
+<td>弱（无精确注意力）</td>
+<td>弱</td>
+<td><strong>强</strong>（attention层弥补）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>生态系统</td>
+<td>较小</td>
+<td>中</td>
+<td>较大（兼容Transformer）</td>
+<td>中</td>
+</tr>
+</tbody></table>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Mamba</th>
+<th>S4&#x2F;H3 (LTI SSM)</th>
+<th>Transformer (MHA)</th>
+<th>RWKV</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>复杂度</td>
+<td>O(n)</td>
+<td>O(n log n)</td>
+<td>O(n^2)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>内容感知</td>
+<td>是（选择性）</td>
+<td>否（LTI）</td>
+<td>是（attention）</td>
+<td>是（WKV）</td>
+</tr>
+<tr>
+<td>KV cache</td>
+<td>无（固定状态）</td>
+<td>无（固定状态）</td>
+<td>有（增长）</td>
+<td>无（固定状态）</td>
+</tr>
+<tr>
+<td>训练并行性</td>
+<td>并行扫描</td>
+<td>卷积&#x2F;FFT</td>
+<td>并行</td>
+<td>并行</td>
+</tr>
+<tr>
+<td>质量 vs Transformer</td>
+<td>匹敌或超越</td>
+<td>逊色</td>
+<td>基准</td>
+<td>接近</td>
+</tr>
+<tr>
+<td>推理速度</td>
+<td>最快</td>
+<td>最快</td>
+<td>慢（长序列）</td>
+<td>最快</td>
+</tr>
+</tbody></table>
+<p>Mamba 处于替代架构历史上最关键的转折点：它是第一个在质量上真正超越同等规模 Transformer 的非 Transformer 架构，同时保持了线性时间和无 KV cache 的效率优势。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><strong>训练吞吐量劣势</strong>：Mamba 的自定义并行扫描 kernel 在训练时不如标准 Transformer（使用 FlashAttention 的成熟实现）快——Mamba 的效率优势主要体现在推理阶段。</li>
+<li><strong>选择性机制的”黑盒”</strong>：Delta、B、C 的选择性函数如何工作缺少直观解释。什么输入导致大 Delta（快速更新）vs 小 Delta（保持记忆）？缺乏可视化或分析。</li>
+<li><strong>对大规模验证的缺乏</strong>：Mamba-2.8B 是主要实验规模，与当时存在的 70B+ 模型有数量级差距。选择性在大规模下是否保持优势缺乏证据。</li>
+<li><strong>硬件耦合性强</strong>：并行扫描 algorithm 针对 NVIDIA GPU 优化，在 TPU、专用芯片、边缘设备上的移植可能困难。</li>
+<li><strong>attention 仍有关键价值</strong>：后续工作（Griffin、Jamba）证明纯 SSM 在需要精确局部匹配的任务（如代码复制、精确文本检索）上不如 attention。</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><strong>选择性&#x2F;输入依赖 &#x3D; 模型能力的关键杠杆</strong>：从 LTI 到 LTV 的转变是 Mamba 成功的核心。任何”固定模式”的模型（不限于 SSM）都可能通过增加输入依赖性获得能力跃升。</li>
+<li><strong>算法和硬件应该协同设计</strong>：不要先设计最优的数学算法再做硬件优化。从设计阶段就考虑硬件的内存层级、并行能力、通信带宽。</li>
+<li><strong>合成任务是能力缺口的最小测试集</strong>：Selective Copying 和 Induction Heads 这些简单的合成任务完美地暴露了 LTI SSM 的能力缺陷。在评估新架构时，设计能够针对性暴露弱点的合成任务至关重要。</li>
+<li><strong>推理效率和训练效率可能需要不同平衡</strong>：Mamba 的训练不如 Transformer 快，但推理快得多。对于推理密集型部署，牺牲一点训练效率换取推理效率是有利可图的。</li>
+<li><strong>无 KV cache &#x3D; 长上下文部署的游戏规则改变者</strong>：对于需要长时间运行、处理无限长度对话或流式输入的应用，无 KV cache 架构有天然的结构性优势。</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Mamba 是一篇让我重新思考”架构创新”定义的论文。在它出现之前，我已经接受了”Transformer + 各种优化就是 LLM 的标准配置”这一叙事。Mamba 挑战了这个假设——不是通过”让 Transformer 更高效”，而是通过提出一个完全不同家族的方法。</p>
+<p>但这也是 Mamba 面临的困境：Transformer 的生态系统太强大了。即使 Mamba 在理论上更高效，所有的优化工具（FlashAttention、vLLM、TensorRT-LLM）、训练框架（Megatron、DeepSpeed）、和硬件加速（Transformer Engine）都是围绕 Transformer 设计的。切换架构意味着放弃这些投入了数年优化的基础设施。</p>
+<p>这解释了为什么后续的混合架构（Jamba、Griffin）比纯 Mamba 更受工业界欢迎：它们可以在保留 Transformer 生态兼容性的同时获得 SSM 的效率。纯 Mamba 可能是”理论上最优”的，但混合架构是”工程上可行”的。</p>
+<p>Tri Dao（FlashAttention 和 Mamba 的共同作者）的角色值得特别关注：他同时拥有”让 Transformer 更快”（FlashAttention）和”替代 Transformer”（Mamba）的双重视角。这种双重身份使他在架构选择上可能拥有最全面的技术判断——他在 Mamba-2 中给出的建议是：混合架构可能是最优解。</p>
+<p>最后，Mamba 的硬件感知设计哲学对我个人的工程实践产生了深远影响。现在每当设计一个算法时，我会首先问：”这个算法在目标 GPU 的内存层级中该如何运行？SRAM 能装下吗？HBM 的读写频率是多少？”这已成为我的设计思维的一部分。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>Mamba 的 hidden state 维度与模型总参数的最优比例是多少？是否能推导出类似 Transformer 中 “d_model 和 d_ff 的比例”的经验规则？</li>
+<li>选择性的”强度”随模型规模如何变化？更大的 Mamba 是否变得更”选择性”？（Delta 的方差随层数&#x2F;规模增加？）</li>
+<li>能否用 Mamba 作为 Transformer 的 KV cache 替代品——用 Mamba 的状态总结历史上下文，query 仍然使用 attention？</li>
+<li>Mamba 在 encoder-only 场景下（如文本嵌入、分类）的表现如何？选择性 SSM 在双向上下文中如何工作？</li>
+<li>Mamba 的 hidden state 能否被解释（如可视化哪些 token 被保留在状态中）？这对理解模型行为和安全审计至关重要。</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;gu2023mamba,<br>  title=&#123;Mamba: Linear-Time Sequence Modeling with Selective State Spaces&#125;,<br>  author=&#123;Gu, Albert and Dao, Tri&#125;,<br>  journal=&#123;arXiv preprint arXiv:2312.00752&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="category-chain-item">替代架构</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/SSM/" class="print-no-link">#SSM</a>
+      
+        <a href="/tags/State-Space-Model/" class="print-no-link">#State Space Model</a>
+      
+        <a href="/tags/Selective-SSM/" class="print-no-link">#Selective SSM</a>
+      
+        <a href="/tags/%E7%BA%BF%E6%80%A7%E6%97%B6%E9%97%B4%E6%8E%A8%E7%90%86/" class="print-no-link">#线性时间推理</a>
+      
+        <a href="/tags/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="print-no-link">#替代架构</a>
+      
+        <a href="/tags/%E7%A1%AC%E4%BB%B6%E6%84%9F%E7%9F%A5%E7%AE%97%E6%B3%95/" class="print-no-link">#硬件感知算法</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Mamba: 选择性状态空间与线性时间序列建模</div>
+      <div>https://w2ongq6.github.io/2023/12/04/inference/note/Mamba_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年12月4日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/12/06/llm/note/Gemini_note/" title="Gemini: A Family of Highly Capable Multimodal Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Gemini: A Family of Highly Capable Multimodal Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/11/28/aigc/note/ADD_note/" title="ADD: Adversarial Diffusion Distillation">
+                        <span class="hidden-mobile">ADD: Adversarial Diffusion Distillation</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

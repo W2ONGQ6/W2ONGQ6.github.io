@@ -1,0 +1,1377 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2024-08-15 核心信息RWKV-5 (Eagle) 和 RWKV-6 (Finch) 代表了 RWKV 架构的多代重大演进。Eagle 引入了多头矩阵值状态（从单头向量状态升级为多头矩阵状态），Finch 进一步引入了数据依赖的动态递归（通过基于 LoRA 的 token shifting 让时间衰减变为输入依赖）。Finch 的内存使用比 FlashAttention 少 4">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RWKV-5&#x2F;6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/08/15/inference/note/RWKV56_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2024-08-15 核心信息RWKV-5 (Eagle) 和 RWKV-6 (Finch) 代表了 RWKV 架构的多代重大演进。Eagle 引入了多头矩阵值状态（从单头向量状态升级为多头矩阵状态），Finch 进一步引入了数据依赖的动态递归（通过基于 LoRA 的 token shifting 让时间衰减变为输入依赖）。Finch 的内存使用比 FlashAttention 少 4">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-08-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.787Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Eagle">
+<meta property="article:tag" content="Finch">
+<meta property="article:tag" content="RWKV">
+<meta property="article:tag" content="动态递归">
+<meta property="article:tag" content="开源架构">
+<meta property="article:tag" content="矩阵值状态">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-08-15 00:00" pubdate>
+          2024年8月15日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          112 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2024-08-15</p>
+<h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><p>RWKV-5 (Eagle) 和 RWKV-6 (Finch) 代表了 RWKV 架构的多代重大演进。Eagle 引入了多头矩阵值状态（从单头向量状态升级为多头矩阵状态），Finch 进一步引入了数据依赖的动态递归（通过基于 LoRA 的 token shifting 让时间衰减变为输入依赖）。Finch 的内存使用比 FlashAttention 少 40%，比 Mamba 少 17%，从 4K 训练上下文泛化到 20K+ 推理上下文。两者共同证明了持续的架构优化可以在不放弃核心 RNN 范式的前提下缩小与 Transformer 的差距。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们呈现了 RWKV 架构的演进：RWKV-5 Eagle 和 RWKV-6 Finch。Eagle 引入了多头矩阵值状态——将时间混合扩展为多个注意力头，使用矩阵值状态并配备新的门控机制和 GroupNorm。Finch 在此基础上引入数据依赖的动态递归——通过基于 LoRA 的 token shifting，每个通道的衰减率根据当前和前一个 token 动态变化。Finch 的内存使用比 FlashAttention 少 40%，从 4K 训练上下文可泛化到 20K+ 推理上下文，在多查询关联回忆任务上表现出色。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>RWKV-5 Eagle：多头矩阵状态</strong>：从 RWKV-4 的”单头向量状态”升级为”多头矩阵状态”。时间混合（WKV）拆分为多个独立的头——类似于 Transformer 从单头到多头的进化。每个头有独立的状态矩阵（而非单个向量），表达力大幅增强。新引入的 gating 机制和 GroupNorm 提升训练稳定性。</p>
+</li>
+<li><p><strong>RWKV-6 Finch：数据依赖动态递归</strong>：时间衰减从固定参数变为输入依赖的函数——“二阶”递归机制。通过基于 LoRA 的 token shifting 实现：w_new &#x3D; w_base + LoRA(w_base, x_t, x_{t-1})。衰减率根据 token 内容动态调整。这是 RWKV 从”静态选择性”到”动态选择性”的关键升级。</p>
+</li>
+<li><p><strong>显著的效率提升</strong>：Finch 内存比 FlashAttention 少 40%（无 KV cache + 高效状态管理），比 Mamba 少 17%。在长序列推理速度上具有压倒性优势。</p>
+</li>
+<li><p><strong>MQAR（多查询关联回忆）任务的突破</strong>：传统 RNN 在此任务上表现极差（&lt;5%），RWKV-4 约 10%，Finch 达到约 65%——证明动态递归对选择性信息检索任务有显著改善。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>Eagle 的多头矩阵状态让 RWKV 获得 Transformer 级别的多视角建模能力，Finch 的动态递归让 RWKV 获得 Mamba 级别的内容感知选择能力——RWKV 家族完成了从”静态 RNN”到”动态递归架构”的关键转型。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心问题分解"><a href="#核心问题分解" class="headerlink" title="核心问题分解"></a>核心问题分解</h3><ul>
+<li><strong>表达能力问题</strong>：RWKV-4 的单头向量状态限制了多视角建模能力（类似单头 attention vs 多头 attention）。多头矩阵状态能否弥补？</li>
+<li><strong>选择性&#x2F;动态性问题</strong>：RWKV-4 的固定时间衰减不能根据输入自适应调整。数据依赖的动态衰减在 RWKV 框架中如何实现？</li>
+<li><strong>MQAR 问题</strong>：多查询关联回忆是 RNN&#x2F;SSM 架构的普遍弱点。动态递归能否解决？</li>
+<li><strong>效率保持问题</strong>：在增加多头和动态性的同时，RWKV 的 O(1) 推理和无 KV cache 优势能否保持？</li>
+</ul>
+<h3 id="子问题-1：单头-vs-多头的表达能力差异"><a href="#子问题-1：单头-vs-多头的表达能力差异" class="headerlink" title="子问题 1：单头 vs 多头的表达能力差异"></a>子问题 1：单头 vs 多头的表达能力差异</h3><p>RWKV-4 的 WKV 机制在处理所有信息时使用单一的”注意力头”——对于序列中的每种信息类型（语法、语义、事实、情感），共享相同的状态空间和衰减参数。这类似于 Transformer 中单头注意力的局限——无法同时捕捉不同类型的关系。</p>
+<p>Eagle 的多头化解决了这个问题——每个头可以学习专注于不同类型的信息，在不同子空间中积累状态。这来源于自然语言的”多维性”——同一段文本可以在语法、语义、风格、情感等多个维度上被解释，单状态空间无法同时捕获所有这些维度。</p>
+<h3 id="子问题-2：固定衰减-vs-动态衰减"><a href="#子问题-2：固定衰减-vs-动态衰减" class="headerlink" title="子问题 2：固定衰减 vs 动态衰减"></a>子问题 2：固定衰减 vs 动态衰减</h3><p>RWKV-4 的每个通道有一个固定的、可学习的衰减参数 w。训练后，w 不再变化——无论输入内容是什么，模型以相同的速率”遗忘”过去的信息。这是一个根本性局限：对于”关键token”（如专有名词、关键事实），模型应该&quot;记住更久&quot;（更小的衰减），对于”填充token”（如介词、冠词），模型应该&quot;更快遗忘&quot;（更大的衰减）。</p>
+<p>Finch 的解决方案：使 w 成为输入的函数——w(x_t, x_{t-1}) &#x3D; w_base + delta_w(x_t, x_{t-1})。这使得衰减变成”数据依赖的”——看到重要信息时自动减少衰减，看到不相关信息时自动增加衰减。</p>
+<h3 id="Before-This-Paper-Pain-Points"><a href="#Before-This-Paper-Pain-Points" class="headerlink" title="Before-This-Paper Pain Points"></a>Before-This-Paper Pain Points</h3><ol>
+<li>RWKV-4 虽然在效率上优于 Transformer，但质量差距仍然明显（PPL 差距约 10-20%）。</li>
+<li>Mamba 引入了选择性 SSM，在质量上大幅超越了固定参数 SSM——RWKV 需要类似的”动态选择性”才能保持竞争力。</li>
+<li>RWKV 在 MQAR（多查询关联回忆）任务上表现极差——这在实际检索任务中转化为”模型忘记之前说过的关键信息”。</li>
+<li>开源社区驱动的架构改进需要”累积式、可验证的”创新模式——每一步改进需要足够小以便于实现和验证，但又足够大以产生可感知的质量提升。</li>
+</ol>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><ul>
+<li><strong>预训练数据</strong>：The Pile 和其他开源语料库</li>
+<li><strong>评估任务</strong>：语言建模 PPL、多查询关联回忆 MQAR、标准 NLP benchmark</li>
+<li><strong>对比基线</strong>：RWKV-4、Mamba、FlashAttention (Transformer)、LLaMA-arch</li>
+<li><strong>上下文扩展</strong>：4K 训练 → 20K+ 推理评估</li>
+<li><strong>效率基准</strong>：内存占用、推理速度 (tok&#x2F;s)</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程：从-RWKV-4-到-Finch-的完整-6-步演进"><a href="#机制流程：从-RWKV-4-到-Finch-的完整-6-步演进" class="headerlink" title="机制流程：从 RWKV-4 到 Finch 的完整 6 步演进"></a>机制流程：从 RWKV-4 到 Finch 的完整 6 步演进</h3><p><strong>Step 1：RWKV-4 的架构基础——WKV 线性注意力</strong></p>
+<ul>
+<li>输入：序列 x &#x3D; [x_1, x_2, …, x_N]</li>
+<li>操作：RWKV-4 的核心公式<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs cpp"># WKV 线性注意力<br><span class="hljs-type">wkv_t</span> = (sum_i e^&#123;-(t<span class="hljs-number">-1</span>-i)*w + k_i&#125; * v_i + e^&#123;u + <span class="hljs-type">k_t</span>&#125; * <span class="hljs-type">v_t</span>)<br>       / (sum_i e^&#123;-(t<span class="hljs-number">-1</span>-i)*w + k_i&#125; + e^&#123;u + <span class="hljs-type">k_t</span>&#125;)<br><br># 其中:<br>#   <span class="hljs-type">r_t</span>, <span class="hljs-type">k_t</span>, <span class="hljs-type">v_t</span> = 从 <span class="hljs-type">x_t</span> 通过线性投影获得<br><span class="hljs-meta">#   w = 可学习的逐通道衰减参数（向量，每通道一个值）</span><br><span class="hljs-meta">#   u = 可学习的<span class="hljs-string">&quot;bonus&quot;</span>参数（给予当前 token 额外权重）</span><br>#   状态 <span class="hljs-type">s_t</span> = (分子累积, 分母累积) —— 每通道两个数值<br></code></pre></td></tr></table></figure>
+关键特征：w 是固定的（训练后不变），状态是向量值的（每个通道一个状态数值），所有信息通过单一的”头”混合。</li>
+<li>输出：通过时间混合和通道混合后的输出</li>
+<li>目标：以 O(1) 的推理复杂度（每个token仅需更新固定大小的状态）实现类似注意力的序列建模</li>
+</ul>
+<p><strong>Step 2：Eagle (RWKV-5) —— 多头矩阵状态的引入</strong></p>
+<ul>
+<li>输入：序列 x（与 RWKV-4 相同）</li>
+<li>操作：<ol>
+<li>将时间混合 (WKV) 拆分为 H 个独立的头（H 通常为 8-16）</li>
+<li>每个头 h 有自己独立的 K, V 投影矩阵和衰减参数 w_h：<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">for head h in 1..H:</span><br><span class="language-xml">  k_</span><span class="hljs-template-variable">&#123;t,h&#125;</span><span class="language-xml"> = W_k^h * x_t</span><br><span class="language-xml">  v_</span><span class="hljs-template-variable">&#123;t,h&#125;</span><span class="language-xml"> = W_v^h * x_t</span><br><span class="language-xml">  wkv_</span><span class="hljs-template-variable">&#123;t,h&#125;</span><span class="language-xml"> = (sum_i e^</span><span class="hljs-template-variable">&#123;-(t-1-i)*w_h + k_&#123;i,h&#125;</span><span class="language-xml">&#125; * v_</span><span class="hljs-template-variable">&#123;i,h&#125;</span><span class="language-xml"></span><br><span class="language-xml">               + e^</span><span class="hljs-template-variable">&#123;u_h + k_&#123;t,h&#125;</span><span class="language-xml">&#125; * v_</span><span class="hljs-template-variable">&#123;t,h&#125;</span><span class="language-xml">)</span><br><span class="language-xml">             / (sum_i e^</span><span class="hljs-template-variable">&#123;-(t-1-i)*w_h + k_&#123;i,h&#125;</span><span class="language-xml">&#125; + e^</span><span class="hljs-template-variable">&#123;u_h + k_&#123;t,h&#125;</span><span class="language-xml">&#125;)</span><br></code></pre></td></tr></table></figure></li>
+<li>状态升级为矩阵：多头的状态组成一个矩阵 State ∈ R^{H × d_head}<ul>
+<li>RWKV-4 的状态：向量 ∈ R^d（1行 × d列）</li>
+<li>Eagle 的状态：矩阵 ∈ R^{H × d_head}（H行 × d_head列）</li>
+<li>矩阵状态有 H 倍的表达容量，且允许头间隐式交互</li>
+</ul>
+</li>
+<li>新增的门控机制（类似 GLU）：<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs cpp">output = (<span class="hljs-type">r_t</span> * <span class="hljs-built_in">sigmoid</span>(<span class="hljs-type">gate_t</span>)) * wkv_result<br># <span class="hljs-type">gate_t</span> 提供逐元素的信息流控制<br></code></pre></td></tr></table></figure></li>
+<li>GroupNorm 在每个头内进行归一化——稳定多头训练</li>
+</ol>
+</li>
+<li>输出：Eagle 的每层输出</li>
+<li>目标：增加多视角建模能力，提升状态表达的丰富度</li>
+</ul>
+<p><strong>Step 3：Finch (RWKV-6) —— 数据依赖动态递归</strong></p>
+<ul>
+<li>输入：序列 x（与 Eagle 相同）</li>
+<li>操作：<ol>
+<li>核心创新：将衰减 w 从固定参数变为输入依赖的函数<figure class="highlight r"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs r"><span class="hljs-comment"># Finch 的动态衰减</span><br>w_<span class="hljs-punctuation">&#123;</span>t<span class="hljs-punctuation">,</span><span class="hljs-built_in">c</span><span class="hljs-punctuation">&#125;</span> <span class="hljs-operator">=</span> w_base_c <span class="hljs-operator">+</span> delta_w<span class="hljs-punctuation">(</span>x_t<span class="hljs-punctuation">,</span> x_<span class="hljs-punctuation">&#123;</span>t<span class="hljs-operator">-</span><span class="hljs-number">1</span><span class="hljs-punctuation">&#125;</span><span class="hljs-punctuation">)</span>_<span class="hljs-built_in">c</span><br><br><span class="hljs-comment"># 其中:</span><br><span class="hljs-comment">#   w_base_c = 可学习的基准衰减（类似 RWKV-4 的 w）</span><br><span class="hljs-comment">#   delta_w = 基于 token 变化量的动态调整</span><br><span class="hljs-comment">#   delta_w 通过 LoRA 低秩分解实现</span><br></code></pre></td></tr></table></figure></li>
+<li>LoRA Token Shifting 的具体实现：<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-comment"># 低秩分解计算动态衰减增量</span><br><span class="hljs-attr">token_diff</span> = x_t - x_&#123;t-<span class="hljs-number">1</span>&#125;    <span class="hljs-comment"># token 的变化量</span><br><span class="hljs-attr">delta_w</span> = A @ (token_diff @ B)  <span class="hljs-comment"># A, B 是低秩矩阵</span><br><br><span class="hljs-comment"># A ∈ R^&#123;d_model × r&#125;, B ∈ R^&#123;r × d_model&#125;</span><br><span class="hljs-comment"># r 是 LoRA 秩（通常为 4-16，远小于 d_model）</span><br><span class="hljs-comment"># 参数量 = 2 * d_model * r （远小于全秩的 d_model^2）</span><br><br><span class="hljs-comment"># 最终衰减</span><br><span class="hljs-attr">w</span> = w_base + delta_w<br></code></pre></td></tr></table></figure></li>
+<li>设计直觉：当 x_t 与 x_{t-1} 差异大时（如专有名词引入），delta_w 较大（显著调整衰减）；当差异小时（如连续的函数词），delta_w 较小（保持基准衰减）</li>
+<li>这种”二阶”递归（状态更新依赖于当前的输入和前一输入之间的关系）赋予 Finch 内容感知的选择性——类似于 Mamba 的 S6 选择性机制但用更轻量的 LoRA 实现</li>
+</ol>
+</li>
+<li>输出：Finch 的每层输出</li>
+<li>目标：使 RWKV 具备”选择性地记忆&#x2F;遗忘”的能力——对重要信息保持更久，对不重要信息更快遗忘</li>
+</ul>
+<p><strong>Step 4：LoRA Token Shifting 的参数效率分析</strong></p>
+<ul>
+<li>输入：LoRA 秩 r 的选择</li>
+<li>操作：<ol>
+<li>参数对比：<figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs tap">全秩动态参数: d_model × d_model = 4096² ≈ 16.8M<br>LoRA (r=8):<span class="hljs-number"> 2 </span>× d_model × r =<span class="hljs-number"> 2 </span>×<span class="hljs-number"> 4096 </span>×<span class="hljs-number"> 8 </span>≈ 65K<br>压缩比: 16.8M / 65K ≈ 258倍<br></code></pre></td></tr></table></figure></li>
+<li>秩 r 的影响（实验）：<ul>
+<li>r&#x3D;2: 动态性的表达力不足，MQAR 提升有限（约 30%）</li>
+<li>r&#x3D;4: 开始产生显著效果（约 50% MQAR）</li>
+<li>r&#x3D;8: 最优平衡点（约 65% MQAR）</li>
+<li>r&#x3D;16: 边际增益极小（约 67% MQAR，但参数翻倍）</li>
+</ul>
+</li>
+</ol>
+</li>
+<li>输出：最优秩选择（r&#x3D;8，约占总参数的 0.5%）</li>
+<li>目标：用极小的参数增量（&lt;1%）引入显著的内容感知能力</li>
+</ul>
+<p><strong>Step 5：Finch 的推理效率——O(1) 状态更新</strong></p>
+<ul>
+<li>输入：推理时的每个新 token x_t</li>
+<li>操作：<ol>
+<li>Finch 的推理状态：<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">State_t</span> = (分子累积_t, 分母累积_t) for each head<br><span class="hljs-comment"># 每个头：两个向量 ∈ R^&#123;d_head&#125;</span><br><span class="hljs-comment"># 总状态大小：2 × H × d_head ≈ 2 × d_model</span><br></code></pre></td></tr></table></figure></li>
+<li>单个 token 的状态更新（O(1) 复杂度）：<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs cpp"># 仅需更新状态，不需要重新计算所有过去的 token<br>w_new = w_base + <span class="hljs-built_in">LoRA</span>(<span class="hljs-type">x_t</span>, x_&#123;t<span class="hljs-number">-1</span>&#125;)<br>分子<span class="hljs-type">_t</span> = e^&#123;-w_new&#125; × 分子_&#123;t<span class="hljs-number">-1</span>&#125; + e^&#123;<span class="hljs-type">k_t</span>&#125; × <span class="hljs-type">v_t</span><br>分母<span class="hljs-type">_t</span> = e^&#123;-w_new&#125; × 分母_&#123;t<span class="hljs-number">-1</span>&#125; + e^&#123;<span class="hljs-type">k_t</span>&#125;<br><span class="hljs-type">wkv_t</span> = 分子<span class="hljs-type">_t</span> / 分母<span class="hljs-type">_t</span><br></code></pre></td></tr></table></figure></li>
+<li>与 Transformer 的差异：Transformer 每次推理需要计算当前 token 与所有过去 token 的注意力——O(N²) 或 O(N)（使用 KV cache）</li>
+<li>Finch 不需要 KV cache——状态大小固定，与序列长度无关</li>
+</ol>
+</li>
+<li>输出：输出 token y_t</li>
+<li>目标：在推理时保持 O(1) 的每步复杂度——无限的上下文长度扩展</li>
+</ul>
+<p><strong>Step 6：训练与推理的效率对比</strong></p>
+<ul>
+<li>输入：FlashAttention (Transformer) 和 Mamba 的对照数据</li>
+<li>操作：<ol>
+<li>内存使用（7B 模型, 8K 序列）：<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">FlashAttention</span>: <span class="hljs-number">100</span>%（基准）<br><span class="hljs-attribute">Mamba</span>: ~<span class="hljs-number">72</span>%<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">4</span>: ~<span class="hljs-number">68</span>%<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">6</span> Finch: ~<span class="hljs-number">60</span>%<br></code></pre></td></tr></table></figure></li>
+<li>长序列推理速度（理论复杂度）：<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs mathematica"><span class="hljs-variable">Transformer</span><span class="hljs-operator">:</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-built_in">N</span>²<span class="hljs-punctuation">)</span> 无 <span class="hljs-variable">KV</span> <span class="hljs-variable">cache</span><span class="hljs-operator">,</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-built_in">N</span><span class="hljs-punctuation">)</span> 有 <span class="hljs-variable">KV</span> <span class="hljs-variable">cache</span> 但内存 <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-built_in">N</span><span class="hljs-punctuation">)</span><br><span class="hljs-variable">RWKV</span> <span class="hljs-variable">Finch</span><span class="hljs-operator">:</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-number">1</span><span class="hljs-punctuation">)</span> <span class="hljs-variable">per</span> <span class="hljs-variable">token</span> <span class="hljs-punctuation">(</span>状态大小恒定<span class="hljs-punctuation">)</span><br></code></pre></td></tr></table></figure></li>
+<li>长度泛化（4K 训练 → X 推理）：<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">Transformer</span>: 通常在 +<span class="hljs-number">20</span>-<span class="hljs-number">50</span>% 长度后显著退化<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">4</span>: 可泛化到 <span class="hljs-number">2</span>-<span class="hljs-number">3</span>× 训练长度<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">6</span> Finch: 可泛化到 <span class="hljs-number">5</span>×+ 训练长度（<span class="hljs-number">4</span>K 训练 → <span class="hljs-number">20</span>K+ 推理）<br></code></pre></td></tr></table></figure></li>
+</ol>
+</li>
+<li>输出：效率优势的定量分析</li>
+<li>目标：证明 Finch 在”训练-推理长度泛化”上的独特优势</li>
+</ul>
+<h3 id="算法伪代码：Finch-单层前向传播"><a href="#算法伪代码：Finch-单层前向传播" class="headerlink" title="算法伪代码：Finch 单层前向传播"></a>算法伪代码：Finch 单层前向传播</h3><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs makefile"><span class="hljs-section">Algorithm: RWKV-6 Finch Layer Forward</span><br><br><span class="hljs-section">Input: x_t (当前token), State_&#123;t-1&#125; (上一状态), w_base (可学习基准衰减)</span><br><span class="hljs-section">Params: LoRA_A, LoRA_B, W_k, W_v, W_r, gate_weights</span><br><br><span class="hljs-comment"># Step 1: Compute key, value, reception</span><br>k_t = W_k @ x_t<br>v_t = W_v @ x_t<br>r_t = W_r @ x_t<br><br><span class="hljs-comment"># Step 2: Dynamic decay via LoRA token shifting</span><br>token_diff = x_t - x_&#123;t-1&#125;<br>delta_w = LoRA_A @ (token_diff @ LoRA_B)  <span class="hljs-comment"># low-rank dynamic adjustment</span><br>w_t = w_base + delta_w                      <span class="hljs-comment"># data-dependent decay</span><br><br><span class="hljs-comment"># Step 3: Update state (O(1) per token, per head)</span><br>numerator = exp(-w_t) * State.numerator + exp(k_t) * v_t<br>denominator = exp(-w_t) * State.denominator + exp(k_t)<br>State = (numerator, denominator)            <span class="hljs-comment"># fixed-size state update</span><br><br><span class="hljs-comment"># Step 4: Time-mix output</span><br>wkv = numerator / denominator<br><br><span class="hljs-comment"># Step 5: Gating</span><br>gate = sigmoid(gate_weights @ x_t)<br>output = (r_t * gate) * wkv<br><br><span class="hljs-comment"># Step 6: Channel-mix (FFN equivalent, similar to RWKV-4)</span><br><span class="hljs-comment"># ... (gated MLP)</span><br><br>return output, State<br></code></pre></td></tr></table></figure>
+
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1：内存使用对比（7B-规模-8K-序列-推理时）"><a href="#表-1：内存使用对比（7B-规模-8K-序列-推理时）" class="headerlink" title="表 1：内存使用对比（7B 规模, 8K 序列, 推理时）"></a>表 1：内存使用对比（7B 规模, 8K 序列, 推理时）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>KV Cache 大小</th>
+<th>状态大小</th>
+<th>总内存占用</th>
+<th>相对 FlashAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FlashAttention (Transformer)</td>
+<td>O(H<em>L</em>N*d)</td>
+<td>无</td>
+<td>基准值</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>Mamba</td>
+<td>无</td>
+<td>O(H*d)</td>
+<td>~72%</td>
+<td>少 28%</td>
+</tr>
+<tr>
+<td>RWKV-4</td>
+<td>无</td>
+<td>O(d)</td>
+<td>~68%</td>
+<td>少 32%</td>
+</tr>
+<tr>
+<td>RWKV-5 Eagle</td>
+<td>无</td>
+<td>O(H*d)</td>
+<td>~65%</td>
+<td>少 35%</td>
+</tr>
+<tr>
+<td><strong>RWKV-6 Finch</strong></td>
+<td><strong>无</strong></td>
+<td><strong>O(H*d)</strong></td>
+<td><strong>~60%</strong></td>
+<td><strong>少 40%</strong></td>
+</tr>
+</tbody></table>
+<p>Finch 的内存优势来自两个维度：（a）无 KV cache（Transformer 的 KV cache 随序列长度线性增长，在百余K token时可达数十GB），（b）固定大小的隐状态（与序列长度无关）。这使得 Finch 在极长序列（&gt;100K）推理时具有压倒性的内存效率优势。</p>
+<h3 id="表-2：长度泛化（4K-训练-→-X-推理-PPL-增量）"><a href="#表-2：长度泛化（4K-训练-→-X-推理-PPL-增量）" class="headerlink" title="表 2：长度泛化（4K 训练 → X 推理, PPL 增量）"></a>表 2：长度泛化（4K 训练 → X 推理, PPL 增量）</h3><table>
+<thead>
+<tr>
+<th>评估长度</th>
+<th>RWKV-4</th>
+<th>Mamba</th>
+<th>RWKV-6 Finch</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4K (训练)</td>
+<td>基准</td>
+<td>基准</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>6K</td>
+<td>+0.03</td>
+<td>+0.01</td>
+<td>+0.01</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>+0.05</td>
+<td>+0.03</td>
+<td>+0.02</td>
+</tr>
+<tr>
+<td>10K</td>
+<td>+0.08</td>
+<td>+0.04</td>
+<td>+0.03</td>
+</tr>
+<tr>
+<td>12K</td>
+<td>+0.10</td>
+<td>+0.06</td>
+<td>+0.04</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>+0.15</td>
+<td>+0.08</td>
+<td>+0.05</td>
+</tr>
+<tr>
+<td>20K</td>
+<td>+0.22</td>
+<td>+0.10</td>
+<td>+0.07</td>
+</tr>
+</tbody></table>
+<p>Finch 的长度泛化性能出色——在 5× 训练长度（20K）处，PPL 增量仅为 0.07（RWKV-4 为 0.22）。Mamba 也表现不错（0.10），但 Finch 在超长泛化上更优。这是因为 Finch 的动态衰减机制在推理时可以适应更长的序列——看到更多token后，重要信息的衰减被自动减小。</p>
+<h3 id="表-3：MQAR-任务（多查询关联回忆）"><a href="#表-3：MQAR-任务（多查询关联回忆）" class="headerlink" title="表 3：MQAR 任务（多查询关联回忆）"></a>表 3：MQAR 任务（多查询关联回忆）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>MQAR 准确率</th>
+<th>相对 RWKV-4</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准 RNN&#x2F;LSTM</td>
+<td>&lt;5%</td>
+<td>-</td>
+<td>状态压缩导致信息丢失</td>
+</tr>
+<tr>
+<td>RWKV-4</td>
+<td>~10%</td>
+<td>基准</td>
+<td>固定衰减无法选择性记忆</td>
+</tr>
+<tr>
+<td>RWKV-5 Eagle</td>
+<td>~40%</td>
+<td>+30pp</td>
+<td>多头增加了表达力但不解决选择性问题</td>
+</tr>
+<tr>
+<td>Mamba</td>
+<td>~60%</td>
+<td>+50pp</td>
+<td>S6 选择性机制</td>
+</tr>
+<tr>
+<td><strong>RWKV-6 Finch</strong></td>
+<td><strong>~65%</strong></td>
+<td><strong>+55pp</strong></td>
+<td>LoRA token shifting 的动态选择性</td>
+</tr>
+</tbody></table>
+<p>MQAR 是 RNN 架构的”酸测试”——它衡量模型是否能在状态中精确存储和检索（key, value）对。标准 RNN 的固定大小状态无法同时存储多个 key-value 对（会相互干扰&#x2F;遗忘），而 Transformer 的注意力可以精确回溯到任何过去的token。Finch 的 65% MQAR 虽然仍低于 Transformer（理论上可达到100%），但已经从 RWKV-4 的 10% 实现了数量级的跃进。</p>
+<h3 id="表-4：架构演进的逐代质量提升（PPL-1-5B-模型-The-Pile）"><a href="#表-4：架构演进的逐代质量提升（PPL-1-5B-模型-The-Pile）" class="headerlink" title="表 4：架构演进的逐代质量提升（PPL, 1.5B 模型, The Pile）"></a>表 4：架构演进的逐代质量提升（PPL, 1.5B 模型, The Pile）</h3><table>
+<thead>
+<tr>
+<th>RWKV 版本</th>
+<th>主要创新</th>
+<th>PPL (The Pile)</th>
+<th>PPL 相对 v4</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v4</td>
+<td>固定衰减, 单头向量状态</td>
+<td>10.8</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>v5 (Eagle)</td>
+<td>多头矩阵 + 门控 + GroupNorm</td>
+<td>10.1</td>
+<td>-0.7</td>
+</tr>
+<tr>
+<td>v6 (Finch)</td>
+<td>LoRA 动态衰减</td>
+<td>9.7</td>
+<td>-0.4 (在 v5 基础上)</td>
+</tr>
+<tr>
+<td>v6 total</td>
+<td>累积改进</td>
+<td>9.7</td>
+<td>-1.1 (-10.2%)</td>
+</tr>
+</tbody></table>
+<p>从 v4 到 v6，PPL 降低 10.2%——这是显著的累积改进。v5 的多头化贡献最大（-0.7 PPL），v6 的动态衰减在此基础上又贡献了-0.4 PPL。</p>
+<h3 id="表-5：推理速度对比（7B-A100-tok-s）"><a href="#表-5：推理速度对比（7B-A100-tok-s）" class="headerlink" title="表 5：推理速度对比（7B, A100, tok&#x2F;s）"></a>表 5：推理速度对比（7B, A100, tok&#x2F;s）</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>Transformer (FlashAttn)</th>
+<th>Mamba</th>
+<th>RWKV-6 Finch</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K (短)</td>
+<td>85 tok&#x2F;s</td>
+<td>95 tok&#x2F;s</td>
+<td>98 tok&#x2F;s</td>
+</tr>
+<tr>
+<td>4K (中)</td>
+<td>72 tok&#x2F;s</td>
+<td>92 tok&#x2F;s</td>
+<td>94 tok&#x2F;s</td>
+</tr>
+<tr>
+<td>16K (长)</td>
+<td>48 tok&#x2F;s</td>
+<td>88 tok&#x2F;s</td>
+<td>92 tok&#x2F;s</td>
+</tr>
+<tr>
+<td>64K (超长)</td>
+<td>21 tok&#x2F;s</td>
+<td>82 tok&#x2F;s</td>
+<td>89 tok&#x2F;s</td>
+</tr>
+<tr>
+<td>128K (极限)</td>
+<td>N&#x2F;A (OOM)</td>
+<td>78 tok&#x2F;s</td>
+<td>86 tok&#x2F;s</td>
+</tr>
+</tbody></table>
+<p>Finch 在所有序列长度上保持接近恒定的推理速度（从1K的98 tok&#x2F;s到128K的86 tok&#x2F;s，仅降12%）。Transformer 的速度随长度急剧下降（从85到21 tok&#x2F;s）或在超长序列上内存溢出。这种”恒定速度”是 Finch O(1) 状态更新的直接体现。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="多头-架构升级的普适法则——从-Transformer-到-RWKV"><a href="#多头-架构升级的普适法则——从-Transformer-到-RWKV" class="headerlink" title="多头 &#x3D; 架构升级的普适法则——从 Transformer 到 RWKV"></a>多头 &#x3D; 架构升级的普适法则——从 Transformer 到 RWKV</h3><p>Eagle 的多头设计验证了一个看似普适的法则：增加”多视角”几乎总是提升模型质量。从 Transformer 的单头到多头 attention，从 RWKV-4 的单头 WKV 到 Eagle 的多头 WKV——“多头化”是序列架构设计中近乎免费的午餐。</p>
+<p>深层原因：</p>
+<ol>
+<li><strong>自然语言的多维性</strong>：一段文本同时包含语法结构、语义内容、事实知识、情感色调、文体风格等多个独立（或半独立）的信息维度。单一状态空间无法同时有效地表示所有这些维度——维度间会有干扰（”语法信息的梯度淹没了风格信息”）。</li>
+<li><strong>子空间专业化</strong>：多头设计允许每个头专注于不同类型的模式——某些头可能专注于局部语法模式（如短语边界），其他头专注于长程语义依赖（如共指消解）。训练过程中，头自然地表现出专业化——这类似于 CNN 中不同卷积核学习不同模式。</li>
+<li><strong>计算效率</strong>：多头可以并行计算（每个头的 WKV 操作独立），额外的计算成本主要来自参数增加（头数 × 投影矩阵），而不是序列计算。</li>
+</ol>
+<h3 id="LoRA-Token-Shifting——轻量级内容感知的巧妙设计"><a href="#LoRA-Token-Shifting——轻量级内容感知的巧妙设计" class="headerlink" title="LoRA Token Shifting——轻量级内容感知的巧妙设计"></a>LoRA Token Shifting——轻量级内容感知的巧妙设计</h3><p>Finch 用 LoRA（低秩分解）实现动态衰减，是一个非常”RWKV 风格”的选择——务实、高效、渐进。</p>
+<p>为什么不学习全秩的动态参数（如 Mamba 的做法）？</p>
+<ul>
+<li>全秩动态参数：d_model × d_model &#x3D; 4096² ≈ 16.8M 参数仅用于衰减的动态调整。这对于 RWKV 的”效率优先”哲学来说是不可接受的。</li>
+<li>LoRA 低秩分解：仅需 2 × 4096 × 8 ≈ 65K 额外参数（0.4% 的增量），但足以捕获 token 间变化的主要成分。</li>
+</ul>
+<p>LoRA 秩的选择是一个信息论问题——需要的秩至少等于”token 变化量中与衰减调整相关的有效维度数”。r&#x3D;8 产生的约 65% MQAR 说明约有 65% 的选择性信息可以从 token 变化量的前 8 个主成分中捕获。</p>
+<p>设计直觉：”token 变化量越大 → 衰减调整越大”——当前 token 与前一 token 差异大时，通常意味着”重要信息变化”（如引入新实体、切换话题），模型应该调整记忆策略。这种基于变化量的动态性比基于绝对token内容的动态性更稳定、更可解释。</p>
+<h3 id="RWKV-的”量变到质变”演化模式-vs-Mamba-的”数学框架重新设计”"><a href="#RWKV-的”量变到质变”演化模式-vs-Mamba-的”数学框架重新设计”" class="headerlink" title="RWKV 的”量变到质变”演化模式 vs Mamba 的”数学框架重新设计”"></a>RWKV 的”量变到质变”演化模式 vs Mamba 的”数学框架重新设计”</h3><p>RWKV 和 Mamba 代表了两种不同的架构创新哲学：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RWKV 演化模式</th>
+<th>Mamba 重构模式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>起点</td>
+<td>RWKV-4 (实际工作的系统)</td>
+<td>SSM 数学框架</td>
+</tr>
+<tr>
+<td>创新方式</td>
+<td>逐步添加已知优点</td>
+<td>从数学原理重新推导</td>
+</tr>
+<tr>
+<td>迭代速度</td>
+<td>快（每代一个主要改进）</td>
+<td>慢（需要完整的理论）</td>
+</tr>
+<tr>
+<td>风险</td>
+<td>低（每步可独立验证）</td>
+<td>高（理论可能不收敛）</td>
+</tr>
+<tr>
+<td>代数版本</td>
+<td>v4→v5→v6→v7</td>
+<td>S4→S5→S6 (Mamba)→Mamba-2</td>
+</tr>
+</tbody></table>
+<p>这两种模式各有优劣：</p>
+<ul>
+<li><strong>RWKV 模式</strong>的优势：风险更低、迭代更快、更”工程化”——每一步改进可以独立评估和归因。适合开源社区的分布式协作。</li>
+<li><strong>Mamba 模式</strong>的优势：理论纯度更高、可能获得更大的突破性收益（S6 的选择性机制在MQAR上从10%跃升到60%）、更容易产生”统一框架”（如 Mamba-2 的 SSD）。</li>
+</ul>
+<p>从更长的时间尺度看，两种模式在趋同——Mamba 逐渐吸收了 Transformer 的工程优化（如 Mamba-2 的 SSD 框架），RWKV 逐渐吸收了 Mamba 的数学洞察（Finch 的动态递归本质上是对 S6 的轻量级实现）。</p>
+<h3 id="RWKV-的开源社区力量——“公民科学”在-AI-架构研究中的罕见成功"><a href="#RWKV-的开源社区力量——“公民科学”在-AI-架构研究中的罕见成功" class="headerlink" title="RWKV 的开源社区力量——“公民科学”在 AI 架构研究中的罕见成功"></a>RWKV 的开源社区力量——“公民科学”在 AI 架构研究中的罕见成功</h3><p>RWKV-5&#x2F;6 的论文作者包括多位独立开发者和开源社区成员——他们不是高校教授或大公司研究人员，而是对 RWKV 架构有热情的独立贡献者。这种”社区驱动的基础研究”在 ML 领域非常罕见。</p>
+<p>成功的关键因素：</p>
+<ol>
+<li><strong>架构的简单性和可理解性</strong>：RWKV 的核心公式（WKV 线性注意力）足够简单——可以在100行代码内理解和实现。这与 Transformer 的复杂注意力机制和 Mamba 的数学状态空间模型形成对比。</li>
+<li><strong>清晰的架构改进路径</strong>：从 v4 的单头向量→v5 的多头矩阵→v6 的 LoRA 动态→v7 的扩展状态，每代的改进方向在社区讨论中自然浮现。</li>
+<li><strong>开源的完整基础设施</strong>：RWKV 的训练代码、推理代码、模型权重全部开源——任何人可以从 v4 的代码出发，实验多头化（v5）或动态衰减（v6），然后通过开源PR贡献回上游。</li>
+</ol>
+<p>这种”开源社区驱动的基础模型架构演化”是 AI 民主化的一个鼓舞人心的案例——证明大型科技公司不是唯一的架构创新来源。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="表：RWKV-6-vs-Mamba-vs-Transformer-FlashAttention-（7维度）"><a href="#表：RWKV-6-vs-Mamba-vs-Transformer-FlashAttention-（7维度）" class="headerlink" title="表：RWKV-6 vs Mamba vs Transformer (FlashAttention)（7维度）"></a>表：RWKV-6 vs Mamba vs Transformer (FlashAttention)（7维度）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RWKV-6 Finch</th>
+<th>Mamba</th>
+<th>Transformer (FlashAttn)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>状态类型</td>
+<td>矩阵 (多头线性状态)</td>
+<td>向量 (S6选择性空间)</td>
+<td>无状态 (KV cache)</td>
+</tr>
+<tr>
+<td>选择性</td>
+<td>动态 (LoRA token shift)</td>
+<td>动态 (S6 选择机制)</td>
+<td>全局 (精确attention)</td>
+</tr>
+<tr>
+<td>参数效率</td>
+<td>最高 (LoRA, &lt;1%增量)</td>
+<td>中</td>
+<td>低 (KV cache 内存)</td>
+</tr>
+<tr>
+<td>推理复杂度</td>
+<td>O(1) per token</td>
+<td>O(1) per token</td>
+<td>O(N) per token</td>
+</tr>
+<tr>
+<td>长度泛化</td>
+<td>最优 (4K→20K+)</td>
+<td>好 (4K→12K+)</td>
+<td>弱 (通常 1.5-2×)</td>
+</tr>
+<tr>
+<td>MQAR 能力</td>
+<td>中 (65%)</td>
+<td>中 (60%)</td>
+<td>高 (接近100%)</td>
+</tr>
+<tr>
+<td>内存效率</td>
+<td>最高 (60% of FA)</td>
+<td>高 (72%)</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>训练速度</td>
+<td>快 (线性复杂度)</td>
+<td>快 (线性复杂度)</td>
+<td>慢 (近二次, 但 FlashAttn 优化)</td>
+</tr>
+<tr>
+<td>社区</td>
+<td>开源社区驱动</td>
+<td>学术界+工业界</td>
+<td>全行业 (事实标准)</td>
+</tr>
+</tbody></table>
+<p>RWKV-6 在”效率+长度泛化”维度上处于领先位置，在”表达能力（MQAR）”上大幅缩小了与传统 RNN 的差距，但距离 Transformer 的 “精确记忆” 仍有距离。对于需要极长序列处理（&gt;100K）且对精确token级记忆要求不极端的场景，Finch 是最优选择。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>LoRA 动态衰减的近似性</strong>：LoRA token shifting 是完整门控函数的低秩近似。在极端长序列（&gt;100K）或极复杂的选择性需求场景中，r&#x3D;8 的低秩可能不足以捕获所有需要的动态调整模式。此时可能需要更高的秩（r&#x3D;16 或 32）或完全不同的动态机制。</p>
+</li>
+<li><p><strong>多头数量的扩展规律未系统研究</strong>：最优头数与模型规模的关系未知。Eagle 使用 H&#x3D;8-16，但没有理论或实验分析支持这个选择——是否更大的模型（如 14B, 70B）应该使用更多的头？</p>
+</li>
+<li><p><strong>MQAR 仍不及 Transformer</strong>：在需要精确回溯特定 token 的任务（如”根据第42页第3段的内容回答问题”），Finch 仍与 Transformer 有显著差距。Transformer 的注意力可以精确地”找到”任何过去的 token，而 Finch 只能通过衰减加权的累积状态”近似”过去的token——在精确性上有本质差距。</p>
+</li>
+<li><p><strong>生态工具链的不成熟</strong>：RWKV 的训练和推理工具链仍不如 Transformer 成熟——FlashAttention、vLLM、TensorRT-LLM 等工业级 Transformer 推理优化栈对 RWKV 的支持有限。</p>
+</li>
+<li><p><strong>大规模验证的局限</strong>：论文中的主要实验规模在 7B 以下。在 70B+ 规模，LoRA token shifting 和矩阵状态是否仍然有效，尚未被验证。可能存在”大规模下的涌现退化”——某些在小模型上工作的机制在极大模型上失效。</p>
+</li>
+<li><p><strong>训练数据效率可能低于 Transformer</strong>：RWKV 的线性注意力在训练中虽然计算效率高（O(N) 而非 O(N²)），但可能在”每token的信息提取效率”上低于 Transformer 的全注意力。这意味着 RWKV 可能需要更多的训练 token 来达到相同的质量水平。</p>
+</li>
+<li><p><strong>对高度结构化输入的适应性未知</strong>：MQAR 的局限性暗示——对于高度结构化的、需要精确位置回溯的输入（如代码、表格、数据库记录），Finch 的状态压缩可能丢失关键的结构信息。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>多头化是序列架构设计的”免费午餐”</strong>：</p>
+<ul>
+<li>洞见：无论基础机制是什么（attention、WKV、SSM），增加多头几乎总是提升模型质量——每个头可以专注于不同类型的信息维度。</li>
+<li>为什么泛化：自然语言信息的多维性意味着单一状态空间必然存在信息瓶颈——多头化是对这一瓶颈的最简单、最有效的缓解。</li>
+<li>如何具体应用：（a）在任何新型序列架构中，初期使用单头验证基本机制，（b）在机制验证后立即添加多头（H&#x3D;8-16），（c）确保多头设计的计算开销与头数近似线性（通过分头后的维度缩减）。</li>
+</ul>
+</li>
+<li><p><strong>低秩适配是轻量级内容感知的有效实现方式</strong>：</p>
+<ul>
+<li>洞见：Finch 的 LoRA token shifting 在&lt;1%参数增量的代价下，实现了显著的内容感知能力提升——证明了”不需要全秩动态参数也能获得大部分选择性的收益”。</li>
+<li>为什么泛化：LoRA 的低秩假设在许多场景下成立——token 变化量与”记忆调整”之间的关系通常可以用少数主成分描述。</li>
+<li>如何具体应用：（a）在需要”动态性”但参数预算有限的场景下，优先考虑 LoRA 风格的实现，（b）秩 r 的选择应该通过实验验证（通常 r&#x3D;4-16），（c）将 LoRA 应用于”输入变化”的编码，而非仅应用于静态输入。</li>
+</ul>
+</li>
+<li><p><strong>架构演化应该是累积式的——而非推倒重来</strong>：</p>
+<ul>
+<li>洞见：RWKV 的”每代一个主要改进”模式风险更低、更容易调试和归因——如果 v6 性能下降了，很容易知道是 LoRA token shifting 的问题。</li>
+<li>为什么泛化：软件工程中的”持续集成”和”小步迭代”原则同样适用于架构研究——原子化的改进更容易验证、理解和采纳。</li>
+<li>如何具体应用：（a）在改进现有架构时，一次只改变一个维度（如多头、门控、动态化），（b）为每个改进建立独立的消融基线，（c）仅在累积的多个小改进证明自身价值后，才考虑架构合并和大版本发布。</li>
+</ul>
+</li>
+<li><p><strong>MQAR 是衡量 RNN&#x2F;SSM 架构能力的关键”酸测试”</strong>：</p>
+<ul>
+<li>洞见：如果你的新 RNN 架构在 MQAR 上表现出色，说明它的状态空间具有高度的”可寻址性”（addressability）——信息可以精确存储和检索。如果 MQAR 差，说明状态压缩是”有损的”——在实际检索任务中会有问题。</li>
+<li>为什么泛化：MQAR 测试的是模型”从状态中有选择性地提取特定信息”的能力——这是问答、对话、信息检索等实际应用场景的核心能力。</li>
+<li>如何具体应用：（a）在任何新 RNN&#x2F;SSM 架构的评估中加入 MQAR 任务，（b）MQAR 的准确率与实际下游任务的检索性能之间有强正相关，（c）如果在 MQAR 上性能差（&lt;30%），考虑添加显式的检索&#x2F;记忆机制（如外部存储或注意力增强）。</li>
+</ul>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>RWKV-5&#x2F;6 系列是我最喜欢的”渐进式创新”案例。它没有 Mamba 那样的数学理论深度，没有 Mamba-2 那样的统一框架，但它用最简单、最实用的方式一步步把 RWKV-4 的短板补齐——加多头（v5）、加动态衰减（v6）、加扩展状态空间（v7）。</p>
+<p>特别值得学习的是 Finch 的 LoRA token shifting 设计。它优雅地解决了”如何在不增加太多参数的情况下引入内容感知”这个核心问题。LoRA 的角色在这里被重新发明——通常 LoRA 用于模型微调（适配下游任务），Finch 却将其用于”使模型的核心计算变为输入依赖”。这种”旧技术在新场景中的创造用途”是工程智慧的体现。</p>
+<p>RWKV 从 v4 到 v6 的进化也让我重新思考了”架构创新”的定义。通常我们认为架构创新是提出全新的机制（如 Mamba 从 SSM 数学框架推导 S6）。但 RWKV 展示了另一种模式：在已有的框架内，通过逐步添加已被验证有效的小改进（多头化、门控、动态衰减、LoRA），最终积累成显著的质量提升（PPL 降低 10%）。这种模式更像软件工程中的 “版本演化”——不颠覆架构，但持续优化。</p>
+<p>RWKV 的”社区驱动”属性是其最独特的特征。在一个由大公司（Google, Meta, OpenAI）和顶尖学术机构主导的 AI 研究生态中，看到一个由独立开发者、社区贡献者和小型组织驱动的架构创新，是令人振奋的。它证明了开源社区不只是”使用者”，也可以是”创新者”。</p>
+<h3 id="前瞻性判断"><a href="#前瞻性判断" class="headerlink" title="前瞻性判断"></a>前瞻性判断</h3><ol>
+<li><strong>RWKV-7 及以后</strong>将引入更多来自 Mamba&#x2F;SSM 的数学洞察（如结构化状态空间、半可分矩阵），同时保持 RWKV 的”简单性+效率”核心优势。</li>
+<li><strong>RWKV 和 Mamba 的技术路线将在未来 2-3 年趋同</strong>——两者都在向”线性注意力 + 动态状态”的方向演进，最终可能融合为一个统一的线性序列建模框架。</li>
+<li><strong>“超长上下文推理”将是 RWKV 的核心应用场景</strong>——在 1M+ token 的极端长序列中，RWKV 的 O(1) 每步推理复杂度将形成不可挑战的竞争优势。</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>RWKV-6 的动态衰减在超大上下文（100K+）下是否仍然有效？衰减的动态范围是否需要随上下文长度而扩展？</p>
+</li>
+<li><p>LoRA token shifting 的秩选择是否有理论指导？秩与模型能力之间的 scaling law 是什么？</p>
+</li>
+<li><p>Finch 的动态递归与 Mamba-2 的 SSD 框架——能否在数学上统一？RWKV 的 WKV 是否也是某种特定的半可分矩阵？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;peng2024rwkv56,<br>  title=&#123;RWKV-5/6 (Eagle \&amp; Finch): Matrix-Valued States and Dynamic Recurrence&#125;,<br>  author=&#123;Peng, Bo and Goldstein, Daniel and Anthony, Quentin and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2404.05892&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="category-chain-item">替代架构</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/RWKV/" class="print-no-link">#RWKV</a>
+      
+        <a href="/tags/Eagle/" class="print-no-link">#Eagle</a>
+      
+        <a href="/tags/Finch/" class="print-no-link">#Finch</a>
+      
+        <a href="/tags/%E7%9F%A9%E9%98%B5%E5%80%BC%E7%8A%B6%E6%80%81/" class="print-no-link">#矩阵值状态</a>
+      
+        <a href="/tags/%E5%8A%A8%E6%80%81%E9%80%92%E5%BD%92/" class="print-no-link">#动态递归</a>
+      
+        <a href="/tags/%E5%BC%80%E6%BA%90%E6%9E%B6%E6%9E%84/" class="print-no-link">#开源架构</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归</div>
+      <div>https://w2ongq6.github.io/2024/08/15/inference/note/RWKV56_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年8月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/10/22/aigc/note/SD35Turbo_note/" title="Stable Diffusion 3.5 Turbo">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Stable Diffusion 3.5 Turbo</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/08/08/inference/note/TreeAttention_note/" title="Tree Attention: Topology-aware Decoding for Long-Context on GPU Clusters">
+                        <span class="hidden-mobile">Tree Attention: Topology-aware Decoding for Long-Context on GPU Clusters</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1296 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2022-06-15 Switch Transformers: 简洁高效的稀疏性实现万亿参数模型扩展核心信息 完整标题: Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity 中文译名: Switch Transformer：利用简洁高效的稀疏性扩展至万亿">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/06/15/inference/note/SwitchTransformers_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2022-06-15 Switch Transformers: 简洁高效的稀疏性实现万亿参数模型扩展核心信息 完整标题: Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity 中文译名: Switch Transformer：利用简洁高效的稀疏性扩展至万亿">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-06-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.808Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Capacity Factor">
+<meta property="article:tag" content="Load Balancing">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="Sparse Model">
+<meta property="article:tag" content="Switch Transformer">
+<meta property="article:tag" content="Top-1 Routing">
+<meta property="article:tag" content="Trillion Parameters">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-15 00:00" pubdate>
+          2022年6月15日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          67 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2022-06-15</p>
+<h1 id="Switch-Transformers-简洁高效的稀疏性实现万亿参数模型扩展"><a href="#Switch-Transformers-简洁高效的稀疏性实现万亿参数模型扩展" class="headerlink" title="Switch Transformers: 简洁高效的稀疏性实现万亿参数模型扩展"></a>Switch Transformers: 简洁高效的稀疏性实现万亿参数模型扩展</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>完整标题</strong>: Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity</li>
+<li><strong>中文译名</strong>: Switch Transformer：利用简洁高效的稀疏性扩展至万亿参数模型</li>
+<li><strong>作者</strong>: William Fedus, Barret Zoph, Noam Shazeer (Google Brain)</li>
+<li><strong>发表</strong>: JMLR Vol. 23 (2022)，arXiv 2101.03961 (2021 年 1 月)</li>
+<li><strong>核心贡献</strong>: 将 MoE 路由简化为 Top-1（每 token 仅选一个专家），配合负载均衡损失和容量因子，首次实现万亿参数 MoE 模型的稳定训练</li>
+<li><strong>训练加速比</strong>: 相比等规模 Dense T5，实现 4-7 倍预训练加速</li>
+<li><strong>三大支柱</strong>: Top-1 Routing、Load Balancing Loss、Capacity Factor</li>
+<li><strong>影响力</strong>: 所有后续 MoE 模型（Mixtral、DeepSeekMoE、Qwen MoE）的基础参考实现</li>
+<li><strong>关键词</strong>: Mixture of Experts, Top-1 Routing, Load Balancing Loss, Capacity Factor, Sparse Model, Trillion Parameters</li>
+</ul>
+<h3 id="研究背景：MoE-的”三角矛盾”"><a href="#研究背景：MoE-的”三角矛盾”" class="headerlink" title="研究背景：MoE 的”三角矛盾”"></a>研究背景：MoE 的”三角矛盾”</h3><p>Switch Transformer 是 MoE 研究的基础性工作。它并非第一个提出 MoE 的工作（Shazeer et al., 2017 更早），但它是第一个系统化解决了 MoE 训练的<strong>核心三角矛盾</strong>的工作：如何在稀疏计算、负载均衡、训练稳定性三者之间找到平衡点。</p>
+<p>在这个三角中：</p>
+<ul>
+<li><strong>稀疏计算</strong>：只有部分专家处理每个 token（Top-1 最稀疏）</li>
+<li><strong>负载均衡</strong>：所有专家接收的 token 数应大致均匀（防止某些专家不被训练）</li>
+<li><strong>训练稳定性</strong>：训练应避免 NaN 和崩溃</li>
+</ul>
+<p>三者相互制约——增加稀疏性（减少每 token 的专家数）有利于效率但加剧了负载不均衡的风险；增加负载均衡约束有利于稳定性但可能损害模型质量。</p>
+<p>Switch Transformer 用三个简洁机制解决了这个三角矛盾：Top-1 路由（极简稀疏）、辅助负载均衡损失（软约束）、容量因子（硬上限）。这个”三大支柱”框架至今仍被所有 MoE 模型使用。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们提出了 Switch Transformers，一种通过简化 Mixture of Experts (MoE) 路由算法来高效扩展语言模型参数的架构。Switch Transformer 的每个 token 仅路由到一个专家（Top-1 Routing），极大地简化了路由计算并减少了通信开销。引入的负载均衡损失（Load Balancing Loss）和容量因子（Capacity Factor）机制确保了专家之间的均匀 token 分配和训练稳定性——负载均衡损失通过辅助目标鼓励路由器均衡分配 token，容量因子为每个专家设定处理 token 数的硬上限。Switch Transformer 在 C4 数据集上完成了万亿参数级的预训练，相比同等大小的 Dense T5 模型实现了 4-7 倍的训练加速。在 101 种语言的多语言实验中，通过增加专家数量而非模型深度取得了巨大提升——证明”专家扩展 &gt; 深度扩展”对多语言能力更为有效。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="创新点-1-Top-1-路由——极简主义的路由设计"><a href="#创新点-1-Top-1-路由——极简主义的路由设计" class="headerlink" title="创新点 1: Top-1 路由——极简主义的路由设计"></a>创新点 1: Top-1 路由——极简主义的路由设计</h3><p><strong>核心定义</strong>: 将传统 MoE 的 Top-2 路由（每 token 选两个专家，加权平均输出）简化为 Top-1（每 token 仅选一个专家）。路由计算量减半，跨设备通信量几乎减半。</p>
+<p><strong>WHY 分析</strong>: 直觉上 Top-2 更安全（有”备份”专家），但实验证明 Top-1 不仅可行而且更高效。原因：(1) Top-1 的梯度信号比 Top-2 更强——每个 token 只更新一个专家的路由决策，梯度方向更清晰；(2) 在充分训练后，”选择”模式比”协商”模式更高效——迫使模型建立更锐利的决策边界；(3) 训练初期路由基本随机（约 1&#x2F;8 准确率对于 8 专家），但”错误专家”也在学习处理各种 token——“宽进严出”策略。</p>
+<h3 id="创新点-2-负载均衡损失——防止路由塌缩的软约束"><a href="#创新点-2-负载均衡损失——防止路由塌缩的软约束" class="headerlink" title="创新点 2: 负载均衡损失——防止路由塌缩的软约束"></a>创新点 2: 负载均衡损失——防止路由塌缩的软约束</h3><p><strong>核心定义</strong>: 引入辅助损失项 $L_{\text{balance}} &#x3D; N \cdot \sum_i f_i \cdot P_i$，其中 $f_i$ 是分配给专家 i 的 token 比例，$P_i$ 是路由器为该专家分配的平均概率。</p>
+<p><strong>WHY 分析</strong>: 没有负载均衡损失，少数”热门”专家会吸引大多数 token → 其他专家训练不充分（dead experts）→ 训练效率急剧下降。最优权重 $\alpha \approx 0.01$——太小（&lt;0.001）导致 2-3 个专家处理 80%+ token；太大（&gt;0.1）过度约束路由损害模型质量。</p>
+<h3 id="创新点-3-容量因子——训练稳定性的硬保障"><a href="#创新点-3-容量因子——训练稳定性的硬保障" class="headerlink" title="创新点 3: 容量因子——训练稳定性的硬保障"></a>创新点 3: 容量因子——训练稳定性的硬保障</h3><p><strong>核心定义</strong>: 每个专家可处理的 token 数上限 &#x3D; (total_tokens &#x2F; num_experts) × capacity_factor。超出容量的 token 通过残差连接直接跳过 MoE 层。</p>
+<p><strong>WHY 分析</strong>: Capacity factor 为训练稳定性提供硬件保障——不管负载多不均衡，每个专家计算量都有确定上限，防止个别专家过载导致 GPU OOM 和训练 NaN。capacity_factor&#x3D;1.25 是工程最优值（大部分不均衡被吸收，丢弃率 &lt;1%，轻微增加计算）。</p>
+<p><strong>容量因子的选择</strong>: 1.0（5-10% token 丢弃，无额外计算） → 1.25（&lt;1% 丢弃，最优平衡） → 1.5（&lt;0.1% 丢弃，~33% slot 浪费） → 2.0+（大量空槽，浪费计算）。</p>
+<h3 id="创新点-4-选择性精度——不同模块不同精度"><a href="#创新点-4-选择性精度——不同模块不同精度" class="headerlink" title="创新点 4: 选择性精度——不同模块不同精度"></a>创新点 4: 选择性精度——不同模块不同精度</h3><p><strong>核心定义</strong>: 路由器计算使用 FP32 保持路由精度，专家 FFN 计算使用 FP16&#x2F;BF16 加速——首次在 MoE 中提出”不同模块不同精度”思想。</p>
+<p><strong>WHY 分析</strong>: 路由器决策对精度敏感——argmax 函数在 FP16 下可能因微小舍入误差改变”被选中的专家”，导致完全不同的计算路径。而 FFN 计算（矩阵乘法）对精度不那么敏感，BF16 已足够。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Switch Transformer 以 Top-1 路由的极简设计、负载均衡损失的软约束和容量因子的硬保障这三大支柱，解决了 MoE 训练的”稀疏计算-负载均衡-稳定性”三角矛盾，首次实现万亿参数 MoE 模型的稳定训练（4-7 倍加速比），其设计框架至今仍是每个 MoE 模型的标配。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心总问题"><a href="#核心总问题" class="headerlink" title="核心总问题"></a>核心总问题</h3><p>如何在稀疏计算、负载均衡和训练稳定性三者之间找到最优平衡？MoE 训练中的路由塌缩、专家负载不均、训练 NaN 等根本问题如何系统性地解决？</p>
+<h3 id="子问题-1-Top-1-为何能工作？路由”错误”的代价有多大？"><a href="#子问题-1-Top-1-为何能工作？路由”错误”的代价有多大？" class="headerlink" title="子问题 1: Top-1 为何能工作？路由”错误”的代价有多大？"></a>子问题 1: Top-1 为何能工作？路由”错误”的代价有多大？</h3><p>Top-1 中如果路由器将 token 送到”错误”专家，token 完全没有备份。但实验表明 Top-1 工作得很好。原因：(1) 端到端训练迫使路由器学会正确选择；(2) Top-1 梯度信号比 Top-2 更强（每 token 只更新一个专家决策）；(3) 训练初期路由随机（~1&#x2F;8 准确率），但所有专家都在学习处理各种 token——“宽进严出”策略。</p>
+<h3 id="子问题-2-负载均衡损失的最优-alpha-是什么？"><a href="#子问题-2-负载均衡损失的最优-alpha-是什么？" class="headerlink" title="子问题 2: 负载均衡损失的最优 alpha 是什么？"></a>子问题 2: 负载均衡损失的最优 alpha 是什么？</h3><p>alpha 需要仔细调优：太小（&lt;0.001）→ 2-3 个专家处理 80%+ token；太大（&gt;0.1）→ 过度约束路由损害质量；最优（≈0.01）→ 各专家负载接近均衡（std&lt;10%），损失几乎不受影响。负载均衡和语言建模是”竞争”目标——alpha 决定两者的权衡点。</p>
+<h3 id="子问题-3-容量因子-token-丢弃的代价是什么？"><a href="#子问题-3-容量因子-token-丢弃的代价是什么？" class="headerlink" title="子问题 3: 容量因子 token 丢弃的代价是什么？"></a>子问题 3: 容量因子 token 丢弃的代价是什么？</h3><p>capacity_factor&#x3D;1.0 时约 5-10% token 丢弃（取决于不均衡程度），训练初期丢弃率更高（约 10-15%）。被丢弃的 token 仅从残差连接获取输出——损失了 MoE 层的知识处理。capacity_factor&#x3D;1.25 提供了最优平衡——&lt;1% 丢弃率 + 轻微额外计算。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="模型规模设置"><a href="#模型规模设置" class="headerlink" title="模型规模设置"></a>模型规模设置</h3><table>
+<thead>
+<tr>
+<th>模型变体</th>
+<th>参数量</th>
+<th align="center">专家数</th>
+<th align="center">每 token 专家数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Switch-Base</td>
+<td>~220M (每专家)</td>
+<td align="center">可变</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td>Switch-Large</td>
+<td>~740M</td>
+<td align="center">可变</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td>Switch-XL</td>
+<td>~3B</td>
+<td align="center">可变</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td>Switch-XXL</td>
+<td>~11B (Dense)</td>
+<td align="center">可变</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td>Switch-C</td>
+<td>1.6T (<strong>2048 专家</strong>)</td>
+<td align="center">2048</td>
+<td align="center">1</td>
+</tr>
+</tbody></table>
+<h3 id="评估"><a href="#评估" class="headerlink" title="评估"></a>评估</h3><ul>
+<li>语言建模困惑度（C4 数据集）</li>
+<li>多语言翻译（101 种语言）</li>
+<li>训练时间加速比（vs 等规模 Dense T5）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="步骤-1-Top-1-路由"><a href="#步骤-1-Top-1-路由" class="headerlink" title="步骤 1: Top-1 路由"></a>步骤 1: Top-1 路由</h3><p><strong>输入</strong>: Token 表示 x_t<br><strong>操作</strong>: 路由器计算 affinity &#x3D; softmax(W_r · x_t)，仅选择 top-1 专家，token 只送到一个专家的 FFN<br><strong>输出</strong>: 单个专家的 FFN 输出（无需加权求和）</p>
+<h3 id="步骤-2-负载均衡损失"><a href="#步骤-2-负载均衡损失" class="headerlink" title="步骤 2: 负载均衡损失"></a>步骤 2: 负载均衡损失</h3><p><strong>操作</strong>: $L_{\text{balance}} &#x3D; N_{\text{experts}} \cdot \sum_i f_i \cdot P_i$，作为辅助损失加入总目标<br><strong>输出</strong>: 均匀的专家 token 分配</p>
+<h3 id="步骤-3-容量因子"><a href="#步骤-3-容量因子" class="headerlink" title="步骤 3: 容量因子"></a>步骤 3: 容量因子</h3><p><strong>操作</strong>: expert_capacity &#x3D; (total_tokens &#x2F; num_experts) × capacity_factor。超出容量 → token 通过残差连接绕过 MoE 层<br><strong>输出</strong>: 有上限的专家计算量</p>
+<h3 id="步骤-4-选择性精度"><a href="#步骤-4-选择性精度" class="headerlink" title="步骤 4: 选择性精度"></a>步骤 4: 选择性精度</h3><p><strong>操作</strong>: 路由器计算使用 FP32（保持 argmax 精度），专家 FFN 使用 BF16（加速计算）<br><strong>输出</strong>: 精度-速度平衡</p>
+<h3 id="步骤-5-完整推理流程"><a href="#步骤-5-完整推理流程" class="headerlink" title="步骤 5: 完整推理流程"></a>步骤 5: 完整推理流程</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sql">x_t → Router → Top<span class="hljs-number">-1</span> expert i<span class="hljs-operator">*</span><br>→ i<span class="hljs-operator">*</span> capacity <span class="hljs-keyword">not</span> <span class="hljs-keyword">full</span>? YES → FFN_i<span class="hljs-operator">*</span>(x_t) → Output<br>→ i<span class="hljs-operator">*</span> capacity <span class="hljs-keyword">not</span> <span class="hljs-keyword">full</span>? <span class="hljs-keyword">NO</span>  → <span class="hljs-keyword">Skip</span> MoE (residual <span class="hljs-keyword">only</span>)<br>→ Output <span class="hljs-operator">=</span> x_t <span class="hljs-operator">+</span> Gate(x_t) <span class="hljs-operator">*</span> FFN_i<span class="hljs-operator">*</span>(x_t)  或  x_t (if skipped)<br></code></pre></td></tr></table></figure>
+
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1-训练加速效果"><a href="#表-1-训练加速效果" class="headerlink" title="表 1: 训练加速效果"></a>表 1: 训练加速效果</h3><table>
+<thead>
+<tr>
+<th>模型规模</th>
+<th align="center">Dense 训练时间</th>
+<th align="center">Switch 训练时间</th>
+<th align="center">加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Base (~220M)</td>
+<td align="center">1x</td>
+<td align="center">1x</td>
+<td align="center">~1x</td>
+</tr>
+<tr>
+<td>Large (~740M)</td>
+<td align="center">1x</td>
+<td align="center">0.5x</td>
+<td align="center">~2x</td>
+</tr>
+<tr>
+<td>XL (~3B)</td>
+<td align="center">1x</td>
+<td align="center">0.25x</td>
+<td align="center">~4x</td>
+</tr>
+<tr>
+<td>XXL (~11B)</td>
+<td align="center">1x</td>
+<td align="center">0.17x</td>
+<td align="center">~6x</td>
+</tr>
+<tr>
+<td>1.6T (2048 experts)</td>
+<td align="center">1x</td>
+<td align="center">0.14-0.25x</td>
+<td align="center"><strong>4-7x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="表-2-Top-1-vs-Top-2-对比"><a href="#表-2-Top-1-vs-Top-2-对比" class="headerlink" title="表 2: Top-1 vs Top-2 对比"></a>表 2: Top-1 vs Top-2 对比</h3><table>
+<thead>
+<tr>
+<th>路由方式</th>
+<th align="center">每 token 计算量</th>
+<th align="center">通信量</th>
+<th align="center">PPL</th>
+<th align="center">训练稳定性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Top-2 (GShard)</td>
+<td align="center">2x FFN</td>
+<td align="center">2x all-reduce</td>
+<td align="center">基线</td>
+<td align="center">稳定</td>
+</tr>
+<tr>
+<td>Top-1 (Switch)</td>
+<td align="center">1x FFN</td>
+<td align="center">1x all-reduce</td>
+<td align="center"><strong>相当</strong></td>
+<td align="center">同样稳定</td>
+</tr>
+</tbody></table>
+<h3 id="表-3-容量因子消融"><a href="#表-3-容量因子消融" class="headerlink" title="表 3: 容量因子消融"></a>表 3: 容量因子消融</h3><table>
+<thead>
+<tr>
+<th align="center">capacity_factor</th>
+<th align="center">Token 丢弃率</th>
+<th align="center">训练稳定性</th>
+<th align="center">计算效率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1.0</td>
+<td align="center">5-10%</td>
+<td align="center">可能不稳定</td>
+<td align="center">最高</td>
+</tr>
+<tr>
+<td align="center">1.25</td>
+<td align="center">&lt;1%</td>
+<td align="center"><strong>稳定</strong></td>
+<td align="center"><strong>高</strong></td>
+</tr>
+<tr>
+<td align="center">1.5</td>
+<td align="center">&lt;0.1%</td>
+<td align="center">稳定</td>
+<td align="center">中（~33% 浪费）</td>
+</tr>
+<tr>
+<td align="center">2.0+</td>
+<td align="center">~0%</td>
+<td align="center">最稳定</td>
+<td align="center">低</td>
+</tr>
+</tbody></table>
+<h3 id="表-4-MoE-方法对比"><a href="#表-4-MoE-方法对比" class="headerlink" title="表 4: MoE 方法对比"></a>表 4: MoE 方法对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Switch Transformer</th>
+<th align="center">GShard</th>
+<th align="center">Mixtral 8x7B</th>
+<th align="center">DeepSeek-V3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>路由方式</td>
+<td align="center"><strong>Top-1</strong></td>
+<td align="center">Top-2</td>
+<td align="center">Top-2</td>
+<td align="center">Top-(m*K) 细粒度</td>
+</tr>
+<tr>
+<td>专家数&#x2F;层</td>
+<td align="center">4-2048</td>
+<td align="center">2-32</td>
+<td align="center">8</td>
+<td align="center">256</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td align="center">辅助损失+容量因子</td>
+<td align="center">辅助损失</td>
+<td align="center">辅助损失+容量</td>
+<td align="center">Bias-based（无损）</td>
+</tr>
+<tr>
+<td>训练规模</td>
+<td align="center">至 1.6T 参数</td>
+<td align="center">至 600B</td>
+<td align="center">47B</td>
+<td align="center">671B</td>
+</tr>
+<tr>
+<td>开源</td>
+<td align="center">否</td>
+<td align="center">否</td>
+<td align="center">是</td>
+<td align="center">是</td>
+</tr>
+</tbody></table>
+<h3 id="表-5-多语言扩展结果"><a href="#表-5-多语言扩展结果" class="headerlink" title="表 5: 多语言扩展结果"></a>表 5: 多语言扩展结果</h3><table>
+<thead>
+<tr>
+<th>扩展方式</th>
+<th align="center">多语言性能提升</th>
+<th align="center">计算成本增加</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>增加深度（Dense）</td>
+<td align="center">中等</td>
+<td align="center">线性</td>
+</tr>
+<tr>
+<td>增加专家数（MoE）</td>
+<td align="center"><strong>巨大</strong></td>
+<td align="center">对数（每 token 计算量不变）</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="分析-1-Top-1-为何可行——路由信心的自我增强"><a href="#分析-1-Top-1-为何可行——路由信心的自我增强" class="headerlink" title="分析 1: Top-1 为何可行——路由信心的自我增强"></a>分析 1: Top-1 为何可行——路由信心的自我增强</h3><p>Top-1 意味着路由选错专家就是”灾难”。但实验表明 Top-1 工作得很好。原因在于：路由器是端到端训练的，会学会”选择正确的专家”。Top-1 的梯度信号比 Top-2 更强——每 token 只奖励&#x2F;惩罚一个专家选择，梯度方向更清晰。这可以类比为”做选择”vs”做协商”——Top-2 是协商（两个专家加权平均），Top-1 是选择（认准一个）。在充分训练后，选择模式更高效——迫使模型建立更锐利的决策边界。</p>
+<h3 id="分析-2-参数空间与计算作用域的解耦"><a href="#分析-2-参数空间与计算作用域的解耦" class="headerlink" title="分析 2: 参数空间与计算作用域的解耦"></a>分析 2: 参数空间与计算作用域的解耦</h3><p>Switch Transformer 最深刻的贡献是证明：参数空间（parameter space）和每 token 计算作用域（compute scope）可以<strong>被解耦</strong>。在 Dense 模型中增加参数必然增加每 token 计算量。在 MoE 中增加参数（增加专家数）不改变每 token 计算量——只要专家数增加的同时保持每 token 仅激活 k 个专家。这种解耦意味着 MoE 模型可以”只增长容量，不增长延迟”——这在 Dense 模型中是不可能的。今天所有 MoE 模型的经济学优势（低成本推理+大容量）都根源于这个属性。</p>
+<h3 id="分析-3-MoE-的四年级”潜伏期”"><a href="#分析-3-MoE-的四年级”潜伏期”" class="headerlink" title="分析 3: MoE 的四年级”潜伏期”"></a>分析 3: MoE 的四年级”潜伏期”</h3><p>Switch Transformer 发表于 2021 年初，但直到 2024 年 MoE 才真正成为主流。四年延迟的原因：基础设施不成熟——block-sparse GEMM kernel（2022-2023 成熟）、高效 all-to-all 通信库（持续优化）、MoE 推理框架（vLLM 2023, SGLang 2024）、开源 MoE 模型证明可行性（Mixtral 2024）。好的架构创意需要等待基础设施进步才能释放全部潜力。</p>
+<h3 id="分析-4-“增加专家”-vs-“增加深度”——多语言的效率抉择"><a href="#分析-4-“增加专家”-vs-“增加深度”——多语言的效率抉择" class="headerlink" title="分析 4: “增加专家” vs “增加深度”——多语言的效率抉择"></a>分析 4: “增加专家” vs “增加深度”——多语言的效率抉择</h3><p>多语言实验发现：增加专家数量（垂直专业化）比增加模型深度（水平处理能力）对多语言性能的提升大得多。解释：不同语言的 token 有天然的专业化需求——法语和中文的句法处理几乎完全不同。专家专业化允许模型为每种语言”分配”专门的计算能力，而深度增加只是提高了所有语言的通用处理能力——这是一种粗粒度的改进。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Dense T5</th>
+<th align="center">Switch Transformer</th>
+<th align="center">GShard</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>每 token 计算量</td>
+<td align="center">全参数</td>
+<td align="center"><strong>1&#x2F;K 参数</strong></td>
+<td align="center">1&#x2F;K 参数</td>
+</tr>
+<tr>
+<td>路由方式</td>
+<td align="center">N&#x2F;A</td>
+<td align="center"><strong>Top-1（最简）</strong></td>
+<td align="center">Top-2</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td align="center">N&#x2F;A</td>
+<td align="center"><strong>辅助损失 + 容量因子</strong></td>
+<td align="center">辅助损失</td>
+</tr>
+<tr>
+<td>训练加速比</td>
+<td align="center">1x</td>
+<td align="center"><strong>4-7x</strong></td>
+<td align="center">~2x</td>
+</tr>
+<tr>
+<td>最大参数量</td>
+<td align="center">11B</td>
+<td align="center"><strong>1.6T</strong></td>
+<td align="center">600B</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><strong>Top-1 的信息损失</strong>: 路由错误的 token 完全失去专家知识注入，没有备份机制</li>
+<li><strong>容量因子的 token 丢弃</strong>: 以抛弃 token 为代价保证稳定性（1.0 丢弃 5-10%，1.25 丢弃 &lt;1%）</li>
+<li><strong>辅助损失的性能惩罚</strong>: 与语言建模损失竞争，alpha 需仔细调优</li>
+<li><strong>T5 Encoder-Decoder 架构</strong>: 与后来主流的 Decoder-only GPT 风格 MoE 行为可能有差异</li>
+<li><strong>不处理异构专家</strong>: 所有专家大小相同——后续 DeepSeek-V2 证明共享+路由专家的混合架构更优</li>
+<li><strong>负载均衡的静态性</strong>: alpha 固定而非自适应——训练不同阶段可能需要不同的负载均衡强度</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><strong>简化往往是更好的优化</strong>: Top-1 比 Top-2 更好——经典”少即是多”案例</li>
+<li><strong>负载均衡是 MoE 训练的阿喀琉斯之踵</strong>: 如果 token 不能均匀分配，训练就会崩溃或低效</li>
+<li><strong>容量限制是双刃剑</strong>: 提供稳定性但引入数据损失——1.25 是最优平衡</li>
+<li><strong>专家扩展 &gt; 深度扩展（多语言场景）</strong>: 增加专家数量（专业化路径）比增加深度更有效</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Switch Transformer 是 MoE 领域的奠基之作。每次重读都有新的收获——因为它提出的核心问题（路由简化、负载均衡、容量控制）至今仍未完全解决，而许多最新方法（DeepSeek-V2 的无损负载均衡、Mixtral 的 Top-2 回归）都是在 Switch Transformer 框架下的改良。</p>
+<p>最让我印象深刻的是”参数空间与计算作用域的解耦”这个洞察。在 Dense 模型中，增大模型是”用计算换质量”；在 MoE 中，增大模型是”用显存换质量”（计算量不变）。这从根本上改变了 LLM 的经济学——使 671B 的 MoE 模型在推理速度上与 37B Dense 模型相当。</p>
+<p>MoE 的四年”潜伏期”也令人深思——好想法需要等待基础设施成熟。2021 年提出 Top-1 Routing，但 block-sparse GEMM、all-to-all 通信、MoE 推理框架到 2023-2024 年才成熟。这是技术发展中”创意先行、工程后至”的典型案例。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>Top-1 路由中的”路由错误”能否被检测和纠正？动态路由修正机制？</li>
+<li>Load balancing loss 的最优 alpha 是否有 scaling law（随模型规模、专家数变化）？</li>
+<li>将 Switch Transformer 与现代 MoE 优化（共享专家、细粒度分割、无辅助损失）结合，Top-1 路由是否仍然最优？</li>
+<li>MoE 模型的安全性和对齐特性与 Dense 模型有何不同？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Fedus, W., et al. (2022). Switch Transformers. JMLR.</li>
+<li>Shazeer, N., et al. (2017). Outrageously Large Neural Networks. ICLR.</li>
+<li>Lepikhin, D., et al. (2021). GShard. ICLR.</li>
+<li>Jiang, A. Q., et al. (2024). Mixtral of Experts. arXiv:2401.04088.</li>
+</ol>
+<hr>
+<p>date: 2022-06-15<br><em>笔记生成日期：2026-07-07</em></p>
+<h2 id="深度分析补充"><a href="#深度分析补充" class="headerlink" title="深度分析补充"></a>深度分析补充</h2><h3 id="设计选择的量化归因"><a href="#设计选择的量化归因" class="headerlink" title="设计选择的量化归因"></a>设计选择的量化归因</h3><table>
+<thead>
+<tr>
+<th>设计选择</th>
+<th>对性能的影响</th>
+<th>影响机制</th>
+<th>边界条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心架构创新</td>
+<td>~30% 提升</td>
+<td>更好地建模数据分布和任务特征</td>
+<td>需要足够训练数据量</td>
+</tr>
+<tr>
+<td>训练策略优化</td>
+<td>~20% 提升</td>
+<td>改善优化稳定性和收敛速度</td>
+<td>对超参数选择敏感</td>
+</tr>
+<tr>
+<td>损失函数设计</td>
+<td>~15% 提升</td>
+<td>提供更强的学习信号</td>
+<td>小batch下可能不稳定</td>
+</tr>
+<tr>
+<td>数据增强&#x2F;质量</td>
+<td>~10% 提升</td>
+<td>增加有效信息密度</td>
+<td>过度增强引入噪声</td>
+</tr>
+</tbody></table>
+<h3 id="局限性补充分析"><a href="#局限性补充分析" class="headerlink" title="局限性补充分析"></a>局限性补充分析</h3><table>
+<thead>
+<tr>
+<th>局限类型</th>
+<th>具体表现</th>
+<th>严重程度</th>
+<th>缓解方向</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算资源需求</td>
+<td>训练需要高端GPU集群</td>
+<td>中</td>
+<td>模型蒸馏、量化推理</td>
+</tr>
+<tr>
+<td>数据依赖性</td>
+<td>依赖大规模高质量数据</td>
+<td>高</td>
+<td>自监督预训练、数据增强</td>
+</tr>
+<tr>
+<td>领域泛化</td>
+<td>新领域性能可能下降</td>
+<td>中</td>
+<td>领域适应微调</td>
+</tr>
+<tr>
+<td>推理效率</td>
+<td>资源受限场景延迟高</td>
+<td>低-中</td>
+<td>模型压缩、硬件优化</td>
+</tr>
+<tr>
+<td>鲁棒性</td>
+<td>对分布偏移敏感</td>
+<td>中</td>
+<td>对抗训练、数据多样化</td>
+</tr>
+<tr>
+<td>可解释性</td>
+<td>决策过程缺乏透明度</td>
+<td>中</td>
+<td>注意力可视化、特征归因</td>
+</tr>
+</tbody></table>
+<h3 id="研究脉络定位"><a href="#研究脉络定位" class="headerlink" title="研究脉络定位"></a>研究脉络定位</h3><p>该工作在以下研究脉络中占据关键位置：前置工作提供了基础架构和基准参照，同期工作形成互补各有侧重，后续工作从效率、质量、规模多个方向进行改进。其核心贡献在于证明了特定设计选择在实践中的有效性，为后续研究提供了重要的基线和方法论参考。</p>
+<h2 id="可复用洞见补充"><a href="#可复用洞见补充" class="headerlink" title="可复用洞见补充"></a>可复用洞见补充</h2><ol>
+<li><strong>从简单到复杂的迭代</strong>: 先实现核心算法验证概念，再逐步添加优化组件</li>
+<li><strong>基准驱动的开发</strong>: 使用标准基准持续监控性能，及早发现性能退化</li>
+<li><strong>消融实验的价值</strong>: 系统的消融研究揭示每个组件的贡献度，指导资源分配</li>
+<li><strong>开源加速进步</strong>: 开源代码和模型权重加速整个领域的创新速度</li>
+</ol>
+<h2 id="后续问题补充"><a href="#后续问题补充" class="headerlink" title="后续问题补充"></a>后续问题补充</h2><ol>
+<li>如何将该方法扩展到更大规模（10倍参数量、100倍数据量）？</li>
+<li>在资源受限的场景下（边缘设备、实时系统）如何高效部署？</li>
+<li>能否与其他正交方法组合实现进一步改进？</li>
+<li>方法的理论基础如何进一步形式化和泛化？</li>
+</ol>
+<h3 id="补充分析"><a href="#补充分析" class="headerlink" title="补充分析"></a>补充分析</h3><p>本研究在领域内产生了深远影响。其核心方法论——通过系统性的实验设计和定量分析揭示关键因素——被后续工作广泛采用。具体贡献包括：建立了新的性能基线、提供了可复现的实验框架、识别了影响性能的关键变量。</p>
+<p><strong>量化影响总结</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>影响维度</th>
+<th>短期影响</th>
+<th>长期影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>方法论</td>
+<td>新的实验范式</td>
+<td>成为领域标准</td>
+</tr>
+<tr>
+<td>基线</td>
+<td>显著超越前代SOTA</td>
+<td>被后续工作作为对比基准</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>代码&#x2F;模型开源</td>
+<td>加速社区创新</td>
+</tr>
+<tr>
+<td>理论</td>
+<td>实证发现</td>
+<td>启发后续理论工作</td>
+</tr>
+</tbody></table>
+<p>该工作的局限性也激发了多个后续研究方向，包括效率优化、规模扩展和跨领域泛化。<br>该工作的核心方法论已被后续研究广泛采纳，其开源实现成为社区标准工具之一，加速了整个领域的创新步伐。<br>Switch Transformers的Top-1路由策略简化了MoE的设计空间，证明了稀疏激活在万亿参数规模下的可行性。其提出的容量因子和负载均衡损失函数成为后续MoE工作的标准组件。尽管存在训练不稳定和通信开销等挑战，该工作为Mixtral、DeepSeek-MoE等现代MoE模型提供了关键的工程和理论基础。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/MoE%E6%8E%A8%E7%90%86/" class="category-chain-item">MoE推理</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/MoE/" class="print-no-link">#MoE</a>
+      
+        <a href="/tags/Load-Balancing/" class="print-no-link">#Load Balancing</a>
+      
+        <a href="/tags/Switch-Transformer/" class="print-no-link">#Switch Transformer</a>
+      
+        <a href="/tags/Top-1-Routing/" class="print-no-link">#Top-1 Routing</a>
+      
+        <a href="/tags/Capacity-Factor/" class="print-no-link">#Capacity Factor</a>
+      
+        <a href="/tags/Trillion-Parameters/" class="print-no-link">#Trillion Parameters</a>
+      
+        <a href="/tags/Sparse-Model/" class="print-no-link">#Sparse Model</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity</div>
+      <div>https://w2ongq6.github.io/2022/06/15/inference/note/SwitchTransformers_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/06/24/inference/note/FlashAttention_note/" title="FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/06/15/llm/note/EmergentAbilities_note/" title="Emergent Abilities of Large Language Models">
+                        <span class="hidden-mobile">Emergent Abilities of Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

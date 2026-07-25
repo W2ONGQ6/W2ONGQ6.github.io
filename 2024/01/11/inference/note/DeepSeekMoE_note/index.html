@@ -1,0 +1,1249 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2024-01-11 DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models核心信息 标题: DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Mo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/01/11/inference/note/DeepSeekMoE_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2024-01-11 DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models核心信息 标题: DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Mo">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-01-10T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.552Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Expert Specialization">
+<meta property="article:tag" content="Fine-Grained Segmentation">
+<meta property="article:tag" content="Language Model">
+<meta property="article:tag" content="Load Balancing">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="Shared Expert Isolation">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-01-11 00:00" pubdate>
+          2024年1月11日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          93 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2024-01-11</p>
+<h1 id="DeepSeekMoE-Towards-Ultimate-Expert-Specialization-in-Mixture-of-Experts-Language-Models"><a href="#DeepSeekMoE-Towards-Ultimate-Expert-Specialization-in-Mixture-of-Experts-Language-Models" class="headerlink" title="DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models"></a>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>标题</strong>: DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</li>
+<li><strong>作者</strong>: Damai Dai, Chengqi Deng, Chenggang Zhao, R.X. Xu, Huazuo Gao, Deli Chen, Jiashi Li, Wangding Zeng, Xingkai Yu, Y. Wu, Zhenda Xie, Y.K. Li, Panpan Huang, Fuli Luo, Chong Ruan, Zhifang Sui, Wenfeng Liang (DeepSeek-AI)</li>
+<li><strong>发表</strong>: arXiv 2024年1月, 预印本 2401.06066</li>
+<li><strong>核心贡献</strong>: 提出 DeepSeekMoE 架构，通过细粒度专家分割（Fine-Grained Expert Segmentation）和共享专家隔离（Shared Expert Isolation）两大策略，实现专家专业化水平的显著提升。</li>
+<li><strong>规模</strong>: 总参数 145B，激活参数 22.2B（仅约15%的参数在每次前向传播中被激活）</li>
+<li><strong>性能</strong>: 在相同总参数规模下，以 75% 更少的计算量（FLOPs）超越 GShard；在 2T tokens 上预训练后，性能与 DeepSeek 67B Dense 模型相当</li>
+<li><strong>后续影响</strong>: 该架构成为 DeepSeek-V2 和 DeepSeek-V3 的核心基础组件，直接推动了 DeepSeek 系列模型的成功</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>Mixture-of-Experts (MoE) 架构在各种大规模语言模型的成功中发挥了关键作用。然而，现有 MoE 架构的训练面临专家专业化不足的问题，导致次优性能。本文中，我们提出 DeepSeekMoE 架构，旨在实现终极专家专业化（ultimate expert specialization）。具体而言，我们引入两大核心策略：（1）<strong>细粒度专家分割</strong>（Fine-Grained Expert Segmentation）：在保持总参数量不变的前提下，将标准 FFN 专家进一步切分为更细粒度的子专家，通过激活更多且更多样化的专家组合来提升知识获取的精确性；（2）<strong>共享专家隔离</strong>（Shared Expert Isolation）：将部分专家指定为共享专家（Shared Expert），这些专家始终被激活，用于捕获和巩固跨上下文的通用知识，从而减轻其他路由专家之间的冗余。我们还在工程层面设计了负载均衡损失和设备级路由机制。实验结果表明，DeepSeekMoE 2B 在相同总参数量的前提下，仅用约 40% 的计算量即达到与 GShard 2.9B（1.5x 专家数量）相当的性能。当我们将 DeepSeekMoE 扩展到 16B 总参数（激活参数约 2.8B）时，其性能与 DeepSeek 7B Dense 和 LLaMA2 7B 相当，但仅需后者约 40% 的计算量。进一步扩展到 145B 总参数时，DeepSeekMoE 16B MoE 的性能与 GShard 架构 137B（激活参数 30.1B）相当，计算量仅为后者的 25.4%（约 1&#x2F;4）。</p>
+</blockquote>
+<h2 id="创新点-Why-Important"><a href="#创新点-Why-Important" class="headerlink" title="创新点 + Why Important"></a>创新点 + Why Important</h2><h3 id="创新点-1-细粒度专家分割（Fine-Grained-Expert-Segmentation）"><a href="#创新点-1-细粒度专家分割（Fine-Grained-Expert-Segmentation）" class="headerlink" title="创新点 1: 细粒度专家分割（Fine-Grained Expert Segmentation）"></a>创新点 1: 细粒度专家分割（Fine-Grained Expert Segmentation）</h3><p>传统 MoE 架构（如 GShard、Switch Transformer）中，每个专家通常是一个完整的 FFN 层。DeepSeekMoE 提出将标准的 N 个 FFN 专家切分为 mN 个更小的子专家（每个子专家的隐藏维度减少为原来的 1&#x2F;m），在激活参数总量不变的情况下（top-K 路由改为 top-mK），激活更多且更多样化的专家组合。</p>
+<p><strong>Why important</strong>: 这个设计的洞察在于——知识本质上是细粒度的。一个”数学专家”内部可能同时封装了代数、几何、微积分等不同子领域的知识，当路由到一个专家时，这些知识被捆绑激活，造成了不必要的计算冗余和知识干扰。将专家切分后，每个子专家可以聚焦于更细粒度的知识单元，路由系统可以更精确地组合所需的知识片段。这在不增加总计算量的前提下，显著提升了模型的表达能力。</p>
+<h3 id="创新点-2-共享专家隔离（Shared-Expert-Isolation）"><a href="#创新点-2-共享专家隔离（Shared-Expert-Isolation）" class="headerlink" title="创新点 2: 共享专家隔离（Shared Expert Isolation）"></a>创新点 2: 共享专家隔离（Shared Expert Isolation）</h3><p>在传统 MoE 中，所有专家都是路由专家，某些通用知识（如语法规则、基础词汇语义）会在多个专家中冗余出现。DeepSeekMoE 将 K_s 个专家指定为”共享专家”（Shared Expert），这些专家始终对所有 token 激活，而其余 mN - K_s 个专家作为”路由专家”（Routed Expert）通过 top-K_r 路由选择性激活。</p>
+<p><strong>Why important</strong>: 这是一个优雅的归纳偏置（inductive bias）设计。通过预先分离通用知识和专业知识，路由专家可以更专注于学习特定的、非冗余的知识模式，从而减少专家之间的参数冗余，提升每个路由参数的信息密度。这与人类认知中的”晶体智力”（通用知识）和”流体智力”（特定领域推理）的分工有异曲同工之妙。</p>
+<h3 id="创新点-3-设备级负载均衡（Auxiliary-Loss-Free-Device-Level-Balance）"><a href="#创新点-3-设备级负载均衡（Auxiliary-Loss-Free-Device-Level-Balance）" class="headerlink" title="创新点 3: 设备级负载均衡（Auxiliary-Loss-Free Device-Level Balance）"></a>创新点 3: 设备级负载均衡（Auxiliary-Loss-Free Device-Level Balance）</h3><p>传统负载均衡通常依赖辅助损失（auxiliary loss）来鼓励均匀的专家利用率，但这会引入一个与语言建模目标相冲突的梯度信号。DeepSeekMoE 在训练中不使用传统的专家级负载均衡辅助损失，而是通过设备级路由机制确保跨设备的计算负载均衡，通过限制每个设备上处理的 token 数量上限来自然避免负载倾斜。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>DeepSeekMoE 通过”把专家切细”（细粒度分割）和”把通用知识抽出来”（共享专家隔离）两个简单而深刻的设计，让每个专家专注于更纯粹的知识片段，在仅激活 15% 参数的情况下以 1&#x2F;4 的计算量匹配 GShard 性能，为后续 DeepSeek-V2&#x2F;V3 的成功奠定了架构基础。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p>论文试图解决 MoE 架构中的三个核心挑战：</p>
+<ol>
+<li><p><strong>专家专业化不足（Insufficient Expert Specialization）</strong>: 现有 MoE 模型（GShard、Switch Transformer）中的专家倾向于学习到冗余的知识表示，不同专家之间的知识重叠度高，意味着参数利用效率低下。</p>
+</li>
+<li><p><strong>知识混合与冗余（Knowledge Hybridity and Redundancy）</strong>: 标准 MoE 中，每个路由专家被迫同时学习通用知识（对所有 token 有用）和专业知识（仅对特定 token 有用），导致每个专家内部的知识表示混合且不够纯粹。</p>
+</li>
+<li><p><strong>负载均衡与模型质量的权衡（Load Balance vs. Model Quality Trade-off）</strong>: 传统的辅助损失（auxiliary loss）机制虽然可以实现负载均衡，但会引入额外的训练信号干扰，在极端情况下可能损害模型质量。</p>
+</li>
+</ol>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li>从互联网收集的大规模多语言文本语料库</li>
+<li>使用与 DeepSeek LLM 相同的分词器（基于 Byte-Pair Encoding）</li>
+<li>数据经过质量过滤和去重</li>
+</ul>
+<h3 id="模型规模设置"><a href="#模型规模设置" class="headerlink" title="模型规模设置"></a>模型规模设置</h3><table>
+<thead>
+<tr>
+<th>模型变体</th>
+<th>总参数</th>
+<th>激活参数</th>
+<th>专家配置</th>
+<th>训练数据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DeepSeekMoE 2B</td>
+<td>2.0B</td>
+<td>0.3B</td>
+<td>N&#x3D;16, m&#x3D;2, K_s&#x3D;2, top-K&#x3D;6</td>
+<td>与基线相同</td>
+</tr>
+<tr>
+<td>DeepSeekMoE 16B</td>
+<td>16.4B</td>
+<td>2.8B</td>
+<td>N&#x3D;16, m&#x3D;2, K_s&#x3D;2, top-K&#x3D;6</td>
+<td>~200B tokens</td>
+</tr>
+<tr>
+<td>DeepSeekMoE 145B</td>
+<td>144.6B</td>
+<td>22.2B</td>
+<td>N&#x3D;64, m&#x3D;2, K_s&#x3D;2, top-K&#x3D;12</td>
+<td>2T tokens</td>
+</tr>
+</tbody></table>
+<h3 id="评估任务"><a href="#评估任务" class="headerlink" title="评估任务"></a>评估任务</h3><ul>
+<li><strong>语言理解</strong>: Pile-test (BPB), HellaSwag, PIQA, WinoGrande, ARC-Easy, ARC-Challenge, BoolQ, RACE, TriviaQA, Natural Questions</li>
+<li><strong>数学推理</strong>: GSM8K, MATH</li>
+<li><strong>代码生成</strong>: HumanEval, MBPP</li>
+<li><strong>中文任务</strong>: CLUEWSC, C-Eval, CMMLU</li>
+</ul>
+<h2 id="方法主线-机制流程"><a href="#方法主线-机制流程" class="headerlink" title="方法主线 + 机制流程"></a>方法主线 + 机制流程</h2><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="整体架构流程"><a href="#整体架构流程" class="headerlink" title="整体架构流程"></a>整体架构流程</h3><figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs stylus">Input Token<br>    │<br>    ▼<br>┌─────────────────────────────────┐<br>│        Attention Layer          │<br>└─────────────────────────────────┘<br>    │<br>    ▼<br>┌─────────────────────────────────────────────────┐<br>│            DeepSeekMoE FFN Layer                 │<br>│                                                  │<br>│  ┌──────────────────┐                            │<br>│  │  Shared Experts   │  ← Always Activated (K_s) │<br>│  │  (通用知识捕获)    │                            │<br>│  └──────────────────┘                            │<br>│           +                                      │<br>│  ┌──────────────────────────────┐                │<br>│  │   Routed Experts (mN - K_s)  │                │<br>│  │   ┌───┐ ┌───┐ ┌───┐ ┌───┐  │                │<br>│  │   │E_1│ │E_2│ │E_3│ │...│  │ ← Top-Kr       │<br>│  │   └───┘ └───┘ └───┘ └───┘  │    Selective    │<br>│  │   (专业知识捕获)              │    Activation   │<br>│  └──────────────────────────────┘                │<br>│                                                  │<br>│  Router: s_&#123;<span class="hljs-selector-tag">i</span>,t&#125; = <span class="hljs-built_in">Softmax</span>(W_r · x_t)           │<br>│  Output = Σ_&#123;i∈Shared&#125; <span class="hljs-built_in">FFN_i</span>(x_t)               │<br>│         + Σ_&#123;i∈<span class="hljs-built_in">TopKr</span>(s_t)&#125; s_&#123;<span class="hljs-selector-tag">i</span>,t&#125; · <span class="hljs-built_in">FFN_i</span>(x_t) │<br>└─────────────────────────────────────────────────┘<br>    │<br>    ▼<br>Output (to next layer or final norm)<br></code></pre></td></tr></table></figure>
+
+<h3 id="机制一：细粒度专家分割"><a href="#机制一：细粒度专家分割" class="headerlink" title="机制一：细粒度专家分割"></a>机制一：细粒度专家分割</h3><p><strong>数学定义</strong>:</p>
+<p>传统 MoE 的 FFN 层输出为:<br>$$h_t^{FFN} &#x3D; \sum_{i&#x3D;1}^{N} (g_{i,t} \cdot \text{FFN}_i(x_t)) + x_t$$</p>
+<p>其中路由权重 $g_{i,t}$ 由 top-K 选择决定（只有 K 个非零）。</p>
+<p>在 DeepSeekMoE 中，将 N 个专家切分为 mN 个细粒度专家:<br>$$h_t^{FFN} &#x3D; x_t + \sum_{i&#x3D;1}^{K_s} \text{FFN}<em>i(x_t) + \sum</em>{i&#x3D;K_s+1}^{mN} (g_{i,t} \cdot \text{FFN}_i(x_t))$$</p>
+<p>其中:</p>
+<ul>
+<li>前 $K_s$ 个为共享专家（始终激活）</li>
+<li>后 $mN - K_s$ 个为路由专家，通过 top-$K_r$ 选择激活</li>
+<li>每个细粒度专家的 FFN 隐藏维度 &#x3D; 原专家的 1&#x2F;m</li>
+</ul>
+<p><strong>关键设计选择</strong>:</p>
+<ul>
+<li>切分因子 m: 通常取 2-4</li>
+<li>激活专家数随 m 线性扩展: K_r &#x3D; mK, 保持总激活参数量不变</li>
+<li>共享专家数量 K_s: 通常为 2（占总专家数的很小比例）</li>
+</ul>
+<h3 id="机制二：共享专家隔离"><a href="#机制二：共享专家隔离" class="headerlink" title="机制二：共享专家隔离"></a>机制二：共享专家隔离</h3><p><strong>设计动机</strong>: 通过对路由专家路由权重的分析，论文发现某些专家对所有 token 都有较高的路由概率，表明这些专家捕获了通用知识。将这部分能力显式化为”共享专家”可以减少路由专家的冗余。</p>
+<p><strong>数学表达</strong>:</p>
+<p>路由权重计算:<br>$$s_{i,t} &#x3D; \text{Softmax}_i(x_t^T W_r e_i)$$</p>
+<p>其中 $W_r$ 是可学习的路由矩阵，$e_i$ 是专家 i 的嵌入向量。</p>
+<p>共享专家直接加入输出，不经过路由门控:<br>$$h_t^{shared} &#x3D; \sum_{j&#x3D;1}^{K_s} \text{FFN}_j^{shared}(x_t)$$</p>
+<p>路由专家带权输出:<br>$$h_t^{routed} &#x3D; \sum_{i \in \text{TopK}<em>r(s_t)} s</em>{i,t} \cdot \text{FFN}_i^{routed}(x_t)$$</p>
+<p>最终输出:<br>$$h_t^{FFN} &#x3D; x_t + h_t^{shared} + h_t^{routed}$$</p>
+<h3 id="机制三：负载均衡策略"><a href="#机制三：负载均衡策略" class="headerlink" title="机制三：负载均衡策略"></a>机制三：负载均衡策略</h3><p><strong>专家级负载均衡（Auxiliary-Loss-Free）</strong>:</p>
+<p>DeepSeekMoE 在训练中不使用传统的专家级辅助损失。论文认为辅助损失会引入与语言建模目标冲突的梯度，影响模型质量。替代方案是在损失函数中完全不加入负载均衡项，仅依靠自然的训练动态。</p>
+<p><strong>设备级负载均衡（Device-Level Balance）</strong>:</p>
+<p>在实际部署中，通过设备级约束确保计算均衡:</p>
+<ol>
+<li>将不同专家分布到不同设备上</li>
+<li>限制每个设备上可处理的最大 token 数量</li>
+<li>如果某设备的 token 分配超过上限，将多余 token 路由到次优专家（secondary routing）</li>
+</ol>
+<p>这种方法将负载约束从训练机制转移到推理调度，避免了训练目标的污染。</p>
+<h2 id="关键结果-Tables"><a href="#关键结果-Tables" class="headerlink" title="关键结果 + Tables"></a>关键结果 + Tables</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="实验结果-1-DeepSeekMoE-2B-vs-基线"><a href="#实验结果-1-DeepSeekMoE-2B-vs-基线" class="headerlink" title="实验结果 1: DeepSeekMoE 2B vs 基线"></a>实验结果 1: DeepSeekMoE 2B vs 基线</h3><p>验证细粒度分割和共享专家隔离的有效性（在相同数据上训练）:</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>总参数</th>
+<th>激活参数</th>
+<th>训练计算量</th>
+<th>Pile BPB ↓</th>
+<th>HellaSwag ↑</th>
+<th>PIQA ↑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dense 2B</td>
+<td>2.0B</td>
+<td>2.0B</td>
+<td>1.00x (基线)</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!figure] Figure 4: 消融实验&#x2F;详细分析图<br>建议位置：关键结果<br>放置原因：展示各组件对最终性能的贡献（消融实验）、参数敏感性分析或速度-质量权衡曲线<br>当前状态：图表占位<br>| GShard 2.9B (N&#x3D;16, K&#x3D;4) | 2.9B | 0.77B | 0.39x | - | - | - |<br>| DeepSeekMoE 2B | 2.0B | 0.30B | <strong>0.39x</strong> | <strong>最优</strong> | <strong>最优</strong> | <strong>最优</strong> |</p>
+</blockquote>
+<p><strong>核心发现</strong>: DeepSeekMoE 在总参数更少（2.0B vs 2.9B）且激活参数更少（0.30B vs 0.77B）的情况下，仅用约 40% 的计算量就超越了 GShard 的性能。</p>
+<h3 id="实验结果-2-消融实验"><a href="#实验结果-2-消融实验" class="headerlink" title="实验结果 2: 消融实验"></a>实验结果 2: 消融实验</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>Pile BPB ↓</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GShard (N&#x3D;16, K&#x3D;4)</td>
+<td>基线</td>
+<td>标准 MoE</td>
+</tr>
+<tr>
+<td>+ 细粒度分割 (N&#x3D;32, K&#x3D;8)</td>
+<td>提升</td>
+<td>仅分割，总参数量不变</td>
+</tr>
+<tr>
+<td>+ 共享专家 (K_s&#x3D;2)</td>
+<td>进一步提升</td>
+<td>分割 + 隔离通用知识</td>
+</tr>
+<tr>
+<td>DeepSeekMoE 完整</td>
+<td><strong>最优</strong></td>
+<td>两者结合</td>
+</tr>
+</tbody></table>
+<h3 id="实验结果-3-DeepSeekMoE-16B-规模"><a href="#实验结果-3-DeepSeekMoE-16B-规模" class="headerlink" title="实验结果 3: DeepSeekMoE 16B 规模"></a>实验结果 3: DeepSeekMoE 16B 规模</h3><p>在约 200B tokens 上训练:</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>总参数</th>
+<th>激活参数</th>
+<th>Pile BPB</th>
+<th>MMLU ↑</th>
+<th>HellaSwag ↑</th>
+<th>HumanEval ↑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DeepSeek 7B Dense</td>
+<td>6.7B</td>
+<td>6.7B</td>
+<td>-</td>
+<td>45.0</td>
+<td>77.3</td>
+<td>26.2</td>
+</tr>
+<tr>
+<td>LLaMA2 7B</td>
+<td>6.7B</td>
+<td>6.7B</td>
+<td>-</td>
+<td>45.3</td>
+<td>77.2</td>
+<td>12.8</td>
+</tr>
+<tr>
+<td>DeepSeekMoE 16B</td>
+<td>16.4B</td>
+<td>2.8B</td>
+<td>更低</td>
+<td>45.0</td>
+<td>77.6</td>
+<td>26.8</td>
+</tr>
+</tbody></table>
+<p>仅激活 2.8B 参数即达到与 7B Dense 模型相当的性能。</p>
+<h3 id="实验结果-4-DeepSeekMoE-145B-大规模验证"><a href="#实验结果-4-DeepSeekMoE-145B-大规模验证" class="headerlink" title="实验结果 4: DeepSeekMoE 145B 大规模验证"></a>实验结果 4: DeepSeekMoE 145B 大规模验证</h3><p>在 2T tokens 上训练:</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>总参数</th>
+<th>激活参数</th>
+<th>相对计算量</th>
+<th>MMLU ↑</th>
+<th>GSM8K ↑</th>
+<th>HumanEval ↑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GShard 137B</td>
+<td>136.7B</td>
+<td>30.1B</td>
+<td>1.00x</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>DeepSeekMoE 145B</td>
+<td>144.6B</td>
+<td>22.2B</td>
+<td><strong>0.25x</strong></td>
+<td>相当&#x2F;更优</td>
+<td>相当&#x2F;更优</td>
+<td>相当&#x2F;更优</td>
+</tr>
+</tbody></table>
+<p>以仅约 1&#x2F;4 的计算量匹配了 GShard 137B 的性能。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-为何细粒度分割有效：信息论视角"><a href="#1-为何细粒度分割有效：信息论视角" class="headerlink" title="1. 为何细粒度分割有效：信息论视角"></a>1. 为何细粒度分割有效：信息论视角</h3><p>从信息瓶颈（Information Bottleneck）理论来看，每个专家的隐藏维度决定了该专家的信息容量上限。传统 MoE 中，一个专家必须在一个较大的隐藏空间中编码其所有相关知识的表示，但由于路由是 hard top-K 选择，一个 token 只能访问 K 个完整专家。如果某个专家内部混合了多种知识，路由无法仅激活其中”对当前 token 有用”的部分。</p>
+<p>细粒度分割增加了路由的自由度：更多的专家意味着更多的组合可能性，路由系统可以更精细地”拼装”所需的知识组合。这类似于从”大块积木”升级为”小块积木”——虽然总体积木量相同，但小块积木可以搭出更精细的结构。</p>
+<h3 id="2-共享专家的双重角色"><a href="#2-共享专家的双重角色" class="headerlink" title="2. 共享专家的双重角色"></a>2. 共享专家的双重角色</h3><p>共享专家不仅减少冗余，还在训练中扮演着一个微妙的”锚定”角色。由于共享专家始终被激活，它们为路由专家提供了一个稳定的”背景知识”基础。这使得路由专家在训练初期更容易找到有意义的专业化方向——路由专家不需要”重新发明轮子”来学习基础语法和语义，可以更早地聚焦于专业化知识的学习。</p>
+<p>这个设计可以类比为：共享专家是”通识教育”，路由专家是”专业选修”——通识教育为所有人提供基础能力，专业选修则让每个人发展独特专长。</p>
+<h3 id="3-负载均衡的无损策略"><a href="#3-负载均衡的无损策略" class="headerlink" title="3. 负载均衡的无损策略"></a>3. 负载均衡的无损策略</h3><p>放弃辅助损失是一个大胆的选择。大多数 MoE 工作视负载均衡为”必要之恶”——虽然没有它训练会不稳定，但加入它会损害质量。DeepSeekMoE 的方案本质上是将负载均衡从训练时的软约束（loss-based）转化为推理&#x2F;部署时的硬约束（capacity-based），从而在训练质量上获得”免费午餐”。</p>
+<h3 id="4-参数量与计算量的解耦"><a href="#4-参数量与计算量的解耦" class="headerlink" title="4. 参数量与计算量的解耦"></a>4. 参数量与计算量的解耦</h3><p>DeepSeekMoE 最深刻的贡献或许是证明了：在 MoE 架构下，总参数量（知识容量）和每 token 计算量（推理成本）可以被有效解耦。145B 总参数 + 22.2B 激活参数的配置意味着：</p>
+<ul>
+<li>知识存储能力 &#x3D; 145B 参数的量级</li>
+<li>推理计算成本 &#x3D; 22.2B 参数的量级</li>
+<li>训练计算成本 &#x3D; 约为同性能 Dense 模型的 40%</li>
+</ul>
+<h3 id="5-与后续工作的联系"><a href="#5-与后续工作的联系" class="headerlink" title="5. 与后续工作的联系"></a>5. 与后续工作的联系</h3><p>DeepSeekMoE 的架构设计直接影响了：</p>
+<ul>
+<li><strong>DeepSeek-V2</strong>: 在 DeepSeekMoE 基础上加入 Multi-head Latent Attention (MLA)，实现 KV Cache 压缩</li>
+<li><strong>DeepSeek-V3</strong>: 将专家规模扩展到 671B 总参数，引入多 token 预测和 FP8 训练</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="与-GShard-Lepikhin-et-al-2021-的对比"><a href="#与-GShard-Lepikhin-et-al-2021-的对比" class="headerlink" title="与 GShard (Lepikhin et al., 2021) 的对比"></a>与 GShard (Lepikhin et al., 2021) 的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GShard</th>
+<th>DeepSeekMoE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>专家粒度</td>
+<td>标准 FFN 专家</td>
+<td>细粒度子专家（m 倍分割）</td>
+</tr>
+<tr>
+<td>通用知识处理</td>
+<td>由路由专家隐式学习</td>
+<td>显式共享专家</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td>Auxiliary loss</td>
+<td>设备级约束（训练无损）</td>
+</tr>
+<tr>
+<td>路由方式</td>
+<td>top-2 gating</td>
+<td>top-(mK) gating</td>
+</tr>
+<tr>
+<td>专家利用率</td>
+<td>存在 dead experts</td>
+<td>更好的专家利用率</td>
+</tr>
+</tbody></table>
+<h3 id="与-Switch-Transformer-Fedus-et-al-2022-的对比"><a href="#与-Switch-Transformer-Fedus-et-al-2022-的对比" class="headerlink" title="与 Switch Transformer (Fedus et al., 2022) 的对比"></a>与 Switch Transformer (Fedus et al., 2022) 的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Switch Transformer</th>
+<th>DeepSeekMoE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>路由策略</td>
+<td>top-1（最简化）</td>
+<td>top-(mK)（灵活性）</td>
+</tr>
+<tr>
+<td>专家设计</td>
+<td>标准大小，大量专家</td>
+<td>细粒度，中等数量专家</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td>Auxiliary loss + capacity factor</td>
+<td>设备级机制</td>
+</tr>
+<tr>
+<td>参数效率</td>
+<td>较好</td>
+<td>更优</td>
+</tr>
+</tbody></table>
+<h3 id="与-Mixtral-8x7B-的对比"><a href="#与-Mixtral-8x7B-的对比" class="headerlink" title="与 Mixtral 8x7B 的对比"></a>与 Mixtral 8x7B 的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Mixtral 8x7B</th>
+<th>DeepSeekMoE 16B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>总参数</td>
+<td>46.7B</td>
+<td>16.4B</td>
+</tr>
+<tr>
+<td>激活参数</td>
+<td>12.9B</td>
+<td>2.8B</td>
+</tr>
+<tr>
+<td>专家数</td>
+<td>8</td>
+<td>30 路由 + 2 共享</td>
+</tr>
+<tr>
+<td>架构创新</td>
+<td>标准 MoE</td>
+<td>细粒度分割 + 共享专家</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>设备级路由的工程复杂性</strong>: 设备级负载均衡虽然理论上无损，但在实际分布式训练中实现复杂，需要精心设计的 all-to-all 通信模式。特别是在专家数多、设备数有限的情况下，secondary routing 可能导致模型性能的微小波动。</p>
+</li>
+<li><p><strong>切分因子 m 的调优</strong>: 论文对 m&#x3D;2 的实验较为充分，但更大的 m（如 m&#x3D;4,8）的效果和最优值尚不明确。理论上 m 过大会导致每个子专家信息容量不足，存在一个最优平衡点。</p>
+</li>
+<li><p><strong>共享专家数量的敏感性</strong>: K_s 的选择缺乏理论指导，主要依赖经验调优。K_s 过小无法有效分离通用知识，过大则会挤占路由专家的参数量。</p>
+</li>
+<li><p><strong>训练数据规模的验证不足</strong>: 论文的大规模实验（145B）仅在 2T tokens 上训练，对于现代标准（如 LLaMA 3 的 15T tokens）而言偏少。</p>
+</li>
+<li><p><strong>推理时的专家部署</strong>: 细粒度专家虽然降低了计算量，但所有专家仍需加载到内存中（145B 参数）。对于资源受限的推理场景，内存占用仍然是一个挑战。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>专家分割是一种通用的参数效率提升策略</strong>: 任何 MoE 架构都可以通过将现有专家进一步细分来提升路由精度，无需改变训练流程或损失函数。</p>
+</li>
+<li><p><strong>共享专家是低成本高收益的设计</strong>: 仅额外增加极少参数（通常 2 个共享专家），就可以显著减少路由专家之间的知识冗余。</p>
+</li>
+<li><p><strong>负载均衡不必依赖辅助损失</strong>: 将负载均衡从训练目标转移到系统调度层面是一个通用的设计模式。对于任何面临”优化目标 vs 约束条件”张力的问题，考虑将约束从损失函数移到系统机制都是值得尝试的思路。</p>
+</li>
+<li><p><strong>激活参数不等于总参数的价值</strong>: 在评估 MoE 模型时，应区分”知识容量”（总参数）和”推理成本”（激活参数）。</p>
+</li>
+<li><p><strong>共享专家 + 路由专家的二分法可推广</strong>: 将能力分为”通用基础”和”专业化扩展”两个层次，是设计大规模 AI 系统的通用方法论。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>DeepSeekMoE 是理解 DeepSeek 整个技术路线图的最佳起点。这篇论文的贡献不在于提出颠覆性的新算法，而在于对 MoE 架构进行了两项精准的”外科手术式”改进。以下是我认为最重要的几点思考：</p>
+<ol>
+<li><p><strong>“细粒度分割”本质上是增加了路由的组合空间</strong>: 从 N 选 K 变为 mN 选 mK，组合数从 C(N,K) 增加到 C(mN,mK)，扩大了数个数量级。这种指数级的组合空间增长是性能提升的深层数学原因。</p>
+</li>
+<li><p><strong>共享专家的设计灵感可能来自计算机体系结构</strong>: 共享专家类似于 CPU 中的 L1 Cache——小而快，始终可访问，存储最常用的操作；路由专家类似于 L2&#x2F;L3 Cache 或主存——更大但访问成本更高。这种层次化设计在计算机系统中被反复验证有效。</p>
+</li>
+<li><p><strong>“Auxiliary-Loss-Free”是大胆的选择</strong>: 在 MoE 社区中，负载均衡辅助损失几乎被视为标配。DeepSeekMoE 的实验表明为训练质量放弃辅助损失是值得的，这挑战了社区的一个隐性假设。</p>
+</li>
+<li><p><strong>这篇论文的价值在于架构思想而非工程技巧</strong>: 与许多注重训练技巧的论文不同，DeepSeekMoE 的核心贡献是架构设计，这意味着其思想可以跨模型规模、跨训练框架移植。</p>
+</li>
+<li><p><strong>后续工作的自然延伸</strong>: DeepSeek-V2 在此基础上加了 MLA（解决 KV Cache 问题），DeepSeek-V3 进一步加了 FP8 训练和多 token 预测。三者形成了一个完整的”高效大模型”技术栈。</p>
+</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>细粒度分割的最优 m 值如何随模型规模变化？是否存在一个 Scaling Law 可以预测最优 m？</li>
+<li>共享专家的数量 K_s 是否需要随总参数量扩展？扩展规律是什么？</li>
+<li>细粒度分割是否可以与 Mixture-of-Depths 等方法结合，实现动态的计算分配？</li>
+<li>在持续预训练（continual pretraining）场景中，细粒度专家的专业化模式如何演变？</li>
+<li>共享专家的设计是否可以推广到 Attention 层？例如设一个始终激活的共享 KV head？</li>
+<li>细粒度专家如何影响模型的可解释性？更细的专家是否意味着更容易理解每个专家学到的知识？</li>
+<li>在 MoE 推理的专家卸载场景（expert offloading）中，细粒度分割是否有助于更精细的内存管理？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;dai2024deepseekmoe,<br>  title=&#123;DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models&#125;,<br>  author=&#123;Dai, Damai and Deng, Chengqi and Zhao, Chenggang and Xu, R.X. and Gao, Huazuo and Chen, Deli and Li, Jiashi and Zeng, Wangding and Yu, Xingkai and Wu, Y. and Xie, Zhenda and Li, Y.K. and Huang, Panpan and Luo, Fuli and Ruan, Chong and Sui, Zhifang and Liang, Wenfeng&#125;,<br>  journal=&#123;arXiv preprint arXiv:2401.06066&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br><br>@article&#123;lepikhin2021gshard,<br>  title=&#123;GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding&#125;,<br>  author=&#123;Lepikhin, Dmitry and Lee, HyoukJoong and Xu, Yuanzhong and Chen, Dehao and Firat, Orhan and Huang, Yanping and Krikun, Maxim and Shazeer, Noam and Chen, Zhifeng&#125;,<br>  journal=&#123;ICLR&#125;,<br>  year=&#123;2021&#125;<br>&#125;<br><br>@article&#123;fedus2022switch,<br>  title=&#123;Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity&#125;,<br>  author=&#123;Fedus, William and Zoph, Barret and Shazeer, Noam&#125;,<br>  journal=&#123;JMLR&#125;,<br>  year=&#123;2022&#125;<br>&#125;<br><br>@article&#123;jiang2024mixtral,<br>  title=&#123;Mixtral of Experts&#125;,<br>  author=&#123;Jiang, Albert Q. and Sablayrolles, Alexandre and Roux, Antoine and Mensch, Arthur and Savary, Blanche and Bamford, Chris and Chaplot, Devendra Singh and Casas, Diego de las and Hanna, Emma Bou and Bressand, Florian and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2401.04088&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/MoE%E6%8E%A8%E7%90%86/" class="category-chain-item">MoE推理</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/MoE/" class="print-no-link">#MoE</a>
+      
+        <a href="/tags/Expert-Specialization/" class="print-no-link">#Expert Specialization</a>
+      
+        <a href="/tags/Fine-Grained-Segmentation/" class="print-no-link">#Fine-Grained Segmentation</a>
+      
+        <a href="/tags/Shared-Expert-Isolation/" class="print-no-link">#Shared Expert Isolation</a>
+      
+        <a href="/tags/Load-Balancing/" class="print-no-link">#Load Balancing</a>
+      
+        <a href="/tags/Language-Model/" class="print-no-link">#Language Model</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</div>
+      <div>https://w2ongq6.github.io/2024/01/11/inference/note/DeepSeekMoE_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年1月11日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/01/15/aigc/note/InstantID_note/" title="InstantID: Zero-shot Identity-Preserving Generation in Seconds">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">InstantID: Zero-shot Identity-Preserving Generation in Seconds</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/01/08/inference/note/Mixtral8x7B_note/" title="Mixtral of Experts">
+                        <span class="hidden-mobile">Mixtral of Experts</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

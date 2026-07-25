@@ -1,0 +1,1245 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="date: 2024-02-29 Griffin: 门控线性递归与局部Attention混合的高效语言模型核心信息Griffin 是 Google DeepMind 对 Mamba 的系统性回应，引入了 Hawk（纯递归架构）和 Griffin（递归 + 局部 Attention 混合架构）。核心创新为 RG-LRU (Real-Gated Linear Recurrent Unit)——一种比">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Griffin: 门控线性递归与局部Attention混合的高效语言模型">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/02/29/inference/note/Griffin_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="date: 2024-02-29 Griffin: 门控线性递归与局部Attention混合的高效语言模型核心信息Griffin 是 Google DeepMind 对 Mamba 的系统性回应，引入了 Hawk（纯递归架构）和 Griffin（递归 + 局部 Attention 混合架构）。核心创新为 RG-LRU (Real-Gated Linear Recurrent Unit)——一种比">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-02-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T15:37:47.638Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Gated Linear Recurrence">
+<meta property="article:tag" content="Google DeepMind">
+<meta property="article:tag" content="Griffin">
+<meta property="article:tag" content="RG-LRU">
+<meta property="article:tag" content="混合架构">
+<meta property="article:tag" content="高效推理">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Griffin: 门控线性递归与局部Attention混合的高效语言模型 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Griffin: 门控线性递归与局部Attention混合的高效语言模型"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-02-29 00:00" pubdate>
+          2024年2月29日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          75 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Griffin: 门控线性递归与局部Attention混合的高效语言模型</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>date: 2024-02-29</p>
+<h1 id="Griffin-门控线性递归与局部Attention混合的高效语言模型"><a href="#Griffin-门控线性递归与局部Attention混合的高效语言模型" class="headerlink" title="Griffin: 门控线性递归与局部Attention混合的高效语言模型"></a>Griffin: 门控线性递归与局部Attention混合的高效语言模型</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><p>Griffin 是 Google DeepMind 对 Mamba 的系统性回应，引入了 Hawk（纯递归架构）和 Griffin（递归 + 局部 Attention 混合架构）。核心创新为 <strong>RG-LRU (Real-Gated Linear Recurrent Unit)</strong>——一种比 Mamba 的 selective SSM 更简单但同样高效的门控线性递归层。Griffin 混合架构将 RG-LRU 层与滑动窗口局部 Attention 交错排列，以少 6 倍的训练 token 匹敌 Llama-2 的质量，在长序列上展现出优越的吞吐量和外推能力。论文的有效扩展到 14B 参数。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 Hawk 和 Griffin，两种基于门控线性递归的新型语言模型架构。Hawk 是纯递归架构，不使用任何 attention；Griffin 则混合使用门控线性递归和局部 attention。核心构建模块 RG-LRU（Real-Gated Linear Recurrent Unit）是一种新颖的门控层，比 Mamba 的 selective SSM 更简单。Griffin 以少 6 倍的训练 token 匹敌 Llama-2 的质量，在长序列上展现出比 multi-query attention Transformer 更高的吞吐量和更低的延迟。模型有效扩展到 14B 参数，在超出训练长度的上下文上展现出强大的外推能力。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>RG-LRU (Real-Gated Linear Recurrent Unit)</strong>：一种新型的门控线性递归单元，核心公式：<code>a_t = sigmoid(LN(x_t)^T W_a)</code> （输入依赖的门控标量）+ 简化的状态更新。比 Mamba 的 selective SSM（S6）更简单——参数更少、计算更直接。门控是实数值标量（非矩阵），计算极其高效。</p>
+</li>
+<li><p><strong>Hawk 架构</strong>：纯递归架构，完全不含 attention。RG-LRU 层 + MLP 层的交替堆叠。用更少的训练 token 在下游任务上超越 Mamba。</p>
+</li>
+<li><p><strong>Griffin 混合架构</strong>：在 RG-LRU 层之间插入滑动窗口局部 Attention 层。递归层处理长程上下文压缩，Attention 层处理局部精确 token 匹配。两种机制互补。</p>
+</li>
+<li><p><strong>系统性的长序列评估</strong>：在超出训练长度的上下文（训练 2K&#x2F;4K → 评估 128K+）上验证外推能力。有效扩展到 14B 参数。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>Griffin 以 RG-LRU 门控递归提供比 Mamba 更简单的选择性机制，以局部 Attention 弥补递归在精确匹配上的短板，是 DeepMind 对”最优混合架构”的权威定义。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><ul>
+<li><strong>架构简化问题</strong>：Mamba 的选择性 SSM 的数学框架相对复杂。能否设计一个更简单但同样有效的门控递归层？</li>
+<li><strong>混合问题</strong>：递归和 Attention 各自擅长什么？Attention 在混合架构中的最佳角色是什么？</li>
+<li><strong>扩展问题</strong>：门控递归架构能否有效扩展到 14B 参数（工业级规模）？</li>
+<li><strong>外推问题</strong>：递归架构在超出训练长度的序列上是否天然更有优势？</li>
+</ul>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：标量门控 vs 向量门控的表达力。</strong> Mamba的S6使用逐通道的选择性门控——2048个隐藏维度就有2048个独立的”遗忘率”。RG-LRU使用标量门控——整个隐藏维度共享一个0到1之间的遗忘率。关键问题：在语言建模中，逐通道的选择性有多大的边际收益？对于”记住这个专有名词”（需要精确逐字记忆）和”理解这个段落的主题”（需要宽松的全局压缩），标量门控是否都能有效处理？量化目标：在Copying任务（需要精确逐位复制远距离信息）上，标量门控的准确率下降与向量门控相比有多少？</p>
+<p><strong>子问题2：局部Attention的最优窗口大小。</strong> Griffin使用滑动窗口局部attention（窗口大小256 tokens）。这个选择是基于什么？如果窗口太小（如64），关键局部依赖（如主谓一致、代词回指）可能跨越多于64 token的距离——对于平均句子长度约20个单词（约25 tokens），64的窗口覆盖约2.5个句子。如果窗口太大（如1024），局部attention的计算开销接近全局attention——对于长度为N的序列，每个token attend到W个邻居，总复杂度O(NW)。W&#x3D;64时复杂度约为全局attention的64&#x2F;N（当N&#x3D;4096时，仅1.6%）。W&#x3D;1024时升至25%——优势减弱。</p>
+<p><strong>子问题3：训练-推理的外推差距。</strong> Griffin声称”在2K&#x2F;4K训练长度上，可以外推到128K+”——这个声称需要一个解释：递归机制的什么性质使其天然支持外推？答案在于：递归状态更新 <code>h_t = a_t * h_{t-1} + (1-a_t) * new_info</code> 不依赖于序列总长度。无论序列是2K还是200K tokens，状态更新公式完全相同。这与Transformer形成对比：RoPE位置编码的旋转角度随位置线性增长，在训练范围外（如位置&gt;4096）产生模型从未见过的编码值。因此，递归的”外推友好性”不是训练技巧的结果，而是架构本身的性质——递归天然不依赖位置编码来建立长程依赖。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><ul>
+<li><strong>预训练数据</strong>：DeepMind内部大规模高质量语料库（规模未公开，推测&gt;500B tokens）</li>
+<li><strong>训练上下文长度</strong>：2K和4K tokens（两个变体）</li>
+<li><strong>模型规模</strong>：1B, 3B, 7B, 14B参数（Hawk和Griffin各4个规模）</li>
+<li><strong>评估任务</strong>：语言建模PPL, HellaSwag, PIQA, ARC-E&#x2F;ARC-C, WinoGrande, LAMBADA, MMLU</li>
+<li><strong>长序列评估</strong>：外推到128K+ tokens, Needle-in-a-Haystack, Copying任务</li>
+<li><strong>效率测量</strong>：训练tokens&#x2F;s&#x2F;GPU, 推理延迟(ms&#x2F;token) vs 序列长度, 最大吞吐量(tokens&#x2F;s)</li>
+<li><strong>对比基线</strong>：Llama-2 (Transformer), Mamba-2.8B, Hawk (纯递归), 同规模MQA Transformer</li>
+</ul>
+<p><strong>RG-LRU 架构详情（14B Griffin）：</strong></p>
+<ul>
+<li>层数：约40层（其中约27层RG-LRU, 约13层局部Attention, 比例约2:1）</li>
+<li>隐藏维度：5376</li>
+<li>RG-LRU状态维度：5376（与隐藏维度相同，全维度的递归状态）</li>
+<li>局部Attention窗口：256 tokens, sliding window</li>
+<li>局部Attention头数：28个Q头, 4个KV头（GQA 7:1 ratio）</li>
+<li>门控投影：单标量输出投影（5376→1, 通过sigmoid）</li>
+</ul>
+<h2 id="方法主线（机制流程）"><a href="#方法主线（机制流程）" class="headerlink" title="方法主线（机制流程）"></a>方法主线（机制流程）</h2><h3 id="1-RG-LRU-的核心设计"><a href="#1-RG-LRU-的核心设计" class="headerlink" title="1. RG-LRU 的核心设计"></a>1. RG-LRU 的核心设计</h3><p><strong>RG-LRU 的门控计算（详细版）</strong>：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-comment"># 输入: x_t (token嵌入, dim=D)</span><br><span class="hljs-comment"># 门控: 输入依赖的标量遗忘/更新比例</span><br><span class="hljs-attr">gate_t</span> = sigmoid(LN(x_t) @ W_a)          <span class="hljs-comment"># [D] → [1]  标量门控（0-1之间）</span><br><span class="hljs-comment"># 候选信息</span><br><span class="hljs-attr">u_t</span> = LN(x_t) @ W_u                       <span class="hljs-comment"># [D] → [D]  候选状态更新</span><br><span class="hljs-comment"># 状态更新</span><br><span class="hljs-attr">h_t</span> = gate_t * h_&#123;t-<span class="hljs-number">1</span>&#125; + (<span class="hljs-number">1</span> - gate_t) * u_t   <span class="hljs-comment"># 指数移动平均的递归</span><br><span class="hljs-comment"># 输出</span><br><span class="hljs-attr">y_t</span> = LN(h_t) @ W_o                       <span class="hljs-comment"># [D] → [D]  输出投影</span><br></code></pre></td></tr></table></figure>
+
+<p>其中W_a (D→1)仅产生1个标量——这是RG-LRU最”简单”的地方。对比Mamba S6中需要产生A, B, C, Delta四个向量（各D维）——RG-LRU的参数少约4000倍（1 vs 4D 维）。</p>
+<p><strong>标量门控的物理直觉：</strong> “gate_t接近1”→ 保留状态→”当前token信息不重要，继续记住之前的内容”。”gate_t接近0”→ 更新状态→”当前token信息很重要，用新信息替换旧状态”。标量意味着：整个隐藏维度同步遗忘或同步更新——没有”部分维度记住、部分维度遗忘”的灵活性。这在数学上等价于一个单时间尺度的指数移动平均。</p>
+<p><strong>与LSTM Forget Gate的对比：</strong> LSTM的forget gate是向量（每维度独立决定是否遗忘）——比RG-LRU更灵活但更复杂。RG-LRU是”最低复杂度”的门控递归——在”标量门控”vs”无门控”的维度上做到了极简。</p>
+<h3 id="2-Hawk-架构（纯递归）"><a href="#2-Hawk-架构（纯递归）" class="headerlink" title="2. Hawk 架构（纯递归）"></a>2. Hawk 架构（纯递归）</h3><figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs mathematica"><span class="hljs-variable">Hawk</span> <span class="hljs-built_in">Block</span> <span class="hljs-punctuation">(</span>重复<span class="hljs-built_in">N</span>次<span class="hljs-punctuation">)</span><span class="hljs-operator">:</span><br>  <span class="hljs-built_in">Input</span> → <span class="hljs-variable">RMSNorm</span><br>  ├── <span class="hljs-variable">RG</span><span class="hljs-operator">-</span><span class="hljs-variable">LRU</span> 递归层（时序维度信息混合）<br>  │   └── <span class="hljs-variable">gate</span> <span class="hljs-operator">+</span> <span class="hljs-type">state_update</span> <span class="hljs-operator">+</span> <span class="hljs-type">output_proj</span><br>  ├── <span class="hljs-variable">RMSNorm</span><br>  └── <span class="hljs-variable">MLP</span>（<span class="hljs-variable">SwiGLU</span>激活，标准<span class="hljs-variable">Transformer</span> <span class="hljs-variable">FFN</span>）<br></code></pre></td></tr></table></figure>
+
+<p>完全不含 attention。每层的”状态”仅为递归状态向量h_t（D维）。推理时O(1)内存。</p>
+<h3 id="3-Griffin-混合架构"><a href="#3-Griffin-混合架构" class="headerlink" title="3. Griffin 混合架构"></a>3. Griffin 混合架构</h3><figure class="highlight prolog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs prolog"><span class="hljs-symbol">Griffin</span> <span class="hljs-symbol">Block</span> (交替排列):<br>  [<span class="hljs-symbol">RG</span>-<span class="hljs-symbol">LRU</span>] [<span class="hljs-symbol">RG</span>-<span class="hljs-symbol">LRU</span>] [<span class="hljs-symbol">LocalAttn</span>] [<span class="hljs-symbol">RG</span>-<span class="hljs-symbol">LRU</span>] [<span class="hljs-symbol">RG</span>-<span class="hljs-symbol">LRU</span>] [<span class="hljs-symbol">LocalAttn</span>] ...<br>  比例: 约<span class="hljs-number">2</span>个<span class="hljs-symbol">RG</span>-<span class="hljs-symbol">LRU</span> : <span class="hljs-number">1</span>个<span class="hljs-symbol">LocalAttn</span> (精确比例随模型深度调整)<br></code></pre></td></tr></table></figure>
+
+<p><strong>局部 Attention 的设计</strong>：</p>
+<ul>
+<li>滑动窗口机制：每个 token 只能 attend到周围256个token</li>
+<li>实现：因果attention mask限制为窗口范围（标准实现，与全局attention相同的kernel但mask限制）</li>
+<li>KV cache 大小：窗口大小×维度——恒定，不随序列长度增长（类似Mamba state的O(1)性质但在attention空间中）</li>
+</ul>
+<h3 id="4-训练和推理的优化（详细流程）"><a href="#4-训练和推理的优化（详细流程）" class="headerlink" title="4. 训练和推理的优化（详细流程）"></a>4. 训练和推理的优化（详细流程）</h3><p><strong>Step 1: 并行训练 → RG-LRU的关联扫描实现。</strong></p>
+<ul>
+<li>输入：完整序列所有token的嵌入 [B, S, D]</li>
+<li>操作：RG-LRU的递归 <code>h_t = gate_t * h_{t-1} + (1-gate_t) * u_t</code> 是线性递归——可以用关联扫描（associative scan, 与Mamba相同技术）并行计算所有时间步的h_t</li>
+<li>关联扫描的操作符：<code>(a, b) ∘ (c, d) = (a*c, a*d + b)</code> —— 对应状态转移的组合规则</li>
+<li>通过并行前缀扫描prefix sum的变体，计算所有h_t从h_0到h_{t-1}的累积结果</li>
+<li>复杂度：O(log S) 的并行深度（而非O(S)的顺序深度）</li>
+<li>输出：所有时间步的h_t（并行计算完成）</li>
+</ul>
+<p><strong>Step 2: 局部Attention的KV cache管理。</strong></p>
+<ul>
+<li>滑动窗口attention的KV cache：仅保留最近W&#x3D;256个token的K,V</li>
+<li>当新token到来时：删除最旧的K,V（窗口外），添加最新token的K,V</li>
+<li>内存：W × 2 × num_kv_heads × head_dim × 2bytes（恒定）</li>
+</ul>
+<p><strong>Step 3: 推理时的逐token循环。</strong></p>
+<ul>
+<li>RG-LRU层：O(1) 状态更新（gate计算 + 状态乘法 + 输出投影）</li>
+<li>Local Attention层：O(W) window attention（attend到最近256个token）</li>
+<li>总推理延迟：不随序列长度增长的恒定延迟（与全局attention Transformer的O(N)形成对比）</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="语言建模质量（与训练效率的关系）"><a href="#语言建模质量（与训练效率的关系）" class="headerlink" title="语言建模质量（与训练效率的关系）"></a>语言建模质量（与训练效率的关系）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>训练 token 数</th>
+<th>PPL (相对基准)</th>
+<th>训练效率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Llama-2 7B (基准)</td>
+<td>2T (2000B)</td>
+<td>基准值</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>Mamba 2.8B</td>
+<td>~300B</td>
+<td>基准值 - 0.02</td>
+<td>高</td>
+</tr>
+<tr>
+<td>Hawk 3B</td>
+<td>~300B</td>
+<td>基准值 - 0.05 (更好)</td>
+<td>高</td>
+</tr>
+<tr>
+<td>Griffin 7B</td>
+<td>~300B</td>
+<td>基准值 - 0.15 (更好)</td>
+<td>中-高</td>
+</tr>
+<tr>
+<td><strong>分析</strong>：Griffin 用~1&#x2F;6 的训练数据达到甚至超越Llama-2在同等PPL下的质量</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3 id="序列效率对比（14B-规模，推理延迟）"><a href="#序列效率对比（14B-规模，推理延迟）" class="headerlink" title="序列效率对比（14B 规模，推理延迟）"></a>序列效率对比（14B 规模，推理延迟）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Seq 2K 延迟</th>
+<th>Seq 8K 延迟</th>
+<th>Seq 32K 延迟</th>
+<th>Seq 128K 延迟</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer (MQA, global attn)</td>
+<td>1.0x (基准)</td>
+<td>1.0x (基准)</td>
+<td>1.0x (基准)</td>
+<td>~3.5x (KV cache增长)</td>
+</tr>
+<tr>
+<td>Griffin (RG-LRU + local attn)</td>
+<td>~0.8x</td>
+<td>~0.5x</td>
+<td>~0.3x</td>
+<td>~0.15x</td>
+</tr>
+<tr>
+<td>Hawk (纯 RG-LRU)</td>
+<td>~0.9x</td>
+<td>~0.6x</td>
+<td>~0.4x</td>
+<td>~0.2x</td>
+</tr>
+</tbody></table>
+<h3 id="长序列外推（2K-训练长度-→-评估到128K-）"><a href="#长序列外推（2K-训练长度-→-评估到128K-）" class="headerlink" title="长序列外推（2K 训练长度 → 评估到128K+）"></a>长序列外推（2K 训练长度 → 评估到128K+）</h3><table>
+<thead>
+<tr>
+<th>评估长度</th>
+<th>Transformer (MQA, 2K trained)</th>
+<th>Mamba (2K trained)</th>
+<th>Griffin (2K trained)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2K（训练）</td>
+<td>基准 PPL</td>
+<td>基准 PPL</td>
+<td>基准 PPL</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>+0.05 PPL</td>
+<td>+0.01</td>
+<td>+0.01</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>+0.15</td>
+<td>+0.02</td>
+<td>+0.02</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>+0.8（性能崩溃）</td>
+<td>+0.03</td>
+<td>+0.03</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>不可用（PPL &gt; 10x）</td>
+<td>+0.05</td>
+<td>+0.04</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>N&#x2F;A</td>
+<td>+0.08</td>
+<td>+0.06</td>
+</tr>
+<tr>
+<td>128K+</td>
+<td>N&#x2F;A</td>
+<td>+0.12</td>
+<td>+0.08</td>
+</tr>
+</tbody></table>
+<h3 id="标准基准（14B-Griffin-vs-同等规模-Transformer）"><a href="#标准基准（14B-Griffin-vs-同等规模-Transformer）" class="headerlink" title="标准基准（14B Griffin vs 同等规模 Transformer）"></a>标准基准（14B Griffin vs 同等规模 Transformer）</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>Griffin 14B</th>
+<th>Hawk 14B (纯递归)</th>
+<th>MQA Transformer 14B</th>
+<th>Llama-2 13B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HellaSwag</td>
+<td>81.2</td>
+<td>79.8</td>
+<td>80.5</td>
+<td>80.7</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td>79.8</td>
+<td>79.1</td>
+<td>79.5</td>
+<td>79.1</td>
+</tr>
+<tr>
+<td>ARC-E</td>
+<td>76.5</td>
+<td>74.2</td>
+<td>75.8</td>
+<td>77.4</td>
+</tr>
+<tr>
+<td>ARC-C</td>
+<td>49.3</td>
+<td>47.1</td>
+<td>48.5</td>
+<td>49.2</td>
+</tr>
+<tr>
+<td>WinoGrande</td>
+<td>72.1</td>
+<td>70.5</td>
+<td>71.8</td>
+<td>72.0</td>
+</tr>
+<tr>
+<td>LAMBADA</td>
+<td>76.8</td>
+<td>74.3</td>
+<td>75.5</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>MMLU</td>
+<td>56.2</td>
+<td>52.8</td>
+<td>55.1</td>
+<td>54.8</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="1-RG-LRU：极简主义的胜利"><a href="#1-RG-LRU：极简主义的胜利" class="headerlink" title="1. RG-LRU：极简主义的胜利"></a>1. RG-LRU：极简主义的胜利</h3><p>RG-LRU 的设计哲学是”如果简单的设计足够好，就不要用复杂的”：</p>
+<ul>
+<li>Mamba 的选择性 SSM 有 A, B, C, Delta 四个参数化的变换</li>
+<li>RG-LRU 只有一个标量门控</li>
+</ul>
+<p>但实验表明，这个极简设计的性能不逊于 Mamba。为什么？</p>
+<p>可能的解释：</p>
+<ul>
+<li>语言建模中，大部分”选择性”可能并不需要细粒度的逐通道控制。一个全局的”现在是时候遗忘旧信息了”的信号（标量门控）在很多情况下已经足够。</li>
+<li>Mamba 的细粒度选择性可能主要用于合成任务（如 Selective Copying），而对实际的语言建模的边际收益有限。</li>
+<li>RG-LRU 的”简单”使得它更容易优化和扩展——复杂的参数化在更大规模下可能更难训练。</li>
+</ul>
+<p>这验证了一个重要的设计原则：<strong>在着手设计复杂机制之前，先测试最简单的可能方案</strong>。</p>
+<p><strong>深入分析：标量门控何时足够？</strong> 语言序列中有明确的”事件边界”——句子结束、段落结束、主题切换。在这些边界处，模型确实需要”重置”或”大规模更新”状态——标量门控（全体遗忘+更新）在这些场景下是合理的甚至是最优的。标量门控可能失灵的场合是：需要”选择性记忆”——如记住一个重要的数字（需要极低衰减），同时遗忘周围的噪音（需要高衰减）。标量门控无法同时做到（因为整个状态的衰减率相同）。向量门控可以——某些通道保持低衰减（记住数字），其他通道快速衰减（遗忘噪音）。这解释了为何在Copying任务上Griffin不如Mamba：Copying需要这种”选择性记忆”。</p>
+<h3 id="2-Google-DeepMind-的混合架构路线"><a href="#2-Google-DeepMind-的混合架构路线" class="headerlink" title="2. Google DeepMind 的混合架构路线"></a>2. Google DeepMind 的混合架构路线</h3><p>Griffin 代表了 Google DeepMind 对”Transformer 之后”架构选择的明确立场：混合架构优于纯架构。这与 Mamba-2 的建议（混合架构最优）一致，但来自不同的团队和不同的实验设置，增加了这一结论的可信度。</p>
+<p><strong>关键洞察：Attention的真正价值是什么？</strong> Griffin暗示：Attention的核心价值不在于”全局上下文整合”（递归可以高效地做到），而在于”局部精确交互”——在近距离内需要精确的token级关联（如解析代词、匹配括号、短距离的语义关联）。递归的压缩&#x2F;传播机制在局部精确交互上不如attention——因为递归状态是”平滑的压缩”，丢失了逐个token的精确位置信息。局部attention（滑动窗口）恰好弥补了这个短板。</p>
+<h3 id="3-Albert-Gu-的参与"><a href="#3-Albert-Gu-的参与" class="headerlink" title="3. Albert Gu 的参与"></a>3. Albert Gu 的参与</h3><p>论文的共同作者包括 Albert Gu（Mamba 的创造者）。他的参与表明：</p>
+<ul>
+<li>Mamba 的作者本人也认同混合架构可能是更好的方向</li>
+<li>RG-LRU 的极简设计可能反映了 Gu 对 Mamba 复杂性的反思</li>
+<li>从纯 SSM（Mamba-1）到 SSD 统一（Mamba-2）再到混合架构（Griffin），Gu 的思想轨迹是从”替代 Transformer”到”与 Transformer 共存”</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Griffin</th>
+<th>Mamba-1</th>
+<th>Hawk</th>
+<th>Transformer (MQA)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>递归机制</td>
+<td>RG-LRU（极简门控）</td>
+<td>S6（选择 SSM）</td>
+<td>RG-LRU</td>
+<td>无</td>
+</tr>
+<tr>
+<td>Attention</td>
+<td>局部滑动窗口 (256)</td>
+<td>无</td>
+<td>无</td>
+<td>全局</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>O(n) 递归 + O(nw) 局部 attn</td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>O(n^2)</td>
+</tr>
+<tr>
+<td>训练数据效率</td>
+<td>高（少 6x token）</td>
+<td>中</td>
+<td>中</td>
+<td>低（基准）</td>
+</tr>
+<tr>
+<td>长序列外推</td>
+<td>强（128K+ from 2K training）</td>
+<td>强</td>
+<td>强</td>
+<td>弱（崩溃在4×训练长度）</td>
+</tr>
+<tr>
+<td>设计哲学</td>
+<td>极简 + 混合</td>
+<td>理论驱动</td>
+<td>极简 + 纯递归</td>
+<td>经典</td>
+</tr>
+<tr>
+<td>门控复杂度</td>
+<td>标量（1&#x2F;层）</td>
+<td>向量（D&#x2F;层）</td>
+<td>标量</td>
+<td>无</td>
+</tr>
+<tr>
+<td>Copying性能</td>
+<td>中（局部attn辅助）</td>
+<td>高</td>
+<td>低（标量门控限制）</td>
+<td>高（全局attn）</td>
+</tr>
+<tr>
+<td>推理内存(128K)</td>
+<td>~MB（递归状态）+ ~MB（固定窗口KV）</td>
+<td>~MB（递归状态）</td>
+<td>~MB</td>
+<td>~GB（KV cache，不可行）</td>
+</tr>
+</tbody></table>
+<p>Griffin 处于”极简设计”和”实用混合”的交汇点：用最简单的门控递归提供效率，用最少量的局部 attention 补齐精确性。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>RG-LRU 标量门控的表达力上限</strong>：在更大规模（70B+）和更复杂任务上，逐通道的门控（如 Mamba）可能产生差距。标量门控在需要”选择性记忆”的任务（如多实体追踪、复杂代码理解）上的表现未知。</p>
+</li>
+<li><p><strong>局部 attention 窗口大小的经验选择</strong>：256 是经验最优，但缺乏理论依据。最优窗口大小可能随任务（精确匹配需要多大范围？）和模型深度（深层是否因压缩而需要更大窗口？）变化。</p>
+</li>
+<li><p><strong>训练数据的闭源性</strong>：使用 DeepMind 内部数据集，与开源社区使用公开数据集（如The Pile）的方法难以公平对比——部分性能优势可能来自更高质量的训练数据。</p>
+</li>
+<li><p><strong>缺少指令微调和对话能力评估</strong>：论文主要关注基础语言建模能力，RLHF&#x2F;对话对齐后的性能未验证。对齐可能改变递归和attention的动态（如安全拒绝需要全局理解用户的敌对意图）。</p>
+</li>
+<li><p><strong>局部 attention 在”长程归纳”上的局限</strong>：滑动窗口attention无法直接处理距离&gt;256 tokens的归纳关系（如”第一章提到X，第十章的Y回指X”）。这依赖RG-LRU递归层在256+距离上”携带”信息——递归的压缩保真度在这些距离上的质量未知。</p>
+</li>
+<li><p><strong>RG-LRU vs Mamba 的直接消融缺乏</strong>：论文对比了Griffin vs Mamba的整体架构，但缺乏”同一架构中仅替换递归单元”的直接消融——无法明确RG-LRU相对Mamba S6的具体增益&#x2F;损失。</p>
+</li>
+<li><p><strong>扩展到视觉&#x2F;多模态的验证缺乏</strong>：递归+局部attention的混合在2D&#x2F;3D视觉数据上的行为未知——图像patch的序列长度（如256×256&#x3D;65536 patches for ViT）可能需要不同的窗口大小或交错模式。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>更简单通常就足够好了</strong>：RG-LRU 的经验表明，复杂的参数化（如 Mamba 的选择性 SSM）可能对实际语言建模是”过设计”的。在引入新的复杂机制前，先测试简化的基线。</p>
+<p><strong>如何应用：</strong> 在设计中新序列处理机制时，采用”复杂度阶梯”——从标量门控开始（1个参数&#x2F;层），如果不满足需求再上向量门控（D个参数&#x2F;层），再不满足再上全矩阵门控（D²参数&#x2F;层）。每一级只有在实验证明”前一级确实不够”时才升级。</p>
+</li>
+<li><p><strong>递归 + 局部 Attention &#x3D; 黄金组合</strong>：全局内容理解用递归（高效），局部精确匹配用 attention（精确）。</p>
+<p><strong>如何应用：</strong> 在构建混合架构时，将递归层和attention层的角色明确分工——递归负责长程信息传播（每隔2-3层插入attention作为”校准点”），attention负责局部精确交互（窗口大小以”覆盖平均句子长度+语法依赖距离”为下限，通常64-512 tokens）。</p>
+</li>
+<li><p><strong>训练效率不止于 FLOPs</strong>：Griffin 用更少的训练 token 达到同等质量——数据效率也是评估架构的重要维度。</p>
+</li>
+<li><p><strong>外推能力是架构设计的显性目标</strong>：如果架构不支持长序列外推，在短序列上训练、长序列上推理的能力将成为架构选择的关键考量——递归架构在这方面有天然的结构性优势。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Griffin 是”最不炫技但最实用”的替代架构论文。它没有 Mamba 那样深厚的 SSM 数学理论，没有 Mamba-2 那样漂亮的统一框架。它做的只是一件简单的事：设计一个极简的门控递归，然后在需要精确性的地方加一点局部 attention——但效果出奇地好。</p>
+<p>RG-LRU 的标量门控让我重新思考了”模型复杂度”和”实际效果”之间的关系。”一个标量就够了”可能是被严重低估的智慧。</p>
+<p>Griffin 最让我信服的一点是它来自 Google DeepMind——全球最大的 ML 研究机构之一。当这样一支团队说”我们选择了最简单的递归 + 局部 attention，因为它最好”，这个结论的分量远超一个学术实验室的类似声明。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>RG-LRU 的标量门控在更大规模（70B+）下是否仍优于 Mamba 的逐通道门控？</li>
+<li>局部 attention 窗口的最优大小是否有 scaling law？</li>
+<li>Griffin 的混合比例是否可以学习而不需要人工设定？</li>
+<li>RG-LRU 的门控值是否可以可视化——哪些 token 触发了”遗忘”信号？</li>
+<li>Griffin 架构在 vision 和多模态任务中的表现如何？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;de2024griffin,<br>  title=&#123;Griffin: Mixing Gated Linear Recurrences with Local Attention for Efficient Language Models&#125;,<br>  author=&#123;De, Soham and Smith, Samuel L and Fernando, Anushan and Botev, Aleksandar and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2402.19427&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="category-chain-item">替代架构</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Griffin/" class="print-no-link">#Griffin</a>
+      
+        <a href="/tags/RG-LRU/" class="print-no-link">#RG-LRU</a>
+      
+        <a href="/tags/%E6%B7%B7%E5%90%88%E6%9E%B6%E6%9E%84/" class="print-no-link">#混合架构</a>
+      
+        <a href="/tags/Gated-Linear-Recurrence/" class="print-no-link">#Gated Linear Recurrence</a>
+      
+        <a href="/tags/Google-DeepMind/" class="print-no-link">#Google DeepMind</a>
+      
+        <a href="/tags/%E9%AB%98%E6%95%88%E6%8E%A8%E7%90%86/" class="print-no-link">#高效推理</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Griffin: 门控线性递归与局部Attention混合的高效语言模型</div>
+      <div>https://w2ongq6.github.io/2024/02/29/inference/note/Griffin_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年2月29日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/03/05/aigc/note/StableDiffusion3_note/" title="Scaling Rectified Flow Transformers for High-Resolution Image Synthesis">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Scaling Rectified Flow Transformers for High-Resolution Image Synthesis</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/02/22/inference/note/LongRoPE_note/" title="LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens">
+                        <span class="hidden-mobile">LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
