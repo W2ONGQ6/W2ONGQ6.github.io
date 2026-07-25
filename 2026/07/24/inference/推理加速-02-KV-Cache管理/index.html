@@ -1,0 +1,1115 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="精选的 LLM 推理中 KV cache 压缩、驱逐与量化代表性论文列表，2023–2024。   论文StreamingLLM: Efficient Streaming Language Models with Attention Sinks arXiv: 2309.17453 发表: ICLR 2024 作者: Guangxuan Xiao, Yuandong Tian, Beidi Che">
+<meta property="og:type" content="article">
+<meta property="og:title" content="推理加速-02：KV-Cache 管理与量化">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-02-KV-Cache%E7%AE%A1%E7%90%86/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="精选的 LLM 推理中 KV cache 压缩、驱逐与量化代表性论文列表，2023–2024。   论文StreamingLLM: Efficient Streaming Language Models with Attention Sinks arXiv: 2309.17453 发表: ICLR 2024 作者: Guangxuan Xiao, Yuandong Tian, Beidi Che">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T03:02:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T09:56:52.000Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="推理加速,LLM推理,推理优化,KV-Cache">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>推理加速-02：KV-Cache 管理与量化 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="推理加速-02：KV-Cache 管理与量化"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 11:02" pubdate>
+          2026年7月24日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          82 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">推理加速-02：KV-Cache 管理与量化</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <blockquote>
+<p>精选的 LLM 推理中 KV cache 压缩、驱逐与量化代表性论文列表，2023–2024。</p>
+</blockquote>
+<hr>
+<h2 id="论文"><a href="#论文" class="headerlink" title="论文"></a>论文</h2><h3 id="StreamingLLM-Efficient-Streaming-Language-Models-with-Attention-Sinks"><a href="#StreamingLLM-Efficient-Streaming-Language-Models-with-Attention-Sinks" class="headerlink" title="StreamingLLM: Efficient Streaming Language Models with Attention Sinks"></a>StreamingLLM: Efficient Streaming Language Models with Attention Sinks</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2309.17453">2309.17453</a></li>
+<li><strong>发表</strong>: ICLR 2024</li>
+<li><strong>作者</strong>: Guangxuan Xiao, Yuandong Tian, Beidi Chen, Song Han, Mike Lewis (MIT, Meta AI, CMU, NVIDIA)</li>
+<li><strong>简介</strong>: 发现了”注意力汇”（attention sink）现象——初始 token 吸收了过多的注意力，并证明仅保留 4 个初始 token 加一个滑动窗口即可实现稳定的无限长度流式推理，无需微调。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Attention sink 的发现：无论语义内容如何，初始 token 都会获得不成比例的高注意力分数；驱逐它们会导致灾难性的困惑度爆炸（例如，Llama-2-7B 从约 10 PPL 跃升至 5158 PPL）</li>
+<li>简单修复：在 KV cache 中保留 4 个初始 sink token，并配合一个滚动窗口保留最近的 token；可实现对超过 400 万 token 序列的稳定推理</li>
+<li>RoPE 位置重映射：持续重映射位置，使 sink token 占据位置 0–3，最近的 token 占据位置 4 及以后，避免分布外的位置编码</li>
+<li>可选的 learnable sink token：在预训练期间添加专用的 sink token，仅需一个 sink token 即可实现稳定流式推理，且零样本基准测试性能无损失</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 揭示了预训练 LLM 中注意力工作机制的一个基本属性。Attention sink 的洞察影响了整个领域的 KV cache 管理策略（StreamingLLM 通常与量化和驱逐方法结合使用）。它使得任何预训练 LLM 都能以常量内存在真正的流式、无限长度场景中部署——这对聊天机器人和实时 agent 应用至关重要。</li>
+</ul>
+<h3 id="H2O-Heavy-Hitter-Oracle-for-Efficient-Generative-Inference-of-Large-Language-Models"><a href="#H2O-Heavy-Hitter-Oracle-for-Efficient-Generative-Inference-of-Large-Language-Models" class="headerlink" title="H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models"></a>H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2306.14048">2306.14048</a></li>
+<li><strong>发表</strong>: NeurIPS 2023</li>
+<li><strong>作者</strong>: Zhenyu Zhang, Ying Sheng, Tianyi Zhou, Tianlong Chen, Lianmin Zheng, Ruisi Cai, Zhao Song, Yuandong Tian, Christopher Re, Clark Barrett, Zhangyang Wang, Beidi Chen (UT Austin, Stanford, UCSD, UC Berkeley, Adobe Research, Meta AI, CMU)</li>
+<li><strong>简介</strong>: 识别出”重击者”（heavy hitter）token——这些 token 按幂律分布主导累计注意力分数——并使用贪婪驱逐策略同时保留重击者和最近的 token，实现 20 倍 KV cache 缩减且准确性损失极小。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>重击者识别：推理时的注意力矩阵超过 95% 稀疏；少量 token 在累计注意力中遵循幂律分布，对生成质量至关重要</li>
+<li>贪婪驱逐策略：基于累计局部注意力分数动态驱逐 token，被表述为一个具有理论保证的动态子模最大化问题</li>
+<li>无需前瞻：驱逐决策仅使用已计算的注意力分数，使其轻量且与流式生成兼容</li>
+<li>相比 DeepSpeed 和 HuggingFace 基线，吞吐量提升高达 29 倍，延迟相比 FlexGen 降低 1.9 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 最具影响力的 KV cache 驱逐策略之一。Heavy-hitter 的概念已被许多后续工作（FastGen、ScissorHands、PyramidKV）采纳和扩展。H2O 的贪婪策略特别实用，因为它可以在推理时使用，无需校准数据或微调，现已集成到 Hugging Face Transformers 中。</li>
+</ul>
+<h3 id="KIVI-A-Tuning-Free-Asymmetric-2bit-Quantization-for-KV-Cache"><a href="#KIVI-A-Tuning-Free-Asymmetric-2bit-Quantization-for-KV-Cache" class="headerlink" title="KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache"></a>KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.02750">2402.02750</a></li>
+<li><strong>发表</strong>: ICML 2024</li>
+<li><strong>作者</strong>: Zirui Liu, Jiayi Yuan, Hongye Jin, Shaochen Zhong, Zhaozhuo Xu, Vladimir Braverman, Beidi Chen, Xia Hu (Rice University, CMU)</li>
+<li><strong>简介</strong>: 通过对 key 使用非对称逐通道量化、对 value 使用逐 token 量化，实现 2-bit KV cache 量化且准确性损失极小，无需校准数据或微调。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>非对称量化策略：发现 key cache 具有逐通道异常值（少量固定通道具有大数值），适合逐通道量化；value cache 没有持续的通道结构，适合逐 token 量化</li>
+<li>对 key 和 value 均采用 2-bit 非对称格式（scale + zero-point），包括模型权重在内峰值内存减少 2.6 倍</li>
+<li>免调参设计：无需校准集、无需微调、无需逐模型超参数调优——在 LLaMA、Falcon、Mistral、LLaMA-3 上开箱即用</li>
+<li>流式处理时使用小型 FP16 残差缓冲区存储最近的 token，结合分块量化使摊销内存接近 2-bit 目标</li>
+<li>在实际工作负载上吞吐量提升 2.35–3.47 倍，支持高达 4 倍更大的 batch size</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 将 KV cache 量化推向极致（2 bit），同时保持实际可用性（无需调参）。逐通道 vs. 逐 token 的非对称性洞察后来被发现与 RoPE 对 key 投影的交互有关，并启发了 Hugging Face Transformers 的 <code>QuantizedCache</code> 实现。代表了 KV cache 在不损失质量的情况下可以多激进地被压缩的前沿。</li>
+</ul>
+<h3 id="KVQuant-Towards-10-Million-Context-Length-LLM-Inference-with-KV-Cache-Quantization"><a href="#KVQuant-Towards-10-Million-Context-Length-LLM-Inference-with-KV-Cache-Quantization" class="headerlink" title="KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization"></a>KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.18079">2401.18079</a></li>
+<li><strong>发表</strong>: NeurIPS 2024</li>
+<li><strong>作者</strong>: Coleman Hooper, Sehoon Kim, Hiva Mohammadzadeh, Michael W. Mahoney, Yakun Sophia Shao, Kurt Keutzer, Amir Gholami (UC Berkeley, ICSI, LBNL)</li>
+<li><strong>简介</strong>: 一个全面的 KV cache 量化系统，包含五项新技术，支持在 1M+ 上下文长度下进行 3–4 bit 量化，在 4.8 倍压缩下困惑度退化小于 0.1。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Pre-RoPE key 量化：在应用旋转位置嵌入（RoPE）之前量化 key，因为 RoPE 会混合通道对并破坏在 RoPE 之前保持一致的异常值幅度</li>
+<li>逐向量稠密-稀疏量化：逐向量（key 按通道、value 按 token）隔离异常值并以稀疏表示存储，防止异常值扭曲量化范围</li>
+<li>非均匀量化（NUQ）：利用 Fisher 信息和 k-means 导出逐层灵敏度加权的非均匀数据类型，提供比均匀量化更好的量化标点布局</li>
+<li>Q-Norm：在量化后对量化中心进行归一化以缓解分布偏移，在 2-bit 精度下尤为关键</li>
+<li>可在单张 A100-80GB 上以 1M 上下文、在 8 GPU 系统上以 10M 上下文来服务 LLaMA-7B</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 最全面、工程化程度最高的 KV cache 量化系统，使 Gemini 1.5 Pro 等模型所需的极端长上下文推理（10M token）成为可能。Pre-RoPE 量化技术已成为许多后续工作采纳的标准最佳实践。证明了通过精心的工程设计，KV cache 量化即使在非常激进的压缩比下也能实现几乎无损的质量。</li>
+</ul>
+<h3 id="MiniCache-KV-Cache-Compression-in-Depth-Dimension-for-Large-Language-Models"><a href="#MiniCache-KV-Cache-Compression-in-Depth-Dimension-for-Large-Language-Models" class="headerlink" title="MiniCache: KV Cache Compression in Depth Dimension for Large Language Models"></a>MiniCache: KV Cache Compression in Depth Dimension for Large Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.14366">2405.14366</a></li>
+<li><strong>发表</strong>: arXiv 预印本，2024 年 5 月（审稿中，NeurIPS 2024）</li>
+<li><strong>作者</strong>: Akide Liu, Jing Liu, Zizheng Pan, Yefei He, Gholamreza Haffari, Bohan Zhuang (Monash University, ZIP Lab)</li>
+<li><strong>简介</strong>: 在深度维度（而非仅仅序列长度）上压缩 KV cache，利用相邻层 KV 状态之间的高度相似性，实现高达 5 倍压缩且性能几乎无损。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>跨层 KV 相似性：观察到 LLM 中深层区域的相邻层 KV cache 状态高度相似（cosine similarity &gt; 0.9），使得深度维度合并成为可能</li>
+<li>幅度-方向解耦：在合并相邻层之前，将每个 KV 状态向量分离为幅度和方向分量，对方向进行插值同时保持原始幅度不变</li>
+<li>Token 保留策略：选择性地将高度不同的状态对保持不合并，保留标记的存储开销极小</li>
+<li>与其他方法互补：可与序列级驱逐、token 级稀疏性和基于量化的压缩方法协同工作；结合 4-bit 量化实现 5 倍压缩</li>
+<li>相比 FP16 全量 cache 基线，内存占用减少 41%，在 ShareGPT 上吞吐量提升约 5 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 独特之处在于沿深度维度压缩 KV cache，而非更常见的序列维度和 token 维度。代表了与其他 KV cache 技术互补（而非替代）的正交压缩维度。跨层相似性的观察也为模型架构开辟了新的设计空间。</li>
+</ul>
+<h3 id="SnapKV-LLM-Knows-What-You-are-Looking-for-Before-Generation"><a href="#SnapKV-LLM-Knows-What-You-are-Looking-for-Before-Generation" class="headerlink" title="SnapKV: LLM Knows What You are Looking for Before Generation"></a>SnapKV: LLM Knows What You are Looking for Before Generation</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.14469">2404.14469</a></li>
+<li><strong>发表</strong>: arXiv 预印本，2024 年 4 月（审稿中）</li>
+<li><strong>作者</strong>: Yuhong Li, Yingbing Huang, Bowen Yang, Bharat Venkitesh, Acyr Locatelli, Hanchen Ye, Tianle Cai, Patrick Lewis, Deming Chen (UIUC, Cohere For AI, Princeton)</li>
+<li><strong>简介</strong>: 通过分析 prompt 末尾附近”观察窗口”中的注意力模式来压缩 KV cache，仅选择性保留最重要的 KV 位置，在 16K 上下文下实现 3.6 倍生成加速。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>观察窗口：利用 prompt 末尾的一个小窗口来观察每个注意力头持续关注的 prompt token，无需完整 KV cache 即可完成分析</li>
+<li>Prompt 驱动的压缩：每个注意力头的重要位置根据观察到的注意力模式独立确定，实现针对每个注意力头的保留策略</li>
+<li>无需微调和校准：适用于任何预训练 LLM，无需额外训练或校准数据</li>
+<li>在单张 A100-80GB GPU 上处理 380K token，在 Needle-in-a-Haystack 和 16 个长序列基准上精度下降可忽略</li>
+<li>在 16K 输入长度下，生成速度提升 3.6 倍，内存效率提升 8.2 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 一种实用的、感知 prompt 的 KV cache 压缩方法，在部署时无需任何准备工作即可使用。观察窗口技术优雅，因为它利用 LLM 自身的注意力模式来决定保留什么，而非依赖启发式或校准。代表了基于运行时行为而非静态分析来做压缩决策的趋势。</li>
+</ul>
+<h3 id="CacheGen-KV-Cache-Compression-and-Streaming-for-Fast-Large-Language-Model-Serving"><a href="#CacheGen-KV-Cache-Compression-and-Streaming-for-Fast-Large-Language-Model-Serving" class="headerlink" title="CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving"></a>CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.07240">2310.07240</a></li>
+<li><strong>发表</strong>: SIGCOMM 2024</li>
+<li><strong>作者</strong>: Yuhan Liu, Hanchen Li, Yihua Cheng, Siddhant Ray, Yuyang Huang, Qizheng Zhang, Kuntai Du, Jiayi Yao, Shan Lu, Ganesh Ananthanarayanan, Michael Maire, Henry Hoffmann, Ari Holtzman, Junchen Jiang (University of Chicago, Microsoft)</li>
+<li><strong>简介</strong>: 通过网络压缩和流式传输 KV cache 来减少上下文加载延迟，利用 token 局部性和层敏感度进行自适应流式传输，实现 3.5–4.3 倍 KV cache 大小缩减和 3.2–3.7 倍 TTFT 降低。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>自定义 tensor 编码器：利用 token 局部性（编码相邻 token 的 delta tensor）、层敏感度（浅层使用更精细量化）以及通道-层分布（GPU 并行算术编码），实现接近熵极限的压缩</li>
+<li>自适应流式传输：将 KV cache 分割成块，根据可用带宽自适应调整每个块的压缩级别，实现低延迟流式传输而非等待完整解压</li>
+<li>网络感知设计：针对”网络墙”问题——通过网络获取大 KV cache（例如 Llama-34B 在 80K token 下为 19 GB）成为瓶颈</li>
+<li>各任务质量退化可忽略（准确率下降 ≤2%，困惑度/F1 下降 ≤0.1%）</li>
+<li>集成到 LMCache 项目中进行实际部署</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 解决了分布式服务系统中 KV cache 传输这一被忽视的问题。随着 LLM 服务向分离式架构（独立的 prefill 和 decode 节点）发展，网络成为上下文切换的瓶颈。CacheGen 的网络感知方法桥接了 KV cache 压缩和分布式系统两个社区，而 LMCache 的集成确保了实际影响力。</li>
+</ul>
+<h3 id="InfiniGen-Efficient-Generative-Inference-of-Large-Language-Models-with-Dynamic-KV-Cache-Management"><a href="#InfiniGen-Efficient-Generative-Inference-of-Large-Language-Models-with-Dynamic-KV-Cache-Management" class="headerlink" title="InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management"></a>InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.19707">2406.19707</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 6 月</li>
+<li><strong>作者</strong>: Wonbeom Lee, Jungbeom Lee, Junghyun Seo, Jaewoong Sim (Seoul National University)</li>
+<li><strong>简介</strong>: 在生成过程中动态预测每个注意力头所需的最优 KV cache 条目数量，通过”按需”分配策略实现 3-4 倍压缩，避免对所有头使用统一的保留预算。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>每头自适应预算分配：发现不同注意力头对 KV cache 的敏感度差异巨大——某些头仅需 10% 的 KV 条目即可保持质量，而其他头需要 80% 以上。InfiniGen 在生成时动态预测每个头所需的 KV 预算</li>
+<li>基于查询相似度的在线预测器：利用当前 query 与历史 query 的余弦相似度来预测哪些 KV 条目最可能被需要，无需额外的离线训练或校准</li>
+<li>预算池化策略：不固定每个头的 KV 保留数量，而是分配一个总预算池，让不同头根据实时需求竞争分配，最大化整体资源利用效率</li>
+<li>与 KIVI 等量化方法正交兼容，可叠加使用实现 8 倍以上的综合压缩</li>
+<li>在 LLaMA-3-8B 的 LongBench 长上下文基准测试上，以 3 倍 KV cache 压缩实现了与全量 cache 相当的性能</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: InfiniGen 的核心贡献在于揭示了”一刀切”的 KV cache 驱逐策略的次优性——不同注意头对上下文的依赖程度本质不同。其动态预算分配策略将 KV cache 管理从一个固定的压缩问题转变为一个在线资源分配问题。这一洞见与 Anthropic 的”注意力头专业化”发现相呼应，对下一代 KV cache 管理系统设计有重要参考价值。</li>
+</ul>
+<hr>
+<h3 id="Quest-Query-Aware-Sparsity-for-Efficient-Long-Context-LLM-Inference"><a href="#Quest-Query-Aware-Sparsity-for-Efficient-Long-Context-LLM-Inference" class="headerlink" title="Quest: Query-Aware Sparsity for Efficient Long-Context LLM Inference"></a>Quest: Query-Aware Sparsity for Efficient Long-Context LLM Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.10774">2406.10774</a></li>
+<li><strong>发表</strong>: ICML 2024 (Poster)</li>
+<li><strong>作者</strong>: Jiaming Tang, Yilong Zhao, Kan Zhu, Guangxuan Xiao, Baris Kasikci, Song Han (MIT / NVIDIA)</li>
+<li><strong>简介</strong>: 在推理时通过 query 向量与 KV cache 的分块近似内积来识别最重要的 KV 分块，仅对选中的分块进行精确注意力计算，在 128K 上下文下实现 7 倍注意力加速。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Query-Aware 分块选择：将 KV cache 按序列长度维度分割为固定大小的分块，对每个分块使用 query 与分块最大内积的快速上界估计，仅选择 top-k 个分块参与精确注意力计算。这一策略确保注意力计算集中在最相关的信息上</li>
+<li>无额外索引开销：分块选择直接使用 KV cache 中的已有数据，无需构建额外的向量索引或哈希表。上界估计仅需少量矩阵运算，计算开销极小（&lt; 2%）</li>
+<li>理论保真度保证：证明了所选 top-k 分块包含的注意力质量（attention mass）有下界保证，确保不会遗漏关键信息</li>
+<li>GPU 友好的分块设计：分块大小与 GPU tile 大小对齐，最大化 TensorCore 利用率</li>
+<li>在 128K 上下文的 LLaMA-3-8B 上实现 7.1 倍注意力加速，端到端生成延迟降低约 2.4 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Quest 代表了注意力稀疏化中”分块级重要性采样”方向的最优实现。与 token 级别的稀疏注意力（如 H2O、StreamingLLM）不同，Quest 在分块级别进行选择，既保留了 GPU 友好的密集矩阵乘法模式，又大幅减少了计算量。其 query-aware 的设计是核心——不同于静态地（在 prefill 阶段）决定保留哪些 KV 条目，Quest 在每一步 decode 时根据当前 query 动态选择，代表了从”静态压缩”到”动态查询”的范式转变。</li>
+</ul>
+<hr>
+<h3 id="PyramidKV-Dynamic-Budget-Allocation-for-Heterogeneous-Attention-Heads-in-KV-Cache-Compression"><a href="#PyramidKV-Dynamic-Budget-Allocation-for-Heterogeneous-Attention-Heads-in-KV-Cache-Compression" class="headerlink" title="PyramidKV: Dynamic Budget Allocation for Heterogeneous Attention Heads in KV Cache Compression"></a>PyramidKV: Dynamic Budget Allocation for Heterogeneous Attention Heads in KV Cache Compression</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.02069">2406.02069</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 6 月</li>
+<li><strong>作者</strong>: Zhuocheng Zhang, Yuhui Li, Mingjie Sun, Jiahao Wang, Hao Zhang, Song Han (MIT / UCSD)</li>
+<li><strong>简介</strong>: 发现不同层的注意力头具有不同的 KV cache 敏感度——浅层容忍高压缩、深层需要更多保留，并据此设计金字塔形的逐层预算分配，相比均等分配提升 20-30% 的压缩效率。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>金字塔形预算分配：浅层分配更少的 KV cache 预算（压缩比更高），深层分配更多预算（压缩比更低），形成一个从浅到深的金字塔结构。预算总和保持固定，但分配方式带来显著增益</li>
+<li>逐层敏感度分析框架：通过分析每一层注意力输出的变化对最终 loss 的影响（一阶 Taylor 展开），量化每层对 KV cache 压缩的敏感度</li>
+<li>与多种驱逐策略兼容：PyramidKV 是一种预算分配策略，而非驱逐策略本身——它可以与 H2O、StreamingLLM、SnapKV 等具体驱逐方法结合使用，赋能所有现有方法</li>
+<li>在 LLaMA-2-7B 到 LLaMA-3-70B 的广泛模型上验证，平均压缩效率（固定质量下的压缩比）提升 20-30%</li>
+<li>与 KV 量化方法正交互补，结合 KIVI 4-bit 量化实现约 10 倍综合压缩</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: PyramidKV 引入了一个重要的维度——层深度——来优化 KV cache 分配。此前的方法要么对所有层统一处理，要么仅考虑 token 级别的重要性。PyramidKV 证明了不同层的注意力头有不同的压缩容忍度，而简单的金字塔形策略就能捕获大部分收益。其方法论（逐层敏感度分析）可以被推广到其他压缩技术的预算分配问题中。</li>
+</ul>
+<hr>
+<h3 id="CompressKV-Attention-Aware-KV-Cache-Compression-for-Long-Context-LLM-Inference"><a href="#CompressKV-Attention-Aware-KV-Cache-Compression-for-Long-Context-LLM-Inference" class="headerlink" title="CompressKV: Attention-Aware KV Cache Compression for Long-Context LLM Inference"></a>CompressKV: Attention-Aware KV Cache Compression for Long-Context LLM Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2502.16547">2502.16547</a></li>
+<li><strong>发表</strong>: arXiv，2025 年 2 月</li>
+<li><strong>作者</strong>: Junhyuk Lee, Seungtaek Choi, Wonjae Kim, Minjoon Seo (KAIST)</li>
+<li><strong>简介</strong>: 仅在 prefill 完成后进行一次注意力分析（而非每步 decode 时都分析），利用 prefill 注意力模式来指导后续所有 decode 步骤的 KV cache 压缩，实现零额外运行时开销的感知压缩。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>一次性注意力引导压缩策略：在 prefill 阶段完成时，对所有层、所有头的注意力模式进行一次全面分析，据此确定各头需要保留的 KV 条目集合。后续所有 decode 步骤直接使用该固定压缩方案，无需重复分析</li>
+<li>跨步骤注意力模式稳定性发现：验证了 prefill 阶段的注意力模式在 decode 阶段高度稳定（注意力分布变化 &lt; 5%），使得一次性分析策略具有理论基础</li>
+<li>层间注意力模式共享：观察到相邻层的注意力模式高度相似，可以复用高层的分析结果指导底层压缩，进一步减少分析开销</li>
+<li>零额外运行时开销：不同于需要在每次 decode 时重新分析的方法（如 SnapKV 的观察窗口），CompressKV 的分析仅在 prefill 结束时执行一次</li>
+<li>在 LLaMA-3-8B 上以 25% 的 KV cache 保留率实现与全量 cache 相当的 LongBench 性能</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: CompressKV 的关键贡献在于证明了”分析一次，重复使用”策略在 KV cache 压缩中的有效性。这与 SnapKV 的”每次 decode 时分析”策略形成对比——CompressKV 以更高的压缩效率换取零额外开销，适合对延迟敏感的部署场景。跨步骤注意力稳定性的发现是一个重要的经验观察，为许多”分析-压缩-固定”策略提供了理论支撑。</li>
+</ul>
+<hr>
+<h3 id="NACL-A-General-and-Effective-KV-Cache-Eviction-Framework-for-LLM-Inference"><a href="#NACL-A-General-and-Effective-KV-Cache-Eviction-Framework-for-LLM-Inference" class="headerlink" title="NACL: A General and Effective KV Cache Eviction Framework for LLM Inference"></a>NACL: A General and Effective KV Cache Eviction Framework for LLM Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.20143">2407.20143</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 7 月</li>
+<li><strong>作者</strong>: Xuan Liao, Yilong Xu, Han Shi, Zixuan Wang, Xiangyu Zhang, Fei Sun (中科院计算所 / 中国科学院大学)</li>
+<li><strong>简介</strong>: 提出统一的 KV cache 驱逐框架——将随机驱逐、注意力分数驱逐、位置驱逐等多种策略统一为”分数-概率-选择”三步范式，并通过可学习的混合权重实现自适应驱逐策略。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>统一驱逐框架：将所有 KV cache 驱逐方法抽象为三个步骤——（1）为每个 token 分配分数（注意力累积、位置分数、随机分数等）、（2）将分数映射为驱逐概率、（3）根据概率选择驱逐 token。不同方法仅在前两个步骤上有所不同</li>
+<li>自适应的多策略混合：使用可学习的混合权重将不同的分数来源（累积注意力、位置重要性、频次统计）线性组合，混合权重通过在验证集上优化困惑度来学习</li>
+<li>无校准的实时自适应：在推理过程中，混合权重根据当前序列的统计特征（序列长度、内容类型）动态调整，使策略自动适配不同的输入</li>
+<li>可作为插件增强任何现有驱逐方法：通过将现有方法的分数纳入混合池，NACL 在原始方法基础上进一步提升 5-15% 的压缩效率</li>
+<li>在 LLaMA-2/3、Mistral、Qwen 等多个模型系列上验证，通用性强</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: NACL 的价值在于将分散的 KV cache 驱逐研究统一到一个框架下，使得不同方法之间的比较和组合变得系统化。其自适应混合权重策略解决了”哪种驱逐策略最好”这个没有唯一答案的问题——最优策略取决于输入内容和模型特性，而 NACL 自动找到最优组合。这种”元策略”的范式可能成为 KV cache 管理的未来方向。</li>
+</ul>
+<hr>
+<h3 id="GEAR-An-Efficient-KV-Cache-Compression-Recipe-for-Near-Lossless-Generative-Inference"><a href="#GEAR-An-Efficient-KV-Cache-Compression-Recipe-for-Near-Lossless-Generative-Inference" class="headerlink" title="GEAR: An Efficient KV Cache Compression Recipe for Near-Lossless Generative Inference"></a>GEAR: An Efficient KV Cache Compression Recipe for Near-Lossless Generative Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.05527">2403.05527</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 3 月</li>
+<li><strong>作者</strong>: Hao Kang, Qingru Zhang, Souvik Kundu, Tianxin Wei, Pengyu Wang, Xiaomin Song, Mingu Lee, Tianlong Chen, Zhangyang Wang (Apple / University of Texas at Austin)</li>
+<li><strong>简介</strong>: 将 KV cache 压缩分解为”低秩近似 + 稀疏残差”两部分——使用 SVD 捕获全局低秩结构，使用稀疏矩阵存储残差中的异常值——在几乎无损的质量下实现 3-4 倍压缩。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>低秩加稀疏分解：对每种 KV cache 矩阵应用截断 SVD，保留 top-r 个奇异向量（低秩分量），然后用稀疏格式存储原始矩阵与低秩重建之间的残差。低秩分量用密集矩阵存储（小但完整），残差用 COO 格式存储（大但稀疏）</li>
+<li>动态秩选择：根据每个头的 KV cache 能量分布自动选择保留的秩数 r，能量集中的头使用较小的 r、能量分散的头使用较大的 r</li>
+<li>逐块处理策略：将 KV cache 沿序列长度维度分块，每个块独立进行低秩分解，避免了全局 SVD 的内存开销（对长序列尤为关键）</li>
+<li>与量化无缝集成：低秩分量可以用更高精度（如 FP16）存储以保证质量，残差用更低精度（如 INT4）存储以保证大小，实现精细的精度分配</li>
+<li>在 LLaMA-2-7B 和 LLaMA-3-8B 上，以 3-4 倍压缩实现困惑度增加 &lt; 0.05</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: GEAR 引入了一个通用的压缩框架——“低秩 + 稀疏”——来处理 KV cache。这与模型权重量化中的类似策略（如 GPTVQ 的低秩补偿）在思想上一致，但专门针对 KV cache 的访问模式进行了优化。其动态秩选择策略是”按需分配”原则在低秩压缩中的体现。GEAR 的方法已被 Apple 的研究团队在设备端 LLM 推理中采用。</li>
+</ul>
+<hr>
+<p><strong>推理加速专题导航</strong>：<a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-01-%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E4%BC%98%E5%8C%96/">← 上一篇：注意力机制优化</a> | <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-03-%E6%8A%95%E6%9C%BA%E8%A7%A3%E7%A0%81/">下一篇：投机解码 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-LLM%E6%8E%A8%E7%90%86-%E6%8E%A8%E7%90%86%E4%BC%98%E5%8C%96-KV-Cache/" class="print-no-link">#推理加速,LLM推理,推理优化,KV-Cache</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>推理加速-02：KV-Cache 管理与量化</div>
+      <div>https://w2ongq6.github.io/2026/07/24/inference/推理加速-02-KV-Cache管理/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-03-%E6%8A%95%E6%9C%BA%E8%A7%A3%E7%A0%81/" title="推理加速-03：投机解码">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">推理加速-03：投机解码</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-01-%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E4%BC%98%E5%8C%96/" title="推理加速-01：注意力机制优化">
+                        <span class="hidden-mobile">推理加速-01：注意力机制优化</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

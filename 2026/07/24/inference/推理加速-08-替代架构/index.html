@@ -1,0 +1,1139 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="虽然 Transformer 架构一直主导着 LLM 发展，但其二次 attention 复杂度为长上下文处理和高效推理带来了根本性的瓶颈。从 2023 年至 2026 年，替代架构——State Space Models (SSM)、线性 RNN 和混合设计——出现了爆发式增长，证明了次二次复杂度的模型可以在推理时大幅提升效率的同时，达到甚至超过 Transformer 的质量。本章节涵盖最具影">
+<meta property="og:type" content="article">
+<meta property="og:title" content="推理加速-08：替代架构（SSM&#x2F;Mamba&#x2F;RWKV）">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-08-%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="虽然 Transformer 架构一直主导着 LLM 发展，但其二次 attention 复杂度为长上下文处理和高效推理带来了根本性的瓶颈。从 2023 年至 2026 年，替代架构——State Space Models (SSM)、线性 RNN 和混合设计——出现了爆发式增长，证明了次二次复杂度的模型可以在推理时大幅提升效率的同时，达到甚至超过 Transformer 的质量。本章节涵盖最具影">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T03:08:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T09:56:52.042Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="推理加速,LLM推理,推理优化,Mamba">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>推理加速-08：替代架构（SSM/Mamba/RWKV） - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="推理加速-08：替代架构（SSM/Mamba/RWKV）"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 11:08" pubdate>
+          2026年7月24日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          101 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">推理加速-08：替代架构（SSM/Mamba/RWKV）</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>虽然 Transformer 架构一直主导着 LLM 发展，但其二次 attention 复杂度为长上下文处理和高效推理带来了根本性的瓶颈。从 2023 年至 2026 年，替代架构——State Space Models (SSM)、线性 RNN 和混合设计——出现了爆发式增长，证明了次二次复杂度的模型可以在推理时大幅提升效率的同时，达到甚至超过 Transformer 的质量。本章节涵盖最具影响力的替代架构论文。</p>
+<hr>
+<h2 id="论文"><a href="#论文" class="headerlink" title="论文"></a>论文</h2><h3 id="Mamba-Linear-Time-Sequence-Modeling-with-Selective-State-Spaces"><a href="#Mamba-Linear-Time-Sequence-Modeling-with-Selective-State-Spaces" class="headerlink" title="Mamba: Linear-Time Sequence Modeling with Selective State Spaces"></a>Mamba: Linear-Time Sequence Modeling with Selective State Spaces</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.00752">2312.00752</a></li>
+<li><strong>发表</strong>: arXiv，2023 年 12 月（未在传统会议上经过同行评审；后续工作 Mamba-2 发表于 ICML 2024）</li>
+<li><strong>作者</strong>: Albert Gu（CMU），Tri Dao（Together AI / Princeton）</li>
+<li><strong>简介</strong>: 引入选择性（输入依赖）state space model，结合硬件感知的并行扫描算法，以线性时间推理和 5 倍吞吐量实现 Transformer 级别的建模质量。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Selective State Space Model (S6)</strong>: 与使用固定线性时不变参数的早期 SSM（S4、H3）不同，Mamba 将 SSM 参数（Delta、B、C）设计为输入依赖的函数，实现内容感知推理——模型学会对每个 token 选择性地传播或遗忘信息</li>
+<li><strong>硬件感知并行扫描算法</strong>: 由于选择性使高效卷积模式不可用，针对 GPU SRAM/HBM 内存层级设计了自定义并行扫描算法，灵感来源于 FlashAttention 的 I/O 感知设计</li>
+<li>移除 attention 甚至 MLP 块，采用精简的端到端 SSM 设计来简化架构</li>
+<li>Mamba-2.8B 在语言建模上超过同等规模的 Transformer，并匹敌两倍规模的 Transformer，同时生成吞吐量提升 5 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Mamba 无疑是自 “Attention Is All You Need” 以来最具影响力的替代架构论文。它证明了非 Transformer 架构可以在质量上真正具有竞争力，同时提供线性时间推理——催生了整个研究生态（Mamba-2、Jamba、Griffin、Caduceus 等）。其硬件感知设计理念（将算法与硬件视为一个协同设计问题）已成为标准实践。</li>
+</ul>
+<hr>
+<h3 id="Transformers-are-SSMs-Generalized-Models-and-Efficient-Algorithms-Through-Structured-State-Space-Duality-Mamba-2"><a href="#Transformers-are-SSMs-Generalized-Models-and-Efficient-Algorithms-Through-Structured-State-Space-Duality-Mamba-2" class="headerlink" title="Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (Mamba-2)"></a>Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (Mamba-2)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.21060">2405.21060</a></li>
+<li><strong>发表</strong>: ICML 2024</li>
+<li><strong>作者</strong>: Tri Dao（Together AI / Princeton），Albert Gu（CMU）</li>
+<li><strong>简介</strong>: 通过”Structured State Space Duality”（SSD）证明了 SSM 与线性 attention 在数学上是等价的，统一了两个此前独立的研究社区，并产出了比 Mamba-1 快 2-8 倍的 Mamba-2。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Structured State Space Duality (SSD)</strong>: 证明了 state space model 对应于结构化半可分矩阵（structured semiseparable matrices），SSM 的递归形式和 masked attention 是同一计算的两种视角——一种线性时间，一种可并行训练</li>
+<li><strong>线性 Attention 与 SSM 的统一框架</strong>: 形式化了 SSM 与 “Structured Masked Attention” (SMA) 之间的联系，证明了任何快速递归的 kernel attention 方法本质上都是一个 SSM</li>
+<li><strong>Mamba-2 架构</strong>: 将 state 维度从 16 增加到 256（约 16 倍），速度损失极小，引入 Grouped-Value Attention (GVA) 和多头 SSM 设计</li>
+<li>比 Mamba-1 快 2-8 倍，在 2K 上下文长度下与 FlashAttention-2 相当，在 16K 时快 6 倍</li>
+<li>混合模型（4-6 attention 层 + Mamba-2 层）超越纯 Transformer++ 和纯 Mamba-2，证实 attention 与 SSM 是互补的</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: 这篇论文提供了连接 SSM 和 attention 社区的理论桥梁。通过证明它们的数学等价性，它终结了”Transformer vs. SSM”的争论，将其重新定义为何时使用哪种计算形式（递归 vs. 并行）的问题。SSD 框架使基于原理的混合设计成为可能，充分结合两者之长。</li>
+</ul>
+<hr>
+<h3 id="RWKV-Reinventing-RNNs-for-the-Transformer-Era"><a href="#RWKV-Reinventing-RNNs-for-the-Transformer-Era" class="headerlink" title="RWKV: Reinventing RNNs for the Transformer Era"></a>RWKV: Reinventing RNNs for the Transformer Era</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2305.13048">2305.13048</a></li>
+<li><strong>发表</strong>: Findings of EMNLP 2023</li>
+<li><strong>作者</strong>: Bo Peng, Eric Alcaide, Quentin Anthony 等，EleutherAI 和 Generative AI Commons</li>
+<li><strong>简介</strong>: 一种新颖的线性 attention 架构，训练时像 Transformer 一样可并行化，推理时以 RNN 方式运行、O(1) 内存占用——无需 KV cache。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>WKV（Receptance Weighted Key Value）机制</strong>: 用通道导向的线性 attention 机制取代标准 QKV attention，使用 receptance (R)、key (K) 和 value (V) 向量，每个通道配有可学习的时间衰减向量</li>
+<li><strong>双重形式</strong>: 既可以以 Transformer 方式计算（并行训练，O(T^2)），也可以以 RNN 方式计算（高效推理，O(T) 时间，O(1) 内存），兼具两种范式的优势</li>
+<li><strong>逐通道时间衰减</strong>: 每个通道学习自己的指数衰减率，使模型能够在不同维度上跨不同时间尺度保留信息</li>
+<li>扩展到 14B 参数——当时有史以来训练过的最大 RNN 语言模型——在标准基准测试上匹敌同等规模的 Transformer</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: RWKV 是基于 RNN 的 Transformer 主要替代方案，拥有强大的开源社区和 Apache 2.0 协议。它证明了类 RNN 架构不仅能匹敌 Transformer 的质量，还能完全消除 KV cache——这对长上下文和内存受限的部署场景是至关重要的优势。RWKV 社区已持续迭代至 RWKV-7。</li>
+</ul>
+<hr>
+<h3 id="Gated-Linear-Attention-GLA-Transformers-with-Hardware-Efficient-Training"><a href="#Gated-Linear-Attention-GLA-Transformers-with-Hardware-Efficient-Training" class="headerlink" title="Gated Linear Attention (GLA) Transformers with Hardware-Efficient Training"></a>Gated Linear Attention (GLA) Transformers with Hardware-Efficient Training</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.06635">2312.06635</a></li>
+<li><strong>发表</strong>: ICML 2024</li>
+<li><strong>作者</strong>: Songlin Yang, Bailin Wang, Yikang Shen, Rameswar Panda, Yoon Kim，MIT / IBM Research / ByteDance</li>
+<li><strong>简介</strong>: 为 linear attention 引入数据依赖的门控机制，配合硬件高效的分块并行训练算法，显著缩小了 linear attention 与 softmax attention 之间的质量差距。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>线性 Attention 的数据依赖门控</strong>: 为线性 attention 递归添加一个可学习的遗忘门（alpha_t），由低秩 sigmoid 参数化推导而来，大幅提升表达能力并增强训练稳定性，远超普通 linear attention</li>
+<li><strong>FlashLinearAttention 算法</strong>: 一种 I/O 感知的实现，利用 GPU TensorCores 进行高效矩阵乘法，同时在 log 空间中为门控项保持数值稳定性</li>
+<li><strong>两级分块并行</strong>: chunk 间计算使用半精度 TensorCore GEMM 以提升速度；chunk 内使用全精度 log 空间操作以保证门控递归的数值稳定性</li>
+<li>GLA Transformer 在 340M 和 1.3B 规模上匹敌 LLaMA 架构的 Transformer、RetNet 和 Mamba，且具有强大的长度泛化能力（在 2K 上训练，可泛化到 20K+）</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: GLA 解决了 linear attention 的一个根本问题：速度快但质量远低于 softmax attention。通过引入可学习的门控——类似于 LSTM 的遗忘门——GLA 缩小了大部分差距。其硬件感知的分块训练算法建立了现在被 linear attention 文献广泛使用的模式。</li>
+</ul>
+<hr>
+<h3 id="Griffin-Mixing-Gated-Linear-Recurrences-with-Local-Attention-for-Efficient-Language-Models"><a href="#Griffin-Mixing-Gated-Linear-Recurrences-with-Local-Attention-for-Efficient-Language-Models" class="headerlink" title="Griffin: Mixing Gated Linear Recurrences with Local Attention for Efficient Language Models"></a>Griffin: Mixing Gated Linear Recurrences with Local Attention for Efficient Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.19427">2402.19427</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 2 月</li>
+<li><strong>作者</strong>: Soham De, Samuel L. Smith, Anushan Fernando, Aleksandar Botev 等（包括 Albert Gu），Google DeepMind</li>
+<li><strong>简介</strong>: Google DeepMind 对 Mamba 的回应，引入了 Hawk（纯递归）和 Griffin（递归 + local attention）架构，在性能上超越 Mamba 的同时训练速度比 Transformer 更快。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>RG-LRU（Real-Gated Linear Recurrent Unit）</strong>: 一种新颖的门控线性递归层，作为构建模块——比 Mamba 的 selective SSM 更简单但同样有效</li>
+<li><strong>混合 Griffin 架构</strong>: 将 RG-LRU 层与滑动窗口 local attention 交错排列，结合了 RNN 在长程上下文上的效率和 attention 在局部 token 交互上的精确性</li>
+<li><strong>Hawk 架构</strong>: 一个纯递归基线（完全不含 attention），用更少的训练 token 在 downstream 任务上仍然超越 Mamba</li>
+<li>Griffin 以少 6 倍的训练 token 匹敌 Llama-2 的质量；在长序列上展现出比 multi-query attention Transformer 更高的吞吐量和更低的延迟</li>
+<li>有效扩展到 14B 参数，在超出训练长度的上下文上展现出强大的长上下文外推能力</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Griffin 的重要性部分在于其共同作者包括了 Albert Gu（Mamba 的创造者），代表了 Google 专业知识与 SSM 社区的融合。RG-LRU 是一种极简的门控机制，达到了 Mamba 级别的质量，而 Griffin 混合设计验证了递归 + local attention——而非纯 SSM——才是未来的发展方向。</li>
+</ul>
+<hr>
+<h3 id="Jamba-A-Hybrid-Transformer-Mamba-Language-Model"><a href="#Jamba-A-Hybrid-Transformer-Mamba-Language-Model" class="headerlink" title="Jamba: A Hybrid Transformer-Mamba Language Model"></a>Jamba: A Hybrid Transformer-Mamba Language Model</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.19887">2403.19887</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 3 月（2024 年 7 月修订）</li>
+<li><strong>作者</strong>: Opher Lieber, Barak Lenz, Hofit Bata, Gal Cohen 等，AI21 Labs</li>
+<li><strong>简介</strong>: 首个生产级的混合 SSM-Transformer 模型，将 Mamba 层与 Transformer 层及 MoE 交错排列，在单张 80GB GPU 上即可支持 256K 上下文。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>交错 Transformer-Mamba 架构</strong>: 在同一模型内交替排列完整的 Transformer 层（带 attention）和 Mamba（SSM）层，并选择性添加 MoE 层以提升容量</li>
+<li><strong>单 GPU 256K 上下文</strong>: 可在单张 80GB GPU 上运行，同时支持 256K token 上下文长度——得益于 Mamba 层恒定大小的 state 消除了大部分层的 KV cache 负担</li>
+<li><strong>52B 总参数量 / 12B 激活参数</strong>，通过 MoE 实现，公开提供 Apache 2.0 权重</li>
+<li>系统性地研究了架构设计决策：Mamba 层与 attention 层的比例、专家放置位置以及模态的交错方式</li>
+<li>后续工作 Jamba-1.5 引入 ExpertsInt8 量化，在 8x80GB GPU 上实现 256K 上下文且无质量下降</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Jamba 证明了混合 SSM-Transformer 架构可以在生产规模上运行并进行商业化部署。虽然 Mamba 和 Griffin 奠定了研究基础，但 Jamba 展示了混合方法的实用性：可以在保留 attention 的关键作用的同时获得 SSM 的大部分效率。论文中详尽的架构消融研究为任何构建混合模型的人提供了宝贵的指南。</li>
+</ul>
+<hr>
+<h3 id="RWKV-5-6-Eagle-Finch-Matrix-Valued-States-and-Dynamic-Recurrence"><a href="#RWKV-5-6-Eagle-Finch-Matrix-Valued-States-and-Dynamic-Recurrence" class="headerlink" title="RWKV-5/6 (Eagle &amp; Finch): Matrix-Valued States and Dynamic Recurrence"></a>RWKV-5/6 (Eagle &amp; Finch): Matrix-Valued States and Dynamic Recurrence</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.05892">2404.05892</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 4 月</li>
+<li><strong>作者</strong>: Bo Peng, Daniel Goldstein, Quentin Anthony 等，RWKV 开源社区</li>
+<li><strong>简介</strong>: RWKV 的多代演进，引入了多头矩阵值状态（RWKV-5 Eagle）和数据依赖的动态递归（RWKV-6 Finch），在保持 RNN 效率的同时大幅提升表达能力。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>RWKV-5 (Eagle) – 多头矩阵状态</strong>: 将时间混合拆分为多个头，使用矩阵值状态（而非向量），类似于 Transformer 从单头 attention 到多头 attention 的演进，外加新的门控机制和 GroupNorm</li>
+<li><strong>RWKV-6 (Finch) – 动态数据依赖递归</strong>: 学习到的时间衰减通过基于 LoRA 的 token shifting 变为输入依赖，每个通道的衰减率根据当前和前一个 token 动态变化——一种”二阶”递归机制</li>
+<li>Finch 的内存使用比 FlashAttention 少 40%，比 Mamba 少 17%，同时保持同等质量</li>
+<li>Finch 从 4K 训练上下文泛化到 20K+ 推理上下文，无需额外训练，在多查询联想回忆（MQAR）任务上表现出色</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: RWKV 家族是来自开源社区（而非大型实验室）最成功的”替代架构”，拥有草根开发模式和 Apache 2.0 协议。Eagle 和 Finch 展示了持续的架构优化可以在不放弃核心 RNN 范式的情况下缩小与 Transformer 的差距——并为 RWKV-7 “Goose” 奠定了基础，后者声称具备超越 TC0 复杂度类的理论能力。</li>
+</ul>
+<hr>
+<h2 id="延伸家族"><a href="#延伸家族" class="headerlink" title="延伸家族"></a>延伸家族</h2><h3 id="RWKV-7-“Goose”-Expressive-Dynamic-State-Evolution"><a href="#RWKV-7-“Goose”-Expressive-Dynamic-State-Evolution" class="headerlink" title="RWKV-7 “Goose”: Expressive Dynamic State Evolution"></a>RWKV-7 “Goose”: Expressive Dynamic State Evolution</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2503.14456">2503.14456</a></li>
+<li><strong>发表</strong>: arXiv，2025 年 3 月</li>
+<li><strong>作者</strong>: RWKV 开源社区</li>
+<li><strong>简介</strong>: 最新一代 RWKV，将状态更新重新表述为 in-context learning 过程并引入向量值门控，在 3B 规模上以仅 1/3 的训练数据即实现最先进的多语言性能。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>广义 Delta 规则（Generalized Delta Rule）</strong>: 将状态更新框架化为内部模型上的梯度下降——分离”删除”和”替换”keys 以实现灵活的信息管理</li>
+<li><strong>向量值学习率</strong>: 每个状态通道拥有自己上下文依赖的学习率，实现对信息保留的细粒度控制</li>
+<li>可证明超越 TC0 复杂度类：2 层 RWKV-7 可以解决群组状态追踪（group state-tracking）任务，4 层可以模拟任何 DFA——这些任务在理论上对固定深度的 Transformer 是不可能的</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: RWKV-7 代表了一个理论突破：它不仅是一个更快的 Transformer 替代品，而是在表达能力上有可证明优势的架构。对于超过 4K token 的序列，其推理速度比 FlashAttention-3 更快，使其成为长上下文部署场景中最具吸引力的选择之一。</li>
+</ul>
+<hr>
+<h3 id="RWKV-7：补充说明"><a href="#RWKV-7：补充说明" class="headerlink" title="RWKV-7：补充说明"></a>RWKV-7：补充说明</h3><p>关于最新的 RWKV 架构论文，请参见 RWKV-7 “Goose”（arXiv: 2503.14456，2025 年 3 月）。RWKV 家族的逐步演化如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">4</span>: 单头 + 静态时间衰减 + 简单 token shift<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">5</span> (Eagle): 多头矩阵状态 + 门控 + GroupNorm<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">6</span> (Finch): 数据依赖动态递归 + LoRA token shift<br><span class="hljs-attribute">RWKV</span>-<span class="hljs-number">7</span> (Goose): 广义 Delta 规则 + in-context 元学习 + 向量值门控<br></code></pre></td></tr></table></figure>
+
+<p>RWKV 家族所有成员共享同一个根本优势：推理时 O(1) 内存占用（无增长的 KV cache），同时训练可像 Transformer 一样并行化。这使其非常适合长上下文和内存受限的部署场景。</p>
+<hr>
+<h2 id="时间线"><a href="#时间线" class="headerlink" title="时间线"></a>时间线</h2><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">2023</span>.<span class="hljs-number">05</span> ── RWKV v1（EMNLP Findings）<br><span class="hljs-attribute">2023</span>.<span class="hljs-number">12</span> ── Mamba v1（arXiv）, GLA（arXiv）<br><span class="hljs-attribute">2024</span>.<span class="hljs-number">02</span> ── Griffin / Hawk（Google DeepMind，arXiv）<br><span class="hljs-attribute">2024</span>.<span class="hljs-number">03</span> ── Jamba（AI21 Labs，arXiv）<br><span class="hljs-attribute">2024</span>.<span class="hljs-number">04</span> ── RWKV-<span class="hljs-number">5</span>/<span class="hljs-number">6</span> Eagle &amp; Finch（arXiv）<br><span class="hljs-attribute">2024</span>.<span class="hljs-number">05</span> ── Mamba-<span class="hljs-number">2</span> / SSD（ICML <span class="hljs-number">2024</span>）<br><span class="hljs-attribute">2024</span>.<span class="hljs-number">06</span> ── GLA（ICML <span class="hljs-number">2024</span>）<br><span class="hljs-attribute">2025</span>.<span class="hljs-number">03</span> ── RWKV-<span class="hljs-number">7</span> Goose（arXiv）<br></code></pre></td></tr></table></figure>
+
+<h3 id="Hymba-A-Hybrid-head-Architecture-for-Small-Language-Models"><a href="#Hymba-A-Hybrid-head-Architecture-for-Small-Language-Models" class="headerlink" title="Hymba: A Hybrid-head Architecture for Small Language Models"></a>Hymba: A Hybrid-head Architecture for Small Language Models</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2411.13676">2411.13676</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 11 月（NVIDIA &amp; Mila）</li>
+<li><strong>作者</strong>: Xin Dong, Yonggan Fu, Shizhe Diao, Wonmin Byeon, Zijia Chen, Ameya Sunil Mahabaleshwarkar, Shih-Yang Liu, Matthijs Van Keirsbilck, Min-Hung Chen, Yoshi Suhara, Yingyan Lin, Jan Kautz, Pavlo Molchanov (NVIDIA / Mila / Georgia Tech)</li>
+<li><strong>简介</strong>: 提出”混合头”架构——在每一层同时使用注意力头和 SSM 头，通过可学习的门控融合两者的输出——在 125M 到 1.3B 的小模型规模上超越所有纯 Transformer 和纯 SSM 基线。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>混合头并行架构：每一层包含并行的注意力子层和 SSM 子层，各自独立处理隐藏状态，输出通过可学习的门控（sigmoid gating）融合。这与 Jamba 的”交错层”（交替放置 Transformer 层和 Mamba 层）有根本区别——混合头在同一层内混合，而非跨层交错</li>
+<li>注意力头和 SSM 头的互补分工：分析表明，注意力头擅长捕获精确的 token 级依赖（如复制、计数），SSM 头擅长处理长程上下文和压缩历史信息，两者在同一层内互补</li>
+<li>参数效率优化：在小模型规模下（125M-1.3B），混合头设计比纯 Transformer 或纯 Mamba 的参数效率更高——因为两种头的参数共享底层 MLP 和归一化层</li>
+<li>训练效率的元学习分析：使用”data distribution次元”指标量化模型在不同数据分布上的适应能力，证明混合头架构具有更平坦的损失景观</li>
+<li>在相同参数预算下，Hymba-1.3B 在 HellaSwag、ARC、PIQA 等基准上大幅超越 Mamba-1.4B 和 Transformer-1.3B</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Hymba 代表了混合架构设计的精致化——不是简单地在模型内同时使用 attention 和 SSM，而是在同一层内将它们并行融合。其分析揭示了 attention 和 SSM 在建模能力上的互补性，为”最优混合比”的设计提供了理论基础。该架构已被 NVIDIA 在其小型语言模型研究管线中采用。</li>
+</ul>
+<hr>
+<h3 id="TTT-Test-Time-Training-Layers-for-Sequence-Modeling"><a href="#TTT-Test-Time-Training-Layers-for-Sequence-Modeling" class="headerlink" title="TTT: Test-Time Training Layers for Sequence Modeling"></a>TTT: Test-Time Training Layers for Sequence Modeling</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.04620">2407.04620</a></li>
+<li><strong>发表</strong>: ICML 2024 (Spotlight)</li>
+<li><strong>作者</strong>: Yu Sun, Xinhao Li, Koustubh Dalal, Jiantao Jiao, Hongyi Wang, Aaron Gokaslan, Taco Cohen, Karen Simonyan, Laurent Sifre (GenSim AI / Stanford / UC Berkeley / Google DeepMind)</li>
+<li><strong>简介</strong>: 提出 TTT（Test-Time Training）层——在推理过程中，模型使用自监督损失更新其隐藏状态中压缩的”模型”，而非固定的递归规则——将 RNN/SSM 层重新定义为在线学习过程，实现线性复杂度下表达能力的跃升。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>推理时在线学习：传统 RNN 和 SSM 使用固定规则更新隐藏状态（如 Mamba 的 selective scan）。TTT 层将隐藏状态视为一个小型 MLP 的权重，在每个 token 上进行一步梯度下降来更新这个 MLP——本质上是在推理时”学习”如何压缩上下文</li>
+<li>自监督重建目标：TTT 层的学习目标是重建当前窗口内的 token 或预测下一个 token，使用与语言建模一致的损失函数</li>
+<li>小模型在隐藏状态内：每个 TTT 层维护一个微小的神经网络（通常为 2 层 MLP，约 1000 个参数），其权重是隐藏状态的一部分，并通过梯度下降在每个 token 上更新</li>
+<li>与标准 SSM 的双重实现：TTT 既可以像 SSM 一样递归计算（推理时 O(1) 内存），也可以像 attention 一样并行计算（训练时），通过巧妙的对偶公式实现</li>
+<li>在 MQAR 和语言建模任务上超越 Mamba-2 和 GLA，尤其在需要精确记忆和检索的长上下文场景中表现突出</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: TTT 层的核心思想——“隐藏状态不是固定的向量，而是一个不断学习的小模型”——是对序列建模架构设计的根本性重新思考。它将”状态更新”从启发式规则升级为”在线学习”，使模型能够根据其接收到的信息自适应地调整其记忆压缩策略。这一范式使 RNN/SSM 的隐藏状态表达能力达到与 Transformer 全注意力可比拟的水平。</li>
+</ul>
+<hr>
+<h3 id="xLSTM-Extended-Long-Short-Term-Memory"><a href="#xLSTM-Extended-Long-Short-Term-Memory" class="headerlink" title="xLSTM: Extended Long Short-Term Memory"></a>xLSTM: Extended Long Short-Term Memory</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.04517">2405.04517</a></li>
+<li><strong>发表</strong>: NeurIPS 2024</li>
+<li><strong>作者</strong>: Maximilian Beck, Korbinian Poeppel, Markus Spanring, Andreas Auer, Oleksandra Prudnikova, Michael Kopp, Günter Klambauer, Johannes Brandstetter, Sepp Hochreiter (NxAI / JKU Linz)</li>
+<li><strong>简介</strong>: 重新发明 LSTM——引入指数门控（替代 sigmoid 门控）、矩阵记忆单元和可并行训练模式——使经典 LSTM 在语言建模上达到 Transformer 和 Mamba 水平，同时保持 RNN 的 O(1) 推理。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>指数门控（Exponential Gating）: 将 LSTM 的 sigmoid 遗忘门替换为指数函数 <code>exp(Wx+b)</code>，使门控值可以大于 1，支持信息的乘法而非仅衰减——大幅提升了序列中长期依赖的建模能力</li>
+<li>矩阵记忆单元（sLSTM 和 mLSTM）: 标量 LSTM（sLSTM）保留经典 LSTM 的逐元素门控，用于细粒度控制；矩阵 LSTM（mLSTM）使用全矩阵记忆单元，支持并行训练（通过类似于 Linear Attention 的 chunkwise 并行算法）</li>
+<li>mLSTM 的可并行训练: 通过将 mLSTM 的递归公式重写为类似于 GLA 的并行形式，mLSTM 在训练时可像 Transformer 一样并行（使用 CUDA 优化的 kernel），推理时保持 RNN 的高效递归</li>
+<li>残差块设计（xLSTM Block）: 将 sLSTM 和 mLSTM 组合到类似于 Transformer 的残差块中，包含 Pre-LayerNorm、残差连接和多头设计</li>
+<li>在 1.3B 规模上匹敌 LLaMA 和 Mamba，在长上下文和状态追踪任务上超越两者</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: xLSTM 是对 LSTM 这一经典架构的现代化改造——证明了 LSTM 的核心设计理念（门控记忆单元）在正确的数学改造下仍然有效。其指数门控是一个最小但高影响力的改变，直接从 LSTM 跃升到与现代 SSM 和 Transformer 竞争的水平。xLSTM 证明了”老架构 + 新数学 = SOTA”的可行性。</li>
+</ul>
+<hr>
+<h3 id="DeltaNet-Linear-Transformers-with-the-Delta-Rule-for-In-Context-Learning"><a href="#DeltaNet-Linear-Transformers-with-the-Delta-Rule-for-In-Context-Learning" class="headerlink" title="DeltaNet: Linear Transformers with the Delta Rule for In-Context Learning"></a>DeltaNet: Linear Transformers with the Delta Rule for In-Context Learning</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.07933">2405.07933</a></li>
+<li><strong>发表</strong>: NeurIPS 2024</li>
+<li><strong>作者</strong>: Songlin Yang, Bailin Wang, Yu Zhang, Yikang Shen, Yoon Kim (MIT / IBM Research / ByteDance)</li>
+<li><strong>简介</strong>: 将 delta 规则（一种经典的在线学习算法）引入线性注意力——在推理时，查询向量与记忆（隐藏状态）通过类似于 Widrow-Hoff delta 规则的更新进行交互——赋予线性注意力 in-context learning 能力。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>Delta 规则线性注意力：在线性注意力的框架下（Q、K、V 和隐藏状态 H），将记忆更新建模为 <code>H_new = H_old - beta * (H_old @ k_i - v_i) @ k_i^T</code>——即 delta 规则更新。这使得隐藏状态可以根据”当前存储的值”与”目标值”之间的差异进行自适应调整</li>
+<li>移除-替换机制：传统线性注意力只能”添加”信息到隐藏状态（通过外积 K^T V），DeltaNet 可以”更正”已有信息——当遇到与历史 token 相似的 key 时，新的 value 可以覆盖旧的 value</li>
+<li>与 Mamba 和 GLA 的关联：DeltaNet 的更新规则在特定参数设置下退化为 GLA（单步梯度下降）或 Mamba（选择性状态空间），建立了这些模型之间的理论联系</li>
+<li>硬件高效的分块并行：使用与 Lightning Attention-2 类似的分块并行算法，训练时可并行到长序列</li>
+<li>在语言建模上匹敌 GLA 和 Mamba，在需要 in-context 学习和状态追踪的合成任务上大幅领先</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DeltaNet 将线性注意力与经典在线学习理论（delta 规则 / LMS 算法）联系起来。其核心贡献是证明了”记忆更新规则”是线性注意力的关键设计维度——简单地改变记忆更新规则（从累积到 delta 规则）就能赋予模型全新的能力（如 in-context learning）。这一理论框架启发了后续的 RWKV-7 和 Titans 等工作。</li>
+</ul>
+<hr>
+<h3 id="Titans-Learning-to-Memorize-at-Test-Time"><a href="#Titans-Learning-to-Memorize-at-Test-Time" class="headerlink" title="Titans: Learning to Memorize at Test Time"></a>Titans: Learning to Memorize at Test Time</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2501.00663">2501.00663</a></li>
+<li><strong>发表</strong>: arXiv，2025 年 1 月</li>
+<li><strong>作者</strong>: Ali Behrouz, Peilin Zhong, Vahab Mirrokni (Google Research)</li>
+<li><strong>简介</strong>: 提出三层记忆架构——核心记忆（长期压缩）、上下文记忆（当前序列）和持久记忆（任务元知识）——赋予线性 RNN 在推理时主动决定”记住什么”和”遗忘什么”的能力，实现事实检索和 in-context learning 的统一。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>三层神经记忆架构: （1）核心记忆：一个持续更新的长期记忆模块，使用类似于 DeltaNet 的 delta 规则管理——决定何时更新和删除信息；（2）上下文记忆：传统的滑动窗口注意力，处理局部上下文；（3）持久记忆：可学习的、任务无关的参数，编码元知识（类似 prefix tuning）</li>
+<li>惊喜度驱动的记忆更新: 使用 token 的”惊喜度”（负对数似然）作为记忆更新的触发信号——高惊喜度（出乎意料）的 token 触发深度记忆编码，低惊喜度（可预测）的 token 仅进行浅层更新</li>
+<li>记忆衰减与遗忘：核心记忆中的信息随时间衰减，衰减率由 token 的重要性和内容类型自适应调整——类似于人脑的记忆巩固过程</li>
+<li>线性复杂度推理：整体架构以线性 RNN 方式运行，O(1) 推理内存（除滑动窗口部分的 O(W) 外），训练时通过并行扫描算法实现 O(N log N)</li>
+<li>在长上下文基准（BABILong、RULER、Needle-in-Haystack）上大幅超越 Transformer、Mamba-2 和 DeltaNet，尤其在需要从上下文中检索精确事实的任务上</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Titans 代表了”神经记忆”研究方向的集大成者——将 DeltaNet 的 delta 规则、Titans 自己的惊喜度驱动机制、持久记忆的任务先验和人类的记忆心理学概念融合为一个统一的记忆架构。其”推理时主动记忆管理”的范式超越了简单的 KV cache 压缩，而是赋予模型真正的”记忆系统”。如果成功扩展到更大规模，Titans 可能成为 Transformer 的有力替代者。</li>
+</ul>
+<hr>
+<h3 id="Samba-Simple-Hybrid-State-Space-Models-for-Efficient-Unlimited-Context-Language-Modeling"><a href="#Samba-Simple-Hybrid-State-Space-Models-for-Efficient-Unlimited-Context-Language-Modeling" class="headerlink" title="Samba: Simple Hybrid State Space Models for Efficient Unlimited Context Language Modeling"></a>Samba: Simple Hybrid State Space Models for Efficient Unlimited Context Language Modeling</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.07522">2406.07522</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 6 月（Microsoft Research）</li>
+<li><strong>作者</strong>: Liliang Ren, Yang Liu, Yadong Lu, Yelong Shen, Chen Liang, Weizhu Chen (Microsoft Research)</li>
+<li><strong>简介</strong>: 提出 Samba 架构——在 Mamba 层之间插入滑动窗口注意力层，用最少的 attention 层（每 4 层 1 个 attention 层）弥补 SSM 在精确信息检索上的不足，在 3.8B 规模上匹敌强 Transformer 基线。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>稀疏交错混合设计：每 4 层包含 3 个 Mamba 层和 1 个滑动窗口注意力层（窗口大小 2048），形成”Samba block”。这一比例（3:1）比 Griffin 和 Jamba 更偏向 Mamba——仅使用最小量的注意力来修复 SSM 的关键缺陷</li>
+<li>精确记忆瓶颈识别：通过消融实验系统地确定了 SSM 失败的确切位置——在精确的”复制”和”检索”任务上，滑动窗口注意力可以在不牺牲线性复杂度优势的情况下提供所需的精确性</li>
+<li>递归内存叠加：滑动窗口 attention 层的输出被添加到递归状态中，使模型能够将局部精确的 attention 结果持久化到长程 SSM 记忆流中</li>
+<li>无限上下文外推：Samba 可在 4K 上下文长度上训练，直接外推到 1M token 且困惑度稳定——优于纯 Mamba（Mamba 在外推上也有退化）和纯 Transformer（外推完全失败）</li>
+<li>在 Phi-3 配方下训练的 Samba-3.8B 在 MMLU、HumanEval 和 GSM8K 等基准上匹敌 Phi-3-mini（3.8B）</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Samba 提供了一种”极简混合”方案——不是激进地混合 attention 和 SSM（如 Jamba 的 1:1 比例），而是只在绝对必要的地方插入最小量的 attention。其 3:1 的比例和滑动窗口策略是高效的工程折中。最令人印象深刻的是其无限上下文外推能力——在 4K 上训练即可外推到 1M+，这对实际部署有巨大价值。</li>
+</ul>
+<hr>
+<p><strong>推理加速专题导航</strong>：<a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-07-MoE%E6%8E%A8%E7%90%86/">← 上一篇：Mixture of Experts 推理</a> | <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-09-%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A4%96%E6%8E%A8/">下一篇：长上下文外推 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-LLM%E6%8E%A8%E7%90%86-%E6%8E%A8%E7%90%86%E4%BC%98%E5%8C%96-Mamba/" class="print-no-link">#推理加速,LLM推理,推理优化,Mamba</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>推理加速-08：替代架构（SSM/Mamba/RWKV）</div>
+      <div>https://w2ongq6.github.io/2026/07/24/inference/推理加速-08-替代架构/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-09-%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A4%96%E6%8E%A8/" title="推理加速-09：长上下文外推">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">推理加速-09：长上下文外推</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-07-MoE%E6%8E%A8%E7%90%86/" title="推理加速-07：Mixture of Experts 推理">
+                        <span class="hidden-mobile">推理加速-07：Mixture of Experts 推理</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

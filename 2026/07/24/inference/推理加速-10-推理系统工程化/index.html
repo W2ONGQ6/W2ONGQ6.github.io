@@ -1,0 +1,1119 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="精选最具代表性的论文，涵盖 LLM 推理系统，涉及内存管理、GPU&#x2F;CPU&#x2F;磁盘 offloading、分离式 serving、多租户 adapter serving 以及自动模型并行。  核心论文FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU arXiv: 2303">
+<meta property="og:type" content="article">
+<meta property="og:title" content="推理加速-10：推理系统工程化">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-10-%E6%8E%A8%E7%90%86%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%8C%96/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="精选最具代表性的论文，涵盖 LLM 推理系统，涉及内存管理、GPU&#x2F;CPU&#x2F;磁盘 offloading、分离式 serving、多租户 adapter serving 以及自动模型并行。  核心论文FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU arXiv: 2303">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T03:10:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T09:56:52.058Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="推理加速,LLM推理,推理优化,分布式推理">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>推理加速-10：推理系统工程化 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="推理加速-10：推理系统工程化"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 11:10" pubdate>
+          2026年7月24日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          101 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">推理加速-10：推理系统工程化</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <blockquote>
+<p>精选最具代表性的论文，涵盖 LLM 推理系统，涉及内存管理、GPU/CPU/磁盘 offloading、分离式 serving、多租户 adapter serving 以及自动模型并行。</p>
+</blockquote>
+<h2 id="核心论文"><a href="#核心论文" class="headerlink" title="核心论文"></a>核心论文</h2><h3 id="FlexGen-High-Throughput-Generative-Inference-of-Large-Language-Models-with-a-Single-GPU"><a href="#FlexGen-High-Throughput-Generative-Inference-of-Large-Language-Models-with-a-Single-GPU" class="headerlink" title="FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU"></a>FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.06865">2303.06865</a></li>
+<li><strong>发表</strong>: ICML 2023</li>
+<li><strong>作者</strong>: Ying Sheng, Lianmin Zheng (Stanford / UC Berkeley), Binhang Yuan, Zhuohan Li (UC Berkeley), Max Ryabinin (Yandex / HSE), Daniel Y. Fu (Stanford), Zhiqiang Xie, Beidi Chen (CMU / Meta), Clark Barrett, Joseph E. Gonzalez, Percy Liang, Christopher Re, Ion Stoica, Ce Zhang (Stanford / UC Berkeley / ETH Zurich)</li>
+<li><strong>简介</strong>: 通过将权重和 KV cache offload 到 CPU 内存和磁盘，并使用线性规划优化器来调度计算和数据传输，使得像 OPT-175B 这样的大模型能够在单块消费级 GPU 上实现高 throughput 批量推理。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Zig-zag 分块调度</strong>: 将计算组织成分块，按顺序逐层处理，同时将 GPU 计算与 CPU/磁盘数据传输重叠，在有限的片上内存下最大化 GPU 利用率。</li>
+<li><strong>基于线性规划的 offloading 优化器</strong>: 在给定硬件约束（内存大小、带宽）和工作负载参数（batch size、序列长度）的情况下，自动搜索跨 GPU/CPU/磁盘的最优张量放置模式。</li>
+<li><strong>4-bit 权重和 KV cache 压缩</strong>: 将模型权重和 key-value cache 都压缩到 4 位，精度损失可忽略不计，大幅减少内存占用，使得更大的有效 batch size 成为可能（OPT-175B 在 16GB GPU 上可达 batch size 144）。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: FlexGen 是第一个证明单块消费级 GPU 就能以可用 throughput 运行最大开源模型（175B 参数）的系统。它开创性地提出推理本质上是一个 I/O 调度问题的观点——通过巧妙的 offloading 和压缩，内存从硬性限制变成了可管理的约束。这篇论文将 GPU/CPU/磁盘层次结构确立为 LLM 推理的一等设计维度。</li>
+</ul>
+<h3 id="DeepSpeed-FastGen-High-throughput-Text-Generation-for-LLMs-via-MII-and-DeepSpeed-Inference"><a href="#DeepSpeed-FastGen-High-throughput-Text-Generation-for-LLMs-via-MII-and-DeepSpeed-Inference" class="headerlink" title="DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference"></a>DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.08671">2401.08671</a></li>
+<li><strong>发表</strong>: arXiv, January 2024 (cs.PF / cs.LG)</li>
+<li><strong>作者</strong>: Connor Holmes, Masahiro Tanaka, Michael Wyatt, Ammar Ahmad Awan, Jeff Rasley, Samyam Rajbhandari, Reza Yazdani Aminabadi, Heyang Qin, Arash Bakhtiari, Lev Kurilenko, Yuxiong He (Microsoft)</li>
+<li><strong>简介</strong>: 引入 Dynamic SplitFuse，一种 continuous batching 技术，在每次前向传播中动态组合 prefill 和 decode token，相比 vLLM 等先前系统实现了高达 2.3 倍的有效 throughput 和 2 倍的延迟降低。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Dynamic SplitFuse</strong>: 不同于先前系统要么只做 prefill-only batching 要么只做 decode-only batching，SplitFuse 将长 prompt 分解为较小的分块，并将其与其他请求的 decode token 交错处理。这确保了前向传播大小的均匀一致，减少了某些 GPU 空闲等待 batch 中最长 prompt 的”气泡”效应。</li>
+<li><strong>带负载均衡的系统性调度</strong>: 将 DeepSpeed-Inference 的优化 kernel（融合算子、tensor parallelism）与 DeepSpeed-MII 的调度基础设施相结合，同时支持持久化（长期运行的服务器）和非持久化（交互式会话）两种部署模式。</li>
+<li><strong>与 DeepSpeed 并行的可组合性</strong>: 利用 DeepSpeed 生态系统的 tensor parallelism、pipeline parallelism 和 ZeRO 优化，实现跨多 GPU 的分布式部署。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DeepSpeed-FastGen 与 vLLM 一起，定义了生产级 continuous batching。Dynamic SplitFuse 是动态 batching 中的关键创新，它展示了如何通过 prompt 的细粒度分解来同时改善 throughput 和尾部延迟。作为微软 DeepSpeed 生态系统的一部分，它代表了 LLM serving 基础设施的工业化方案。</li>
+</ul>
+<h3 id="PowerInfer-Fast-Large-Language-Model-Serving-with-a-Consumer-grade-GPU"><a href="#PowerInfer-Fast-Large-Language-Model-Serving-with-a-Consumer-grade-GPU" class="headerlink" title="PowerInfer: Fast Large Language Model Serving with a Consumer-grade GPU"></a>PowerInfer: Fast Large Language Model Serving with a Consumer-grade GPU</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.12456">2312.12456</a></li>
+<li><strong>发表</strong>: SOSP 2024 (ACM SIGOPS 30th Symposium on Operating Systems Principles)</li>
+<li><strong>作者</strong>: Yixin Song, Zeyu Mi, Haotong Xie, Haibo Chen (上海交通大学)</li>
+<li><strong>简介</strong>: 利用 FFN 层中神经元激活的幂律分布特性，将持续激活的”热”神经元放在 GPU 上，将输入相关的”冷”神经元放在 CPU 上，在消费级 GPU 上实现相比 llama.cpp 高达 11 倍的加速。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>在线自适应预测器</strong>: 在推理过程中在线训练一个轻量级预测器，识别每个输入将激活哪些神经元，将”热”神经元（在大多数输入中都活跃的一小部分）路由到 GPU，将”冷”神经元路由到 CPU。无需任何预处理或离线分析。</li>
+<li><strong>神经元感知的稀疏算子</strong>: 专门为预测出的活跃神经元上的稀疏 FFN 计算而设计的自定义 GPU 和 CPU kernel，避免了完整的矩阵乘法。</li>
+<li><strong>GPU-CPU 混合推理</strong>: 对于 OPT-30B 等模型，在单块消费级 RTX 4090 上达到了 A100 服务器 GPU 82% 的 token 生成速率，并成功地在消费级硬件上运行了 OPT-175B。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: PowerInfer 代表了对消费级 LLM 推理的最佳方案，它利用的是 transformer 激活的一个基本属性（幂律稀疏性），而非仅仅依赖量化或 offloading。它证明了消费级 GPU 配合强大的 CPU 可以接近数据中心 GPU 的性能，显著降低了在本地运行大模型的门槛。这一洞见延伸到后续工作如 PowerInfer-2（针对智能手机）。</li>
+</ul>
+<h3 id="LLM-in-a-Flash-Efficient-Large-Language-Model-Inference-with-Limited-Memory"><a href="#LLM-in-a-Flash-Efficient-Large-Language-Model-Inference-with-Limited-Memory" class="headerlink" title="LLM in a Flash: Efficient Large Language Model Inference with Limited Memory"></a>LLM in a Flash: Efficient Large Language Model Inference with Limited Memory</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.11514">2312.11514</a></li>
+<li><strong>发表</strong>: ACL 2024</li>
+<li><strong>作者</strong>: Keivan Alizadeh, Iman Mirzadeh, Dmitry Belenko, Karen Khatamifard, Minsik Cho, Carlo C. Del Mundo, Mohammad Rastegari, Mehrdad Farajtabar (Apple)</li>
+<li><strong>简介</strong>: 将模型参数存储在闪存（SSD）上，仅按需将激活的神经元加载到 DRAM 中，使得比可用 RAM 大 2 倍的模型能够在 iPhone 和 MacBook 等内存受限设备上运行。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Windowing</strong>: 在一个滑动窗口中缓存最近激活的 FFN 神经元，使得连续激活相同神经元的 token 无需耗费昂贵的闪存读取。由于文本的序列性质，相邻 token 的激活具有高度重叠性。</li>
+<li><strong>Row-column bundling</strong>: 将 up-projection 的对应行和 down-projection 的对应列共置在连续的闪存块中，将小规模随机读取转化为大规模顺序读取。闪存擅长大规模顺序读取，但在小规模随机读取上表现不佳。</li>
+<li><strong>低秩预测器</strong>: 使用紧凑的预测器网络来预测哪些神经元将被激活（在激活函数之后，例如 ReLU），因此只需从闪存中获取那些特定的列/行，将 I/O 量减少约 90-97%。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Apple 的方案是在设备端 LLM 推理的典范方案，与 iPhone、iPad 和 MacBook 上保护隐私的本地 AI 直接相关。它证明了闪存——此前被认为速度远不足以支持推理——在结合激活稀疏性感知和硬件优化数据布局之后，完全可以胜任。这篇论文弥合了学术推理系统研究与实际消费设备部署之间的鸿沟。</li>
+</ul>
+<h3 id="DistServe-Disaggregating-Prefill-and-Decoding-for-Goodput-Optimized-LLM-Serving"><a href="#DistServe-Disaggregating-Prefill-and-Decoding-for-Goodput-Optimized-LLM-Serving" class="headerlink" title="DistServe: Disaggregating Prefill and Decoding for Goodput-Optimized LLM Serving"></a>DistServe: Disaggregating Prefill and Decoding for Goodput-Optimized LLM Serving</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.09670">2401.09670</a></li>
+<li><strong>发表</strong>: OSDI 2024 (18th USENIX Symposium on Operating Systems Design and Implementation)</li>
+<li><strong>作者</strong>: Yinmin Zhong, Shengyu Liu, Jianbo Hu (北京大学); Junda Chen, Hao Zhang (UC San Diego); Yibo Zhu (独立); Xuanzhe Liu, Xin Jin (北京大学)</li>
+<li><strong>简介</strong>: 将 LLM 推理的 prefill（计算密集型）和 decode（内存密集型）阶段分离到不同的 GPU 集群上，独立优化每个阶段的资源分配和并行策略，以在 SLO 约束下实现最优 goodput。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>Prefill-decode 分离</strong>: 将 prefill 放在适合并行 token 处理的高算力 GPU（如 H100）上，将 decode 放在适合带宽受限的自回归生成的内存优化 GPU 上。消除了两个阶段之间的破坏性干扰。</li>
+<li><strong>逐阶段并行优化</strong>: Prefill 因其高算术强度而受益于 intra-operator parallelism（tensor parallelism），而 decode 则受益于 inter-operator parallelism（pipeline parallelism）以减少通信开销。</li>
+<li><strong>Goodput 优化</strong>: 最大化在 SLO 内完成的请求速率，协同优化实例放置、并行配置以及 prefill 与 decode 集群之间的 KV cache 路由。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: DistServe 正式确立并证明了分离式 prefill/decode serving 的好处，在 SLO 约束下实现了高达 7.4 倍的请求处理量提升。该架构已成为大规模生产级 LLM serving 的主导范式——它得到了 Splitwise (ISCA 2024) 的独立验证，并已被主流 serving 框架采纳。Prefill 和 decode 具有根本不同的计算特性这一观察，现已成为该领域的核心洞察。</li>
+</ul>
+<h3 id="LoRA-Land-310-Fine-tuned-LLMs-that-Rival-GPT-4-LoRAX"><a href="#LoRA-Land-310-Fine-tuned-LLMs-that-Rival-GPT-4-LoRAX" class="headerlink" title="LoRA Land: 310 Fine-tuned LLMs that Rival GPT-4 (LoRAX)"></a>LoRA Land: 310 Fine-tuned LLMs that Rival GPT-4 (LoRAX)</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.00732">2405.00732</a></li>
+<li><strong>发表</strong>: arXiv Technical Report, April 2024 (Predibase)</li>
+<li><strong>作者</strong>: Justin Zhao, Timothy Wang, Wael Abid, Geoffrey Angus, Arnav Garg, Jeffery Kinnison, Alex Sherstinsky, Piero Molino, Travis Addair, Devvret Rishi (Predibase)</li>
+<li><strong>简介</strong>: 证明 4-bit 量化的 LoRA 微调模型在专门任务上可以超越 GPT-4，并引入 LoRAX——一个通过在单块 GPU 上共享基座模型权重和动态加载 adapter 来高效 serving 数百个 LoRA adapter 的推理服务器。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>共享基座模型 + 动态 adapter 加载</strong>: 将基座模型权重一次性加载到 GPU 上，然后动态加载和卸载 LoRA adapter（每次切换约 200ms 开销）。Adapter 通过 LRU 淘汰策略缓存在 GPU 到 CPU 到磁盘的层次结构中，使得单块 GPU 可 serving 数百个微调变体。</li>
+<li><strong>连续多 adapter batching</strong>: 按目标 adapter 将请求分组，将使用同一 adapter 的请求的 token 批量处理在一起，并在 batch 之间切换 adapter 上下文。这实现了接近线性的 throughput 扩展，与并发 adapter 数量成正比。</li>
+<li><strong>Segmented Gather Matrix-Vector Multiplication (SGMV)</strong>: 一种高效的 CUDA kernel，针对 LoRA 的低秩矩阵运算进行了优化，支持在动态切换 adapter 权重的情况下进行批量执行。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: LoRAX 解决了多租户微调模型 serving 的关键经济问题。如果不共享 adapter，serving N 个微调模型将需要 N 倍的 GPU 内存。LoRAX 证明了 25 个微调的 Mistral-7B 模型可以共享一块 A100 GPU，而 LoRA Land 对 310 个模型的评估证明了专门的微调模型集体性能超越 GPT-4。这确立了在生产环境中使用基于 LoRA 的 serving 的成本效益论据。</li>
+</ul>
+<h3 id="AlpaServe-Statistical-Multiplexing-with-Model-Parallelism-for-Deep-Learning-Serving"><a href="#AlpaServe-Statistical-Multiplexing-with-Model-Parallelism-for-Deep-Learning-Serving" class="headerlink" title="AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving"></a>AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2302.11665">2302.11665</a></li>
+<li><strong>发表</strong>: OSDI 2023 (17th USENIX Symposium on Operating Systems Design and Implementation)</li>
+<li><strong>作者</strong>: Zhuohan Li, Lianmin Zheng (UC Berkeley); Yinmin Zhong (北京大学); Vincent Liu (UPenn); Ying Sheng (Stanford); Xin Jin (北京大学); Yanping Huang, Zhifeng Chen (Google); Hao Zhang (UC San Diego); Joseph E. Gonzalez, Ion Stoica (UC Berkeley)</li>
+<li><strong>简介</strong>: 证明模型并行——传统上仅用于单 GPU 无法容纳的大模型——即使对于能够放入单个设备的模型，也能通过自动化的放置和并行化算法提供显著的统计复用收益。</li>
+<li><strong>核心创新</strong>:<ul>
+<li><strong>通过模型并行实现统计复用</strong>: 通过将模型拆分到多块 GPU 上，请求被分布到不同的设备上，平滑突发性工作负载。每块 GPU 处理的并发请求更少，在保持高利用率的同时减少了排队延迟。</li>
+<li><strong>自动化放置算法</strong>: 使用基于迭代式模拟器引导的搜索，在模型并行配置（inter-op vs. intra-op parallelism、分区数量、设备分配）的巨大设计空间中导航，找到满足 SLO 的最优放置方案。</li>
+<li><strong>分组分区算法</strong>: 对于多模型 serving 场景，将模型划分为组并为每组分配 GPU 集合，在模型并行开销与复用收益之间取得平衡。</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: AlpaServe 从根本上改变了系统社区对模型并行的看法——从”超大模型的最后一招”转变为”serving throughput 的一等优化手段”。其自动化分区方法建立在 UC Berkeley 的 Alpa 编译器框架之上，代表了推理中模型切分的 ML 系统方法论。该论文关于统计复用的洞见直接影响了后续的分离式 serving 和自动并行化工作。在 SLO 保证下，请求处理速率最高提升 10 倍。</li>
+</ul>
+<h3 id="PETALS-Collaborative-Inference-and-Fine-Tuning-of-LLMs-over-the-Internet"><a href="#PETALS-Collaborative-Inference-and-Fine-Tuning-of-LLMs-over-the-Internet" class="headerlink" title="PETALS: Collaborative Inference and Fine-Tuning of LLMs over the Internet"></a>PETALS: Collaborative Inference and Fine-Tuning of LLMs over the Internet</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2209.01188">2209.01188</a>（v2-v4 更新至 2024 年）</li>
+<li><strong>发表</strong>: ACL 2023 (Demo Track) / MLSys 2024</li>
+<li><strong>作者</strong>: Alexander Borzunov, Max Ryabinin, Dmitry Baranchuk, Tim Dettmers, Younes Belkada, Artem Chumachenko, Pavel Samygin, Colin Raffel (Yandex Research / HSE University / University of Washington / Hugging Face / UNC Chapel Hill)</li>
+<li><strong>简介</strong>: 构建去中心化的 LLM 推理网络——志愿者贡献闲置 GPU 来运行模型的不同层——通过互联网在分布式志愿者设备上实现 BLOOM-176B 和 LLaMA-65B 的推理和微调。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>去中心化流水线并行: 将 LLM 的 Transformer 层分布在不同的志愿者设备上（每个设备运行若干层），数据以流水线方式在这些设备之间传递。设备可以随时加入和离开，无需中心调度器</li>
+<li>容错路由协议: 使用分布式哈希表（DHT）维护网络中活跃设备的注册信息，自动检测设备离线并重新路由中间激活到替代设备</li>
+<li>自适应负载均衡: 每个设备处理不同数量的层（根据其 GPU/CPU 能力），高性能设备运行更多层、低性能设备运行更少层</li>
+<li>混合精度传输: 层间激活以更低精度（8-bit 或 4-bit）通过网络传输，在下一层恢复到全精度——大幅降低网络带宽需求（典型家庭宽带上约 100-500 Mbps 即可参与）</li>
+<li>支持推理和微调——微调时的梯度通过相同的分布式网络反向传播</li>
+<li>在约 40 个志愿者设备的网络上成功运行 BLOOM-176B 的推理（约 1-2 秒/token），在 14 个设备上运行微调</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: PETALS 代表了 LLM 民主化的理想主义方向——在没有数据中心 GPU 集群的情况下，通过社区协作运行大模型。虽然其推理速度不适合交互式应用，但它证明了去中心化大模型推理的可行性。其容错路由和混合精度传输技术对边缘计算和联邦学习场景有直接借鉴价值。该项目目前仍在活跃开发中，已支持 LLaMA、Falcon 等更多模型家族。</li>
+</ul>
+<hr>
+<h3 id="LoongServe-Elastic-Long-Context-LLM-Serving-with-Minimal-Preemptions"><a href="#LoongServe-Elastic-Long-Context-LLM-Serving-with-Minimal-Preemptions" class="headerlink" title="LoongServe: Elastic Long-Context LLM Serving with Minimal Preemptions"></a>LoongServe: Elastic Long-Context LLM Serving with Minimal Preemptions</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.08332">2407.08332</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 7 月（北京大学 / UCSD）</li>
+<li><strong>作者</strong>: Shengyu Liu, Yinmin Zhong, Jianbo Hu, Junda Chen, Hao Zhang, Xuanzhe Liu, Xin Jin (北京大学 / UCSD)</li>
+<li><strong>简介</strong>: 针对长上下文请求的弹性推理系统——通过细粒度的 prefill 抢占和 elastic batching，在混合短/长请求的负载下实现高吞吐量，解决了长请求”霸占” GPU 导致短请求排队的核心矛盾。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>弹性 prefill 抢占: 长 prefill 请求被分解为多个可抢占的计算单元——当短请求到达时，正在处理的长 prefill 可以被”挂起”，释放 GPU 用于处理短请求，之后再恢复长 prefill。类似操作系统的抢占式多任务处理</li>
+<li>弹性批处理: 批处理大小根据请求混合比例动态调整——在短请求密集时使用大批量（充分利用 GPU 并行性），在长请求密集时使用小批量（避免内存溢出）</li>
+<li>KV cache 检查点: 被抢占的 prefill 请求的中间 KV cache 被保存为检查点（在 GPU 内存中），恢复时直接加载，避免重新计算</li>
+<li>请求优先级队列: 使用多级反馈队列（MLFQ）进行请求调度——短请求获得更高优先级（类似于 OS 中的短作业优先），长请求获得更低的优先级但不被饿死</li>
+<li>在混合负载（10% 长请求 + 90% 短请求）下，短请求的 P99 延迟比 vLLM 降低 5-8 倍，总体吞吐量提升约 2 倍</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: LoongServe 解决了长上下文服务中的”短请求受害”问题——少数长请求（如文档分析、代码审查）可能严重延迟大量短请求（如对话、搜索）。其弹性抢占机制将操作系统经典的”抢占式多任务”思想引入 LLM 服务，是优雅的跨领域迁移。弹性 batching 和优先级调度使其成为混合负载场景中最实用的服务方案之一。</li>
+</ul>
+<hr>
+<h3 id="Vidur-A-Large-Scale-Simulation-Framework-for-LLM-Inference"><a href="#Vidur-A-Large-Scale-Simulation-Framework-for-LLM-Inference" class="headerlink" title="Vidur: A Large-Scale Simulation Framework for LLM Inference"></a>Vidur: A Large-Scale Simulation Framework for LLM Inference</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.05465">2405.05465</a></li>
+<li><strong>发表</strong>: NeurIPS 2024 (Datasets &amp; Benchmarks Track)</li>
+<li><strong>作者</strong>: Amey Agrawal, Nitin Kedia, Ashish Panwar, Jayashree Mohan, Nipun Kwatra, Bhargav Gulavani, Alexey Tumanov, Ramachandran Ramjee (Georgia Tech / Microsoft Research India)</li>
+<li><strong>简介</strong>: 一个高保真的 LLM 推理模拟器——对模型计算、内存层次、网络通信和调度策略进行精确建模——使研究人员能够在不访问真实 GPU 集群的情况下评估和比较推理服务系统的性能。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>高保真性能建模: 对 GPU 计算（FLOPs、内存带宽、SM 利用率）、内存层次（HBM 容量、NVLink 带宽、PCIe 带宽）、网络（节点间通信延迟和带宽）以及调度策略（连续批处理、分块 prefill）进行详细的性能建模</li>
+<li>可插拔的调度策略: 模拟器支持”即插即用”地切换不同的调度策略（FCFS、SJF、continuous batching、chunked prefill 等），允许研究人员在同一框架下进行公平比较</li>
+<li>大规模集群模拟: 支持模拟多达数百个 GPU 的推理集群，包含异构 GPU 类型和网络拓扑</li>
+<li>真实负载重放: 可以从生产日志中重放真实请求负载（时间戳、序列长度分布、输入/输出长度分布），评估系统在真实场景下的性能</li>
+<li>开源且可扩展: 提供了 Python API 用于定义新的模型架构、调度策略和硬件配置，已被多家研究机构采用</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Vidur 填补了 LLM 推理系统研究中的一个基础设施空白——此前，评估一个新推理系统的性能需要实际的 GPU 集群，这极大地限制了研究的可及性。Vidur 的高保真模拟使得研究人员可以在笔记本电脑上进行推理系统的初步设计和评估。其可插拔的调度策略设计也使其成为调度算法比较的标准化基准平台。</li>
+</ul>
+<hr>
+<h3 id="Andes-Accelerating-LLM-Inference-with-Near-Data-Processing"><a href="#Andes-Accelerating-LLM-Inference-with-Near-Data-Processing" class="headerlink" title="Andes: Accelerating LLM Inference with Near-Data Processing"></a>Andes: Accelerating LLM Inference with Near-Data Processing</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.01552">2407.01552</a></li>
+<li><strong>发表</strong>: MICRO 2024</li>
+<li><strong>作者</strong>: Shiyu Li, Yiren Zhao, Jiashi Li, Xianzhi Du, Xiaojun Chang, Yingyan Lin, Xipeng Shen (Georgia Tech / North Carolina State University / NVIDIA / Northeastern University)</li>
+<li><strong>简介</strong>: 提出近数据处理（NDP）架构用于 LLM 推理——在 SSD 控制器上嵌入小型计算单元，直接在数据所在位置（SSD）执行 KV cache 和 FFN 的访存密集型操作——避免了数据从 SSD 到 GPU 的传输瓶颈。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>SSD 内计算: 在 NVMe SSD 的控制器上嵌入轻量级矩阵乘法引擎（用于 attention 中的 PV 计算和 FFN 计算），这些计算直接在 SSD 上执行——只将最终结果传回 GPU，而非传输整个权重矩阵或 KV cache</li>
+<li>负载分解: 将 LLM 推理的计算分解为”GPU 部分”（QK^T、softmax、LayerNorm、激活函数——计算密集型）和”NDP 部分”（PV、FFN——访存密集型），两部分并行执行</li>
+<li>计算放置优化器: 使用成本模型自动决定哪些计算应放在 GPU 上、哪些应放在 SSD 上，基于数据位置、计算量和传输延迟的综合评估</li>
+<li>兼容现有 SSD 架构: Andes 的设计基于标准 NVMe 协议，不需要修改 SSD 硬件——使用已有的 SSD 计算卸载能力（如 Samsung SmartSSD 或 ScaleFlux CSD）</li>
+<li>在 LLaMA-2-7B 和 OPT-6.7B 上，相比纯 GPU+SSD offloading 方案（如 FlexGen），生成延迟降低约 30-50%</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Andes 代表了 LLM 推理硬件架构的重大转变——从”所有计算在 GPU 上”到”计算分布在整个存储层次中”。其核心洞察是：LLM 推理中的许多操作（尤其是与 KV cache 相关的操作）是严重访存密集的，将这些操作放在离数据更近的地方执行（SSD 内），反而比将数据搬运到 GPU 再计算更高效。这一思想对下一代 AI 推理硬件设计有重要指导意义。</li>
+</ul>
+<hr>
+<h3 id="MuxServe-Multiplexing-Heterogeneous-Models-for-Cost-Efficient-LLM-Serving"><a href="#MuxServe-Multiplexing-Heterogeneous-Models-for-Cost-Efficient-LLM-Serving" class="headerlink" title="MuxServe: Multiplexing Heterogeneous Models for Cost-Efficient LLM Serving"></a>MuxServe: Multiplexing Heterogeneous Models for Cost-Efficient LLM Serving</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.05378">2406.05378</a></li>
+<li><strong>发表</strong>: arXiv，2024 年 6 月（上海交通大学 / UCSD / 北京大学）</li>
+<li><strong>作者</strong>: Jianbo Hu, Shengyu Liu, Yinmin Zhong, Junda Chen, Hao Zhang, Xuanzhe Liu, Xin Jin (北京大学 / UCSD / 上海交通大学)</li>
+<li><strong>简介</strong>: 在同一 GPU 集群上同时服务多个异构 LLM（不同大小、不同架构、不同用途），通过空间-时间多路复用最大化 GPU 利用率，在混合模型负载下将总服务成本降低 2-3 倍。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>空间多路复用（Spatial Multiplexing）: 将 GPU 显存划分为多个分区，每个分区加载一个不同的模型（如一个小模型 full-time 常驻、一个大模型按需加载），不同模型的请求同时处理</li>
+<li>时间多路复用（Temporal Multiplexing）: 不同模型在不同时间段共享同一 GPU——当一个模型的请求队列为空时，GPU 切换到另一个模型的请求</li>
+<li>模型间 KV cache 隔离: 每个模型维护独立的 KV cache 池，通过显存分区确保不互相干扰</li>
+<li>成本感知的调度策略: 考虑了不同模型的许可证费用、API 定价和 GPU 成本，在满足所有模型 SLO 的前提下最小化总体运营成本</li>
+<li>在混合负载（GPT-3、LLaMA-2-7B、LLaMA-2-13B、CodeLLaMA 同时服务）下，相比独立部署将 GPU 使用量减少约 50%</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: MuxServe 解决了生产环境中的现实问题——大多数组织需要同时服务多个不同规模和用途的 LLM（如小模型做分类、大模型做生成、代码模型做补全），但独立部署每个模型导致严重的 GPU 利用率不足。MuxServe 的空间-时间双模复用策略是一个实用的解决方案，其成本感知的调度模型尤其适合云服务提供商的混合模型服务业务。</li>
+</ul>
+<hr>
+<h3 id="EdgeLLM-Efficient-LLM-Inference-on-Resource-Constrained-Edge-Devices"><a href="#EdgeLLM-Efficient-LLM-Inference-on-Resource-Constrained-Edge-Devices" class="headerlink" title="EdgeLLM: Efficient LLM Inference on Resource-Constrained Edge Devices"></a>EdgeLLM: Efficient LLM Inference on Resource-Constrained Edge Devices</h3><ul>
+<li><strong>arXiv</strong>: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2410.09555">2410.09555</a></li>
+<li><strong>发表</strong>: MobiCom 2025</li>
+<li><strong>作者</strong>: Wangsong Yin, Mengwei Xu, Yuanchun Li, Feng Qian, Xuanzhe Liu (北京大学 / 微软亚洲研究院)</li>
+<li><strong>简介</strong>: 针对智能手机和 IoT 设备的 LLM 推理优化框架——结合模型级优化（激活感知的算子融合）和系统级优化（Android NN API 适配、NPU/GPU/DSP 异构调度）——在智能手机上实现 10+ tokens/s 的 LLaMA-2-7B 推理。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>移动端感知的算子融合: 将注意力投影、FFN 和 LayerNorm 融合为针对移动 GPU（Adreno、Mali）和 NPU（Hexagon、Apple Neural Engine）优化的单内核——减少内核启动开销和中间结果的内存占用</li>
+<li>SoC 异构调度: 自动将不同算子分配到 SoC 上最合适的计算单元——注意力计算放在 GPU（其 SIMD 架构高效）、LayerNorm 和激活函数放在 NPU、token 采样放在 CPU</li>
+<li>内存层次优化: 利用 Android 的 ION 内存分配器实现 GPU-CPU-NPU 之间的零拷贝内存共享，避免跨芯片数据传输</li>
+<li>自适应精度降级: 在前台应用运行时（用户正在交互）以高精度推理，在后台运行时以低精度推理以节省电量和内存</li>
+<li>在骁龙 8 Gen 3 设备上以 W4A16 量化实现 LLaMA-2-7B 的约 12 tokens/s 推理速度</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: EdgeLLM 代表了设备端 LLM 推理的工程前沿。将 7B 参数的模型在智能手机上运行到交互式速度（&gt; 10 tokens/s）是一个重大的工程成就。其 SoC 异构调度策略充分利用了现代移动芯片的多计算单元设计——GPU/NPU/CPU 各司其职，避免任何一个单元成为瓶颈。这对于 Apple Intelligence 和 Gemini Nano 等所有设备端 AI 平台都有重要的参考价值。</li>
+</ul>
+<hr>
+<h3 id="Prompt-Caching-Systems-Automatic-Prefix-Reuse-for-LLM-APIs"><a href="#Prompt-Caching-Systems-Automatic-Prefix-Reuse-for-LLM-APIs" class="headerlink" title="Prompt Caching Systems: Automatic Prefix Reuse for LLM APIs"></a>Prompt Caching Systems: Automatic Prefix Reuse for LLM APIs</h3><ul>
+<li><strong>arXiv</strong>: 无正式论文（2024 年多平台的技术博客和 API 文档）</li>
+<li><strong>发表</strong>: 2024 年（Anthropic、OpenAI、Google、DeepSeek 等平台的技术实现）</li>
+<li><strong>作者</strong>: 各平台工程团队</li>
+<li><strong>简介</strong>: 2024 年成为主流的 LLM API 功能——API 平台自动检测和缓存重复的 prompt 前缀的 KV cache——在多轮对话、RAG 和 agent 场景中大幅降低延迟和成本。</li>
+<li><strong>核心创新</strong>:<ul>
+<li>自动前缀检测: API 网关自动计算请求 prompt 的哈希值，匹配到之前请求的 prompt 前缀（无需用户手动管理缓存）。当多个请求共享相同的长前缀（如系统 prompt、RAG 上下文、few-shot 示例）时，前缀仅计算一次</li>
+<li>缓存精度层次: 不同平台提供不同精度的匹配策略——精确前缀匹配（Anthropic）、语义前缀匹配（实验性）和用户管理缓存（OpenAI 的”prompt caching”API）</li>
+<li>基于使用频率的缓存驱逐: 缓存采用 LFU 或 LRU 策略，频繁使用的前缀（如流行应用的 system prompt）长期保留，一次性前缀在 TTL 后过期</li>
+<li>成本模型: 缓存命中的 prompt token 以大幅折扣计费（通常为原始价格的 10-25%），为开发者和平台同时创造了经济价值</li>
+<li>平台无关的实现: 独立开发者可以通过 CacheGen、LMCache 或 RadixAttention（SGLang/vLLM）在自己的服务中实现类似功能</li>
+</ul>
+</li>
+<li><strong>代表意义</strong>: Prompt caching 是 2024 年 LLM 推理领域最实用的基础设施改进之一——它不需要任何模型或算法创新，仅通过缓存常见的 prompt 前缀就为开发者和平台节省了大量成本。在多轮对话和 RAG 场景中，prompt caching 通常能将首 token 延迟降低 50-80%。这一功能现已成为所有主流 LLM API 的标准特性，代表了推理系统从”每次重新计算”到”智能复用”的范式转变。</li>
+</ul>
+<hr>
+<p><strong>推理加速专题导航</strong>：<a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-09-%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A4%96%E6%8E%A8/">← 上一篇：长上下文外推</a> | <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-LLM%E6%8E%A8%E7%90%86-%E6%8E%A8%E7%90%86%E4%BC%98%E5%8C%96-%E5%88%86%E5%B8%83%E5%BC%8F%E6%8E%A8%E7%90%86/" class="print-no-link">#推理加速,LLM推理,推理优化,分布式推理</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>推理加速-10：推理系统工程化</div>
+      <div>https://w2ongq6.github.io/2026/07/24/inference/推理加速-10-推理系统工程化/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/aigc/AIGC-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/" title="AIGC 经典论文全景指南（2021–2026）">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AIGC 经典论文全景指南（2021–2026）</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/inference/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F-09-%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A4%96%E6%8E%A8/" title="推理加速-09：长上下文外推">
+                        <span class="hidden-mobile">推理加速-09：长上下文外推</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
