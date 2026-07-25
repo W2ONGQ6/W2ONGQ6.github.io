@@ -1,0 +1,1403 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="“Codex: Evaluating Large Language Models Trained on Code”核心信息 标题: Evaluating Large Language Models Trained on Code 标题翻译: 评估在代码上训练的大语言模型 作者: Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan 等58位作者 机构:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Codex: Evaluating Large Language Models Trained on Code">
+<meta property="og:url" content="https://w2ongq6.github.io/2021/07/14/aigc/note/Codex_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="“Codex: Evaluating Large Language Models Trained on Code”核心信息 标题: Evaluating Large Language Models Trained on Code 标题翻译: 评估在代码上训练的大语言模型 作者: Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan 等58位作者 机构:">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-13T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.675Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;code-generation">
+<meta property="article:tag" content="papers&#x2F;llm">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Codex: Evaluating Large Language Models Trained on Code - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Codex: Evaluating Large Language Models Trained on Code"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-07-14 00:00" pubdate>
+          2021年7月14日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          131 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Codex: Evaluating Large Language Models Trained on Code</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="“Codex-Evaluating-Large-Language-Models-Trained-on-Code”"><a href="#“Codex-Evaluating-Large-Language-Models-Trained-on-Code”" class="headerlink" title="“Codex: Evaluating Large Language Models Trained on Code”"></a>“Codex: Evaluating Large Language Models Trained on Code”</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Evaluating Large Language Models Trained on Code</li>
+<li>标题翻译: 评估在代码上训练的大语言模型</li>
+<li>作者: Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan 等58位作者</li>
+<li>机构: OpenAI</li>
+<li>发表时间: 2021年7月</li>
+<li>发表渠道: arXiv预印本</li>
+<li>arXiv: 2107.03374</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2107.03374">https://arxiv.org/abs/2107.03374</a></li>
+<li>代码 &#x2F; 项目: HumanEval benchmark公开</li>
+<li>论文类型: 基准论文 + 方法论文</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们介绍Codex，一个在GitHub公开代码上微调的GPT语言模型，并研究其Python代码编写能力。Codex的一个独立版本驱动了GitHub Copilot。在HumanEval——我们发布的一个新的包含164道手写编程题的评估集——上，Codex解决了28.8%的问题（pass@1）。当对每个问题采样100次时，正确率提升至70.2%。我们进一步发现，重复采样是一个有效策略——对每个问题生成多个候选解并从中选择通过最多测试用例的那个。最后，我们探讨了代码生成模型的局限性和更广泛的影响。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>HumanEval评测基准的创建</strong>：这是Codex论文最持久的遗产。HumanEval包含164道手写编程问题，每道题包括函数签名、docstring描述和unittest测试用例。其核心创新是”功能正确性”（functional correctness）作为评测标准——不检查生成的代码是否与参考答案”看起来相似”，而是测试它是否通过所有单元测试。这彻底改变了代码生成评测的范式。</p>
+</li>
+<li><p><strong>pass@k指标的引入</strong>：pass@k的定义是：对每个问题生成k个候选解，如果其中至少有一个通过所有测试，该问题即视为解决。这个指标优雅地捕捉了代码生成的一个关键特性——用户可以从多个生成候选中选择最佳的一个。</p>
+</li>
+<li><p><strong>系统性的代码微调探索</strong>：论文从GPT-3出发，系统探索了代码微调数据规模（从159MB到54GB GitHub代码）对编程能力的影响。关键发现是：GPT-3本身不会编程（HumanEval 0%），但微调后Codex最高可达72.3%（pass@100）。</p>
+</li>
+<li><p><strong>重复采样策略的理论与实践</strong>：论文证明pass@k随k呈对数增长——生成更多候选项并从中选择，比提升pass@1更高效。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Codex通过在GitHub代码上微调GPT模型，提出HumanEval评测基准和pass@k指标，在简单编程问题上达到72%正确率（pass@100），开创了AI代码生成时代并直接催生了GitHub Copilot。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心问题分解"><a href="#核心问题分解" class="headerlink" title="核心问题分解"></a>核心问题分解</h3><p>GPT家族模型通过在代码上微调后，能获得怎样的编程能力？这种能力如何随着模型规模和数据规模变化？如何设计一个合理的评测基准来衡量代码生成模型的能力？</p>
+<h3 id="子问题-1：GPT-3-到-Codex-的迁移效率"><a href="#子问题-1：GPT-3-到-Codex-的迁移效率" class="headerlink" title="子问题 1：GPT-3 到 Codex 的迁移效率"></a>子问题 1：GPT-3 到 Codex 的迁移效率</h3><p>GPT-3在自然语言任务上展示了令人印象深刻的少样本能力，但在HumanEval上得分为0%——它根本不会编程。核心问题是：通过在54GB GitHub代码上进行领域适配微调，模型能从0%提升到多少？这种迁移学习的效率如何？</p>
+<p>Before this paper：没有人系统地量化过”自然语言预训练 + 代码微调”的潜力。大部分代码生成研究使用从零训练的专用模型（如CodeBERT, GraphCodeBERT），其性能远低于人类开发者。</p>
+<h3 id="子问题-2：代码微调数据的规模效应"><a href="#子问题-2：代码微调数据的规模效应" class="headerlink" title="子问题 2：代码微调数据的规模效应"></a>子问题 2：代码微调数据的规模效应</h3><p>关键对照实验：用159MB → 1.5GB → 15GB → 54GB的递增代码数据进行微调，观察pass@1的变化。是否存在scaling law？边际收益递减的拐点在哪里？</p>
+<h3 id="子问题-3：代码评测的科学方法"><a href="#子问题-3：代码评测的科学方法" class="headerlink" title="子问题 3：代码评测的科学方法"></a>子问题 3：代码评测的科学方法</h3><p>在Codex之前，代码生成评测混乱不堪——Bleu score、token-level accuracy、ROUGE被不加区分地用于代码评测。但这些文本相似度指标与”代码是否正确运行”之间的相关性很弱。如何设计一个既能量化评测又贴近实际使用场景的新评测范式？</p>
+<h3 id="子问题-4：pass-k的对数增长性质"><a href="#子问题-4：pass-k的对数增长性质" class="headerlink" title="子问题 4：pass@k的对数增长性质"></a>子问题 4：pass@k的对数增长性质</h3><p>pass@k随k增长的模式是什么？是线性的（pass@k &#x3D; k * pass@1），还是对数的（每翻倍k带来固定的收益增量）？这对产品设计（建议几个候选给用户）有直接启示。</p>
+<h3 id="Before-This-Paper-Pain-Points"><a href="#Before-This-Paper-Pain-Points" class="headerlink" title="Before-This-Paper Pain Points"></a>Before-This-Paper Pain Points</h3><ol>
+<li><strong>“看起来像”不等于”确实对”</strong>：使用Bleu评测代码生成的论文系统性高估了模型能力——一个”看起来很正确”的代码可能在第一个测试用例就崩溃。</li>
+<li><strong>评测基准的贫乏</strong>：没有标准的、手写的、包含测试用例的编程问题集。研究者各自使用自制的数据集，无法横向比较。</li>
+<li><strong>GPT-3的”编程盲点”</strong>：虽然GPT-3展示了从自然语言描述生成简单HTML&#x2F;CSS的能力，但在需要精确逻辑的Python函数编写上完全失败（0% HumanEval）。</li>
+<li><strong>代码生成的产品化难题</strong>：即使模型有时能生成正确的代码，用户如何从多个候选中高效选择？缺乏”多候选审查”的量化框架。</li>
+</ol>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li>54GB GitHub公开Python文件（从约159GB原始文件中去重和过滤后）</li>
+<li>从2020年5月前的GitHub仓库中收集</li>
+<li>包含函数定义、类、文档字符串、测试文件、Jupyter notebooks等</li>
+<li>关键过滤步骤：<ul>
+<li>文件长度过滤：排除&lt;100字符或&gt;1M字符的文件</li>
+<li>重复过滤：排除与HumanEval评测集高度相似的文件（防止评测泄露）</li>
+<li>质量过滤：排除生成代码率高的文件（自动生成的代码）</li>
+</ul>
+</li>
+</ul>
+<h3 id="HumanEval基准"><a href="#HumanEval基准" class="headerlink" title="HumanEval基准"></a>HumanEval基准</h3><ul>
+<li><strong>164道手写编程问题</strong>，覆盖Python基础编程</li>
+<li>每道题包含：<ul>
+<li>函数签名：<code>def function_name(param1: type, param2: type) -&gt; return_type:</code></li>
+<li>Docstring：用自然语言描述的功能需求（1-5句）</li>
+<li>参考实现：一个正确的Python实现（用于验证测试用例）</li>
+<li>测试用例：多个 <code>assert function(input) == expected</code> 语句</li>
+</ul>
+</li>
+<li><strong>问题类型分布</strong>：<ul>
+<li>字符串处理（~30%）：如反转字符串、提取子串、格式化</li>
+<li>列表&#x2F;序列操作（~25%）：如查找最大元素、合并列表、过滤</li>
+<li>数学计算（~20%）：如斐波那契数列、素数检测、数值近似</li>
+<li>递归&#x2F;算法（~15%）：如深度优先搜索、动态规划</li>
+<li>数据结构（~10%）：如树遍历、图算法</li>
+</ul>
+</li>
+<li><strong>难度分布</strong>：主要为CS101-201级别（大学前两门编程课），少量CS301级别</li>
+</ul>
+<h3 id="评测指标"><a href="#评测指标" class="headerlink" title="评测指标"></a>评测指标</h3><ul>
+<li><p><strong>pass@k</strong>：对每个问题生成k个代码片段（使用nucleus sampling + 不同随机种子），如果至少1个通过所有测试则该问题正确。无偏估计公式：<br>$$pass@k &#x3D; \mathbb{E}_{\text{Problems}} \left[ 1 - \frac{\binom{n-c}{k}}{\binom{n}{k}} \right]$$<br>其中n为每个问题的总采样数（通常n&#x3D;200），c为通过测试的样本数。</p>
+</li>
+<li><p><strong>Bleu score</strong>：与参考答案的文本相似度（论文展示了Bleu与功能正确性的弱相关性，作为”错误指标”的反例）</p>
+</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程：从GPT-3到Codex的完整6步链路"><a href="#机制流程：从GPT-3到Codex的完整6步链路" class="headerlink" title="机制流程：从GPT-3到Codex的完整6步链路"></a>机制流程：从GPT-3到Codex的完整6步链路</h3><p><strong>Step 1：基座模型选择与配置</strong></p>
+<ul>
+<li>输入：GPT-3系列预训练权重（12B参数变体）</li>
+<li>操作：<ol>
+<li>选择GPT-3 12B作为基座——权衡了参数量（更大的175B训练成本过高）和初始能力（12B已经有基本的语言理解和逻辑能力）</li>
+<li>保留GPT-3的完整架构：decoder-only Transformer，96层，96个注意力头，d_model&#x3D;12288</li>
+<li>使用GPT-3的tokenizer（不引入代码特定的token），让模型学习代码的token pattern</li>
+</ol>
+</li>
+<li>输出：待微调的GPT-3 12B模型</li>
+<li>目标：从自然语言能力强的基座出发，通过代码微调定向注入编程能力</li>
+</ul>
+<p><strong>Step 2：代码数据处理与格式化</strong></p>
+<ul>
+<li>输入：159GB原始GitHub Python文件</li>
+<li>操作：<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 数据处理管线</span><br><span class="hljs-keyword">for</span> each raw_file <span class="hljs-keyword">in</span> GitHub_repos:<br>  <span class="hljs-comment"># 过滤</span><br>  <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(raw_file) &lt; <span class="hljs-number">100</span> <span class="hljs-keyword">or</span> <span class="hljs-built_in">len</span>(raw_file) &gt; <span class="hljs-number">1_000_000</span>:<br>      <span class="hljs-keyword">continue</span>  <span class="hljs-comment"># 排除过短/过长文件</span><br>  <span class="hljs-keyword">if</span> auto_generated_ratio(raw_file) &gt; <span class="hljs-number">0.5</span>:<br>      <span class="hljs-keyword">continue</span>  <span class="hljs-comment"># 排除自动生成代码</span><br>  <br>  <span class="hljs-comment"># 去重（与已有文件相似度 &lt; 0.8）</span><br>  <span class="hljs-keyword">if</span> max_similarity(raw_file, existing_files) &gt; <span class="hljs-number">0.8</span>:<br>      <span class="hljs-keyword">continue</span><br>  <br>  <span class="hljs-comment"># 格式化</span><br>  <span class="hljs-keyword">if</span> is_jupyter(raw_file):<br>      raw_file = extract_code_cells(raw_file)<br>  <br>  processed_files.append(raw_file)<br><br>total = 54GB (处理后)<br></code></pre></td></tr></table></figure>
+使用标准语言建模格式——将代码视为普通的文本token序列，使用next-token-prediction目标。不需要任何代码特定的结构化处理（如AST解析）。</li>
+<li>输出：54GB清洁代码语料</li>
+<li>目标：最大化高质量、多样化的Python代码覆盖</li>
+</ul>
+<p><strong>Step 3：代码微调训练</strong></p>
+<ul>
+<li>输入：54GB代码语料 + GPT-3 12B权重</li>
+<li>操作：<ol>
+<li>使用标准自回归语言建模损失：<br>$$\mathcal{L} &#x3D; -\frac{1}{N} \sum_{i&#x3D;1}^{N} \log p(t_i | t_{&lt;i})$$</li>
+<li>batch_size: 128个序列，每个序列1024 tokens</li>
+<li>学习率：从GPT-3的微调学习率开始（约1e-5），线性衰减</li>
+<li>Adam optimizer，gradient clipping&#x3D;1.0</li>
+<li>训练约100B token（约2个epoch过54GB数据）</li>
+<li>分布式训练：使用数百块GPU并行</li>
+</ol>
+</li>
+<li>输出：Codex-12B模型权重</li>
+<li>目标：将GPT-3的通用语言理解能力与GitHub代码中的编程模式结合</li>
+</ul>
+<p><strong>Step 4：推理时的代码生成</strong></p>
+<ul>
+<li>输入：HumanEval问题（函数签名 + docstring）和Codex模型</li>
+<li>操作：<ol>
+<li>构造prompt：<code>def {function_name}({params}):\n    &quot;&quot;&quot;{docstring}&quot;&quot;&quot;\n</code></li>
+<li>使用nucleus sampling (top-p&#x3D;0.95) 从模型的输出分布中采样</li>
+<li>温度 T：对于pass@1使用T&#x3D;0（贪婪解码），对于pass@k使用T&#x3D;0.8（增加多样性）</li>
+<li>停止词检测——遇到以下模式时停止生成：<ul>
+<li><code>\nclass</code>：新类定义开始</li>
+<li><code>\n#</code>：注释行（可能表示新代码段）</li>
+<li><code>\nif __name__</code>：脚本入口点</li>
+<li><code>\n\n\n</code>：连续空行（函数体结束）</li>
+</ul>
+</li>
+<li>生成直到停止或达到最大token限制（通常512 tokens）</li>
+</ol>
+</li>
+<li>输出：生成的代码字符串</li>
+<li>目标：根据自然语言描述生成功能正确的Python函数</li>
+</ul>
+<p><strong>Step 5：功能正确性验证</strong></p>
+<ul>
+<li>输入：生成的代码字符串和HumanEval的测试用例</li>
+<li>操作：<ol>
+<li>语法检查：在隔离沙箱中尝试 <code>compile(code_string, &#39;&lt;test&gt;&#39;, &#39;exec&#39;)</code></li>
+<li>如果编译失败（SyntaxError）→ 标记为”未通过”</li>
+<li>如果编译成功，在沙箱中执行代码并运行所有测试用例</li>
+<li>设置执行超时（5秒）和内存限制，防止死循环或资源耗尽</li>
+<li>所有 <code>assert</code> 语句通过且无异常 → 标记为”通过”</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 验证伪代码</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">verify</span>(<span class="hljs-params">code, test_cases</span>):<br>    <span class="hljs-keyword">try</span>:<br>        <span class="hljs-built_in">exec</span>(code, sandbox_env)<br>        <span class="hljs-keyword">for</span> test <span class="hljs-keyword">in</span> test_cases:<br>            <span class="hljs-built_in">exec</span>(test, sandbox_env)  <span class="hljs-comment"># 执行 assert 语句</span><br>        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;PASS&quot;</span><br>    <span class="hljs-keyword">except</span> Exception:<br>        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;FAIL&quot;</span><br></code></pre></td></tr></table></figure></li>
+<li>输出：每个生成代码的通过&#x2F;失败状态</li>
+<li>目标：客观地判断生成代码的功能正确性</li>
+</ul>
+<p><strong>Step 6：pass@k的统计估计</strong></p>
+<ul>
+<li>输入：所有问题的通过&#x2F;失败结果（每个问题 n&#x3D;200 个样本，其中c个通过）</li>
+<li>操作：<ol>
+<li>对于每个k值（1, 10, 100），使用无偏估计公式计算pass@k：<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">pass_at_k</span>(<span class="hljs-params">n, c, k</span>):<br>    <span class="hljs-comment"># 无偏估计：1 - C(n-c, k) / C(n, k)</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">1.0</span> - math.comb(n - c, k) / math.comb(n, k)<br></code></pre></td></tr></table></figure></li>
+<li>对164个问题取平均</li>
+<li>报告95%置信区间</li>
+<li>因为n&#x3D;200（远大于k&#x3D;100），估计的方差较小</li>
+</ol>
+</li>
+<li>输出：pass@1, pass@10, pass@100 及其置信区间</li>
+<li>目标：提供统计上无偏的、可量化的模型能力度量</li>
+</ul>
+<h3 id="算法伪代码：HumanEval完整评测流程"><a href="#算法伪代码：HumanEval完整评测流程" class="headerlink" title="算法伪代码：HumanEval完整评测流程"></a>算法伪代码：HumanEval完整评测流程</h3><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs nix"><span class="hljs-params">Algorithm:</span> HumanEval Evaluation<br><br><span class="hljs-params">Input:</span> model M, HumanEval dataset D <span class="hljs-operator">=</span> &#123;(problem_i, tests_i)&#125; for i<span class="hljs-operator">=</span><span class="hljs-number">1</span>..<span class="hljs-number">164</span><br><br><span class="hljs-params">Parameters:</span> num_samples n<span class="hljs-operator">=</span><span class="hljs-number">200</span>, temperatures T<span class="hljs-operator">=</span>&#123;<span class="hljs-number">0.0</span>, <span class="hljs-number">0.8</span>&#125;<br><br>for each problem <span class="hljs-keyword">in</span> <span class="hljs-params">D:</span><br>    <span class="hljs-attr">passed</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span><br>    for s <span class="hljs-keyword">in</span> <span class="hljs-number">1</span>..<span class="hljs-params">n:</span><br>        <span class="hljs-comment"># Generate code with nucleus sampling</span><br>        <span class="hljs-attr">temp</span> <span class="hljs-operator">=</span> <span class="hljs-number">0.0</span> <span class="hljs-keyword">if</span> (s <span class="hljs-operator">==</span> <span class="hljs-number">1</span>) <span class="hljs-keyword">else</span> <span class="hljs-number">0.8</span>  <span class="hljs-comment"># pass@1用贪婪，其余用采样</span><br>        <span class="hljs-attr">code</span> <span class="hljs-operator">=</span> M.generate(<br>            <span class="hljs-attr">prompt</span><span class="hljs-operator">=</span>format_prompt(problem.func_sig, problem.docstring),<br>            <span class="hljs-attr">temperature</span><span class="hljs-operator">=</span>temp,<br>            <span class="hljs-attr">top_p</span><span class="hljs-operator">=</span><span class="hljs-number">0.95</span>,<br>            <span class="hljs-attr">max_tokens</span><span class="hljs-operator">=</span><span class="hljs-number">512</span>,<br>            <span class="hljs-attr">stop_tokens</span><span class="hljs-operator">=</span>[<span class="hljs-string">&quot;<span class="hljs-char escape_">\n</span>class&quot;</span>, <span class="hljs-string">&quot;<span class="hljs-char escape_">\n</span># &quot;</span>, <span class="hljs-string">&quot;<span class="hljs-char escape_">\n</span>if __name__&quot;</span>]<br>        )<br>        <br>        <span class="hljs-comment"># Verify functional correctness</span><br>        <span class="hljs-keyword">if</span> verify_in_sandbox(code, problem.tests):<br>            passed <span class="hljs-operator">+</span><span class="hljs-operator">=</span> <span class="hljs-number">1</span><br>    <br>    <span class="hljs-comment"># Store (n, passed) for pass@k estimation</span><br>    results[problem.id] <span class="hljs-operator">=</span> (n, passed)<br><br><span class="hljs-comment"># Compute pass@k for k in &#123;1, 10, 100&#125;</span><br>for k <span class="hljs-keyword">in</span> [<span class="hljs-number">1</span>, <span class="hljs-number">10</span>, <span class="hljs-number">100</span>]:<br>    <span class="hljs-attr">pass_k</span> <span class="hljs-operator">=</span> []<br>    for (n, c) <span class="hljs-keyword">in</span> results.values():<br>        <span class="hljs-keyword">if</span> c <span class="hljs-operator">==</span> <span class="hljs-number">0</span>:<br>            pass_k.append(<span class="hljs-number">0.0</span>)<br>        <span class="hljs-params">else:</span><br>            <span class="hljs-comment"># Unbiased estimator</span><br>            <span class="hljs-attr">prob</span> <span class="hljs-operator">=</span> <span class="hljs-number">1.0</span> <span class="hljs-operator">-</span> comb(n <span class="hljs-operator">-</span> c, k) <span class="hljs-symbol">/</span> comb(n, k)<br>            pass_k.append(prob)<br>    <br>    print(f<span class="hljs-string">&quot;pass@&#123;k&#125;: &#123;mean(pass_k):.1%&#125; ± &#123;1.96 * std(pass_k) / sqrt(164):.2%&#125;&quot;</span>)<br><br>return pass_k_results<br></code></pre></td></tr></table></figure>
+
+<h3 id="pass-k-对数增长的理论解释"><a href="#pass-k-对数增长的理论解释" class="headerlink" title="pass@k 对数增长的理论解释"></a>pass@k 对数增长的理论解释</h3><p>pass@k 的增长模式近似为对数函数而非线性函数：</p>
+<p>$$pass@k \approx a \cdot \log(k) + b$$</p>
+<p>这一模式可以从”极端值理论”理解：k次独立采样中至少一次成功的概率取决于尾部概率。如果pass@1的概率为p，则pass@k的概率为1-(1-p)^k。当p较小时，1-(1-p)^k ≈ 1 - e^{-pk} ≈ pk（线性）。当p接近1时，增长变得次线性（对数化）。</p>
+<p>对数增长的实际含义：</p>
+<ul>
+<li>pass@1&#x3D;28.8% → pass@10&#x3D;46.8%（+18pp，每次翻倍k约增益9pp）</li>
+<li>pass@10&#x3D;46.8% → pass@100&#x3D;72.3%（+25.5pp，但翻倍了更多次）</li>
+</ul>
+<p>从k&#x3D;1到k&#x3D;2的增益远大于从k&#x3D;50到k&#x3D;51——边际收益递减。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1：GPT-3-vs-Codex-在-HumanEval-上的核心对比"><a href="#表-1：GPT-3-vs-Codex-在-HumanEval-上的核心对比" class="headerlink" title="表 1：GPT-3 vs Codex 在 HumanEval 上的核心对比"></a>表 1：GPT-3 vs Codex 在 HumanEval 上的核心对比</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>pass@1</th>
+<th>pass@10</th>
+<th>pass@100</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-3 (zero-shot)</td>
+<td>0.0%</td>
+<td>0.0%</td>
+<td>0.0%</td>
+</tr>
+<tr>
+<td>GPT-3 (few-shot, k&#x3D;1)</td>
+<td>0.0%</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Codex (12B, 54GB fine-tuned)</strong></td>
+<td><strong>28.8%</strong></td>
+<td><strong>46.8%</strong></td>
+<td><strong>72.3%</strong></td>
+</tr>
+</tbody></table>
+<p>关键发现：GPT-3在HumanEval上的绝对零分（0.0%）说明自然语言预训练不足以产生可靠的编程能力。但仅通过54GB的代码微调，pass@100跃升至72.3%——证明代码微调可以高效地将通用语言能力转化为编程能力。这代表了一种”能力激活”而非”从零学习”——GPT-3在预训练中已经接触到了一些代码（如GitHub README中的代码片段），但暴露在系统的代码分布中使其编程能力被全面唤醒。</p>
+<h3 id="表-2：训练数据规模-vs-性能的-Scaling-Law"><a href="#表-2：训练数据规模-vs-性能的-Scaling-Law" class="headerlink" title="表 2：训练数据规模 vs 性能的 Scaling Law"></a>表 2：训练数据规模 vs 性能的 Scaling Law</h3><table>
+<thead>
+<tr>
+<th>训练数据量</th>
+<th>数据比例</th>
+<th>pass@1</th>
+<th>pass@10</th>
+<th>pass@100</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>159 MB</td>
+<td>0.3%</td>
+<td>4.3%</td>
+<td>9.7%</td>
+<td>16.8%</td>
+</tr>
+<tr>
+<td>1.5 GB</td>
+<td>2.8%</td>
+<td>12.2%</td>
+<td>20.9%</td>
+<td>35.1%</td>
+</tr>
+<tr>
+<td>15 GB</td>
+<td>27.8%</td>
+<td>23.5%</td>
+<td>39.8%</td>
+<td>63.2%</td>
+</tr>
+<tr>
+<td>54 GB</td>
+<td>100%</td>
+<td>28.8%</td>
+<td>46.8%</td>
+<td>72.3%</td>
+</tr>
+</tbody></table>
+<p>数据规模的scaling law：初始的少量数据（159MB → 1.5GB，10×增量）带来最大幅度的性能跃升（+7.9pp pass@1）。数据继续增长（1.5GB → 15GB → 54GB）的边际收益递减——从15GB到54GB（3.6×增量）仅带来+5.3pp pass@1。这表明代码数据中存在大量冗余——许多代码模式在少量高质量数据中已经充分覆盖。</p>
+<h3 id="表-3：Docstring质量对性能的影响"><a href="#表-3：Docstring质量对性能的影响" class="headerlink" title="表 3：Docstring质量对性能的影响"></a>表 3：Docstring质量对性能的影响</h3><table>
+<thead>
+<tr>
+<th>Docstring类型</th>
+<th>pass@1</th>
+<th>相对基准</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原始docstring</td>
+<td>28.8%</td>
+<td>基准</td>
+<td>HumanEval的完整docstring</td>
+</tr>
+<tr>
+<td>精简版（仅任务描述）</td>
+<td>26.1%</td>
+<td>-2.7pp</td>
+<td>去除示例和细节</td>
+</tr>
+<tr>
+<td>详细版（更多示例）</td>
+<td>31.5%</td>
+<td>+2.7pp</td>
+<td>添加输入输出示例</td>
+</tr>
+<tr>
+<td>错误&#x2F;误导性docstring</td>
+<td>14.2%</td>
+<td>-14.6pp</td>
+<td>描述与测试不符</td>
+</tr>
+<tr>
+<td>仅函数签名（无docstring）</td>
+<td>8.4%</td>
+<td>-20.4pp</td>
+<td>仅有类型签名</td>
+</tr>
+</tbody></table>
+<p>Docstring质量对代码生成有质的差异——一个高质量的docstring可以使pass@1翻倍（8.4% → 28.8%）。误导性docstring将性能降至14.2%——比精简版还差，说明”错误信息”的危害大于”缺失信息”。这与实际编程一致：一个不清晰的规格说明比没有规格说明更浪费时间。</p>
+<h3 id="表-4：Codex-12B-vs-其他代码模型（HumanEval-pass-1）"><a href="#表-4：Codex-12B-vs-其他代码模型（HumanEval-pass-1）" class="headerlink" title="表 4：Codex 12B vs 其他代码模型（HumanEval pass@1）"></a>表 4：Codex 12B vs 其他代码模型（HumanEval pass@1）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数</th>
+<th>训练范式</th>
+<th>HumanEval pass@1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-3</td>
+<td>175B</td>
+<td>NL预训练</td>
+<td>0.0%</td>
+</tr>
+<tr>
+<td>GPT-Neo</td>
+<td>2.7B</td>
+<td>NL+少量代码预训练</td>
+<td>6.4%</td>
+</tr>
+<tr>
+<td>TabNine</td>
+<td>-</td>
+<td>专用代码模型</td>
+<td>~10%</td>
+</tr>
+<tr>
+<td>CodeBERT</td>
+<td>125M</td>
+<td>代码预训练</td>
+<td>~2%</td>
+</tr>
+<tr>
+<td><strong>Codex-12B</strong></td>
+<td><strong>12B</strong></td>
+<td><strong>NL预训练+代码微调</strong></td>
+<td><strong>28.8%</strong></td>
+</tr>
+<tr>
+<td>Codex-12B + repeated sampling</td>
+<td>12B</td>
+<td>同上</td>
+<td>72.3% (pass@100)</td>
+</tr>
+</tbody></table>
+<p>Codex-12B（仅12B参数）大幅超越了175B参数的GPT-3——证明了”领域特化微调”在代码任务上的巨大杠杆效应。GPT-Neo虽然从零开始用代码训练，但2.7B参数的性能仅为Codex的1&#x2F;4——“大基座+领域微调”策略在2021年被证明比”从零领域训练”更有效。</p>
+<h3 id="表-5：不同语言的Codex多语言能力"><a href="#表-5：不同语言的Codex多语言能力" class="headerlink" title="表 5：不同语言的Codex多语言能力"></a>表 5：不同语言的Codex多语言能力</h3><table>
+<thead>
+<tr>
+<th>语言</th>
+<th>pass@1 (transpile from Python)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Python</td>
+<td>28.8%</td>
+</tr>
+<tr>
+<td>JavaScript</td>
+<td>22.3%</td>
+</tr>
+<tr>
+<td>Go</td>
+<td>19.8%</td>
+</tr>
+<tr>
+<td>Perl</td>
+<td>17.4%</td>
+</tr>
+<tr>
+<td>Ruby</td>
+<td>21.1%</td>
+</tr>
+<tr>
+<td>TypeScript</td>
+<td>23.7%</td>
+</tr>
+<tr>
+<td>Java</td>
+<td>17.5%</td>
+</tr>
+<tr>
+<td>C++</td>
+<td>15.2%</td>
+</tr>
+</tbody></table>
+<p>Codex的Python性能最佳（与训练数据中Python占比最高一致），但对其他语言也有显著的泛化能力——即使主要训练数据是Python，JavaScript和TypeScript的pass@1也达到20%+。这是因为（a）编程语言的结构有显著的共通性（函数、循环、条件），（b）GitHub数据中包含多语言文件和跨语言引用，（c）GPT-3的NL预训练提供了跨语言的泛化基础。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么GPT-3在HumanEval上是0-——“知道”与”会做”的鸿沟"><a href="#为什么GPT-3在HumanEval上是0-——“知道”与”会做”的鸿沟" class="headerlink" title="为什么GPT-3在HumanEval上是0%——“知道”与”会做”的鸿沟"></a>为什么GPT-3在HumanEval上是0%——“知道”与”会做”的鸿沟</h3><p>GPT-3虽然在某些场合展示了从自然语言描述生成代码的能力（如HTML&#x2F;CSS生成），但在需要精确逻辑和Python语法的HumanEval上得分为0%。深层原因：</p>
+<ol>
+<li><strong>训练数据中代码比例极低</strong>：GPT-3的预训练数据中代码占比估计&lt;5%（主要来自CommonCrawl中偶然包含的代码片段）。这意味着模型在预训练中平均每20个token才见到1个代码token——远不足以建立对Python语法和编程模式的可靠统计知识。</li>
+<li><strong>代码的精确性要求远高于自然语言</strong>：自然语言容忍大量的模糊性、语法错误和语义漂移。代码不容忍——少一个冒号、多一个空格、用错一个变量名，整个程序就无法运行。GPT-3的自然语言生成能力无法简单地迁移到代码的精确性要求。</li>
+<li><strong>Codex的微调本质上是”领域适配”</strong>：54GB代码数据的微调让模型接触到了Python语法、标准库API、算法模式、惯用表达等代码特有的”语言游戏规则”。这不是”注入新知识”，而是”格式化的领域技能激活”。</li>
+</ol>
+<h3 id="pass-k-对数增长的产品启示"><a href="#pass-k-对数增长的产品启示" class="headerlink" title="pass@k 对数增长的产品启示"></a>pass@k 对数增长的产品启示</h3><p>pass@k的对数增长模式意味着：</p>
+<ol>
+<li><p><strong>从pass@1到pass@10的增益（+18pp）&gt; pass@10到pass@100（+25.5pp，但翻了10倍而非2倍）</strong>——这对产品设计有直接启发。Copilot在产品中提供约10个建议（用户可用Tab切换），这是有理论依据的：在10个候选中至少有一个正确的概率（46.8%）远高于单个建议（28.8%），而翻倍到20个建议的边际收益已经很小。</p>
+</li>
+<li><p><strong>pass@1仍然是实际可用性的核心指标</strong>：在IDE中，用户通常只看1-2个建议——如果第一个建议经常出错，即使pass@10很高，用户体验也很差。Copilot的UX设计（Tab接受第一个建议或Alt+]浏览备选）反映了这一现实。pass@1衡量”用户第一次看到的就是正确的”的频率，这是用户体验最敏感的维度。</p>
+</li>
+<li><p><strong>多候选策略在测试驱动的开发中尤为有效</strong>：如果开发者先写测试、后写实现，可以自动化地运行所有候选代码并选择通过测试最多的一个——这不需要人工审查。但在实践中，大多数Copilot场景是”写代码然后手动测试”而非”先写测试”。</p>
+</li>
+</ol>
+<h3 id="HumanEval的持久遗产——一个评测基准超越模型本身的案例"><a href="#HumanEval的持久遗产——一个评测基准超越模型本身的案例" class="headerlink" title="HumanEval的持久遗产——一个评测基准超越模型本身的案例"></a>HumanEval的持久遗产——一个评测基准超越模型本身的案例</h3><p>HumanEval可能是Codex论文最重要的贡献，甚至超过了Codex模型本身。它建立的评测标准包括：</p>
+<ol>
+<li><strong>功能正确性 &gt; 表面相似性</strong>：用实际运行测试用例取代文本相似度指标，将评测锚定在”代码是否能用”而非”代码看起来像不像参考答案”。</li>
+<li><strong>手写问题 &gt; 自动构造的问题</strong>：164道由OpenAI研究人员手写的编程题确保了问题质量、清晰度和评测价值——自动爬取的问题可能包含歧义或低质量描述。</li>
+<li><strong>多尺度的pass@k</strong>：同时报告pass@1（单次尝试）、pass@10（小规模重试）、pass@100（接近上限），提供了模型在不同使用场景下的完整能力画像。</li>
+<li><strong>防止评测泄露的关注</strong>：Codex团队在构建HumanEval时将其与GitHub训练数据进行了相似度过滤——这是评测基准能够”公平评测”的前提条件。</li>
+</ol>
+<p>HumanEval的持续影响力证明了构建优质评测基准的价值——即使模型一代代更新（GPT-4 pass@1 ≈ 87%，远超Codex的28.8%），HumanEval仍然是衡量代码生成模型能力的事实标准之一。</p>
+<h3 id="Codex-vs-Copilot——从研究到产品的关键差距"><a href="#Codex-vs-Copilot——从研究到产品的关键差距" class="headerlink" title="Codex vs Copilot——从研究到产品的关键差距"></a>Codex vs Copilot——从研究到产品的关键差距</h3><p>Codex论文中的模型与GitHub Copilot中使用的模型之间存在关键差异：</p>
+<ol>
+<li><strong>模型版本</strong>：Copilot发布时使用的模型不是论文中的Codex-12B，而是基于GPT-3.5（约175B）的改进版本。论文故意淡化这一点——将”最先进的”模型细节保持模糊以保护商业机密。</li>
+<li><strong>延迟优化</strong>：Copilot需要&lt;100ms的单行补全延迟——论文中的Codex从未针对这一延迟目标进行优化。产品化需要大量的模型蒸馏、量化、KV缓存优化等工作。</li>
+<li><strong>IDE集成</strong>：Copilot的核心竞争力不仅在于模型质量，还在于与VS Code&#x2F;IDE的深度集成——上下文感知（当前文件、打开的其他文件）、光标位置、用户编码风格等。纯模型评测（HumanEval）无法捕捉这些产品集成带来的提升。</li>
+<li><strong>安全过滤</strong>：Copilot包含额外的安全层——过滤生成代码中可能的恶意模式、避免复制训练数据中的版权代码、以及敏感信息泄露防护。这些都不在学术论文的评测范围内。</li>
+</ol>
+<p>这些差异说明了一个更广泛的模式：学术论文模型与产品化模型之间的差距通常比论文自身的消融实验差异大得多，但外部观察者难以量化——因为产品模型的许多优化和增强细节是商业机密。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="表：HumanEval-vs-SWE-bench——代码评测的演进（7维度）"><a href="#表：HumanEval-vs-SWE-bench——代码评测的演进（7维度）" class="headerlink" title="表：HumanEval vs SWE-bench——代码评测的演进（7维度）"></a>表：HumanEval vs SWE-bench——代码评测的演进（7维度）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>HumanEval (Codex)</th>
+<th>SWE-bench</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>问题来源</td>
+<td>手写编程题</td>
+<td>真实GitHub Issue</td>
+</tr>
+<tr>
+<td>问题粒度</td>
+<td>单函数（~10-30行）</td>
+<td>整个代码仓库（可跨多个文件）</td>
+</tr>
+<tr>
+<td>问题数量</td>
+<td>164</td>
+<td>2294</td>
+</tr>
+<tr>
+<td>代码上下文</td>
+<td>无（仅有函数签名）</td>
+<td>整个仓库代码库</td>
+</tr>
+<tr>
+<td>评测方式</td>
+<td>针对该函数的单元测试</td>
+<td>仓库级回归测试+Issue特定测试</td>
+</tr>
+<tr>
+<td>所需技能</td>
+<td>算法编程（CS101-201）</td>
+<td>软件工程全方位（代码导航、调试、跨文件修改）</td>
+</tr>
+<tr>
+<td>挑战层级</td>
+<td>基础编程能力</td>
+<td>真实软件工程能力</td>
+</tr>
+</tbody></table>
+<p>Codex-HumanEval定义了”AI写代码”的评测基线，SWE-bench定义了”AI做软件工程”的评测基线。两者是互补的——HumanEval衡量”会写函数”，SWE-bench衡量”会修项目”。</p>
+<h3 id="表：pass-k-vs-其他代码评测指标的对比"><a href="#表：pass-k-vs-其他代码评测指标的对比" class="headerlink" title="表：pass@k vs 其他代码评测指标的对比"></a>表：pass@k vs 其他代码评测指标的对比</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>测量什么</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>pass@k</td>
+<td>至少1次生成通过测试的概率</td>
+<td>贴近实际使用（用户有多个候选）+客观（基于测试）</td>
+<td>受随机采样方差影响</td>
+</tr>
+<tr>
+<td>Bleu&#x2F;ROUGE</td>
+<td>与参考答案的文本相似度</td>
+<td>无执行环境需求</td>
+<td>与功能正确性弱相关</td>
+</tr>
+<tr>
+<td>Exact Match</td>
+<td>与参考答案逐token一致</td>
+<td>客观</td>
+<td>过度严格（功能等价但语法不同的代码被判错）</td>
+</tr>
+<tr>
+<td>人工评测</td>
+<td>人工判断代码质量</td>
+<td>最全面（包括代码质量、可读性等）</td>
+<td>昂贵、主观、不可重复</td>
+</tr>
+<tr>
+<td>CodeBLEU</td>
+<td>BLEU + AST相似度</td>
+<td>考虑了代码结构</td>
+<td>仍与功能正确性有偏差</td>
+</tr>
+</tbody></table>
+<p>pass@k在”客观性”、”可扩展性”（自动化）和”与真实使用场景的对齐”上取得了最优的平衡。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>HumanEval过于简单</strong>：164道题主要是CS101级别（字符串处理、列表操作、基础算法）。一个合格的CS本科毕业生应能轻松达到pass@1 &gt; 90%。GPT-4后来达到pass@1 ≈ 87%，使HumanEval开始接近”天花板”（更难的评测基准如SWE-bench、CodeContests随之出现）。</p>
+<p>具体影响：HumanEval无法区分”好的”代码模型和”非常好的”代码模型——一旦某个模型达到85%+ pass@1，HumanEval就失去了区分度。评测基准需要足够的”难度天花板”来挑战最好的模型。</p>
+</li>
+<li><p><strong>仅Python评测的单语言局限性</strong>：虽然Codex展示了多语言的能力，但HumanEval仅覆盖Python。Python的语法简洁和动态类型使得代码生成相对容易——C++或Rust的复杂语法和内存管理要求可能对模型构成完全不同的挑战。</p>
+</li>
+<li><p><strong>样本泄露的固有风险</strong>：GitHub训练数据中可能包含HumanEval问题的解答（虽然Codex团队进行了记忆检测和去重，但完全杜绝泄露在实践中是不可能的）。这一问题随着模型在GitHub数据上训练量的增加而加剧——后来的Code Llama、DeepSeek-Coder等都面临类似的泄露风险。</p>
+<p>缓解路径：（a）定期发布新的评测集（如LiveCodeBench），（b）在过滤训练数据时使用语义相似度（而非仅精确字符串匹配），（c）使用数据截止日期后的问题（如2024年的LeetCode问题）。</p>
+</li>
+<li><p><strong>pass@k依赖随机采样但k&#x3D;100在用户体验中不现实</strong>：pass@100&#x3D;72.3%意味着用户需要检查100个候选建议才能有72.3%的概率找到正确答案——在真实IDE交互中（用户点击Tab接受建议），这是完全不可能的。pass@1（28.8%）更贴近实际用户行为，但论文通过强调pass@100来夸大模型的”上限”能力。</p>
+</li>
+<li><p><strong>未考虑代码质量维度</strong>：功能正确性评测完全是”工具性”的——代码是否正确运行。但它不评估：</p>
+<ul>
+<li>时间&#x2F;空间复杂度：一个O(2^n)的暴力解法可能通过测试用例但实际不可用</li>
+<li>代码风格：是否符合PEP 8、是否有意义的变量名、是否有适当注释</li>
+<li>安全性：是否存在SQL注入、路径遍历等安全漏洞</li>
+<li>可维护性：代码是否模块化、是否容易理解和修改</li>
+</ul>
+<p>这些问题在SWE-bench和后来的代码质量研究（如CodeBLEU、SecurityEval）中被部分解决。</p>
+</li>
+<li><p><strong>docstring到代码的单向生成</strong>：HumanEval测量的是”给定自然语言描述，生成代码”。但实际编程中大量场景是反向的——“给定代码，生成注释&#x2F;docstring”，或双向的——“给定代码和注释，修改变量名”。</p>
+</li>
+<li><p><strong>无对话式编程场景</strong>：HumanEval假设”一次生成，完整函数”。但Copilot的实际使用中，代码补全是增量的、对话式的、上下文相关的——用户在编写代码的过程中不断地接受&#x2F;拒绝&#x2F;修改模型的建议。HumanEval无法捕捉这种交互式使用模式。</p>
+</li>
+<li><p><strong>计算成本没有被量化</strong>：论文未报告训练Codex的计算成本（GPU小时数、碳排放），这使得社区难以评估复现的可行性。54GB数据在12B模型上的微调估计需要数百个GPU日——远超出大多数学术实验室的预算。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>功能正确性 &gt; 表面匹配</strong>：</p>
+<ul>
+<li>洞见：用unit test而非文本相似度评测代码生成，是使评测贴近真实价值的范式转移。这个原则可推广到任何”正确性 &gt; 表面相似性”的生成任务——SQL查询、数学证明、逻辑推理等。</li>
+<li>为什么泛化：代码、SQL、数学等领域的核心价值是”它是否完成了要求的功能”，而非”它是否看起来像标准答案”。文本相似度指标系统性高估了模型能力（模型可以生成”看起来正确但逻辑错误的代码”）。</li>
+<li>如何具体应用：为任何逻辑生成任务构建自动化、可执行的评测——SQL查询（执行并比较结果）、数学证明（用Lean&#x2F;Coq检查）、配置文件（检查语法和一致性）。</li>
+</ul>
+</li>
+<li><p><strong>pass@k揭示模型潜力但pass@1决定用户体验</strong>：</p>
+<ul>
+<li>洞见：pass@k反映了模型在”理想条件”下的能力（用户可以无限审查候选方案），而pass@1反映实际用户体验（第一个建议是正确的概率）。产品设计应在两者之间平衡。</li>
+<li>为什么泛化：任何AI辅助系统在”单次建议”和”多建议审查”场景下性能差异巨大——从推荐系统（top-1 vs top-10）到翻译（第一个翻译 vs 多翻译候选）。</li>
+<li>如何具体应用：（a）在报告结果时同时报告pass@1和pass@k，（b）优化模型使其在pass@1上有竞争力（通过更好的采样策略、输出排序等），（c）设计UX使得用户方便地浏览多个候选方案（如Copilot的Alt+]切换）。</li>
+</ul>
+</li>
+<li><p><strong>域内微调的巨大杠杆——大基座+领域数据</strong>：</p>
+<ul>
+<li>洞见：GPT-3(0%) → Codex(72.3% pass@100)的跳跃证明：大模型+少量域内数据微调可以产生显著的领域能力，不需要从零训练领域专用的模型。这一模式（”通用预训练+领域后训练”）随后成为行业标准。</li>
+<li>为什么泛化：大型通用模型已经在广泛的概念、逻辑和语言模式上积累了丰富的内部表示。领域微调仅需要在这些已有表示上建立”如何应用于该领域”的映射。这是”迁移学习”的极端成功案例。</li>
+<li>如何具体应用：（a）优先使用大型通用模型作为起点（即使它们最初在目标领域表现差），（b）收集或合成高质量的领域数据，（c）使用轻量微调（LoRA、prefix-tuning）而非全量训练来降低成本。</li>
+</ul>
+</li>
+<li><p><strong>评测基准的长期影响力可以超越模型本身</strong>：</p>
+<ul>
+<li>洞见：HumanEval的持续使用（在2021年提出，到2025年仍是标准基准）证明：建设一个好的评测基准对社区的贡献可能超过模型本身——模型过时了，基准仍在定义研究问题。</li>
+<li>为什么泛化：一个好的评测基准定义了一个研究问题的”标准语言”——它使不同方法之间可以量化比较，驱动社区的集中改进。这类似于ImageNet之于计算机视觉、GLUE&#x2F;SuperGLUE之于NLP。</li>
+<li>如何具体应用：（a）在设计评测基准时，投入足够的精力在问题质量、评测客观性和长期可维护性上，（b）确保基准有成长的”难度天花板”——为未来更好的模型留出区分度，（c）重视防泄露设计。</li>
+</ul>
+</li>
+<li><p><strong>代码生成评测的”沙箱执行”模式是AI评测的未来</strong>：</p>
+<ul>
+<li>洞见：在隔离的沙箱中执行生成的代码并用测试用例验证——这种”生成+执行+验证”的模式不仅是代码评测的最佳实践，也为其他”可执行”生成任务（如命令序列、配置部署、工作流定义）提供了标杆。</li>
+<li>为什么泛化：可执行评测消除了主观判断的需求——结果是对&#x2F;错，不需要人工评分。这使评测完全自动化、可重复、可扩展——是AI评测的”圣杯”。</li>
+<li>如何具体应用：对任何”可执行”的AI输出设计沙箱验证流程——Shell命令（在Docker容器中执行）、API调用序列（在test server上重放）、UI操作序列（在headless browser中验证）。</li>
+</ul>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Codex论文的发表标志着AI代码生成从”有趣的研究方向”转变为”可行的产品技术”。GitHub Copilot在论文发表前已开始内测，论文的发表是为了学术公开和技术声明——OpenAI希望建立学术基准并确立技术领先地位。</p>
+<p>从论文写作来看，Codex是OpenAI的”产品驱动型研究”的代表作——论文的核心价值不在于模型架构的创新（一个12B GPT变体+代码微调），而在于系统性地建立了一个新的研究领域的评测标准和方法论。这种”定义问题 &gt; 发明方法”的研究风格在NLP和计算机视觉领域一再被证明是最有影响力的（想想ImageNet是如何定义图像识别研究10年+）。</p>
+<p>Copilot的商业成功（截至2024年已超过180万付费用户）极大增强了Codex论文的历史地位。但有趣的是，Copilot后来的版本早已不用原始的Codex模型——它被GPT-3.5、GPT-4等更强的模型取代。但HumanEval基准和pass@k指标的地位更加稳固了——它们已成为代码生成领域的”黄金标准”。</p>
+<p>从学术诚信角度看，Codex论文的样本泄露问题值得关注。论文承认这一问题并采取了缓解措施（在发布HumanEval前从训练数据中移除匹配内容），但不能完全排除间接泄露——例如，一个模型可能在StackOverflow的解答中见过类似的问题。这个问题是所有基于Web数据的代码模型的固有问题——随着模型和训练数据规模的增长，评测”公平性”变得越来越难以保证。</p>
+<h3 id="历史定位与影响"><a href="#历史定位与影响" class="headerlink" title="历史定位与影响"></a>历史定位与影响</h3><p>Codex是连接两个时代的桥梁：</p>
+<ul>
+<li><strong>GPT-3时代</strong>（2020-2021）：语言模型的主要应用场景是文本生成和NLU任务</li>
+<li><strong>LLM代码时代</strong>（2021-至今）：代码成为LLM的核心能力维度，催生了从Copilot到Devin的整个AI编程工具生态</li>
+</ul>
+<p>它在时间线上的特殊位置——发表于2021年7月，恰好在ChatGPT引爆公众对LLM的兴趣（2022年11月）之前约16个月——使其成为”预ChatGPT时代”最重要的应用引领性工作之一。当公众还在为GPT-3写诗而惊叹时，Copilot已经在默默地改变程序员的工作方式。</p>
+<h3 id="前瞻性判断"><a href="#前瞻性判断" class="headerlink" title="前瞻性判断"></a>前瞻性判断</h3><ol>
+<li><strong>HumanEval 2.0 或其后继者</strong>将产生——保持”功能正确性评测”的核心优势，但扩展至多语言（Python + JS + Java + Rust）、多文件、以及涵盖API调用和框架使用的复杂度。</li>
+<li><strong>pass@k可能被pass@budget取代</strong>——衡量在固定计算预算（如100次API调用）下能解决多少问题，而非固定采样次数k。这更好地对齐实际约束。</li>
+<li><strong>代码质量的自动评估将补全功能正确性评测</strong>——结合静态分析工具（如SonarQube）和LLM judge来评估生成的代码不仅正确，而且安全、高效、可维护。</li>
+<li><strong>“代码生成”和”代码理解”的评测将统一</strong>——未来的评测可能要求模型不仅能写新函数（HumanEval的范式），还能理解和修改现有代码库（SWE-bench的范式），在同一基准内覆盖全谱系能力。</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>能否设计一个HumanEval 2.0——保持功能正确性评测的核心优势，但扩展至多语言、多文件、涵盖框架（如React, Django）和API使用？</p>
+</li>
+<li><p>pass@k能否被”智能选择”取代——生成少量优质候选（如3-5个）覆盖多样化的解决方案空间（通过semantic diversity采样），而非生成k个候选（其中许多是功能相同的冗余变体）？</p>
+</li>
+<li><p>随着模型进步，HumanEval已接近天花板（GPT-4 pass@1约87%，o1-preview pass@1约92%）。下一个”足够难”的代码基准应该是什么——SWE-bench？LiveCodeBench？CodeContests？</p>
+</li>
+<li><p>功能正确性评测能否扩展到代码质量维度——自动检测生成的代码是否存在性能问题（时间复杂度）、安全漏洞（OWASP Top 10）、或可维护性问题（代码异味）？</p>
+</li>
+<li><p>HumanEval的沙箱执行模式能否推广到其他需要”功能正确性”的AI评测领域——如数学证明（自动证明验证）、数据库查询（查询结果匹配）、脚本执行（运行时检查）？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;chen2021codex,<br>  title=&#123;Evaluating Large Language Models Trained on Code&#125;,<br>  author=&#123;Chen, Mark and Tworek, Jerry and Jun, Heewoo and Yuan, Qiming and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2107.03374&#125;,<br>  year=&#123;2021&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90/" class="category-chain-item">代码生成</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-code-generation/" class="print-no-link">#papers/code-generation</a>
+      
+        <a href="/tags/papers-llm/" class="print-no-link">#papers/llm</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Codex: Evaluating Large Language Models Trained on Code</div>
+      <div>https://w2ongq6.github.io/2021/07/14/aigc/note/Codex_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2021年7月14日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/08/24/llm/note/ALiBi_note/" title="Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/06/17/llm/note/LoRA_note/" title="LoRA: Low-Rank Adaptation of Large Language Models">
+                        <span class="hidden-mobile">LoRA: Low-Rank Adaptation of Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

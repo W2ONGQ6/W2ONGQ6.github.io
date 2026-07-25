@@ -1,0 +1,1401 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Position Interpolation：通过位置插值扩展 LLM 上下文窗口核心信息 标题: Extending Context Window of Large Language Models via Positional Interpolation 标题翻译: 通过位置插值扩展大语言模型的上下文窗口 作者: Shouyuan Chen, Sherman Wong, Liangjian Ch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Extending Context Window of Large Language Models via Positional Interpolation">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/06/30/inference/note/PositionInterpolation_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Position Interpolation：通过位置插值扩展 LLM 上下文窗口核心信息 标题: Extending Context Window of Large Language Models via Positional Interpolation 标题翻译: 通过位置插值扩展大语言模型的上下文窗口 作者: Shouyuan Chen, Sherman Wong, Liangjian Ch">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.053Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;llm">
+<meta property="article:tag" content="papers&#x2F;long-context">
+<meta property="article:tag" content="papers&#x2F;positional-encoding">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Extending Context Window of Large Language Models via Positional Interpolation - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Extending Context Window of Large Language Models via Positional Interpolation"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-06-30 00:00" pubdate>
+          2023年6月30日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.3k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          78 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Extending Context Window of Large Language Models via Positional Interpolation</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Position-Interpolation：通过位置插值扩展-LLM-上下文窗口"><a href="#Position-Interpolation：通过位置插值扩展-LLM-上下文窗口" class="headerlink" title="Position Interpolation：通过位置插值扩展 LLM 上下文窗口"></a>Position Interpolation：通过位置插值扩展 LLM 上下文窗口</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Extending Context Window of Large Language Models via Positional Interpolation</li>
+<li>标题翻译: 通过位置插值扩展大语言模型的上下文窗口</li>
+<li>作者: Shouyuan Chen, Sherman Wong, Liangjian Chen, Yuandong Tian</li>
+<li>机构: Meta AI</li>
+<li>发表时间: 2023 年 6 月</li>
+<li>发表渠道: arXiv preprint (后续被广泛整合至 LLaMA 生态)</li>
+<li>arXiv: 2306.15595</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2306.15595">https://arxiv.org/abs/2306.15595</a></li>
+<li>论文类型: AI方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们提出位置插值（Position Interpolation, PI），一种简单但有效的方法来扩展基于 RoPE 的预训练 LLM 的上下文窗口大小。PI 的核心是将预训练中”见过”的位置索引范围通过线性降采样映射到目标上下文范围内，使得模型在未见过的更长序列上仍保持良好性能。在 LLaMA 7B 到 65B 上，PI 仅需微调 1000 步即可将上下文从 2K 扩展到 32K——其中包括 4 倍外推（到 8K）甚至无需微调。PI 是模型无关的技术——任何使用 RoPE 的预训练 LLM 都可以通过 PI 以极小成本扩展上下文窗口。其有效性根植于 RoPE 的相对位置特性——两个 token 之间的注意力依赖于它们的相对距离，而 PI 将此距离线性压缩，使模型在更长的相对距离上依然保持先验。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>线性位置插值</strong>：将目标长度 L’ 中的位置索引通过缩放因子 s &#x3D; L&#x2F;L’ 映射回原始训练长度 L 内。新位置 pos’ 在 RoPE 中使用 <code>pos_interpolated = pos&#39; * (L/L&#39;)</code> 作为实际位置输入。这是最简单的 RoPE 扩展方法。</p>
+</li>
+<li><p><strong>分布内优于分布外</strong>：PI 的核心洞察是将”未见过的位置”压缩到”见过的位置范围”内——即做”分布内插值”而非”分布外外推”。RoPE 的旋转角度始终在训练见过的范围内，模型不需要适应未见过的旋转角度。</p>
+</li>
+<li><p><strong>极致的简单性和有效性</strong>：不需要修改模型架构，不需要设计新的位置编码，不需要复杂的数据处理——仅修改位置索引的计算方式（一行代码的改动），就能实现 4 倍零微调外推和 16 倍千步微调外推。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Position Interpolation 通过简单的位置索引线性降采样（将新位置映射到训练见过的范围），以极致简洁的方式将 RoPE 的上下文窗口扩展 4-16 倍——4 倍外推零微调，16 倍仅需 1000 步微调。</p>
+<hr>
+<h2 id="核心机制详解"><a href="#核心机制详解" class="headerlink" title="核心机制详解"></a>核心机制详解</h2><p><em>Figure 2: 来源—原论文。</em></p>
+<h3 id="位置插值的数学定义"><a href="#位置插值的数学定义" class="headerlink" title="位置插值的数学定义"></a>位置插值的数学定义</h3><h4 id="原始-RoPE（训练时）"><a href="#原始-RoPE（训练时）" class="headerlink" title="原始 RoPE（训练时）"></a>原始 RoPE（训练时）</h4><p>对于位置索引 $pos \in [0, L-1]$，RoPE 使用的旋转角度为：</p>
+<p>$$\theta_{pos} &#x3D; pos \cdot \theta, \quad \theta &#x3D; 10000^{-2i&#x2F;d}$$</p>
+<p>其中 $L$ 是训练时的最大序列长度（如 LLaMA 的 2048 或 LLaMA-2 的 4096）。</p>
+<h4 id="位置插值（推理时扩展）"><a href="#位置插值（推理时扩展）" class="headerlink" title="位置插值（推理时扩展）"></a>位置插值（推理时扩展）</h4><p>对于目标长度 $L’ &gt; L$（如 8192、32768），定义缩放因子：</p>
+<p>$$s &#x3D; \frac{L}{L’}$$</p>
+<p>对于新序列中的位置 $pos’ \in [0, L’-1]$，插值后的位置为：</p>
+<p>$$pos_{interpolated} &#x3D; pos’ \times s$$</p>
+<p>插值后的 RoPE 旋转角度为：</p>
+<p>$$\theta_{pos’} &#x3D; pos_{interpolated} \cdot \theta &#x3D; (pos’ \times s) \cdot \theta$$</p>
+<h4 id="数值示例"><a href="#数值示例" class="headerlink" title="数值示例"></a>数值示例</h4><figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs tap">训练长度 L =<span class="hljs-number"> 2048 </span>(LLaMA)<br>目标长度 L&#x27; =<span class="hljs-number"> 8192 </span>(4x 扩展)<br>缩放因子 s =<span class="hljs-number"> 2048 </span>/<span class="hljs-number"> 8192 </span>= 0.25<br><br>原始 RoPE:<br>  位置<span class="hljs-number"> 512 </span> → 旋转角度<span class="hljs-number"> 512 </span>* θ<br>  位置<span class="hljs-number"> 1024 </span>→ 旋转角度<span class="hljs-number"> 1024 </span>* θ<br>  位置<span class="hljs-number"> 2048 </span>→ 旋转角度<span class="hljs-number"> 2048 </span>* θ (训练范围边界)<br>  位置<span class="hljs-number"> 4096 </span>→ 旋转角度<span class="hljs-number"> 4096 </span>* θ (未见过 → 外推失败)<br><br>PI:<br>  位置<span class="hljs-number"> 512 </span>  → 插值位置<span class="hljs-number"> 128 </span> → 旋转角度<span class="hljs-number"> 128 </span>* θ   (在训练范围内)<br>  位置<span class="hljs-number"> 1024 </span> → 插值位置<span class="hljs-number"> 256 </span> → 旋转角度<span class="hljs-number"> 256 </span>* θ   (在训练范围内)<br>  位置<span class="hljs-number"> 4096 </span> → 插值位置<span class="hljs-number"> 1024 </span>→ 旋转角度<span class="hljs-number"> 1024 </span>* θ  (在训练范围内!)<br>  位置<span class="hljs-number"> 8192 </span> → 插值位置<span class="hljs-number"> 2048 </span>→ 旋转角度<span class="hljs-number"> 2048 </span>* θ  (训练范围边界)<br></code></pre></td></tr></table></figure>
+
+<p><strong>关键结果</strong>：目标长度的最大位置 8192 被映射到训练见过的 2048——所有位置对应的旋转角度都在训练分布内。</p>
+<h3 id="为什么插值有效——RoPE-的相对位置性质"><a href="#为什么插值有效——RoPE-的相对位置性质" class="headerlink" title="为什么插值有效——RoPE 的相对位置性质"></a>为什么插值有效——RoPE 的相对位置性质</h3><p>RoPE 的核心数学性质：两个 token 的注意力仅依赖于它们的<strong>相对距离</strong>：</p>
+<p>$$\langle f_q(x_m, m), f_k(x_n, n) \rangle &#x3D; g(m - n)$$</p>
+<p>PI 在位置索引上施加线性变换 $pos’ \rightarrow pos’ \times s$。对于任意两个位置 $m’$ 和 $n’$：</p>
+<p>$$m’ \times s - n’ \times s &#x3D; (m’ - n’) \times s$$</p>
+<p><strong>这说明</strong>：变换后的相对距离 &#x3D; 原始相对距离 $\times$ s。</p>
+<p>这意味着 PI 保持了 RoPE 的核心不变性——注意力仍然仅依赖相对距离，但相对距离被线性缩放。对于模型来说，这相当于”把整个世界变得更紧密”了——原来的”两个距离为 100 的 token”行为现在变成了”距离为 25 的 token”行为。</p>
+<h4 id="为什么外推失败——信息论解释"><a href="#为什么外推失败——信息论解释" class="headerlink" title="为什么外推失败——信息论解释"></a>为什么外推失败——信息论解释</h4><p>直接外推失败的根本原因：RoPE在每个频率维度上使用的旋转角度θ_i &#x3D; 10000^{-2i&#x2F;d}形成了一个几何级数。对于高频维度(i小，θ大)，相邻位置的旋转角度差较大——模型在训练中学会了这些高频旋转对应的”短距离关系”。对于低频维度(i大，θ小)，相邻位置的旋转角度差较小——模型学会了”长距离关系”。</p>
+<p>当直接外推到未见过的大位置(如pos&#x3D;8192)，高频维度的旋转角度变为8192*θ_high——这个旋转角度模型从未在训练中见过。就像让学生计算”2198 * 3847”但他们从未学过4位数乘法——模型”见过”小位置的旋转，但无法泛化到大位置的旋转。</p>
+<p>PI通过将大位置”缩放”回小位置避免了这个问题——pos&#x3D;8192经PI后变为2048*θ，这正好是训练中见过的最大位置。</p>
+<h3 id="PI的旋转角度分布分析（为什么微调能补偿分辨率损失）"><a href="#PI的旋转角度分布分析（为什么微调能补偿分辨率损失）" class="headerlink" title="PI的旋转角度分布分析（为什么微调能补偿分辨率损失）"></a>PI的旋转角度分布分析（为什么微调能补偿分辨率损失）</h3><table>
+<thead>
+<tr>
+<th>位置范围</th>
+<th>原始RoPE旋转角范围</th>
+<th>PI旋转角范围(16x)</th>
+<th>训练中是否见过</th>
+<th>微调效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>pos&#x3D;0-127</td>
+<td>0 ~ 127θ</td>
+<td>0 ~ 7.9θ</td>
+<td>见过（低pos区域高频使用）</td>
+<td>不需要微调</td>
+</tr>
+<tr>
+<td>pos&#x3D;128-512</td>
+<td>128θ ~ 512θ</td>
+<td>8θ ~ 32θ</td>
+<td>见过（中pos区域，最常见）</td>
+<td>不需要微调</td>
+</tr>
+<tr>
+<td>pos&#x3D;513-2048</td>
+<td>513θ ~ 2048θ</td>
+<td>32θ ~ 128θ</td>
+<td>见过（高pos区域，低频使用）</td>
+<td>轻微适应</td>
+</tr>
+<tr>
+<td>pos&#x3D;2049-8192</td>
+<td>未见过</td>
+<td>128θ ~ 512θ</td>
+<td>未见过原始范围，但PI后见过</td>
+<td>需要微调</td>
+</tr>
+<tr>
+<td>pos&#x3D;8193-32768</td>
+<td>未见过</td>
+<td>513θ ~ 2048θ</td>
+<td>PI后在训练分布边界</td>
+<td>必须微调</td>
+</tr>
+</tbody></table>
+<p>在16x扩展(2K→32K)中，所有PI后的旋转角度（0到2048θ）都在训练分布内——这是为什么PI”可工作”的根本原因。但相邻位置的距离从1缩小到0.0625，导致”位置分辨率”降低了16倍——这是为什么需要微调。</p>
+<p>微调的作用：让模型的注意力机制适应”更密集的位置编码”。在微调中，模型学习了(1)区分”位置1和位置1.0625”之间的细微差异；(2)将注意力权重调整到新的相对距离尺度上。1000步微调足以完成这个适应过程。</p>
+<hr>
+<h2 id="详细机制流程（Numbered-Steps-with-Input-Operation-Output）"><a href="#详细机制流程（Numbered-Steps-with-Input-Operation-Output）" class="headerlink" title="详细机制流程（Numbered Steps with Input&#x2F;Operation&#x2F;Output）"></a>详细机制流程（Numbered Steps with Input&#x2F;Operation&#x2F;Output）</h2><h3 id="流程：PI-的完整应用"><a href="#流程：PI-的完整应用" class="headerlink" title="流程：PI 的完整应用"></a>流程：PI 的完整应用</h3><p><strong>Step 1：确定缩放因子</strong></p>
+<ul>
+<li>输入：原始训练长度 L（如2048）、目标长度 L’（如32768）</li>
+<li>操作：计算 s &#x3D; L &#x2F; L’（对于 2K→32K，s &#x3D; 2048&#x2F;32768 &#x3D; 1&#x2F;16 &#x3D; 0.0625）</li>
+<li>输出：缩放因子 s</li>
+<li>设计考量：s的选择是在”上下文长度”和”位置分辨率”之间的权衡。更小的s&#x3D;更长的上下文但更低的分辨率</li>
+</ul>
+<p><strong>Step 2：修改位置索引计算</strong></p>
+<ul>
+<li>输入：原始 RoPE 代码 + 缩放因子 s</li>
+<li>操作：将 RoPE 的位置输入从 <code>pos</code> 改为 <code>pos * s</code><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 原始 RoPE</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">compute_rope</span>(<span class="hljs-params">pos, dim</span>):<br>    theta = <span class="hljs-number">1.0</span> / (<span class="hljs-number">10000</span> ** (torch.arange(<span class="hljs-number">0</span>, dim, <span class="hljs-number">2</span>) / dim))<br>    <span class="hljs-keyword">return</span> pos * theta<br><br><span class="hljs-comment"># PI 修改（仅此一行改动）</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">compute_rope_pi</span>(<span class="hljs-params">pos, dim, s</span>):<br>    theta = <span class="hljs-number">1.0</span> / (<span class="hljs-number">10000</span> ** (torch.arange(<span class="hljs-number">0</span>, dim, <span class="hljs-number">2</span>) / dim))<br>    <span class="hljs-keyword">return</span> (pos * s) * theta  <span class="hljs-comment"># ← 唯一改动</span><br></code></pre></td></tr></table></figure></li>
+<li>输出：修改后的 RoPE 计算函数</li>
+<li>注意：这个修改仅影响位置编码的计算，不改变模型的任何其他部分</li>
+</ul>
+<p><strong>Step 3（可选但推荐）：小规模微调</strong></p>
+<ul>
+<li>输入：扩展后的模型 + 长序列微调数据</li>
+<li>操作：<ul>
+<li>仅在目标长度 L’ 的序列上微调 1000 步</li>
+<li>使用较小的学习率（原始训练的 1&#x2F;5 到 1&#x2F;10）</li>
+<li>推荐lr：2e-5（原始训练的lr约为1e-4到3e-4）</li>
+<li>微调数据：从预训练数据中提取长序列（或使用长文本数据集如books、long-form articles）</li>
+<li>微调目标：让模型适应”更密集的位置编码分辨率”</li>
+</ul>
+</li>
+<li>输出：微调后的长上下文模型</li>
+</ul>
+<p><strong>Step 4：推理部署</strong></p>
+<ul>
+<li>输入：长序列（长度 ≤ L’）</li>
+<li>操作：直接使用 PI 修改后的 RoPE 计算，正常推理（无需额外修改）</li>
+<li>输出：长上下文推理结果</li>
+</ul>
+<h3 id="微调参数策略"><a href="#微调参数策略" class="headerlink" title="微调参数策略"></a>微调参数策略</h3><table>
+<thead>
+<tr>
+<th>扩展倍数</th>
+<th>微调需求</th>
+<th>微调步数</th>
+<th>数据需求</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2x (4K)</td>
+<td>无需微调</td>
+<td>0</td>
+<td>无</td>
+<td>几乎无退化（PPL +0.01）</td>
+</tr>
+<tr>
+<td>4x (8K)</td>
+<td>无需微调</td>
+<td>0</td>
+<td>无</td>
+<td>轻微退化（PPL +1.1，可接受）</td>
+</tr>
+<tr>
+<td>8x (16K)</td>
+<td>推荐微调</td>
+<td>500</td>
+<td>中等（几万条长序列）</td>
+<td>微调后恢复</td>
+</tr>
+<tr>
+<td>16x (32K)</td>
+<td>必须微调</td>
+<td>1000</td>
+<td>较多（十万条长序列）</td>
+<td>微调后良好（PPL甚至优于原模型）</td>
+</tr>
+<tr>
+<td>&gt;32x</td>
+<td>不推荐</td>
+<td>-</td>
+<td>-</td>
+<td>位置分辨率严重损失</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="关键实验与量化结果"><a href="#关键实验与量化结果" class="headerlink" title="关键实验与量化结果"></a>关键实验与量化结果</h2><h3 id="主结果：语言建模困惑度"><a href="#主结果：语言建模困惑度" class="headerlink" title="主结果：语言建模困惑度"></a>主结果：语言建模困惑度</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>方法</th>
+<th>2K</th>
+<th>4K</th>
+<th>8K</th>
+<th>16K</th>
+<th>32K</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td>原始</td>
+<td>7.8</td>
+<td>&gt;1000 (崩溃)</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td><strong>PI (无微调)</strong></td>
+<td>7.8</td>
+<td><strong>7.9</strong></td>
+<td><strong>8.9</strong></td>
+<td>15.2</td>
+<td>&gt;1000</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td><strong>PI + FT 1000步</strong></td>
+<td>7.8</td>
+<td>7.8</td>
+<td>8.1</td>
+<td>7.9</td>
+<td><strong>7.6</strong></td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>原始</td>
+<td>6.8</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td><strong>PI + FT</strong></td>
+<td>6.8</td>
+<td>6.8</td>
+<td>7.0</td>
+<td>6.9</td>
+<td><strong>6.7</strong></td>
+</tr>
+<tr>
+<td>LLaMA-65B</td>
+<td>原始</td>
+<td>5.2</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+<td>&gt;1000</td>
+</tr>
+<tr>
+<td>LLaMA-65B</td>
+<td><strong>PI + FT</strong></td>
+<td>5.2</td>
+<td>5.2</td>
+<td>5.3</td>
+<td>5.2</td>
+<td><strong>5.1</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+<li>零微调 PI（4 倍外推 2K→8K）：困惑度仅从 7.8 升到 8.9（退化约 1.1 PPL）——对于许多应用场景已足够</li>
+<li>微调 1000 步 PI（16 倍外推 2K→32K）：困惑度甚至<strong>优于</strong>原始 2K 训练的模型（7.6 vs 7.8）——因为长上下文中模型看到了更完整的文档&#x2F;段落结构</li>
+<li>大模型(65B)对PI的适应更好：PPL从5.2降到5.1——可能是因为大模型有更多参数来”学习补偿位置分辨率损失”</li>
+</ul>
+<h3 id="Passkey-Retrieval（检索精度）"><a href="#Passkey-Retrieval（检索精度）" class="headerlink" title="Passkey Retrieval（检索精度）"></a>Passkey Retrieval（检索精度）</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>2K 内</th>
+<th>4K</th>
+<th>8K</th>
+<th>16K</th>
+<th>32K</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原始 LLaMA-7B</td>
+<td>99%</td>
+<td>5%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>PI (无微调)</td>
+<td>99%</td>
+<td>95%</td>
+<td>78%</td>
+<td>35%</td>
+<td>5%</td>
+</tr>
+<tr>
+<td>PI + FT 1000</td>
+<td>99%</td>
+<td>99%</td>
+<td>97%</td>
+<td>92%</td>
+<td><strong>85%</strong></td>
+</tr>
+</tbody></table>
+<h3 id="长文本摘要质量"><a href="#长文本摘要质量" class="headerlink" title="长文本摘要质量"></a>长文本摘要质量</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>BookSum (ROUGE-L)</th>
+<th>GovReport (ROUGE-L)</th>
+<th>SummScreen (ROUGE-L)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原始 LLaMA-7B (截断, 2K)</td>
+<td>14.2</td>
+<td>18.5</td>
+<td>12.8</td>
+</tr>
+<tr>
+<td>PI + FT LLaMA-7B (全上下文 32K)</td>
+<td>22.8</td>
+<td>28.1</td>
+<td>24.5</td>
+</tr>
+<tr>
+<td>GPT-3.5-Turbo-16K</td>
+<td>23.5</td>
+<td>32.5</td>
+<td>27.1</td>
+</tr>
+<tr>
+<td>LLaMA-2-7B (4K context, 截断)</td>
+<td>17.3</td>
+<td>21.2</td>
+<td>15.7</td>
+</tr>
+</tbody></table>
+<h3 id="不同微调步数的效果"><a href="#不同微调步数的效果" class="headerlink" title="不同微调步数的效果"></a>不同微调步数的效果</h3><table>
+<thead>
+<tr>
+<th>微调步数</th>
+<th>8K PPL</th>
+<th>16K PPL</th>
+<th>32K PPL</th>
+<th>Passkey 32K</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0 (无微调)</td>
+<td>8.9</td>
+<td>15.2</td>
+<td>&gt;1000</td>
+<td>5%</td>
+</tr>
+<tr>
+<td>200步</td>
+<td>8.4</td>
+<td>10.5</td>
+<td>&gt;100</td>
+<td>35%</td>
+</tr>
+<tr>
+<td>500步</td>
+<td>8.2</td>
+<td>8.8</td>
+<td>25.4</td>
+<td>62%</td>
+</tr>
+<tr>
+<td>1000步</td>
+<td>8.1</td>
+<td>7.9</td>
+<td>7.6</td>
+<td>85%</td>
+</tr>
+<tr>
+<td>2000步</td>
+<td>8.1</td>
+<td>7.8</td>
+<td>7.5</td>
+<td>86%</td>
+</tr>
+</tbody></table>
+<p>关键：1000步是甜点——超过后边际收益极低（2000步仅额外提升0.1 PPL和1% Passkey），训练效率最优。</p>
+<hr>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="分布内-vs-分布外：PI-的核心哲学"><a href="#分布内-vs-分布外：PI-的核心哲学" class="headerlink" title="分布内 vs 分布外：PI 的核心哲学"></a>分布内 vs 分布外：PI 的核心哲学</h3><p>机器学习的一条核心准则是：<strong>模型在训练分布内的数据上表现好，在分布外的数据上表现差。</strong> PI 将这一准则应用到了位置编码上：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">标准外推（分布外）</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">训练</span><span class="hljs-punctuation">:</span> <span class="hljs-string">位置 0-2048 的旋转角度</span><br>  <span class="hljs-attribute">推理</span><span class="hljs-punctuation">:</span> <span class="hljs-string">位置 0-8192 的旋转角度（其中一半在训练分布外）</span><br>  <span class="hljs-attribute">结果</span><span class="hljs-punctuation">:</span> <span class="hljs-string">模型对 2048-8192 位置无先验 → 随机/错误行为</span><br><br><span class="hljs-attribute">位置插值（分布内）</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">训练</span><span class="hljs-punctuation">:</span> <span class="hljs-string">位置 0-2048 的旋转角度</span><br>  <span class="hljs-attribute">推理</span><span class="hljs-punctuation">:</span> <span class="hljs-string">所有位置被映射到 [0, 2048] 范围内</span><br>  <span class="hljs-attribute">结果</span><span class="hljs-punctuation">:</span> <span class="hljs-string">所有旋转角度在训练分布内 → 模型有先验</span><br></code></pre></td></tr></table></figure>
+
+<p>这种”将新问题转化为已知问题”的哲学超越了位置编码——它是 AI 设计的通用思维模式。当面对一个模型未见过的输入空间时，首先思考：”能否通过某种变换将新输入映射到模型已知的输入空间？”</p>
+<h3 id="PI-的核心权衡：位置分辨率-vs-上下文范围"><a href="#PI-的核心权衡：位置分辨率-vs-上下文范围" class="headerlink" title="PI 的核心权衡：位置分辨率 vs 上下文范围"></a>PI 的核心权衡：位置分辨率 vs 上下文范围</h3><p>PI 不是免费的午餐——它的成本是<strong>位置分辨率</strong>：</p>
+<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs livecodeserver">原始 <span class="hljs-number">2</span>K: 位置分辨率为 <span class="hljs-number">1</span> (位置 <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, ..., <span class="hljs-number">2047</span>)<br>          相邻 <span class="hljs-keyword">token</span> 的旋转角度差 = <span class="hljs-number">1</span> × θ<br><br><span class="hljs-literal">PI</span> → <span class="hljs-number">32</span>K (s=<span class="hljs-number">1</span>/<span class="hljs-number">16</span>):<br>  位置分辨率为 <span class="hljs-number">0.0625</span> (位置 <span class="hljs-number">0</span>, <span class="hljs-number">0.0625</span>, <span class="hljs-number">0.125</span>, ..., <span class="hljs-number">2047</span>)<br>  相邻 <span class="hljs-keyword">token</span> 的旋转角度差 = <span class="hljs-number">0.0625</span> × θ<br><br>  问题: 两个相邻 <span class="hljs-keyword">token</span> 的旋转角度差缩小了 <span class="hljs-number">16</span> 倍<br>  → 模型更难区分<span class="hljs-string">&quot;位置 1 和位置 2&quot;</span>的区别<br>  → 这就是为什么 &gt;<span class="hljs-number">16</span>x 扩展需要微调<br></code></pre></td></tr></table></figure>
+
+<p><strong>为什么&gt;16x困难</strong>：在128K扩展（64x）中，相邻token的旋转角度差变为0.0156×θ。这意味着两个token之间的旋转角度差接近于零——模型几乎无法区分”相邻token”和”同一token”。注意力机制依赖位置差异来确定”哪些token应该在注意力中互相看到”——如果位置差异过小，模型无法有效聚焦，导致注意力权重接近均匀分布。</p>
+<p><strong>微调的作用</strong>：让模型适应”更低分辨率的位置信息”——模型学会了在更密集的位置编码空间中推理，补偿了分辨率损失。</p>
+<h3 id="PI-的优雅之处"><a href="#PI-的优雅之处" class="headerlink" title="PI 的优雅之处"></a>PI 的优雅之处</h3><p>PI 是我认为最优雅的 AI 论文之一。它的优雅体现在：</p>
+<ol>
+<li><strong>一行代码</strong>的核心改动（<code>pos * s</code> 替代 <code>pos</code>）</li>
+<li><strong>零架构修改</strong>——不需要改变模型结构、不需要新的位置编码</li>
+<li><strong>理论上有扎实的数学基础</strong>（RoPE 的相对位置性质保证 PI 下的注意力行为是合理的）</li>
+<li><strong>工程上极其实用</strong>——1000 步微调即可适应 16 倍扩展</li>
+</ol>
+<p>PI 是”简单即美”的最佳示范——后来的 NTK-aware、YaRN、LongRoPE 等方法都是对 PI 核心思想的改进和扩展，而不是替代。</p>
+<h3 id="不同频率维度对PI的响应分析"><a href="#不同频率维度对PI的响应分析" class="headerlink" title="不同频率维度对PI的响应分析"></a>不同频率维度对PI的响应分析</h3><p>RoPE使用多频率维度：θ_i &#x3D; 10000^{-2i&#x2F;d}，形成从高频到低频的连续谱。PI对每个频率维度施加同样的缩放因子s——但不同频率维度对缩放的敏感度不同。</p>
+<table>
+<thead>
+<tr>
+<th>频率范围</th>
+<th>θ值范围(LLaMA dim&#x3D;128)</th>
+<th>PI后相邻位置角差</th>
+<th>敏感度</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>高频 (i&#x3D;0-21)</td>
+<td>1.0 ~ 0.105</td>
+<td>0.0625 ~ 0.0066</td>
+<td>极高</td>
+<td>短距离信息最受影响</td>
+</tr>
+<tr>
+<td>中频 (i&#x3D;22-42)</td>
+<td>0.105 ~ 0.011</td>
+<td>0.0066 ~ 0.0007</td>
+<td>中等</td>
+<td>中等距离信息</td>
+</tr>
+<tr>
+<td>低频 (i&#x3D;43-63)</td>
+<td>0.011 ~ 0.001</td>
+<td>0.0007 ~ 0.00006</td>
+<td>低</td>
+<td>长距离信息几乎不受影响</td>
+</tr>
+</tbody></table>
+<p>原因：高频维度原本的角差很大（相邻token旋转约1弧度），PI后变为0.0625弧度——变化巨大。低频维度原本的角差很小（0.001弧度），PI后变为0.00006弧度——本来就很小，变化比例虽然相同但绝对变化可忽略。</p>
+<p>这就解释了后续工作NTK-aware Scaling的核心动机——对不同频率维度使用不同的缩放因子（高频少压缩，低频多压缩），而非PI的均匀缩放。</p>
+<hr>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>位置分辨率损失</strong>：将 32K 位置压缩到 2K 范围意味着相邻位置的”距离”缩小了 16 倍——模型对位置的区分能力下降。虽然微调可以补偿，但存在理论上限。</p>
+</li>
+<li><p><strong>线性假设的局限</strong>：假设位置压缩应该是均匀的（所有位置使用相同的缩放因子）——但 LongRoPE 证明不同频率维度需要不同的缩放。PI 的均匀缩放在高频维度上”压缩不足”，在低频维度上”压缩过度”。</p>
+</li>
+<li><p><strong>&gt;16 倍扩展的困难</strong>：PI 在 2K→32K (16x) 范围内有效，但 2K→64K (32x) 时分辨率损失过大，即使微调也难以完全恢复。这与 PI 的线性假设在极限下的失效直接相关。</p>
+</li>
+<li><p><strong>不解决计算效率</strong>：PI 仅解决了”让模型在长序列上表现良好”，但不解决 O(N²) 的注意力计算成本。32K 上下文的推理仍然比 2K 慢约 16²&#x2F;2² &#x3D; 64 倍（考虑因果掩码减少了约一半）。</p>
+</li>
+<li><p><strong>微调数据的必要性</strong>：超过 4 倍的外推需要微调——而微调需要对应长度的训练数据。32K 长度的自然语言数据虽然不如 2M 级别稀缺，但仍然不如 2K-4K 级别丰富。</p>
+</li>
+<li><p><strong>只适用于 RoPE</strong>：PI 的数学基础依赖 RoPE 的相对位置性质。对于 Sinusoidal 编码、ALiBi、或可学习嵌入，需要不同的扩展策略。</p>
+</li>
+</ol>
+<h3 id="各扩展倍数的失败模式"><a href="#各扩展倍数的失败模式" class="headerlink" title="各扩展倍数的失败模式"></a>各扩展倍数的失败模式</h3><table>
+<thead>
+<tr>
+<th>扩展倍数</th>
+<th>主要失败模式</th>
+<th>是否可微调恢复</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2x (2K→4K)</td>
+<td>极轻微困惑度上升</td>
+<td>不需要微调</td>
+</tr>
+<tr>
+<td>4x (2K→8K)</td>
+<td>局部注意力略微模糊</td>
+<td>轻微微调即可 &gt;95%恢复</td>
+</tr>
+<tr>
+<td>8x (2K→16K)</td>
+<td>“近距离token”区分力下降</td>
+<td>500步微调可恢复</td>
+</tr>
+<tr>
+<td>16x (2K→32K)</td>
+<td>位置分辨率严重损失</td>
+<td>1000步微调可恢复</td>
+</tr>
+<tr>
+<td>32x (2K→64K)</td>
+<td>注意力接近均匀分布</td>
+<td>微调可部分恢复(~70%)</td>
+</tr>
+<tr>
+<td>64x (2K→128K)</td>
+<td>注意力完全均匀，模型丧失位置概念</td>
+<td>微调无法完全恢复</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="洞见-1：分布内优于分布外——将外推转化为内插"><a href="#洞见-1：分布内优于分布外——将外推转化为内插" class="headerlink" title="洞见 1：分布内优于分布外——将外推转化为内插"></a>洞见 1：分布内优于分布外——将外推转化为内插</h3><p><strong>核心思想</strong>：PI 最深刻的洞察不是”线性插值”这个数学工具——而是”将分布外问题转化为分布内问题”的思维范式。不要强迫模型去外推——而是巧妙地重新定义问题使其成为内插。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>面对模型的分布外问题时，首先思考：能否通过某种输入变换将问题”压缩”到模型的已知空间？</li>
+<li>这种”变换 + 微调适应”的模式比”强制外推”更稳定、更可预测</li>
+<li>在其他场景中的类似思维：图像超分辨率（先下采样再上采样）、域适应（先映射到已知域）、数据增强（变换后保持分布）</li>
+</ul>
+<h3 id="洞见-2：极简方案往往是最优方案"><a href="#洞见-2：极简方案往往是最优方案" class="headerlink" title="洞见 2：极简方案往往是最优方案"></a>洞见 2：极简方案往往是最优方案</h3><p><strong>核心思想</strong>：PI 仅修改了一行代码（位置索引乘以缩放因子）——但它的效果超越了当时许多复杂的方法。在 AI 系统设计中，最简单的方案如果理论正确，往往也是最鲁棒的。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>在提出解决方案时，从最简版本开始——不要先入为主地认为”复杂 &#x3D; 更好”</li>
+<li>如果最简方案背后有扎实的理论基础（如 PI 对 RoPE 相对位置性质的利用），它可能比更复杂的经验方法更强</li>
+<li>奥卡姆剃刀在 AI 系统中同样适用：简单方案容易调试、容易扩展、容易理解</li>
+</ul>
+<h3 id="洞见-3：微调是强大的适配器"><a href="#洞见-3：微调是强大的适配器" class="headerlink" title="洞见 3：微调是强大的适配器"></a>洞见 3：微调是强大的适配器</h3><p><strong>核心思想</strong>：PI 将位置分布压缩了 16 倍——这是对模型来说巨大的分布变化。但仅 1000 步微调就能让模型适应这个变化。微调的”适应效率”远超预期。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>在进行分布变化时，不要假设”需要与原始训练同等规模的重新训练”——微调少量步数往往足够</li>
+<li>使用较小的学习率（原始训练的 1&#x2F;5 到 1&#x2F;10）进行适应性微调</li>
+<li>1000 步是一个经验性的”魔法数字”——在许多领域适应任务中约 500-2000 步微调足够</li>
+</ul>
+<h3 id="洞见-4：理论保证是工程方案的护身符"><a href="#洞见-4：理论保证是工程方案的护身符" class="headerlink" title="洞见 4：理论保证是工程方案的护身符"></a>洞见 4：理论保证是工程方案的护身符</h3><p><strong>核心思想</strong>：PI 的成功根植于 RoPE 的相对位置数学性质——$\langle f_q(x_m,m), f_k(x_n,n) \rangle &#x3D; g(m-n)$。这个理论保证使得 PI 不是”猜”，而是”知道”线性缩放会保持注意力的一致性。</p>
+<hr>
+<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>核心原理</th>
+<th>最大无微调外推</th>
+<th>最大有微调外推</th>
+<th>复杂度</th>
+<th>位置分辨率的处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>直接外推</td>
+<td>无处理</td>
+<td>0x</td>
+<td>0x</td>
+<td>最低</td>
+<td>无损失</td>
+</tr>
+<tr>
+<td><strong>PI</strong></td>
+<td><strong>线性降采样</strong></td>
+<td><strong>4x</strong></td>
+<td><strong>16x</strong></td>
+<td><strong>极低</strong></td>
+<td><strong>均匀损失</strong></td>
+</tr>
+<tr>
+<td>NTK-aware</td>
+<td>调整 RoPE 基频</td>
+<td>~4x</td>
+<td>~16x</td>
+<td>低</td>
+<td>不同程度的损失</td>
+</tr>
+<tr>
+<td>YaRN</td>
+<td>PI + 温度调节</td>
+<td>~4x</td>
+<td>~128x</td>
+<td>中</td>
+<td>温度补偿</td>
+</tr>
+<tr>
+<td>LongRoPE</td>
+<td>非均匀 + 进化搜索</td>
+<td>~4x</td>
+<td>512x+</td>
+<td>高</td>
+<td>智能分配</td>
+</tr>
+</tbody></table>
+<h3 id="PI-对后续工作的影响"><a href="#PI-对后续工作的影响" class="headerlink" title="PI 对后续工作的影响"></a>PI 对后续工作的影响</h3><p>PI 是 RoPE 扩展研究的”种子论文”——几乎所有后续的 RoPE 扩展工作都建立在其”内插而非外推”的核心思想的基座上：</p>
+<ul>
+<li><strong>NTK-aware</strong>：改变插值方式（不直接缩放位置，而是调整 RoPE 基频来隐式实现插值）</li>
+<li><strong>YaRN</strong>：在 PI 基础上加入注意力温度的调整，改善插值后的注意力熵</li>
+<li><strong>LongRoPE</strong>：将 PI 的均匀插值推广为非均匀插值 + 进化搜索</li>
+<li><strong>LongLoRA</strong>：虽然在方法上完全不同（S²-Attn 而非位置编码），但在目标上是 PI 的延续（低成本扩展上下文）</li>
+</ul>
+<hr>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Position Interpolation 是我认为最”干净”的 AI 论文之一。它的核心贡献可以浓缩为一句话：”把新位置线性压缩到旧位置范围内”。但正是这个极其简单的想法，奠定了此后几乎所有 RoPE 上下文扩展工作的基础。</p>
+<p>PI 之所以如此有效，是因为它触达了一个深层问题：<strong>AI 系统的泛化能力边界在哪里？</strong> PI 的回答是：泛化的边界在”你能把新问题转化为你已知问题的程度”。这种”转化问题空间”的思维比任何具体的插值技巧都更重要。</p>
+<p>从今天的视角回顾，PI 的局限性（均匀缩放、&gt;16x 困难）已经被后续工作解决。但它的核心洞察——内插 &gt; 外推——仍然是 AI 系统设计的永恒原则。</p>
+<hr>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;chen2023position,<br>  title=&#123;Extending Context Window of Large Language Models via Positional Interpolation&#125;,<br>  author=&#123;Chen, Shouyuan and Wong, Sherman and Chen, Liangjian and Tian, Yuandong&#125;,<br>  journal=&#123;arXiv preprint arXiv:2306.15595&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;su2021roformer,<br>  title=&#123;RoFormer: Enhanced Transformer with Rotary Position Embedding&#125;,<br>  author=&#123;Su, Jianlin and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2104.09864&#125;,<br>  year=&#123;2021&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87/" class="category-chain-item">长上下文</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-llm/" class="print-no-link">#papers/llm</a>
+      
+        <a href="/tags/papers-long-context/" class="print-no-link">#papers/long-context</a>
+      
+        <a href="/tags/papers-positional-encoding/" class="print-no-link">#papers/positional-encoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Extending Context Window of Large Language Models via Positional Interpolation</div>
+      <div>https://w2ongq6.github.io/2023/06/30/inference/note/PositionInterpolation_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年6月30日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/07/04/aigc/note/SDXL_note/" title="SDXL: Improving Latent Diffusion Models for High-Resolution Image Synthesis">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SDXL: Improving Latent Diffusion Models for High-Resolution Image Synthesis</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/06/28/inference/note/H2O_note/" title="H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models">
+                        <span class="hidden-mobile">H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

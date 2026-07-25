@@ -1,0 +1,1317 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models核心信息 作者: Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, Song Han 发表: ICML 2023 arXiv: 2211.1043">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/11/19/inference/note/SmoothQuant_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models核心信息 作者: Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, Song Han 发表: ICML 2023 arXiv: 2211.1043">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-11-19T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.274Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="activation-quantization">
+<meta property="article:tag" content="outlier-smoothing">
+<meta property="article:tag" content="per-channel-scaling">
+<meta property="article:tag" content="post-training-quantization">
+<meta property="article:tag" content="quantization">
+<meta property="article:tag" content="smoothquant">
+<meta property="article:tag" content="w8a8">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-19 08:00" pubdate>
+          2022年11月19日 早上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          83 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="SmoothQuant-Accurate-and-Efficient-Post-Training-Quantization-for-Large-Language-Models"><a href="#SmoothQuant-Accurate-and-Efficient-Post-Training-Quantization-for-Large-Language-Models" class="headerlink" title="SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models"></a>SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>作者</strong>: Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, Song Han</li>
+<li><strong>发表</strong>: ICML 2023</li>
+<li><strong>arXiv</strong>: 2211.10438</li>
+<li><strong>代码</strong>: <a target="_blank" rel="noopener" href="https://github.com/mit-han-lab/smoothquant">mit-han-lab&#x2F;smoothquant</a></li>
+<li><strong>关键词</strong>: W8A8, Activation Quantization, Outlier Smoothing, Per-Channel Scaling, PTQ, INT8</li>
+</ul>
+<p>SmoothQuant 是 W8A8（权重和激活均为 8-bit）量化领域的基础性工作。它解决了一个核心问题：LLM 激活值中存在系统性的异常值（outlier），这些异常值集中出现在特定通道上，幅度可达其他通道的 100 倍以上，使得直接对激活值做 INT8 量化会导致巨大精度损失。SmoothQuant 的核心思想是将量化难度从激活值”平滑迁移”到权重上：通过数学等价的 per-channel 缩放变换 Y &#x3D; (X·diag(s)) · (diag(s)^{-1}·W^T)^T，压缩激活值的异常值，同时相应放大权重的对应通道。由于权重通常分布更均匀且易于量化，这种迁移在不损失模型精度的前提下，使得激活值也能被顺利量化到 INT8。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>大语言模型（LLM）在各种任务上展现出卓越的性能。然而，由于巨大的模型尺寸，LLM 的推理成本极高，需要大量 GPU 和内存。量化是缓解这一问题的一种很有前景的方法，但现有方法无法在 LLM 中保持精度，尤其是当激活值难以量化时。我们发现激活值中的系统异常值是 LLM 量化的关键瓶颈——它们使激活值量化比权重量化困难得多。我们提出了 SmoothQuant，一种无需训练、精度保持的量化方法，确保 LLM 进行 8 比特权重和 8 比特激活值（W8A8）量化。SmoothQuant 通过数学等价的变换将量化难度从激活值平滑迁移到权重上。实验表明，SmoothQuant 在各种 LLM 上均能保持精度，包括 OPT-175B、BLOOM-176B 和 GLM-130B。SmoothQuant 实现了比 FP16 推理高达 1.56 倍的加速和 2 倍的内存节省。我们的工作首次证明，大语言模型可以进行 W8A8 量化而不会降低性能，为 LLM 的高效部署铺平了道路。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>系统性异常值的发现和量化</strong>: 首次系统地识别和量化了 LLM 激活值中的异常值问题，证明异常值集中在特定通道（而非随机出现），且主要出现在 LayerNorm 之后。</p>
+</li>
+<li><p><strong>平滑迁移变换（Smooth Transformation）</strong>: 核心创新——通过数学等价的 per-channel 缩放，将量化难度从激活值平滑转移到权重上：激活被压缩 → 异常值减小 → 易于量化；权重被放大 → 但权重本来分布均匀 → 量化质量几乎不受影响。</p>
+</li>
+<li><p><strong>自动迁移强度搜索</strong>: 提出基于激活值和权重的统计特性自动确定 per-channel 平滑因子 s 的方法，通过一个简洁的公式 s &#x3D; max(|X_j|)^α &#x2F; max(|W_j|)^{1-α} 实现，只需一个超参数 α。</p>
+</li>
+<li><p><strong>通用性和硬件友好性</strong>: 方法不需要任何重训练，适用于所有 Transformer 架构，且完全兼容标准 INT8 GEMM kernel（如 TensorRT、FasterTransformer），可直接在现有推理框架上部署。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>SmoothQuant 通过数学等价的 per-channel 缩放变换将激活值异常值的量化难度平滑迁移到权重上，首次实现了 LLM 的 W8A8 量化且精度无损，推理加速 1.5x、内存减半。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p>LLM 推理面临严重的内存带宽和计算瓶颈。权重量化（如 GPTQ）可以减小模型存储，但激活值仍需 FP16 计算，无法利用 INT8 矩阵乘法单元（如 NVIDIA Tensor Core 的 INT8 模式）的 2 倍吞吐量增益。激活值量化的核心障碍在于：LLM 的激活值中存在大量异常值（某些值可达数百甚至数千，而大部分值在 [-1, 1] 之间），直接量化会导致严重的 clipping 误差或舍入误差。核心问题：<strong>能否在不重新训练的前提下，同时将 LLM 的权重和激活值都量化到 INT8，且精度损失可忽略？</strong></p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="任务定义"><a href="#任务定义" class="headerlink" title="任务定义"></a>任务定义</h3><p>给定预训练的 Transformer 模型，将所有权重矩阵 W 和所有激活值张量 X 从 FP16 量化到 INT8，使得量化后的模型在各项任务上的精度与 FP16 基线相比下降最小。</p>
+<p>核心量化函数：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">X_int8</span> = clamp(round(X / Δ_x), -<span class="hljs-number">128</span>, <span class="hljs-number">127</span>)<br><span class="hljs-attribute">W_int8</span> = clamp(round(W / Δ_w), -<span class="hljs-number">128</span>, <span class="hljs-number">127</span>)<br></code></pre></td></tr></table></figure>
+<p>其中 Δ_x, Δ_w 分别是激活和权重的 per-tensor 或 per-channel 量化步长。</p>
+<h3 id="校准数据"><a href="#校准数据" class="headerlink" title="校准数据"></a>校准数据</h3><ul>
+<li>从 Pile 验证集中随机采样约 512 个序列，每个 512 tokens</li>
+</ul>
+<h3 id="评估数据和任务"><a href="#评估数据和任务" class="headerlink" title="评估数据和任务"></a>评估数据和任务</h3><ul>
+<li><strong>语言建模</strong>: WikiText-2, PTB, C4</li>
+<li><strong>零样本任务</strong>: LAMBADA, HellaSwag, PIQA, WinoGrande, COPA, RACE</li>
+<li><strong>推理速度</strong>: 在 A100 GPU 上使用 FasterTransformer 实测</li>
+</ul>
+<h2 id="方法主线-机制流程"><a href="#方法主线-机制流程" class="headerlink" title="方法主线 + 机制流程"></a>方法主线 + 机制流程</h2><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-问题分析：激活值异常值"><a href="#1-问题分析：激活值异常值" class="headerlink" title="1. 问题分析：激活值异常值"></a>1. 问题分析：激活值异常值</h3><p>SmoothQuant 首先对 LLM 各层的激活值分布进行了细致分析，发现：</p>
+<p><strong>系统性异常值的三个特征</strong>:</p>
+<ol>
+<li><strong>通道集中性</strong>: 异常值集中在少数固定通道上（通常 0.1% 的通道包含绝大多数异常值）。这些通道在所有 token 上都持续表现异常大的幅度。</li>
+<li><strong>位置规律性</strong>: 异常值主要出现在 LayerNorm&#x2F;RMSNorm 之后、线性变换之前的激活值中。这是因为 LayerNorm 输出的分布具有特定的通道偏置。</li>
+<li><strong>规模相关性</strong>: 随着模型规模增大（6.7B → 175B），异常值问题变得更加严重，峰值激活值可能达到 1000+。</li>
+</ol>
+<p>这一分析解释了一个关键现象：<strong>为什么权重量化相对容易但激活量化极其困难</strong>。权重分布通常近似高斯分布（均值 0、标准差适中），容易用对称 INT8 量化表示。而激活值分布具有长尾特性，极端值迫使量化步长 Δ_x 过大，导致大多数正常值的量化精度极低。</p>
+<h3 id="2-核心方法：平滑迁移（Smooth）"><a href="#2-核心方法：平滑迁移（Smooth）" class="headerlink" title="2. 核心方法：平滑迁移（Smooth）"></a>2. 核心方法：平滑迁移（Smooth）</h3><p>SmoothQuant 的核心变换基于矩阵乘法的等价重写：</p>
+<p>对于线性层 Y &#x3D; X·W^T（X: 激活值, W: 权重矩阵）：</p>
+<figure class="highlight tp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs tp"><span class="hljs-keyword">Y</span> = <span class="hljs-keyword">X</span> · <span class="hljs-keyword">W</span>^T<br>  = (<span class="hljs-keyword">X</span> · diag(s)^&#123;<span class="hljs-number">-1</span>&#125;) · (diag(s) · <span class="hljs-keyword">W</span>^T)<br>  = <span class="hljs-keyword">X</span>̂ · Ŵ^T<br></code></pre></td></tr></table></figure>
+
+<p>其中 s 是 per-channel 平滑因子向量，维度等于中间特征维度（通常是 d_model 或 d_ff）。</p>
+<p><strong>变换的效果</strong>:</p>
+<ul>
+<li>激活值 X 被 per-channel 缩放：X̂_j &#x3D; X_j &#x2F; s_j（压缩异常值通道）</li>
+<li>权重 W 被 per-channel 缩放：Ŵ_j &#x3D; W_j · s_j（放大对应通道）</li>
+</ul>
+<p>由于权重分布通常对称且均匀，被放大后仍然易于量化。而激活值中的异常值通道被压缩后，其幅度回到正常范围，INT8 量化变得可行。</p>
+<h3 id="3-迁移强度（Migration-Strength）"><a href="#3-迁移强度（Migration-Strength）" class="headerlink" title="3. 迁移强度（Migration Strength）"></a>3. 迁移强度（Migration Strength）</h3><p>平滑因子的计算是方法的核心。SmoothQuant 提出了基于统计的自动方法：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs coq">s_j = max(|<span class="hljs-type">X_j</span>|<span class="hljs-type">)^α / max</span>(|<span class="hljs-type">W_j</span>|<span class="hljs-type">)^&#123;1</span>-α&#125;<br></code></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>max(|X_j|): 通道 j 激活值的最大绝对值（衡量该通道的异常值程度）</li>
+<li>max(|W_j|): 通道 j 权重的最大绝对值（衡量该通道对权重放大的容忍度）</li>
+<li>α ∈ [0, 1]: 迁移强度超参数</li>
+</ul>
+<p><strong>直觉</strong>:</p>
+<ul>
+<li>α &#x3D; 1: 全部迁移到权重侧（激活值完全均匀，但权重被极端放大）</li>
+<li>α &#x3D; 0: 全部保留在激活侧（等效于无变换）</li>
+<li>α &#x3D; 0.5: 平衡迁移（实践中效果最好）</li>
+</ul>
+<p>通过搜索 α 在 {0.3, 0.4, 0.5, 0.6, 0.7} 中找到最优值。大多数实验使用 α &#x3D; 0.5。</p>
+<h3 id="4-全栈实现：SmoothQuant-量化流程"><a href="#4-全栈实现：SmoothQuant-量化流程" class="headerlink" title="4. 全栈实现：SmoothQuant 量化流程"></a>4. 全栈实现：SmoothQuant 量化流程</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">输入</span><span class="hljs-punctuation">:</span> <span class="hljs-string">预训练的 Transformer 模型</span><br><span class="hljs-attribute">输出</span><span class="hljs-punctuation">:</span> <span class="hljs-string">W8A8 量化模型</span><br><br><span class="hljs-attribute">对于每个 Transformer 层</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">1. 校准阶段</span><span class="hljs-punctuation">:</span><br>     <span class="hljs-attribute">a. 对校准数据进行前向传播</span><br><span class="hljs-attribute">     b. 收集每个线性层输入的激活值统计</span><span class="hljs-punctuation">:</span> <span class="hljs-string">max(|X_j|)</span><br>     <span class="hljs-attribute">c. 计算平滑因子 s_j = max(|X_j|)^α / max(|W_j|)^&#123;1-α&#125;</span><br><span class="hljs-attribute">  </span><br><span class="hljs-attribute">  2. 变换阶段</span><span class="hljs-punctuation">:</span><br>     <span class="hljs-attribute">a. 对每个线性层的输入激活</span><span class="hljs-punctuation">:</span> <span class="hljs-string">X̂ = X · diag(s)^&#123;-1&#125;</span><br>     <span class="hljs-attribute">b. 对每个线性层的权重</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Ŵ = W · diag(s)</span><br>     <span class="hljs-attribute">c. 将 diag(s) 吸收到前一个 LayerNorm 中（如果存在）</span><br><span class="hljs-attribute">  </span><br><span class="hljs-attribute">  3. 量化阶段</span><span class="hljs-punctuation">:</span><br>     <span class="hljs-attribute">a. 权重</span><span class="hljs-punctuation">:</span> <span class="hljs-string">INT8 per-channel 量化</span><br>     <span class="hljs-attribute">b. 激活</span><span class="hljs-punctuation">:</span> <span class="hljs-string">INT8 per-token 量化（使用静态或动态范围）</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>关键实现细节</strong>:</p>
+<ul>
+<li>SmoothQuant 将缩放逆矩阵 diag(s)^{-1} 融合到前一个 LayerNorm&#x2F;RMSNorm 的权重和偏置中，从而在推理时完全不增加额外计算</li>
+<li>对于注意力层的 QKV 投影，SmoothQuant 使用共享的平滑因子</li>
+<li>量化后的矩阵乘法使用标准 INT8 GEMM kernel，无需自定义算子</li>
+</ul>
+<h3 id="5-与-INT8-GEMM-硬件的兼容性"><a href="#5-与-INT8-GEMM-硬件的兼容性" class="headerlink" title="5. 与 INT8 GEMM 硬件的兼容性"></a>5. 与 INT8 GEMM 硬件的兼容性</h3><p>SmoothQuant 的一个重要设计考量是硬件兼容性。W8A8 量化利用 NVIDIA GPU Tensor Core 的 INT8 模式，该模式提供 FP16 2 倍的计算吞吐量。SmoothQuant 的 W8A8 方案完全符合标准 INT8 GEMM 接口（per-channel 权重量化 + per-token 激活量化），可直接在以下推理框架上运行：</p>
+<ul>
+<li>NVIDIA FasterTransformer</li>
+<li>NVIDIA TensorRT</li>
+<li>Intel Sapphire Rapids AMX</li>
+<li>Apple Neural Engine</li>
+</ul>
+<h2 id="关键结果-表格"><a href="#关键结果-表格" class="headerlink" title="关键结果 + 表格"></a>关键结果 + 表格</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="语言建模困惑度（WikiText-2）"><a href="#语言建模困惑度（WikiText-2）" class="headerlink" title="语言建模困惑度（WikiText-2）"></a>语言建模困惑度（WikiText-2）</h3><blockquote>
+<p>[!figure] Figure 4: 消融实验&#x2F;详细分析图<br>建议位置：关键结果<br>放置原因：展示各组件对最终性能的贡献（消融实验）、参数敏感性分析或速度-质量权衡曲线<br>当前状态：图表占位</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">FP16</th>
+<th align="center">W8A8 (RTN)</th>
+<th align="center">W8A8 (SmoothQuant)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-6.7B</td>
+<td align="center">10.86</td>
+<td align="center">27.41</td>
+<td align="center"><strong>10.96</strong></td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td align="center">10.13</td>
+<td align="center">31.20</td>
+<td align="center"><strong>10.20</strong></td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td align="center">9.56</td>
+<td align="center">20.54</td>
+<td align="center"><strong>9.64</strong></td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td align="center">9.34</td>
+<td align="center">16.73</td>
+<td align="center"><strong>9.43</strong></td>
+</tr>
+<tr>
+<td>OPT-175B</td>
+<td align="center">8.34</td>
+<td align="center">11.35</td>
+<td align="center"><strong>8.44</strong></td>
+</tr>
+<tr>
+<td>BLOOM-7.1B</td>
+<td align="center">11.37</td>
+<td align="center">23.87</td>
+<td align="center"><strong>11.52</strong></td>
+</tr>
+<tr>
+<td>BLOOM-176B</td>
+<td align="center">8.10</td>
+<td align="center">13.84</td>
+<td align="center"><strong>8.22</strong></td>
+</tr>
+<tr>
+<td>GLM-130B</td>
+<td align="center">9.63</td>
+<td align="center">14.82</td>
+<td align="center"><strong>9.76</strong></td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td align="center">5.68</td>
+<td align="center">8.26</td>
+<td align="center"><strong>5.75</strong></td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td align="center">5.09</td>
+<td align="center">7.15</td>
+<td align="center"><strong>5.15</strong></td>
+</tr>
+<tr>
+<td>LLaMA-30B</td>
+<td align="center">4.10</td>
+<td align="center">5.54</td>
+<td align="center"><strong>4.16</strong></td>
+</tr>
+<tr>
+<td>LLaMA-65B</td>
+<td align="center">3.56</td>
+<td align="center">4.68</td>
+<td align="center"><strong>3.62</strong></td>
+</tr>
+</tbody></table>
+</blockquote>
+<h3 id="零样本任务准确率"><a href="#零样本任务准确率" class="headerlink" title="零样本任务准确率"></a>零样本任务准确率</h3><table>
+<thead>
+<tr>
+<th>Task</th>
+<th align="center">OPT-13B FP16</th>
+<th align="center">OPT-13B SQ</th>
+<th align="center">OPT-66B FP16</th>
+<th align="center">OPT-66B SQ</th>
+<th align="center">LLaMA-7B FP16</th>
+<th align="center">LLaMA-7B SQ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LAMBADA</td>
+<td align="center">72.4</td>
+<td align="center">71.9</td>
+<td align="center">74.9</td>
+<td align="center">74.5</td>
+<td align="center">73.2</td>
+<td align="center">72.8</td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td align="center">56.6</td>
+<td align="center">56.2</td>
+<td align="center">66.1</td>
+<td align="center">65.7</td>
+<td align="center">57.2</td>
+<td align="center">56.9</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td align="center">77.3</td>
+<td align="center">77.0</td>
+<td align="center">80.6</td>
+<td align="center">80.3</td>
+<td align="center">78.9</td>
+<td align="center">78.5</td>
+</tr>
+<tr>
+<td>WinoGrande</td>
+<td align="center">67.3</td>
+<td align="center">67.1</td>
+<td align="center">73.0</td>
+<td align="center">72.7</td>
+<td align="center">68.4</td>
+<td align="center">68.1</td>
+</tr>
+<tr>
+<td>RACE (Acc)</td>
+<td align="center">39.2</td>
+<td align="center">38.8</td>
+<td align="center">43.1</td>
+<td align="center">42.8</td>
+<td align="center">37.5</td>
+<td align="center">37.2</td>
+</tr>
+<tr>
+<td><strong>Average</strong></td>
+<td align="center">62.6</td>
+<td align="center">62.2</td>
+<td align="center">67.5</td>
+<td align="center">67.2</td>
+<td align="center">63.0</td>
+<td align="center">62.7</td>
+</tr>
+</tbody></table>
+<h3 id="推理加速"><a href="#推理加速" class="headerlink" title="推理加速"></a>推理加速</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Framework</th>
+<th align="center">FP16 (tok&#x2F;s)</th>
+<th align="center">SmoothQuant (tok&#x2F;s)</th>
+<th align="center">Speedup</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-6.7B</td>
+<td>FasterTransformer</td>
+<td align="center">2160</td>
+<td align="center">3290</td>
+<td align="center"><strong>1.52x</strong></td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td>FasterTransformer</td>
+<td align="center">1240</td>
+<td align="center">1880</td>
+<td align="center"><strong>1.52x</strong></td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td>FasterTransformer</td>
+<td align="center">570</td>
+<td align="center">890</td>
+<td align="center"><strong>1.56x</strong></td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td>FasterTransformer</td>
+<td align="center">270</td>
+<td align="center">420</td>
+<td align="center"><strong>1.55x</strong></td>
+</tr>
+<tr>
+<td>BLOOM-7.1B</td>
+<td>FasterTransformer</td>
+<td align="center">2080</td>
+<td align="center">3180</td>
+<td align="center"><strong>1.53x</strong></td>
+</tr>
+<tr>
+<td>BLOOM-176B</td>
+<td>FasterTransformer</td>
+<td align="center">110</td>
+<td align="center">168</td>
+<td align="center"><strong>1.53x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="内存节省"><a href="#内存节省" class="headerlink" title="内存节省"></a>内存节省</h3><p>W8A8 量化相比 FP16 推理将模型权重从 2 bytes&#x2F;param 降低到 1 byte&#x2F;param，激活值同理。在 OPT-175B 上，总显存消耗从约 350GB 降低到约 220GB，使得原本需要 5 张 A100-80GB 的模型可以在 3 张 A100-80GB 上运行。</p>
+<h3 id="消融实验-α-的影响"><a href="#消融实验-α-的影响" class="headerlink" title="消融实验: α 的影响"></a>消融实验: α 的影响</h3><table>
+<thead>
+<tr>
+<th>α</th>
+<th align="center">OPT-6.7B PPL</th>
+<th align="center">OPT-13B PPL</th>
+<th align="center">OPT-30B PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0.0 (No smoothing)</td>
+<td align="center">27.41</td>
+<td align="center">31.20</td>
+<td align="center">20.54</td>
+</tr>
+<tr>
+<td>0.3</td>
+<td align="center">11.32</td>
+<td align="center">10.74</td>
+<td align="center">10.08</td>
+</tr>
+<tr>
+<td>0.4</td>
+<td align="center">11.08</td>
+<td align="center">10.45</td>
+<td align="center">9.78</td>
+</tr>
+<tr>
+<td><strong>0.5</strong></td>
+<td align="center"><strong>10.96</strong></td>
+<td align="center"><strong>10.20</strong></td>
+<td align="center"><strong>9.64</strong></td>
+</tr>
+<tr>
+<td>0.6</td>
+<td align="center">11.05</td>
+<td align="center">10.32</td>
+<td align="center">9.71</td>
+</tr>
+<tr>
+<td>0.7</td>
+<td align="center">11.22</td>
+<td align="center">10.58</td>
+<td align="center">9.89</td>
+</tr>
+<tr>
+<td>FP16 baseline</td>
+<td align="center">10.86</td>
+<td align="center">10.13</td>
+<td align="center">9.56</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="为什么激活值会存在系统性的异常值？"><a href="#为什么激活值会存在系统性的异常值？" class="headerlink" title="为什么激活值会存在系统性的异常值？"></a>为什么激活值会存在系统性的异常值？</h3><p>SmoothQuant 对异常值的产生机制给出了有说服力的分析。在 Transformer 架构中，LayerNorm&#x2F;RMSNorm 执行均值为 0、方差为 1 的归一化，但这是全局统计。在 token 级别和通道级别的交互中，某些通道在特定输入下会产生幅度极端的输出。这源于：</p>
+<ol>
+<li><strong>embedding 的特定维度偏置</strong>: 词嵌入的某些维度天然具有更大的数值范围</li>
+<li><strong>注意力头的放大效应</strong>: 某些注意力模式会产生 concentrated attention，使部分通道的输出异常放大</li>
+<li><strong>残差连接的累积</strong>: 残差连接虽然缓解了梯度消失，但也可能累积大的激活值</li>
+</ol>
+<p>值得注意的是，这些异常值在 token 维度上具有一致性——如果一个通道的某个 token 产生异常值，该通道的所有 token 通常都会表现出较大的幅度。这种”通道级一致性”解释了为什么 per-channel 平滑策略是可行的。</p>
+<h3 id="平滑变换的双向性"><a href="#平滑变换的双向性" class="headerlink" title="平滑变换的双向性"></a>平滑变换的双向性</h3><p>SmoothQuant 的 “平滑” 不仅仅是单向的。通过适当选择 s_j，可以实现：</p>
+<ul>
+<li><strong>激活侧平滑</strong>: 异常值压缩 → 量化范围缩小 → 量化精度提高</li>
+<li><strong>权重侧放大</strong>: 对应通道放大 → 但这些通道的权重值也在可接受范围内</li>
+</ul>
+<p>关键是找到一个平衡点，使得两边的量化质量都不受影响。这体现了 SmoothQuant 最优雅的特性：<strong>利用权重和激活值之间的不对称敏感性，在两者之间重新分配量化难度</strong>。</p>
+<h3 id="与-LLM-int8-的对比"><a href="#与-LLM-int8-的对比" class="headerlink" title="与 LLM.int8() 的对比"></a>与 LLM.int8() 的对比</h3><p>LLM.int8() 是另一个重要的 INT8 量化方案，采用混合精度策略：异常值通道用 FP16 计算，其余通道用 INT8 计算。SmoothQuant 的优势在于：</p>
+<ul>
+<li><strong>纯 INT8 计算</strong>: 不需要混合精度逻辑，硬件实现更简单</li>
+<li><strong>无动态异常值检测</strong>: LLM.int8() 需要在运行时识别异常值，增加开销</li>
+<li><strong>更好的硬件亲和性</strong>: 标准的 W8A8 GEMM 接口</li>
+</ul>
+<h3 id="将-s-j-吸收到-LayerNorm-的技巧"><a href="#将-s-j-吸收到-LayerNorm-的技巧" class="headerlink" title="将 s_j 吸收到 LayerNorm 的技巧"></a>将 s_j 吸收到 LayerNorm 的技巧</h3><p>这是 SmoothQuant 工程实现中最精妙的部分。将 diag(s)^{-1} 吸收到前一个 LayerNorm 的权重中，意味着推理时完全不需要额外的缩放操作。具体来说，如果 LayerNorm 的计算是：</p>
+<figure class="highlight gml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs gml"><span class="hljs-variable language_">y</span> = (<span class="hljs-variable language_">x</span> - μ)/σ · γ + β<br></code></pre></td></tr></table></figure>
+
+<p>吸收后变为：</p>
+<figure class="highlight llvm"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs llvm">y&#x27; <span class="hljs-operator">=</span> y / s <span class="hljs-operator">=</span> ((<span class="hljs-keyword">x</span> - μ)/σ · γ + β) / s <span class="hljs-operator">=</span> (<span class="hljs-keyword">x</span> - μ)/σ · (γ/s) + (β/s)<br></code></pre></td></tr></table></figure>
+
+<p>只需修改 γ 和 β，不需要额外的 kernel。这个技巧使得 SmoothQuant 的推理几乎零开销。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="W8A8-量化方法对比"><a href="#W8A8-量化方法对比" class="headerlink" title="W8A8 量化方法对比"></a>W8A8 量化方法对比</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th align="center">权重量化</th>
+<th align="center">激活量化</th>
+<th align="center">需要训练</th>
+<th>硬件</th>
+<th align="center">精度保持</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TensorRT PTQ</td>
+<td align="center">INT8</td>
+<td align="center">INT8</td>
+<td align="center">否</td>
+<td>NVIDIA</td>
+<td align="center">中等模型→好; LLM→差</td>
+</tr>
+<tr>
+<td>LLM.int8()</td>
+<td align="center">INT8</td>
+<td align="center">混合精度</td>
+<td align="center">否</td>
+<td>通用</td>
+<td align="center">好</td>
+</tr>
+<tr>
+<td>ZeroQuant</td>
+<td align="center">INT8</td>
+<td align="center">INT8</td>
+<td align="center">是 (蒸馏)</td>
+<td>通用</td>
+<td align="center">好</td>
+</tr>
+<tr>
+<td><strong>SmoothQuant</strong></td>
+<td align="center"><strong>INT8</strong></td>
+<td align="center"><strong>INT8</strong></td>
+<td align="center"><strong>否</strong></td>
+<td><strong>通用</strong></td>
+<td align="center"><strong>好</strong></td>
+</tr>
+</tbody></table>
+<h3 id="在量化方法谱中的位置"><a href="#在量化方法谱中的位置" class="headerlink" title="在量化方法谱中的位置"></a>在量化方法谱中的位置</h3><p>SmoothQuant 处于一个独特的位置：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs scss">      权重量化                          激活+权重量化<br>  ┌──────┼──────┐              ┌─────────┼─────────┐<br> RTN   GPTQ    AWQ        LLM<span class="hljs-selector-class">.int8</span>()  SmoothQuant  ZeroQuant-V2<br>(W4)   (W4)   (W4)        (W8 + 混合)   (W8A8)     (W8A8+蒸馏)<br>                                 │<br>                           SmoothQuant ◄── 最简洁的W8A8方案<br></code></pre></td></tr></table></figure>
+
+<h3 id="与-AWQ-的同源关系"><a href="#与-AWQ-的同源关系" class="headerlink" title="与 AWQ 的同源关系"></a>与 AWQ 的同源关系</h3><p>值得注意的是，SmoothQuant 和 AWQ 来自同一研究组（MIT HAN Lab），共享一些核心洞察（如激活值决定通道重要性），但面向不同的问题：</p>
+<ul>
+<li>SmoothQuant: 将量化难度从激活迁移到权重，实现 W8A8</li>
+<li>AWQ: 保护对应大激活值的权重通道，实现 W4A16</li>
+</ul>
+<p>两者的数学变换形式几乎相同（Y &#x3D; X·S^{-1} · S·W^T vs Y &#x3D; X·S^{-1} · (S·W^T)），但方向相反——SmoothQuant 压缩激活、放大权重，AWQ 放大权重、压缩激活（但在 W4A16 场景下激活未被量化）。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>仅限于 INT8</strong>: SmoothQuant 主要聚焦 W8A8 方案，在更低比特（W4A4, W4A8）下精度可能不够。这也是 AWQ 互补存在的意义。</p>
+</li>
+<li><p><strong>per-channel 权重 per-token 激活的限制</strong>: 这种量化粒度对硬件有特定要求。虽然 NVIDIA GPU 支持，但某些边缘设备可能不支持 per-token 激活量化。</p>
+</li>
+<li><p><strong>异常值通道的极端情况</strong>: 对于异常值特别极端的模型（某些微调后的模型），即使压缩后也可能超出 INT8 范围，需要 fallback 机制。</p>
+</li>
+<li><p><strong>批处理大小的影响</strong>: Per-token 激活量化的动态量化范围受 batch size 影响，小 batch（如单 query 推理）时量化范围估计可能不准确。</p>
+</li>
+<li><p><strong>KV Cache 未量化</strong>: SmoothQuant 只量化了权重和激活值，KV Cache 仍在 FP16，对长序列推理的内存节省有限。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>量化难度的不对称迁移</strong>: 在模型压缩中，可以通过数学等价的变换，将难度从一个难以处理的组件转移到另一个更容易处理的组件。这个洞察在 SmoothQuant（激活→权重）和 AWQ（激活→权重缩放）中反复出现。</p>
+</li>
+<li><p><strong>系统性异常值的处理策略</strong>: 异常值不是随机噪声，而是具有系统性模式（集中在特定通道）。这意味着可以通过统计方法识别并专门处理，而非依赖动态检测或混合精度。</p>
+</li>
+<li><p><strong>算法-硬件协同设计</strong>: SmoothQuant 的 W8A8 方案利用了硬件 INT8 的 2x 吞吐量增益。好的量化方案不仅要考虑数学精度，还要考虑硬件亲和性。</p>
+</li>
+<li><p><strong>吸收到前序层的技巧</strong>: 将缩放因子融合到 LayerNorm 中，在不增加计算量的前提下实现等效变换。这种”零成本变换”的设计模式值得推广。</p>
+</li>
+<li><p><strong>单超参数调优</strong>: α 的自动选择机制（基于统计量）使用户可以在仅调整一个超参数的情况下完成量化配置，这是工程实用性的关键。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>SmoothQuant 是理解 LLM 量化挑战的重要论文。它最具价值的部分可能是对激活值异常值的系统分析——这不是一个在数学上显而易见的问题，但一旦被指出，就变得”显而易见”地关键。论文的 Fig 2（显示激活值中异常值的通道集中性）可能是 LLM 量化领域最有影响力的可视化之一。</p>
+<p>从技术上看，SmoothQuant 的方法出人意料地简单：它本质上就是一个数学恒等变换（在矩阵乘法中插入对角矩阵及其逆）。但这种简单的背后是对问题的深刻理解——知道在什么位置插入什么值的对角矩阵。</p>
+<p>SmoothQuant 的另一个价值是建立了 W8A8 量化的可行性。在它之前，业界普遍认为 LLM 的激活值太”脆弱”而无法量化，解决方案是在特定层使用混合精度（LLM.int8()）或避免激活量化（GPTQ）。SmoothQuant 证明，通过适当的预处理，纯 INT8 计算是完全可行的。</p>
+<p>在实际生态中，SmoothQuant 已被 NVIDIA TensorRT-LLM 原生支持，成为生产级 W8A8 推理的标准方案之一。这反映了它的硬件友好设计理念的成功。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>SmoothQuant 的平滑策略是否能推广到训练（量化感知训练 QAT），在低位宽场景（W4A4）下实现更好的初始化？</li>
+<li>异常值通道的比例是否与模型宽度和深度有可预测的关系？能否在架构设计阶段就避免过度异常值？</li>
+<li>KV Cache 能否采用类似的平滑策略进行量化？</li>
+<li>对于 MoE 架构，不同专家的激活分布差异很大，是否需要 per-expert 的平滑策略？</li>
+<li>SmoothQuant 的校准数据需求是什么？校准集大小和分布对最终精度的敏感性如何？</li>
+<li>能否将 SmoothQuant 的思想与 GPTQ 或 AWQ 结合，实现 W4A8 的高效量化？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;xiao2023smoothquant,<br>  title=&#123;SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models&#125;,<br>  author=&#123;Xiao, Guangxuan and Lin, Ji and Seznec, Mickael and Wu, Hao and Demouth, Julien and Han, Song&#125;,<br>  booktitle=&#123;International Conference on Machine Learning (ICML)&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;dettmers2022llm,<br>  title=&#123;LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale&#125;,<br>  author=&#123;Dettmers, Tim and Lewis, Mike and Belkada, Younes and Zettlemoyer, Luke&#125;,<br>  journal=&#123;Advances in Neural Information Processing Systems&#125;,<br>  volume=&#123;35&#125;,<br>  year=&#123;2022&#125;<br>&#125;<br><br>@inproceedings&#123;frantar2023gptq,<br>  title=&#123;GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers&#125;,<br>  author=&#123;Frantar, Elias and Ashkboos, Saleh and Hoefler, Torsten and Alistarh, Dan&#125;,<br>  booktitle=&#123;ICLR&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@inproceedings&#123;lin2024awq,<br>  title=&#123;AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration&#125;,<br>  author=&#123;Lin, Ji and Tang, Jiaming and Tang, Haotian and Yang, Shang and Chen, Wei-Ming and Wang, Wei-Chen and Xiao, Guangxuan and Dang, Xingyu and Gan, Chuang and Han, Song&#125;,<br>  booktitle=&#123;MLSys&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%A8%A1%E5%9E%8B%E9%87%8F%E5%8C%96/" class="category-chain-item">模型量化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/quantization/" class="print-no-link">#quantization</a>
+      
+        <a href="/tags/post-training-quantization/" class="print-no-link">#post-training-quantization</a>
+      
+        <a href="/tags/w8a8/" class="print-no-link">#w8a8</a>
+      
+        <a href="/tags/activation-quantization/" class="print-no-link">#activation-quantization</a>
+      
+        <a href="/tags/outlier-smoothing/" class="print-no-link">#outlier-smoothing</a>
+      
+        <a href="/tags/per-channel-scaling/" class="print-no-link">#per-channel-scaling</a>
+      
+        <a href="/tags/smoothquant/" class="print-no-link">#smoothquant</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models</div>
+      <div>https://w2ongq6.github.io/2022/11/19/inference/note/SmoothQuant_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年11月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/28/llm/note/What_Learning_Algorithm_is_ICL_note/" title="What Learning Algorithm is In-Context Learning? Investigations with Linear Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">What Learning Algorithm is In-Context Learning? Investigations with Linear Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/17/aigc/note/InstructPix2Pix_note/" title="InstructPix2Pix: Learning to Follow Image Editing Instructions">
+                        <span class="hidden-mobile">InstructPix2Pix: Learning to Follow Image Editing Instructions</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

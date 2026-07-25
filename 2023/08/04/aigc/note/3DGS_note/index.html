@@ -1,0 +1,1378 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="“3D Gaussian Splatting for Real-Time Radiance Field Rendering”核心信息 标题: 3D Gaussian Splatting for Real-Time Radiance Field Rendering 标题翻译: 面向实时光芒辐射场渲染的3D高斯泼溅 作者: Bernhard Kerbl, Georgios Kopanas, Thoma">
+<meta property="og:type" content="article">
+<meta property="og:title" content="3D Gaussian Splatting for Real-Time Radiance Field Rendering">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/08/04/aigc/note/3DGS_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="“3D Gaussian Splatting for Real-Time Radiance Field Rendering”核心信息 标题: 3D Gaussian Splatting for Real-Time Radiance Field Rendering 标题翻译: 面向实时光芒辐射场渲染的3D高斯泼溅 作者: Bernhard Kerbl, Georgios Kopanas, Thoma">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="article:published_time" content="2023-08-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.485Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;3d-generation">
+<meta property="article:tag" content="papers&#x2F;rendering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>3D Gaussian Splatting for Real-Time Radiance Field Rendering - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="3D Gaussian Splatting for Real-Time Radiance Field Rendering"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-08-04 00:00" pubdate>
+          2023年8月4日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          132 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">3D Gaussian Splatting for Real-Time Radiance Field Rendering</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="“3D-Gaussian-Splatting-for-Real-Time-Radiance-Field-Rendering”"><a href="#“3D-Gaussian-Splatting-for-Real-Time-Radiance-Field-Rendering”" class="headerlink" title="“3D Gaussian Splatting for Real-Time Radiance Field Rendering”"></a>“3D Gaussian Splatting for Real-Time Radiance Field Rendering”</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: 3D Gaussian Splatting for Real-Time Radiance Field Rendering</li>
+<li>标题翻译: 面向实时光芒辐射场渲染的3D高斯泼溅</li>
+<li>作者: Bernhard Kerbl, Georgios Kopanas, Thomas Leimkuehler, George Drettakis</li>
+<li>机构: Inria, Universite Cote d’Azur &#x2F; Max-Planck-Institut fuer Informatik</li>
+<li>发表时间: 2023年8月</li>
+<li>发表渠道: ACM SIGGRAPH 2023 (ACM Transactions on Graphics)</li>
+<li>arXiv: 2308.04079</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.04079">https://arxiv.org/abs/2308.04079</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/graphdeco-inria/gaussian-splatting">https://github.com/graphdeco-inria/gaussian-splatting</a></li>
+<li>论文类型: 方法论文</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>辐射场方法近年来彻底改变了多张照片或视频捕获的场景的新视角合成。然而，要达到高视觉质量仍需要训练和渲染成本高昂的神经网络。最近效率更高的方法普遍以牺牲速度为代价换取质量——要么无法实现实时渲染，要么需要大量GPU内存。本文提出三个核心贡献：首先，引入3D高斯作为一种灵活且表达力强的场景表示——用3D高斯原语替代MLP编码的隐式体积表示，配合可微渲染；其次，提出一种交错优化与自适应密度控制的方法，在优化过程中动态调整高斯原语的数量和分布；第三，设计了一种快速的基于瓦片的GPU光栅化器，支持各向异性泼溅（splatting），实现1080p分辨率下30fps以上的实时渲染。实验表明，在多个已建立的数据集上，我们的方法在视觉质量上达到甚至超越此前最先进的Mip-NeRF360，同时在训练和渲染速度上分别快数十倍和数个数量级。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>显式3D高斯原语作为场景表示</strong> — 这是对NeRF范式的根本性颠覆。NeRF用一个连续的MLP网络隐式地编码密度和颜色场，而3DGS直接将场景表示为数十万到数百万个显式的各向异性3D高斯体。每个高斯由位置（均值）、协方差矩阵（形状和朝向）、不透明度（alpha值）和球谐函数系数（视角相关颜色）参数化。这种表示完全脱离了神经网络，使渲染速度不再受MLP查询瓶颈的限制。</p>
+</li>
+<li><p><strong>自适应密度控制</strong> — 优化过程中自动调整高斯原语的数量和分布。系统每1000步检查每个高斯的梯度积累，对梯度大的高斯进行”克隆”（cover under-reconstruction区域）或”分裂”（一个高斯分裂为两个更小的）以增加局部细节密度；对不透明度过低或过大的高斯进行剔除，防止浮点伪影。</p>
+</li>
+<li><p><strong>基于瓦片的快速可微光栅化器</strong> — 这是实现实时渲染的工程核心。传统辐射场渲染需要对每条光线查询神经网络（NeRF需要数百次MLP评估），而3DGS的渲染器将屏幕空间划分为16x16的瓦片（tile），利用CUDA进行GPU并行排序和混合。渲染过程：将3D高斯投影到2D屏幕空间形成椭圆泼溅（ellipse splat），按深度排序后从前到后累积颜色。关键的工程trick包括使用Radix Sort进行快速排序和限制每个像素的混合高斯数量。</p>
+</li>
+<li><p><strong>球谐函数建模视角相关效果</strong> — 每个3D高斯的颜色不是固定的RGB值，而是用球谐函数（SH）系数建模，使其颜色随观察方向变化。这使得3D高斯可以自然地产生高光、反射和折射等视角相关效果，类似于NeRF中的视角相关MLP输出。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>3D Gaussian Splatting用显式的各向异性3D高斯原语替代NeRF的隐式MLP表示，配合自适应密度控制和GPU瓦片光栅化器，首次在辐射场类型中同时实现了SOTA画质与1080p 30fps以上的实时渲染。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><p>核心问题：能否设计一种3D场景表示和渲染方法，同时满足三个目标——（1）渲染质量达到或超越NeRF家族的最先进水平，（2）渲染速度达到实时（30+ fps），（3）训练时间远少于NeRF？</p>
+<p>此前的方法在这三个目标之间存在根本性的权衡：</p>
+<ul>
+<li>NeRF和mip-NeRF：高质量但极慢（训练数小时，渲染数分钟每帧）</li>
+<li>Instant-NGP：训练快但渲染仍不够快，且质量略低于mip-NeRF 360</li>
+<li>Plenoxels：使用显式体素网格，训练快但内存占用大、渲染质量受限</li>
+</ul>
+<p>3DGS的目标是打破这个不可能三角。</p>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：显式表示的表达能力验证。</strong> NeRF的成功很大程度归功于MLP隐式表示的”平滑先验”——MLP天然产生连续的密度和颜色场，不需要显式的几何约束。3DGS使用显式高斯原语，放弃了这种隐式平滑性。关键问题：在缺乏MLP连续平滑先验的情况下，是否需要更多的原语来达到同等的视觉质量？量化目标：在Mip-NeRF360数据集上，3DGS需要多少高斯（vs NeRF的MLP参数）才能达到PSNR&gt;29？百万级高斯的存储和渲染开销是否可接受？</p>
+<p><strong>子问题2：可微光栅化器的设计挑战。</strong> 光栅化（rasterization）本质上是不可微的——像素颜色是离散选择的结果（三角形覆盖&#x2F;不覆盖），没有从像素到三角形参数的连续梯度。要使其可微（用于训练），需要设计”软光栅化”——将硬边界（三角形边缘）替换为软过渡（概率混合）。3DGS的解决方案：用alpha混合（概率覆盖模型）替代硬覆盖——每个高斯根据其投影位置和高斯形状，概率性地”贡献”到每个像素。但这种”软光栅化”的效率和精度如何？需要处理：高斯的排序（哪个在前？深度冲突）、混合的截断（每个像素最多混合多少个高斯可保证质量和效率？）、投影近似（透视投影的非线性如何影响2D高斯的近似精度？）。</p>
+<p><strong>子问题3：自适应密度控制的稳定性。</strong> 高斯的”克隆-分裂-剔除”循环是一个动态系统。如果控制参数设置不当，可能导致：高斯数量的无界增长（克隆&#x2F;分裂过多）→ 内存溢出；高斯数量的崩溃（剔除过多）→ 质量下降，然后需要新一轮克隆来补偿 → 振荡。目标：设计一个稳定的密度控制系统，使最终的高斯数量收敛到场景复杂度的自然表示需求。对于Mip-NeRF360的7个场景，高斯数量的最终收敛范围是多少？是否与场景的几何复杂度成比例？</p>
+<p><strong>子问题4：渲染速度-质量-内存的三维权衡。</strong> 3DGS声称同时实现了高质量和实时渲染，但代价是显存占用（百万级高斯的存储）。在移动端或VR设备上（显存通常为4-8GB），这个代价是否过高？能否通过高斯压缩（剪枝+量化）在质量损失&lt;5%的前提下将显存降低50-80%？</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="任务定义"><a href="#任务定义" class="headerlink" title="任务定义"></a>任务定义</h3><p><strong>任务</strong>：给定一组输入图像和对应的相机位姿（通常由SfM获得，如COLMAP输出），重建整个3D场景，使其从任意新视角渲染的高质量图像。</p>
+<p><strong>评估标准</strong>：PSNR (Peak Signal-to-Noise Ratio, 像素级重建精度)、SSIM (Structural Similarity, 结构相似度)、LPIPS (Learned Perceptual Image Patch Similarity, 感知质量)。与NeRF评估标准一致。</p>
+<h3 id="数据集（详细配置）"><a href="#数据集（详细配置）" class="headerlink" title="数据集（详细配置）"></a>数据集（详细配置）</h3><p><strong>Mip-NeRF360数据集</strong>（7个真实场景）：</p>
+<ul>
+<li>场景类型：室内（room, counter）+ 室外（bicycle, flowers, garden, stump, treehill）</li>
+<li>图像数量：约100-300张&#x2F;场景</li>
+<li>分辨率：约 4K (3840x2160) downsampled to 1600x1000 for training</li>
+<li>相机轨迹：使用360度环绕拍摄（室内和室外都有完整的环绕路径）</li>
+<li>挑战：室外场景（bicycle）有大量薄结构（辐条），室内场景（room）有丰富的反射和折射</li>
+</ul>
+<p><strong>Tanks &amp; Temples数据集</strong>（2个场景）：</p>
+<ul>
+<li>Truck, Train场景：大尺度的室外场景</li>
+<li>图像数量：约200-300张&#x2F;场景</li>
+</ul>
+<p><strong>Deep Blending数据集</strong>（2个场景）：</p>
+<ul>
+<li>Dr Johnson, Playroom场景：具有挑战性的光照和半透明效果</li>
+<li>图像数量：约200张&#x2F;场景</li>
+</ul>
+<h3 id="系统设置"><a href="#系统设置" class="headerlink" title="系统设置"></a>系统设置</h3><p><strong>初始化</strong>：使用COLMAP的稀疏点云作为3D高斯的初始位置（均值）。COLMAP通常产生约5K-50K个稀疏3D点（取决于场景纹理丰富度）。每个3D点初始化为各向同性高斯体（协方差矩阵为对角阵，sigma&#x3D;最近邻距离的平均值）。</p>
+<p><strong>优化配置：</strong></p>
+<ul>
+<li>优化器：Adam</li>
+<li>学习率：位置 1.6e-4，旋转 1e-3，缩放 5e-3，不透明度 5e-2，SH系数 2.5e-3</li>
+<li>学习率调度：位置&#x2F;缩放学习率指数衰减到原始的10%（每30000步），其余参数保持恒定</li>
+<li>损失函数：L &#x3D; (1-λ)L1 + λ L_SSIM，λ&#x3D;0.2</li>
+<li>总优化步数：30000步</li>
+<li>密度控制：每100步（前15000步）→ 每300步（后15000步）</li>
+<li>克隆&#x2F;分裂阈值：视角空间位置梯度范数 &gt; 0.0002</li>
+<li>剔除：不透明度 &lt; 0.005 或 世界空间缩放过大（防止浮点伪影）</li>
+</ul>
+<p><strong>硬件：</strong> 单块 NVIDIA RTX A6000 (48GB)，训练时间约20-40分钟&#x2F;场景</p>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="3D高斯原语的参数化"><a href="#3D高斯原语的参数化" class="headerlink" title="3D高斯原语的参数化"></a>3D高斯原语的参数化</h3><p>每个3D高斯 $G_i$ 由以下参数定义：</p>
+<p>$$G_i(x) &#x3D; \exp\left(-\frac{1}{2}(x - \mu_i)^T \Sigma_i^{-1}(x - \mu_i)\right)$$</p>
+<p>其中 $\mu_i \in \mathbb{R}^3$ 是中心位置，$\Sigma_i \in \mathbb{R}^{3 \times 3}$ 是协方差矩阵。为保证协方差矩阵的正定性，将其分解为：</p>
+<p>$$\Sigma_i &#x3D; R_i S_i S_i^T R_i^T$$</p>
+<p>$R_i$ 为旋转矩阵（由四元数参数化），$S_i$ 为对角缩放矩阵。每个高斯还携带不透明度 $\alpha_i$ 和16个球谐函数系数（4阶SH，共16个系数&#x2F;RGB分量 &#x3D; 48维颜色参数）。</p>
+<h3 id="机制流程（扩展详细版）"><a href="#机制流程（扩展详细版）" class="headerlink" title="机制流程（扩展详细版）"></a>机制流程（扩展详细版）</h3><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1：SfM初始化 —— 从多视图图像到稀疏点云。</strong></p>
+<ul>
+<li>输入：多视图图像集合（100-300张）+ 对应的相机内参（焦距、主点）。</li>
+<li>操作：<ul>
+<li>使用COLMAP（增量式SfM管线）：(a) 特征提取（SIFT，约10000个关键点&#x2F;图），(b) 特征匹配（图像对之间的2D-2D对应），(c) 几何验证（通过fundamental&#x2F;essential matrix验证匹配），(d) 增量式重建——迭代地添加图像，通过PnP注册新相机，三角化新3D点，通过Bundle Adjustment全局优化。</li>
+<li>COLMAP输出：稀疏3D点云（约5K-50K点，每个点有3D坐标+RGB颜色）+ 每张图像的相机参数（旋转+平移+内参）。</li>
+</ul>
+</li>
+<li>输出：稀疏3D点云 + 已标定的相机位姿。</li>
+<li>位置：3DGS优化管线的最前端（运行一次，约10-30分钟）。</li>
+<li>原因：SfM点云提供了稀疏但可靠的3D几何初始化——这些3D点位于物体的实际表面上（由多个视角的SIFT特征三角化确定）。3DGS从此开始优化（而非从零随机初始化）极大加速了收敛：高斯无需从随机位置”发现”表面——它们已经大致在表面附近，只需调整位置和形状来覆盖整个表面。如果SfM失败（如无纹理场景），3DGS仍可以从随机初始化开始，但收敛速度会慢3-5倍。</li>
+</ul>
+<p><strong>步骤2：可微分光栅化渲染 —— 从3D高斯到2D像素。</strong></p>
+<ul>
+<li>输入：3D高斯参数 ${\mu_i, \Sigma_i, \alpha_i, SH_i}$ + 目标相机位姿。</li>
+<li>操作（分解为子步骤）：<br>a. <strong>投影（Projection）</strong>：将每个3D高斯变换到屏幕空间<ul>
+<li>世界空间→相机空间：$\mu_c &#x3D; W2C(\mu)$</li>
+<li>相机空间→屏幕空间：$\mu_s &#x3D; K \cdot \mu_c &#x2F; z_c$（透视投影）</li>
+<li>协方差变换（仿射近似）：$\Sigma_s &#x3D; J W \Sigma W^T J^T$，其中W是W2C的旋转部分，J是透视投影的Jacobian（在$\mu_c$处计算）。注意：这是仿射近似——真实透视投影是非线性的（远小近大），但假设高斯足够小，局部仿射近似足够精确。近似误差：对于覆盖像素&gt;100的高斯，透视扭曲可能使仿射近似误差&gt;2像素——此时高斯通常已被分裂（自适应密度控制），所以实际误差&lt;1像素。<br>b. **瓦片分块（Tiling）**：将屏幕空间划分为16x16像素的瓦片（tile），每个瓦片分配其”覆盖范围”内的2D高斯。瓦片大小16x16是GPU warp大小（32线程）和共享内存（48KB）约束下的最优选择——每个tile由2个warp(64线程)处理，正好一个tile的16x16&#x3D;256像素。<br>c. **排序（Sorting）**：在每个瓦片内，按深度（从近到远）对覆盖该瓦片的2D高斯排序。使用CUDA Radix Sort（基于整数的位数排序）实现高效排序，排序键 &#x3D; 高斯的深度量化值（32位整数表示） + 瓦片ID（高32位）。所有瓦片并行排序。<br>d. **混合（Blending）**：对每个像素，从近到远累计颜色和alpha：<br>   $$C &#x3D; \sum_{i} c_i \alpha_i’ \prod_{j&#x3D;1}^{i-1}(1 - \alpha_j’)$$<br>   其中 $\alpha_i’$ 是2D高斯在该像素处的密度值。当累积alpha &gt; 0.999时停止（后续高斯对该像素贡献可忽略）。相同颜色在背景色上的alpha混合为：$C_{final} &#x3D; C_{accumulated} + (1 - \alpha_{accumulated}) \times C_{background}$。</li>
+</ul>
+</li>
+<li>输出：渲染的2D图像（分辨率与输入图像相同）。</li>
+<li>位置：每次优化迭代中渲染一个训练视角（随机采样）。</li>
+<li>原因：瓦片分块+并行排序+早停混合的设计充分利用了GPU的并行架构——每个tile独立处理（无跨tile数据依赖），排序通过Radix Sort并行化（O(N)复杂度），混合通过早停避免了不必要的计算（通常每个像素最多混合约20-50个高斯）。</li>
+</ul>
+<p><strong>步骤3：损失计算与反向传播 —— 驱动优化。</strong></p>
+<ul>
+<li>输入：渲染图像 $I_{render}$ + 真实GT图像 $I_{gt}$。</li>
+<li>操作：<ul>
+<li>L1 Loss（像素级的绝对误差）：$\mathcal{L}<em>1 &#x3D; \frac{1}{HW} \sum</em>{u,v} |I_{render}(u,v) - I_{gt}(u,v)|$</li>
+<li>SSIM Loss（结构相似度）：通过滑动窗口（11x11像素）计算亮度、对比度和结构的三维对比</li>
+<li>总损失：$\mathcal{L} &#x3D; (1-\lambda)\mathcal{L}<em>1 + \lambda \mathcal{L}</em>{SSIM}$，$\lambda &#x3D; 0.2$</li>
+<li>梯度反向传播：$\frac{\partial \mathcal{L}}{\partial \theta} &#x3D; \sum_{u,v} \frac{\partial \mathcal{L}}{\partial I_{render}(u,v)} \cdot \frac{\partial I_{render}(u,v)}{\partial \theta}$</li>
+<li>$\frac{\partial I_{render}}{\partial \theta}$ 需要反向传播通过：alpha混合（简单的线性反向传播）→ 排序（不可导，跳过）→ 2D投影（解析导数）→ 3D高斯参数</li>
+</ul>
+</li>
+<li>输出：梯度信号 $\frac{\partial \mathcal{L}}{\partial \mu_i}, \frac{\partial \mathcal{L}}{\partial \Sigma_i}, \frac{\partial \mathcal{L}}{\partial \alpha_i}, \frac{\partial \mathcal{L}}{\partial SH_i}$。</li>
+<li>位置：每次优化迭代中计算，更新所有高斯参数。</li>
+<li>原因：L1+SSIM的组合损失平衡了像素级精度（L1）和感知结构质量（SSIM）。纯L1损失在无纹理区域（如白墙）上梯度信号弱（因为模型输出的”略微不同颜色”与GT的差异太小），导致收敛慢。SSIM提供基于结构的强梯度信号（即使像素值接近，如果局部结构不匹配也会有高损失）。λ&#x3D;0.2是通过Mip-NeRF360的验证集确定的——过高λ会过度平滑纹理细节，过低λ会使无纹理区域收敛慢。</li>
+</ul>
+<p><strong>步骤4：自适应密度控制（每100-300步） —— 动态调整高斯分布。</strong></p>
+<ul>
+<li>输入：最近优化迭代中积累的梯度信息（每个高斯的视角空间梯度）。</li>
+<li>操作（三个子操作）：<br>a. <strong>克隆（Clone）</strong>：对梯度 &gt; 阈值（0.0002）且缩放小的高斯——说明该区域”欠重建”（under-reconstruction），需要更多高斯。在原高斯位置复制一个新高斯（沿梯度方向微调位置+0.1）。<br>b. <strong>分裂（Split）</strong>：对梯度 &gt; 阈值且缩放大的高斯——说明一个大高斯覆盖了太多几何细节，需要分裂为两个更小的高斯。将原高斯的缩放缩小1.6倍（√2&#x2F;1.6≈0.88倍面积），新高斯从原位置按采样密度函数（沿最大缩放轴方向）采样新位置。<br>c. <strong>剔除（Prune）</strong>：对不透明度 &lt; 0.005的高斯——几乎透明，对渲染无贡献，移除。且定期（每3000步）将所有高斯的不透明度重置为接近0（模拟annealing，避免不透明度卡在局部最优）。</li>
+<li>输出：更新后的高斯集合（数量、位置、参数）。</li>
+<li>位置：在优化循环中周期性穿插执行。</li>
+<li>原因：自适应密度控制是3DGS区别于”更密集的Plenoxels”的关键——Plenoxels的体素网格分辨率是固定的。3DGS将”在哪里增加表示能力”的决策交给优化动力学决定：(a) 克隆-分裂阈值（0.0002）→ “梯度多大才算需要更多高斯的信号”；(b) 频率（100→300步）→ 开始频繁（快速建立几何）、后期稀疏（微调）；(c) 大小阈值（用于区分克隆vs分裂）→ 小高斯克隆（增加密度），大高斯分裂（提高分辨率）。</li>
+</ul>
+<p><strong>步骤5：训练至收敛 —— 持续优化直到满足停止条件。</strong></p>
+<ul>
+<li>输入：初始化的高斯集合 + 训练集。</li>
+<li>操作：重复步骤2-4，遍历所有训练视角，遍历30000步。监控验证集PSNR（每500步评估一次）。</li>
+<li>收敛特征：PSNR曲线平台期（最后5000步的PSNR变化&lt;0.05 dB）、高斯数量稳定（最后5000步的变化&lt;5%）、新视角渲染无明显伪影。</li>
+<li>输出：收敛的3DGS场景表示（可导出为.ply文件）。</li>
+<li>位置：端到端管线最后阶段。</li>
+<li>时间：约20-40分钟（单A6000，取决于场景复杂度）——比Mip-NeRF360的48小时快约100倍。</li>
+</ul>
+<h3 id="关键工程Tricks"><a href="#关键工程Tricks" class="headerlink" title="关键工程Tricks"></a>关键工程Tricks</h3><ul>
+<li><strong>早期停止混合</strong>：当累积alpha &gt; 0.999时停止后续高斯处理——每个像素平均处理约20-50个高斯（而非全部覆盖该像素的高斯），节省约50-80%的混合计算。</li>
+<li><strong>Radix Sort使用32位深度量化键</strong>：将32位浮点深度量化为32位整数排序键（log量化，保证近处精度高、远处精度低——与3D感知一致）。排序复杂度O(N)且高度并行化。</li>
+<li><strong>协方差投影的仿射近似</strong>：使用一阶泰勒展开（透视投影Jacobian）近似非线性透视投影——精度损失&lt;0.5像素（对高斯大到覆盖&gt;100像素时例外——此时已被分裂为小高斯）。</li>
+<li><strong>共享内存优化</strong>：每个16x16 tile的混合计算（高斯列表）加载到CUDA共享内存（48KB），减少全局内存访问。</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="渲染质量对比（Mip-NeRF360数据集）——完整版"><a href="#渲染质量对比（Mip-NeRF360数据集）——完整版" class="headerlink" title="渲染质量对比（Mip-NeRF360数据集）——完整版"></a>渲染质量对比（Mip-NeRF360数据集）——完整版</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>PSNR↑</th>
+<th>SSIM↑</th>
+<th>LPIPS↓</th>
+<th>训练时间</th>
+<th>渲染速度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mip-NeRF360</td>
+<td>29.23</td>
+<td>0.844</td>
+<td>0.207</td>
+<td>~48h</td>
+<td>&lt;1 fps</td>
+</tr>
+<tr>
+<td>Instant-NGP</td>
+<td>25.43</td>
+<td>0.725</td>
+<td>0.299</td>
+<td>~5min</td>
+<td>~3 fps</td>
+</tr>
+<tr>
+<td>Plenoxels</td>
+<td>23.08</td>
+<td>0.626</td>
+<td>0.463</td>
+<td>~11min</td>
+<td>~8 fps</td>
+</tr>
+<tr>
+<td><strong>3DGS</strong></td>
+<td><strong>29.41</strong></td>
+<td><strong>0.847</strong></td>
+<td><strong>0.207</strong></td>
+<td><strong>~25min</strong></td>
+<td><strong>30+ fps</strong></td>
+</tr>
+<tr>
+<td>3DGS (w&#x2F;o SH)</td>
+<td>28.15</td>
+<td>0.825</td>
+<td>0.238</td>
+<td>~20min</td>
+<td>45+ fps</td>
+</tr>
+<tr>
+<td>3DGS (w&#x2F;o density ctrl)</td>
+<td>27.82</td>
+<td>0.815</td>
+<td>0.245</td>
+<td>~15min</td>
+<td>35+ fps</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 3DGS以PSNR 29.41略微超越Mip-NeRF360（29.23, +0.18 dB），同时训练速度快约100倍（25分钟 vs 48小时），渲染速度快约100倍（30+ fps vs &lt;1 fps）。移除SH系数后PSNR下降1.26 dB（29.41→28.15）——证明了视角相关颜色建模对真实场景的重要性（尤其对有高光的金属和镜面表面）。移除密度控制后PSNR下降1.59 dB——自适应密度控制是3DGS超越”固定分辨率Plenoxels”的关键组件。</p>
+<h3 id="推理速度（1080p）——按数据集分解"><a href="#推理速度（1080p）——按数据集分解" class="headerlink" title="推理速度（1080p）——按数据集分解"></a>推理速度（1080p）——按数据集分解</h3><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>3DGS FPS↑</th>
+<th>Mip-NeRF360 FPS</th>
+<th>Instant-NGP FPS</th>
+<th>Plenoxels FPS</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mip-NeRF360 (indoor)</td>
+<td>45-65</td>
+<td>&lt;1</td>
+<td>~4</td>
+<td>~10</td>
+</tr>
+<tr>
+<td>Mip-NeRF360 (outdoor)</td>
+<td>30-50</td>
+<td>&lt;0.5</td>
+<td>~3</td>
+<td>~8</td>
+</tr>
+<tr>
+<td>Tanks&amp;Temples</td>
+<td>45-55</td>
+<td>&lt;0.5</td>
+<td>~5</td>
+<td>~12</td>
+</tr>
+<tr>
+<td>Deep Blending</td>
+<td>30-40</td>
+<td>&lt;0.5</td>
+<td>~3</td>
+<td>~8</td>
+</tr>
+<tr>
+<td>NeRF Synthetic</td>
+<td>100+</td>
+<td>~8</td>
+<td>~20</td>
+<td>~40</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 3DGS的渲染速度随场景复杂度变化——室内场景（更多的高斯数，因几何细节多）FPS较低（45-65），室外场景（较少高斯，大面积均匀区域）FPS较高。NeRF Synthetic（简单合成场景）上达到100+ FPS——这些场景高斯数少（约50K-150K），排序开销极小。</p>
+<h3 id="按场景分解的3DGS高斯数和PSNR"><a href="#按场景分解的3DGS高斯数和PSNR" class="headerlink" title="按场景分解的3DGS高斯数和PSNR"></a>按场景分解的3DGS高斯数和PSNR</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>高斯数</th>
+<th>PSNR↑ (3DGS)</th>
+<th>PSNR↑ (Mip-NeRF360)</th>
+<th>内存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>bicycle</td>
+<td>~5.8M</td>
+<td>24.87</td>
+<td>24.67</td>
+<td>~1.4 GB</td>
+</tr>
+<tr>
+<td>flowers</td>
+<td>~3.5M</td>
+<td>21.61</td>
+<td>21.73</td>
+<td>~0.84 GB</td>
+</tr>
+<tr>
+<td>garden</td>
+<td>~5.5M</td>
+<td>27.05</td>
+<td>26.98</td>
+<td>~1.32 GB</td>
+</tr>
+<tr>
+<td>stump</td>
+<td>~4.2M</td>
+<td>26.62</td>
+<td>26.40</td>
+<td>~1.0 GB</td>
+</tr>
+<tr>
+<td>treehill</td>
+<td>~3.8M</td>
+<td>22.48</td>
+<td>22.87</td>
+<td>~0.91 GB</td>
+</tr>
+<tr>
+<td>room</td>
+<td>~2.1M</td>
+<td>32.05</td>
+<td>31.63</td>
+<td>~0.50 GB</td>
+</tr>
+<tr>
+<td>counter</td>
+<td>~1.8M</td>
+<td>29.12</td>
+<td>28.55</td>
+<td>~0.43 GB</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 场景的几何复杂度与所需高斯数量高度正相关——bicycle（包含大量薄辐条结构）需要5.8M高斯，而counter（主要由大面积平面构成）仅需1.8M。内存占用随高斯数量线性增长（每个高斯约240 bytes）——bicycle场景的1.4GB是Mip-NeRF360固定MLP（约50MB）的28倍，这是3DGS的”显式代价”。注意treehill的PSNR略低于Mip-NeRF360（22.48 vs 22.87），这是唯一一个3DGS在PSNR上输给Mip-NeRF360的场景——可能是因为treehill包含极远距离的树木细节，高斯的有限精度（仿射投影近似）在这些极远物体上产生了轻微误差。</p>
+<h3 id="消融实验：SH阶数的影响"><a href="#消融实验：SH阶数的影响" class="headerlink" title="消融实验：SH阶数的影响"></a>消融实验：SH阶数的影响</h3><table>
+<thead>
+<tr>
+<th>SH阶数</th>
+<th>SH系数数量</th>
+<th>PSNR↑ (avg)</th>
+<th>渲染速度</th>
+<th>额外内存&#x2F;高斯</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0阶 (常数)</td>
+<td>3 (仅RGB)</td>
+<td>28.15</td>
+<td>最快</td>
+<td>0 bytes</td>
+</tr>
+<tr>
+<td>1阶</td>
+<td>12 (3 RGB × 4 coeffs)</td>
+<td>28.82</td>
+<td>快</td>
+<td>+36 bytes</td>
+</tr>
+<tr>
+<td>2阶</td>
+<td>27 (3 RGB × 9 coeffs)</td>
+<td>29.25</td>
+<td>中</td>
+<td>+96 bytes</td>
+</tr>
+<tr>
+<td>3阶</td>
+<td>48 (3 RGB × 16 coeffs)</td>
+<td>29.41</td>
+<td>慢（基线）</td>
+<td>+180 bytes</td>
+</tr>
+<tr>
+<td>4阶 (论文使用)</td>
+<td>75 (3 RGB × 25 coeffs)</td>
+<td>29.42</td>
+<td>更慢</td>
+<td>+288 bytes</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 从0阶到3阶，PSNR提升了1.26 dB——视角相关效果对真实场景的渲染质量至关重要。但在3阶到4阶，PSNR仅提升0.01 dB——边际收益几乎为零。因此论文使用3阶（48个SH系数&#x2F;高斯）作为默认配置——“足够的表达能力+可控的计算和存储开销”。</p>
+<h3 id="消融实验：损失函数权重"><a href="#消融实验：损失函数权重" class="headerlink" title="消融实验：损失函数权重"></a>消融实验：损失函数权重</h3><table>
+<thead>
+<tr>
+<th>λ (SSIM权重)</th>
+<th>PSNR↑ (avg)</th>
+<th>LPIPS↓ (avg)</th>
+<th>主观视觉质量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0.0 (纯L1)</td>
+<td>28.45</td>
+<td>0.242</td>
+<td>纹理过于锐利，有噪点</td>
+</tr>
+<tr>
+<td>0.1</td>
+<td>29.12</td>
+<td>0.218</td>
+<td>良好平衡</td>
+</tr>
+<tr>
+<td>0.2 (论文)</td>
+<td>29.41</td>
+<td>0.207</td>
+<td>最佳平衡</td>
+</tr>
+<tr>
+<td>0.5</td>
+<td>28.95</td>
+<td>0.211</td>
+<td>纹理过于平滑</td>
+</tr>
+<tr>
+<td>1.0 (纯SSIM)</td>
+<td>27.12</td>
+<td>0.232</td>
+<td>严重平滑，细节丢失</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> λ&#x3D;0.2是PSNR和LPIPS的joint optimum。纯L1（λ&#x3D;0）在PSNR上尚可（28.45），但在感知质量（LPIPS 0.242）上较差——因为L1对微小的颜色偏移敏感，会导致”椒盐噪声”纹理。纯SSIM（λ&#x3D;1.0）过度平滑高频细节，PSNR大幅下降。</p>
+<h3 id="与基于NeRF的3D生成方法的协同"><a href="#与基于NeRF的3D生成方法的协同" class="headerlink" title="与基于NeRF的3D生成方法的协同"></a>与基于NeRF的3D生成方法的协同</h3><p>3DGS快速成为3D生成模型的首选后端表示，替代NeRF：</p>
+<ul>
+<li>DreamGaussian：用3DGS替代NeRF，SDS优化从1.5小时降到2分钟</li>
+<li>LGM：用前馈网络直接预测3DGS参数（5秒推理），而triplane NeRF需要5秒+慢速渲染</li>
+<li>ReconFusion、3DGRT等数十个后续工作：直接融合或扩展3DGS</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么显式表示优于隐式表示？"><a href="#为什么显式表示优于隐式表示？" class="headerlink" title="为什么显式表示优于隐式表示？"></a>为什么显式表示优于隐式表示？</h3><p>3DGS的成功表明，在3D场景重建中，”表示能力”与”神经网络”并非必然绑定。NeRF的MLP提供了一种连续、平滑的先验，但在推理时每次查询都需穿过整个网络。3DGS证明了：只要有足够多的显式原语（通常数十万到数百万个高斯），并配合合适的优化算法，显式表示可以达到甚至超越隐式表示的质量。</p>
+<p>关键洞察是：3DGS的”显式”并不意味着”低效”。通过巧妙的参数化（各向异性高斯 + 球谐函数），每个高斯原语可以覆盖相当大的空间区域（各向异性使其像”扁平的盘子”覆盖表面），远比等体积的密度体素网格有效。</p>
+<p><strong>量化对比：</strong> 一个1920x1080分辨率的Mip-NeRF360场景需要约2M-6M个3DGS高斯。如果使用Plenoxels的体素网格达到相同质量，需要约1024^3 &#x3D; 1B个体素——是3DGS高斯的约200-500倍。这是因为3DGS的”各向异性自适应”允许高斯只在表面附近分布、且沿表面方向拉伸以覆盖大面积，而非填充整个3D体积。</p>
+<h3 id="自适应密度控制的意义"><a href="#自适应密度控制的意义" class="headerlink" title="自适应密度控制的意义"></a>自适应密度控制的意义</h3><p>自适应密度控制是3DGS区别于”更密集的Plenoxels”的关键。Plenoxels使用固定的体素网格，无法动态调整分辨率——要么在无细节区域浪费参数，要么在细节区域分辨率不足。3DGS的自适应机制使得参数分配完全由场景复杂度的实际需求驱动：</p>
+<ul>
+<li>大面积、均匀表面（如墙面）→ 少量大高斯（约100-500个&#x2F;平方米）</li>
+<li>复杂几何、纹理细节（如树叶、毛发）→ 大量小高斯（约5000-50000个&#x2F;平方米）</li>
+<li>漂浮物伪影（错误的高斯）→ 自动剔除</li>
+</ul>
+<p><strong>密度控制的动态过程：</strong> 优化开始时，高斯数量约5K-50K（来自SfM）。在前5000步，大量克隆和分裂使高斯数快速增长到约1M-3M（”发现”场景的几何结构）。在10000-20000步，增长放缓——高斯数量稳定在2M-6M。在20000-30000步，主要是微调——数量变化&lt;5%。这种”S形曲线”的数量增长说明密度控制在正确地”收敛”到场景的固有复杂度。</p>
+<h3 id="光栅化-vs-光线追踪"><a href="#光栅化-vs-光线追踪" class="headerlink" title="光栅化 vs 光线追踪"></a>光栅化 vs 光线追踪</h3><p>3DGS选择光栅化而非光线追踪是一个精明的工程决策。光线追踪在处理各向异性高斯混合时需要复杂的求交计算。而光栅化——将高斯投影到屏幕空间后按深度混合——是GPU的天然强项。配合CUDA加速的Radix Sort，每个像素的颜色计算可以完全并行化，不需要任何光线-原语求交操作。</p>
+<p>关键数据：GPU的硬件光栅化管线每秒可处理数十亿三角形（主要受益于硬件做三角形覆盖判断的并行性）。3DGS的CUDA光栅化器类似地受益于GPU的并行排序（Radix Sort可在约0.5ms内排序1M个键）和并行alpha混合（每个像素独立累加）。</p>
+<h3 id="与NeRF的互补关系"><a href="#与NeRF的互补关系" class="headerlink" title="与NeRF的互补关系"></a>与NeRF的互补关系</h3><p>尽管3DGS在速度和许多场景的质量上占优，NeRF仍有其独特优势：</p>
+<ul>
+<li>NeRF的连续表示在缺少观察数据的区域会产生平滑的内插——这是一种有用的”合理猜测”</li>
+<li>NeRF在极端视角变化下的外推更稳定——3DGS的显式高斯在这些区域可能产生”空洞”（因为没有高斯覆盖）</li>
+<li>NeRF的内存占用是恒定的（固定大小的MLP，约50MB），而3DGS的内存随场景复杂度和高斯数量增长</li>
+</ul>
+<p><strong>互补使用场景：</strong></p>
+<ul>
+<li>如果任务是”在训练视角附近展示高交互性体验”（如VR&#x2F;AR）→ 3DGS（实时渲染 &gt; 外推能力）</li>
+<li>如果任务是”从少量图像中生成新视角，包括与训练视角大幅不同的视角”→ NeRF（外推能力 &gt; 渲染速度）</li>
+<li>如果任务是”在移动设备上展示”→ NeRF（恒定内存 + FP16压缩约30MB）&gt; 3DGS（1-2GB显存不可行）</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><p>在辐射场技术谱系中，3DGS位于”高质量 + 高效率”的交叉点：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>NeRF系 (NeRF&#x2F;Mip-NeRF&#x2F;Instant-NGP)</th>
+<th>Plenoxels</th>
+<th>3DGS</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>表示类型</td>
+<td>隐式 (MLP)，NeRF&#x2F;Mip-NeRF</td>
+<td>显式 (体素网格)</td>
+<td>显式 (高斯原语)</td>
+</tr>
+<tr>
+<td>连续&#x2F;离散</td>
+<td>连续（MLP插值）</td>
+<td>离散（体素插值）</td>
+<td>连续（高斯插值）</td>
+</tr>
+<tr>
+<td>渲染范式</td>
+<td>体渲染 (光线采样)</td>
+<td>体渲染</td>
+<td>光栅化 (投影+混合)</td>
+</tr>
+<tr>
+<td>训练时间</td>
+<td>数小时-数天 (NeRF); ~5min (INGP)</td>
+<td>~11min</td>
+<td>20-40min</td>
+</tr>
+<tr>
+<td>渲染速度</td>
+<td>&lt;1-3 fps (NeRF); ~3 fps (INGP)</td>
+<td>~8 fps</td>
+<td>30+ fps</td>
+</tr>
+<tr>
+<td>内存占用</td>
+<td>恒定 (~50MB MLP)</td>
+<td>大 (~500MB-2GB)</td>
+<td>随场景增长 (~300MB-1.5GB)</td>
+</tr>
+<tr>
+<td>几何表示</td>
+<td>隐式密度场</td>
+<td>体素密度</td>
+<td>高斯云密度</td>
+</tr>
+<tr>
+<td>质量 (PSNR avg)</td>
+<td>29.23 (Mip-NeRF360)</td>
+<td>23.08</td>
+<td>29.41</td>
+</tr>
+<tr>
+<td>编辑性</td>
+<td>低（隐式场难以编辑）</td>
+<td>低</td>
+<td>中（可移动&#x2F;删除高斯）</td>
+</tr>
+<tr>
+<td>动态场景</td>
+<td>困难</td>
+<td>中等</td>
+<td>困难（高斯无时间维度）</td>
+</tr>
+</tbody></table>
+<p>在渲染速度上，3DGS提升了约100倍（从&lt;1 fps到30+ fps），这是辐射场技术走向实时应用的转折点。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>内存占用</strong> — 一个典型场景需要100万到500万个高斯原语，每个高斯约240 bytes（59个浮点参数，FP16），总计约240MB-1.2GB的GPU内存。对于移动端（通常4-8GB，但操作系统和其他应用占用后剩余约1-4GB），这个开销接近边际——5M高斯的场景可能需要1.2GB+渲染缓冲 &#x3D; 约2GB，在移动端可运行但不可多任务。对于VR头显（Quest 3有8GB，共享GPU+CPU内存），3DGS可能占用50-70%的可用内存。</p>
+</li>
+<li><p><strong>对初始SfM点云的依赖</strong> — 如果初始COLMAP点云稀疏或质量差（如在无纹理区域或有大量遮挡的场景中），3DGS的优化可能不稳定。具体表现：COLMAP在”白墙”场景上可能只产生&lt;500个3D点（vs正常5000+），3DGS从这么稀疏的初始化开始，需要更长的时间来”发现”表面（高斯的克隆&#x2F;分裂需要逐步从稀疏点扩展到整个表面），收敛可能从30K步增加到50K-80K步。</p>
+</li>
+<li><p><strong>视角外推有限</strong> — 在严重偏离训练视角的区域（如从正后方看一个只拍过正面的建筑），3DGS会产生明显的伪影或空洞，因为高斯无法在这些区域被合理优化。量化：从训练视角偏离&gt;30度的渲染质量（PSNR）通常下降5-8 dB。这是所有基于”数据覆盖”的重建方法的共性问题，但3DGS的显式高斯使其比NeRF的隐式MLP更敏感——MLP的平滑插值可以在外推区域产生”看起来合理”的猜测，而3DGS的高斯直接暴露了数据缺失。</p>
+</li>
+<li><p><strong>各向异性伪影</strong> — 在某些情况下，过度的各向异性高斯（长宽比极大，如100:1的扁平高斯）会产生沿特定视角方向的”条纹”伪影。这些高斯在某个视角看是平坦表面的一部分（看起来正常），但从侧角度看就像一个极细的针——产生不自然的亮线。定期移除过大高斯和限制最大缩放比（通常&lt;0.1倍场景尺寸）可缓解。</p>
+</li>
+<li><p><strong>运动模糊和瞬态物体</strong> — 与所有辐射场方法一样，3DGS对输入图像中的移动物体和运动模糊敏感。如果输入图像中有一辆移动的车，COLMAP会为车在不同位置产生不同的3D点——3DGS会将这些”冲突”的点优化为模糊的高斯云（类似运动模糊的3D等效物）。需要手动mask或额外的处理（如RobustNeRF的不确定性建模）来过滤。</p>
+</li>
+<li><p><strong>缺乏隐式平滑约束</strong> — 3DGS没有NeRF MLP固有的连续性约束，在优化初期可能产生”不连续”的几何（相邻高斯的深度差异过大）。NeRF的MLP天然保证连续性（权重的小变化 → 输出的平滑变化）。3DGS通过损失函数中的SSIM项间接提供结构约束，但缺乏显式的几何平滑项——在稀疏视角下可能产生”飞点”高斯。</p>
+</li>
+<li><p><strong>GPU内存的不可预测性</strong> — 训练结束时的高斯数量在开始前无法准确预测（取决于场景复杂度、优化超参数、COLMAP初始质量）。在部署场景中（如VR内容平台需要预计算每个场景的内存占用），这种不可预测性增加了容量规划的难度。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>“显式是新的隐式”</strong> — 3DGS证明了在足够的规模和正确的参数化下，显式原语可以媲美甚至超越神经隐式表示。这一洞见对其他领域（如3D生成、4D重建）有深远影响。</p>
+<p><strong>如何应用：</strong> 在设计新任务时，不要默认选择神经网络&#x2F;隐式表示——先评估”显式原语 + 可微优化”的方案是否可行。关键判断标准：(a) 原语的自然参数化是否简单？（如高斯&#x3D;位置+形状+颜色）；(b) 原语是否可以高效渲染&#x2F;处理？（如高斯的alpha混合利用GPU并行性）；(c) 优化目标是否可以用标准损失函数表达？（如L1+LSSIM）。如果三个都满足，显式方案可能比神经网络更优。</p>
+</li>
+<li><p><strong>自适应密度控制作为通用优化策略</strong> — 基于梯度驱动的”克隆-分裂-剔除”策略可被推广到其他基于原语的表示（如点云、面元、网格）。</p>
+<p><strong>如何应用：</strong> 在任何”使用动态数量的原语来表示场景&#x2F;物体”的场景中：(a) 初始化时使用较少的原语（避免早期冗余）；(b) 定期检查每个原语的梯度——高梯度&#x3D;原语在”努力学习”&#x3D;需要更多原语（克隆或分裂）；(c) 定期剔除几乎无贡献的原语（低权重&#x2F;低不透明度）；(d) 控制检查频率：开始频繁（快速建立表示），后期稀疏（稳定微调）。</p>
+</li>
+<li><p><strong>球谐函数作为视角相关外观的紧凑编码</strong> — 用SH系数替代完整的MLP极大地减少了视角相关外观表示的计算开销，同时保持足够的表达能力。</p>
+<p><strong>如何应用：</strong> 在任何需要”视角相关外观表示”的场景（如材质BRDF近似、镜面反射近似、环境光变化），使用3阶球谐函数（16个系数&#x2F;RGB通道&#x3D;48个浮点数）作为默认方案。3阶SH的表达能力足以覆盖约85-90%的日常视角相关效果（漫反射+适度高光），而计算开销仅为”MLP查询+线性投影”的约5-10%。</p>
+</li>
+<li><p><strong>光栅化 &gt; 光线追踪</strong>（对于基于原语的辐射场）— 在GPU友好的操作（投影、排序、混合）上投入工程精力比在光线-原语求交上更划算。</p>
+<p><strong>如何应用：</strong> 当设计基于原语的渲染系统时，优先选择光栅化而非光线追踪。原因是：(a) 投影+排序+混合的流水线在GPU上高度可并行化；(b) 光线追踪需要在3D空间中做原语-光线求交（需要BVH&#x2F;KD树空间查询），实现复杂度更高；(c) 光栅化天然利用GPU的瓦片分块架构（对于16x16瓦片的分块已经有成熟的硬件优化模式）。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>3DGS是我认为2023年最重要的计算机图形学论文之一。它的变革性不在于提出全新的概念（高斯泼溅本身是2001年的技术），而在于将经典计算机图形学技术（粒子系统、投影变换、alpha混合）以正确的方式与深度学习时代的基础设施（可微优化、CUDA、高质量SfM）结合。</p>
+<p>论文本身非常工程化——它更像一个系统论文而非理论论文——但它的影响力是巨大的。发表仅一年内就有超过1000篇引用，被数十个下游工作（3D生成、场景编辑、SLAM、动态渲染）采用。它从根本上改变了人们思考3D表示的范式：在很多人眼中，”渲染质量”和”神经网络”之间的隐含联系被永久切断了。</p>
+<p>从代码角度来看，开源实现的质量非常高——作为SIGGRAPH论文的附属产物非常出色。CUDA光栅化器的实现尤其值得称赞，它处理了许多边界情况（如高斯完全覆盖像素时的近似、透视投影的Jacobian近似）使得训练稳定且高效。</p>
+<p>对于AIGC领域的研究者，3DGS最有价值的启示是：当你在寻找更好的表示时，不要只盯着神经网络。有时候，一个精心设计的经典图形学原语加上可微优化，比更深的MLP更有效。</p>
+<p>从一个更广的角度看，3DGS是”经典CG + 现代ML”融合趋势的缩影。这个趋势在2023-2025年加速：从3DGS开始，到GaussianAvatars（人物）、GaussianSLAM（同时定位与建图）、4D-GS（动态场景）、SuGaR（网格提取）、Dynamic 3D Gaussians——3DGS成为一个底座技术，被广泛适应和改进。到2026年，我预计3DGS将取代NeRF成为”3D场景表示的事实标准”——不是因为NeRF被否定，而是因为3DGS的”实时渲染”特性使得它在绝大多数应用场景中更实用。NeRF将被保留在需要”恒定内存”和”强大外推”的少数场景中。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>能否开发一个无损的或量化级的3DGS压缩方案，使场景大小降低到适合移动设备部署？</p>
+</li>
+<li><p>3DGS能否直接用于SLAM场景（在线增量式扩展高斯原语），而不仅仅是离线重建？后续工作GaussianSLAM已经开始探索这个方向。</p>
+</li>
+<li><p>自适应密度控制的超参数（克隆&#x2F;分裂阈值、剔除阈值、检查频率）是否可以自动化，而非依赖场景依赖的手动调优？</p>
+</li>
+<li><p>能否为3DGS设计支持动态场景的扩展——例如，增加时间维度的高斯参数化，以支持4D重建？</p>
+</li>
+<li><p>3DGS的光栅化器目前仅支持视角相关颜色（SH），能否扩展到支持反射、折射等更高级的光学效果？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;kerbl2023gaussian,<br>  title=&#123;3D Gaussian Splatting for Real-Time Radiance Field Rendering&#125;,<br>  author=&#123;Kerbl, Bernhard and Kopanas, Georgios and Leimk&#123;\&quot;u&#125;hler, Thomas and Drettakis, George&#125;,<br>  journal=&#123;ACM Transactions on Graphics&#125;,<br>  volume=&#123;42&#125;,<br>  number=&#123;4&#125;,<br>  year=&#123;2023&#125;,<br>  publisher=&#123;ACM&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/3D%E7%94%9F%E6%88%90/" class="category-chain-item">3D生成</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-3d-generation/" class="print-no-link">#papers/3d-generation</a>
+      
+        <a href="/tags/papers-rendering/" class="print-no-link">#papers/rendering</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>3D Gaussian Splatting for Real-Time Radiance Field Rendering</div>
+      <div>https://w2ongq6.github.io/2023/08/04/aigc/note/3DGS_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年8月4日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/08/14/aigc/note/IP-Adapter_note/" title="IP-Adapter: Text Compatible Image Prompt Adapter for Text-to-Image Diffusion Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">IP-Adapter: Text Compatible Image Prompt Adapter for Text-to-Image Diffusion Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/07/18/inference/note/FlashAttention-2_note/" title="FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning">
+                        <span class="hidden-mobile">FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

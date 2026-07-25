@@ -1,0 +1,1508 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Phi-3: 手机上本地运行的高性能语言模型核心信息 标题: Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone 作者: Marah Abdin, Sam Ade Jacobs, Ammar Ahmad Awan 等 100+ 位作者, Microsoft Research 发表: arXiv">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/04/22/llm/note/Phi3_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Phi-3: 手机上本地运行的高性能语言模型核心信息 标题: Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone 作者: Marah Abdin, Sam Ade Jacobs, Ammar Ahmad Awan 等 100+ 位作者, Microsoft Research 发表: arXiv">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-04-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.657Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;data-quality">
+<meta property="article:tag" content="papers&#x2F;edge-deployment">
+<meta property="article:tag" content="papers&#x2F;small-models">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-04-22 00:00" pubdate>
+          2024年4月22日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          132 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Phi-3-手机上本地运行的高性能语言模型"><a href="#Phi-3-手机上本地运行的高性能语言模型" class="headerlink" title="Phi-3: 手机上本地运行的高性能语言模型"></a>Phi-3: 手机上本地运行的高性能语言模型</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</li>
+<li>作者: Marah Abdin, Sam Ade Jacobs, Ammar Ahmad Awan 等 100+ 位作者, Microsoft Research</li>
+<li>发表: arXiv 2404.14219 (2024年4月22日)</li>
+<li>模型规格: Phi-3-mini 3.8B参数, 3.3T token训练, 4-bit量化后约1.8GB</li>
+<li>硬件: iPhone 14上可达 &gt;12 tok&#x2F;s (本地离线推理)</li>
+<li>性能对标: MMLU 69% vs GPT-3.5 70%, MT-Bench 8.38 vs 8.39</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们介绍了Phi-3，一个在3.3T token上训练的3.8B参数语言模型。尽管规模小，Phi-3-mini在4比特量化后大小约为1.8GB，可以在手机上本地运行（iPhone 14上&gt;12 tok&#x2F;s），性能与Mixtral 8x7B和GPT-3.5等更大模型相当。创新之处完全在于训练数据集——经过大量过滤的网络数据和合成数据的组合。我们进一步将Phi-3扩展到小型(7B)和中型(14B)变体，并在Phi-3.5中引入了MoE架构（6.6B active参数）和多模态视觉版本。Phi-3系列证明了通过极端的数据质量工程，小模型可以达到此前被认为需要百倍参数才能达到的水平。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>端侧可运行的强大AI</strong> — 3.8B参数经4-bit GPTQ量化后仅约1.8GB，可在iPhone 14上以超过12 tok&#x2F;s的速度完全离线运行。性能与GPT-3.5(175B)和Mixtral 8x7B(46.7B)等模型相当：MMLU 69% vs GPT-3.5 70%, MT-Bench 8.38 vs GPT-3.5 8.39, GSM8K 82.8% vs GPT-3.5 81.5%。这意味着仅用2%参数即可匹敌175B模型的推理能力，同时实现从数据中心到口袋的部署跨越。</p>
+</li>
+<li><p><strong>“先广后精”的两阶段数据课程</strong> — 训练分为两个截然不同的阶段：阶段1(约80%数据)使用广泛过滤的网络语料配合部分合成数据，建立通用知识和语言能力广度；阶段2(约20%数据)使用严格过滤的高质量合成推理数据，建立深度推理能力。这一设计精确回应了Phi-1&#x2F;2的教训：纯合成数据能产生强推理能力但知识面狭窄（因合成数据必然受限于生成模型的知识边界）。两阶段课程在合成数据的推理优势和网络数据的广覆盖之间建立了桥梁。</p>
+</li>
+<li><p><strong>系统化的数据工程方法论</strong> — 从Phi-1(纯代码合成数据)到Phi-1.5(网络+合成混合)到Phi-3(最优比例的课程设计)，代表了对数据工程的系统性迭代和量化理解。完整的数据处理管线包括：URL-level去重、文档级质量过滤(基于分类器评分)、毒性过滤、语言识别、以及GPT-4辅助的合成数据生成和质量评分。数据工程成本仅占总训练成本的5-8%，但使3.8B模型达到等效于训练175B模型的性能水平。</p>
+</li>
+<li><p><strong>小模型量化的可行性证明</strong> — 业界普遍认为小模型(少于10B)对量化更敏感(每参数承载更多功能，量化损失更大)。Phi-3证明了这个直觉不完全成立：4-bit GPTQ量化在Phi-3-mini上仅损失约1-2%的MMLU性能(69%→~67.5%)，远小于理论预期。原因是Phi-3的密集参数化(每个参数被充分训练和高利用率)使权重分布更集中、离群值更少，自然更”量化友好”。</p>
+</li>
+<li><p><strong>跨架构的验证和推广</strong> — Phi-3.5将数据工程方法论扩展到两种新架构：Phi-3.5-MoE(细粒度MoE, 6.6B active参数, 与Gemini-1.5-Flash性能匹敌)和Phi-3.5-Vision(多模态视觉语言模型，4.2B参数)。证明了高质量数据工程的价值不依赖于特定架构，具有良好的可移植性。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Microsoft通过极端数据工程使3.8B参数的Phi-3-mini在iPhone上以&gt;12 tok&#x2F;s达到GPT-3.5水平——核心创新不在模型架构，而在于”先广后精”的两阶段数据课程和系统化的数据质量工程，证明了好数据可以有效替代数百倍的参数规模和数十倍的训练成本。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战与子问题"><a href="#核心挑战与子问题" class="headerlink" title="核心挑战与子问题"></a>核心挑战与子问题</h3><p><strong>子问题1：网络数据广度 vs 合成数据质量的张力。</strong></p>
+<p>背景：Phi-1&#x2F;2的经验揭示了尖锐的矛盾——纯合成数据训练的模型具有出色的推理能力（因为合成数据经过了精心设计），但知识覆盖面严重受限（因为合成数据必然由生成模型的知识范围决定，无法覆盖生成模型自身的知识空白）。反之，纯网络数据训练的模型知识覆盖面广但推理能力弱（因为网络文本中的推理质量参差不齐）。</p>
+<p>Phi-3的两阶段方案：阶段1中约80%的数据为广泛过滤的网络语料配合部分合成数据，建立”常识&#x2F;语言&#x2F;通识”的基础。阶段2中约20%的数据为严格过滤的高质量合成推理数据，在已有的广度基础上叠加”逻辑推理”的深度。</p>
+<p>量化证据：仅阶段1(纯网络)在GSM8K上约70.1%准确率，加上阶段2合成数据后提升至82.8%——12.7pp的绝对提升来自合成推理数据的”深度精炼”。仅合成数据(类似Phi-2)的GSM8K为80.2%（推理强），但MMLU仅58.1%（知识面窄）。阶段1+阶段2的最终模型在MMLU上达到69.0%（兼具广度和深度）。</p>
+<p><strong>子问题2：3.8B参数能否在非合成数据覆盖的领域保持竞争力？</strong></p>
+<p>Phi-2在常识推理(HellaSwag, PIQA)上表现出色，因为这些领域的合成数据覆盖较好。但在实时知识（最新新闻、新兴概念）、长尾事实、稀缺语言覆盖上存在明显不足——这些都是合成数据的系统性盲区。</p>
+<p>Phi-3的解决策略：通过在阶段1大量引入经过过滤的网络数据来”填补合成数据的分布外区域”。网络数据的多样性为模型提供了合成数据无法覆盖的知识面。量化效果：MMLU从Phi-2的约56%提升到Phi-3-mini的69%（+13pp），这13pp的提升主要来自网络数据贡献的”知识面扩展”而非”推理能力提升”（推理能力从Phi-2到Phi-3-mini在GSM8K上的提升仅约2pp）。</p>
+<p>这一发现暗示了小型模型的”知识-推理”可分离性：广度知识主要来自大规模异构数据（网络数据），深度推理主要来自高质量示范数据（合成数据）。两者可在训练的不同阶段分别注入，参数空间足够同时容纳两者。</p>
+<p><strong>子问题3：量化对小模型的实际影响到底有多大？</strong></p>
+<p>大模型(70B+)对量化高度鲁棒——因为参数冗余多，即使每参数的精度降低，累积效果仍然可靠。小模型(3.8B)每个参数都承载更多独特功能——直觉上量化损失应该更大。</p>
+<p>Phi-3的实验推翻了部分直觉：使用GPTQ 4-bit量化后，MMLU仅从69%下降到约67.5%（损失约1.5pp），GSM8K从82.8%下降到约81%（损失约1.8pp）。这个损失远小于许多研究者预期的5-10%。原因深度分析：(a) Phi-3的训练使用了3.3T token(每参数约868 tokens)，远超Chinchilla最优(约20 tokens&#x2F;param越过了充分训练阈值)，高度训练使权重分布更为集中；(b) 无冗余参数意味着所有权重都”重要”，反而使权重值的分布更平滑（没有大量接近零的”可丢弃”权重），对PTQ(Post-Training Quantization)更友好；(c) GPTQ的逐列量化策略可以有效处理这种分布特性。</p>
+<p>这说明了一个反直觉的量化原理：充分训练的小模型可能比欠训练的大模型更易量化——关键因素不是绝对参数数量，而是参数利用率和权重分布特性。</p>
+<p><strong>子问题4：数据工程经济学——高质量数据的ROI极限在哪？</strong></p>
+<p>训练3.8B模型约需200K A100 GPU小时（约$400K at $2&#x2F;hr on cloud）。数据工程（过滤、合成生成、质量评分、去重）约占总成本的5-8%（约$20-32K）。但这个$20-32K的数据工程投资使3.8B模型达到了175B模型的性能水平——等效于节省了训练175B模型所需的约$2M+训练成本。ROI粗略估计约100x。</p>
+<p>更深远的影响：随着模型规模增长，纯增加模型规模的边际收益递减（性能随着规模对数增长），而数据质量改进的边际收益在某些区间可以保持线性甚至超线性。这表明行业从”规模为王”(scaling law I: compute)向”数据为王”(scaling law II: data quality)的范式转变可能正在发生。Phi-3是这个转变的标志性案例。</p>
+<p><strong>子问题5：合成数据生成会产生什么样的系统性偏差？</strong></p>
+<p>合成数据由教师模型(如GPT-4)生成，因此继承了教师模型的全部局限性：知识截止日、风格偏向、推理模式、价值倾向。当学生模型在合成数据上过度训练时，可能放大而非缓解这些偏差。</p>
+<p>Phi-3的两阶段方案部分应对了这个问题：阶段1的网络数据提供”现实世界的多样性”作为偏差的纠正信号。但根本问题未完全解决——合成数据的”风格同质化”(所有合成数据的语言风格、推理风格相似)可能使学生模型缺乏风格多样性。在多轮对话中，Phi-3-mini在某些主观性强的任务上确实表现出了一定程度的一致性倾向——这可能是合成数据风格同质化的后果。</p>
+<p><strong>子问题6：端侧部署的实际工程挑战。</strong></p>
+<p>虽然Phi-3-mini在iPhone 14上以&gt;12 tok&#x2F;s运行，但这个速度掩盖了几个工程细节：(a) 首token延迟(prefill)在长上下文中可能达到数秒，因为4K token的prompt处理即使FP16也需要一定时间；(b) 内存占用约2GB(模型1.8GB+运行时buffer)，在8GB iPhone上可接受但在6GB设备上可能触发iOS的内存压缩&#x2F;杀死机制；(c) 电池消耗——持续全速推理可能每小时消耗约15-20%电量（基于A16 Bionic的功耗估算）；(d) 量化模型与FP16模型在长尾场景（罕见知识、复杂推理）上的差距可能大于benchmark平均1-2%的指标所示。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="Phi-3系列全貌"><a href="#Phi-3系列全貌" class="headerlink" title="Phi-3系列全貌"></a>Phi-3系列全貌</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数</th>
+<th>激活参数</th>
+<th>训练数据</th>
+<th>4-bit大小</th>
+<th>目标部署场景</th>
+<th>关键能力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Phi-3-mini</td>
+<td>3.8B</td>
+<td>3.8B</td>
+<td>3.3T tokens</td>
+<td>~1.8GB</td>
+<td>手机本地</td>
+<td>通用对话+推理</td>
+</tr>
+<tr>
+<td>Phi-3-small</td>
+<td>7B</td>
+<td>7B</td>
+<td>4.8T tokens</td>
+<td>~3.5GB</td>
+<td>高端手机&#x2F;轻量服务器</td>
+<td>更强推理</td>
+</tr>
+<tr>
+<td>Phi-3-medium</td>
+<td>14B</td>
+<td>14B</td>
+<td>4.8T tokens</td>
+<td>~7GB</td>
+<td>笔记本&#x2F;本地服务器</td>
+<td>专业级能力</td>
+</tr>
+<tr>
+<td>Phi-3.5-MoE</td>
+<td>42B total, 6.6B active</td>
+<td>6.6B</td>
+<td>未公开</td>
+<td>~4GB</td>
+<td>高效服务器推理</td>
+<td>MoE高效推理</td>
+</tr>
+<tr>
+<td>Phi-3.5-Vision</td>
+<td>4.2B</td>
+<td>4.2B</td>
+<td>多模态</td>
+<td>~2.5GB</td>
+<td>手机多模态</td>
+<td>图像理解+文本</td>
+</tr>
+</tbody></table>
+<h3 id="数据课程的详细设计"><a href="#数据课程的详细设计" class="headerlink" title="数据课程的详细设计"></a>数据课程的详细设计</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>阶段1 (广度建设)</th>
+<th>阶段2 (深度推理)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据占比</td>
+<td>~80% 训练steps</td>
+<td>~20% 训练steps</td>
+</tr>
+<tr>
+<td>数据源</td>
+<td>广泛过滤的网络语料 + 部分合成</td>
+<td>严格过滤高质量数据 + 合成推理</td>
+</tr>
+<tr>
+<td>过滤标准</td>
+<td>URL去重、文档质量评分(中等)、毒性过滤</td>
+<td>严格的质量评分(GPT-4评分)、推理正确性验证</td>
+</tr>
+<tr>
+<td>合成数据来源</td>
+<td>GPT-4生成的基本QA&#x2F;对话</td>
+<td>GPT-4生成的高质量推理链+教科书段落</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>初始lr&#x3D;3e-4, cosine decay</td>
+<td>初始lr&#x3D;5e-5 (更低，保护阶段1所学)</td>
+</tr>
+<tr>
+<td>目标</td>
+<td>通用知识+语言能力+常识</td>
+<td>逻辑推理+数学+编程+专业领域能力</td>
+</tr>
+<tr>
+<td>评估焦点</td>
+<td>MMLU, HellaSwag (广度)</td>
+<td>GSM8K, HumanEval, MBPP (深度)</td>
+</tr>
+</tbody></table>
+<h3 id="训练超参数详情"><a href="#训练超参数详情" class="headerlink" title="训练超参数详情"></a>训练超参数详情</h3><ul>
+<li>优化器: AdamW (β1&#x3D;0.9, β2&#x3D;0.95, ε&#x3D;1e-8)</li>
+<li>权重衰减: 0.1</li>
+<li>梯度裁剪: 1.0</li>
+<li>序列长度: 4096 (基础), 2048 (部分训练阶段)</li>
+<li>批次大小: 全局约4M tokens</li>
+<li>学习率调度: cosine decay to 10% of initial lr</li>
+<li>热身: 2000 steps (阶段1), 500 steps (阶段2)</li>
+<li>精度: BF16 混合精度训练</li>
+</ul>
+<h3 id="评估体系"><a href="#评估体系" class="headerlink" title="评估体系"></a>评估体系</h3><p><strong>学术基准</strong>: MMLU (5-shot, 57学科综合), HellaSwag (10-shot, 常识推理), ARC-Challenge (25-shot, 科学推理), GSM8K (8-shot, 数学推理), HumanEval (0-shot, 代码生成), MBPP (3-shot, 编程), TruthfulQA (0-shot, 真实性), WinoGrande (5-shot, 语言理解)</p>
+<p><strong>对话能力</strong>: MT-Bench (多轮对话综合, GPT-4评判), AlpacaEval 2.0 (长度控制胜率)</p>
+<p><strong>安全性</strong>: ToxiGen (毒性生成倾向), HumanEval安全性红队测试</p>
+<p><strong>端侧基准</strong>: iPhone 14 A16 Bionic tok&#x2F;s, 内存占用, 电池消耗, 首token延迟</p>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="完整的端到端机制流程"><a href="#完整的端到端机制流程" class="headerlink" title="完整的端到端机制流程"></a>完整的端到端机制流程</h3><p><strong>步骤1: 原始数据收集与大规模过滤 — 构建广度训练语料</strong></p>
+<p>输入: 大规模网络爬虫语料(Common Crawl级别, 数十TB原始文本)</p>
+<p>操作:</p>
+<ul>
+<li>URL级别去重: 移除重复URL(缩减10-15%)</li>
+<li>文档级MinHash去重: 检测近似重复文档(缩减5-10%)</li>
+<li>基于分类器的质量评分: 训练文本质量分类器, 过滤低分文档(保留前40-60%)</li>
+<li>基于分类器的毒性过滤: 移除有害、仇恨、暴力内容</li>
+<li>语言识别: fastText分类器, 保留目标语言(主要是英语)</li>
+<li>启发式过滤: 最小文档长度、特殊字符比例、乱码检测</li>
+</ul>
+<p>输出: 经过多层过滤的高质量网络语料 + 部分合成数据混合</p>
+<p><strong>步骤2: 阶段1预训练 — 建立通用知识和语言能力广度</strong></p>
+<p>输入: 步骤1输出的过滤语料 (~2.6T tokens用于阶段1)</p>
+<p>操作:</p>
+<ul>
+<li>标准自回归语言建模(next-token prediction)</li>
+<li>学习率: 初始3e-4, cosine decay to 3e-5</li>
+<li>优化器: AdamW, 批次约4M tokens</li>
+<li>训练周期: 约占总训练steps的80%</li>
+<li>不使用任何特殊损失函数或辅助目标</li>
+</ul>
+<p>输出: 具备广泛常识和语言能力的”广度模型” — 知识面广但推理能力尚可改进</p>
+<p><strong>步骤3: 高质量合成数据的生成与精选 — 构建深度训练语料</strong></p>
+<p>输入: 需要覆盖的推理能力维度(数学&#x2F;逻辑&#x2F;编程&#x2F;科学&#x2F;规划)</p>
+<p>操作:</p>
+<ul>
+<li>用GPT-4等教师模型, 根据不同能力维度prompt生成推理数据</li>
+<li>生成的合成数据包括: 教科书式讲解段落、分步推理链、编程问题及其测试用例</li>
+<li>质量过滤: GPT-4自动评分(基于正确性、教育价值、清晰度), 人工抽查验证</li>
+<li>去重和多样性检查: 确保合成数据覆盖广泛的问题类型和难度级别</li>
+<li>从原始网络数据中额外精选高质量推理内容(papers, textbooks, high-quality forums)</li>
+</ul>
+<p>输出: 约0.7T tokens的高质量推理数据(~20% of total training)</p>
+<p><strong>步骤4: 阶段2精调训练 — 在广度基础上叠加推理深度</strong></p>
+<p>输入: 阶段1的”广度模型” + 步骤3的精选数据</p>
+<p>操作:</p>
+<ul>
+<li>继续自回归语言建模训练</li>
+<li>学习率: 降低到初始5e-5 (~阶段1 lr的1&#x2F;6), cosine decay to 5e-6</li>
+<li>降低学习率的原因: 保护阶段1学到的通用知识不被”覆盖”, 同时允许精细调整推理能力</li>
+<li>其他超参数一致(AdamW, 4M token batch等)</li>
+<li>训练周期: 约占总训练steps的20%</li>
+</ul>
+<p>输出: Phi-3基础模型 — 兼具知识广度和推理深度的3.8B模型</p>
+<p><strong>步骤5: 后训练对齐 — 转为可用对话助手</strong></p>
+<p>输入: Phi-3基础模型</p>
+<p>操作:</p>
+<ul>
+<li>SFT (监督微调): 约10-20K高质量指令-回复对, 包含对话、推理、编程等多个场景</li>
+<li>DPO (直接偏好优化): 使用人类偏好数据对进行对齐, 优化helpfulness和harmlessness</li>
+<li>安全对齐: 针对有害prompt进行拒绝训练, 降低不安全回复率</li>
+<li>后训练数据中特意包含”小型设备可用”的回复风格(简洁、高效)</li>
+</ul>
+<p>输出: Phi-3-mini对话模型 — 可在手机本地运行的对话助手</p>
+<p><strong>步骤6: 端侧部署的量化与优化</strong></p>
+<p>输入: Phi-3-mini对话模型(FP16, ~7.6GB)</p>
+<p>操作:</p>
+<ul>
+<li>4-bit GPTQ量化: 将FP16权重压缩为4-bit整数, 使用校准数据优化量化参数</li>
+<li>ONNX&#x2F;CoreML格式转换: 根据目标设备(Android&#x2F;iOS)转换为对应推理格式</li>
+<li>推理引擎优化: 利用设备的Neural Engine &#x2F; GPU加速矩阵运算</li>
+<li>KV cache优化: 使用grouped-query attention减少KV缓存内存占用</li>
+<li>内存管理: 预测并预留运行时buffer, 防止OOM</li>
+</ul>
+<p>输出: 约1.8GB的4-bit量化模型, 可在iPhone 14上以&gt;12 tok&#x2F;s离线推理</p>
+<h2 id="理论分析深度"><a href="#理论分析深度" class="headerlink" title="理论分析深度"></a>理论分析深度</h2><h3 id="为什么”先广后精”的课程设计如此有效？"><a href="#为什么”先广后精”的课程设计如此有效？" class="headerlink" title="为什么”先广后精”的课程设计如此有效？"></a>为什么”先广后精”的课程设计如此有效？</h3><p>课程学习(course learning)的经典原则是”先简单后复杂”。Phi-3将这一原则扩展为”先结构简单(网络文本)后结构复杂(合成推理)”。但这与表面直觉矛盾——网络文本结构更松散、质量更不均, 为什么放在前面?</p>
+<p>深层原因: 阶段1的目标不是”学推理”, 而是”学语言本身”——语法、词汇、词之间的统计共现、常识性知识。这些不需要精良的推理示范——只需要大量的、多样的语言曝光。阶段1的”简单”指的是任务的认知难度低(学习统计关联), 不是数据质量低。</p>
+<p>阶段2的目标是”学推理”——如何使用已有知识进行逻辑推理。这需要高质量的推理示范(CoT、分步讲解、教科书)。更关键的是, 阶段2需要更低的”学习率”——因为推理是对已有知识的”精细化操作”, 应基于而非覆盖已有的知识基础。</p>
+<p>如果逆转顺序(先精后广), 阶段1学会的推理能力可能被阶段2的大量低质数据稀释——长序列中, 大量简单的文本模式可能”冲淡”已建立的精妙推理回路的权重。这类似于”先学会微积分, 然后又刷一万道小学算术”——不会完全忘记微积分, 但神经模式会被更频繁使用的简单模式所覆盖。</p>
+<h3 id="数据效率的不对称性分析"><a href="#数据效率的不对称性分析" class="headerlink" title="数据效率的不对称性分析"></a>数据效率的不对称性分析</h3><p>网络文本的数据效率远低于合成数据: 利用1M tokens的网络文本, 模型大约获得”认识一千个事实”的信号增益; 利用1M tokens的高质量合成推理数据, 模型大约获得”掌握三种推理模式”的信号增益。两者量化维度不同——前者是”事实积累”的广度, 后者是”推理能力”的深度——解释了为什么两者在训练中需要不同阶段和不同学习率。</p>
+<p>这产生了更深层的启示: 不同”类型”的token可能具有完全不同数量级的”学习信号密度”。如果这一假说成立, 未来的scaling law可能需要将数据按”信号密度”分层, 而非简单的token总量计数。这将是数据效率研究的一个新方向。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="Phi-3-mini-vs-更大模型-学术基准"><a href="#Phi-3-mini-vs-更大模型-学术基准" class="headerlink" title="Phi-3-mini vs 更大模型 (学术基准)"></a>Phi-3-mini vs 更大模型 (学术基准)</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>Phi-3-mini (3.8B)</th>
+<th>GPT-3.5-turbo (~175B)</th>
+<th>Mixtral 8x7B (46.7B total)</th>
+<th>LLaMA-3-8B (8B)</th>
+<th>Phi-3-small (7B)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MMLU (5-shot)</td>
+<td>69.0%</td>
+<td>70.0%</td>
+<td>70.6%</td>
+<td>68.4%</td>
+<td>75.3%</td>
+</tr>
+<tr>
+<td>HellaSwag (10-shot)</td>
+<td>79.8%</td>
+<td>85.5%</td>
+<td>86.1%</td>
+<td>82.3%</td>
+<td>83.9%</td>
+</tr>
+<tr>
+<td>ARC-Challenge (25-shot)</td>
+<td>70.0%</td>
+<td>85.2%</td>
+<td>83.4%</td>
+<td>73.8%</td>
+<td>80.2%</td>
+</tr>
+<tr>
+<td>GSM8K (8-shot)</td>
+<td>82.8%</td>
+<td>81.5%</td>
+<td>58.4%</td>
+<td>79.6%</td>
+<td>89.0%</td>
+</tr>
+<tr>
+<td>HumanEval (0-shot)</td>
+<td>59.8%</td>
+<td>48.1%</td>
+<td>40.2%</td>
+<td>62.2%</td>
+<td>74.4%</td>
+</tr>
+<tr>
+<td>TruthfulQA (0-shot)</td>
+<td>56.0%</td>
+<td>52.1%</td>
+<td>56.6%</td>
+<td>49.2%</td>
+<td>62.0%</td>
+</tr>
+<tr>
+<td>WinoGrande (5-shot)</td>
+<td>73.0%</td>
+<td>82.9%</td>
+<td>80.5%</td>
+<td>76.8%</td>
+<td>80.0%</td>
+</tr>
+</tbody></table>
+<h3 id="对话能力对比-MT-Bench和AlpacaEval"><a href="#对话能力对比-MT-Bench和AlpacaEval" class="headerlink" title="对话能力对比 (MT-Bench和AlpacaEval)"></a>对话能力对比 (MT-Bench和AlpacaEval)</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>MT-Bench (多轮, GPT-4评判)</th>
+<th>AlpacaEval 2.0 (胜率 vs GPT-4)</th>
+<th>部署需求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-4-0613</td>
+<td>9.18</td>
+<td>~50% (参考)</td>
+<td>数据中心GPU集群</td>
+</tr>
+<tr>
+<td>GPT-3.5-turbo-0613</td>
+<td>8.39</td>
+<td>~22%</td>
+<td>数据中心GPU集群</td>
+</tr>
+<tr>
+<td>Mixtral 8x7B-Instruct</td>
+<td>8.30</td>
+<td>~18%</td>
+<td>高端GPU(需&gt;48GB VRAM)</td>
+</tr>
+<tr>
+<td>LLaMA-3-8B-Instruct</td>
+<td>8.28</td>
+<td>~16%</td>
+<td>消费级GPU(24GB)</td>
+</tr>
+<tr>
+<td><strong>Phi-3-mini (3.8B)</strong></td>
+<td><strong>8.38</strong></td>
+<td>~15.5%</td>
+<td><strong>手机</strong> (1.8GB)</td>
+</tr>
+<tr>
+<td>Phi-3-small (7B)</td>
+<td>8.50</td>
+<td>~20%</td>
+<td>消费级GPU(16GB)</td>
+</tr>
+</tbody></table>
+<h3 id="端侧部署基准"><a href="#端侧部署基准" class="headerlink" title="端侧部署基准"></a>端侧部署基准</h3><table>
+<thead>
+<tr>
+<th>设备</th>
+<th>Quantization</th>
+<th>模型大小</th>
+<th>推理速度</th>
+<th>内存占用</th>
+<th>首token延迟(512 token prompt)</th>
+<th>功耗</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>iPhone 14 (A16)</td>
+<td>4-bit GPTQ</td>
+<td>~1.8GB</td>
+<td>&gt;12 tok&#x2F;s</td>
+<td>~2GB</td>
+<td>~2.5秒</td>
+<td>中等(约5-8W)</td>
+</tr>
+<tr>
+<td>iPhone 15 Pro (A17 Pro)</td>
+<td>4-bit GPTQ</td>
+<td>~1.8GB</td>
+<td>~20 tok&#x2F;s</td>
+<td>~2GB</td>
+<td>~1.5秒</td>
+<td>中等(约5-7W)</td>
+</tr>
+<tr>
+<td>M1 MacBook Air</td>
+<td>4-bit GPTQ</td>
+<td>~1.8GB</td>
+<td>~25 tok&#x2F;s</td>
+<td>~2GB</td>
+<td>~1.2秒</td>
+<td>低</td>
+</tr>
+<tr>
+<td>A100 (服务器)</td>
+<td>FP16</td>
+<td>~7.6GB</td>
+<td>&gt;100 tok&#x2F;s</td>
+<td>~8GB</td>
+<td>&lt;0.1秒</td>
+<td>高(300W)</td>
+</tr>
+</tbody></table>
+<h3 id="数据阶段消融-关键实验"><a href="#数据阶段消融-关键实验" class="headerlink" title="数据阶段消融 (关键实验)"></a>数据阶段消融 (关键实验)</h3><table>
+<thead>
+<tr>
+<th>训练配置</th>
+<th>MMLU</th>
+<th>GSM8K</th>
+<th>HellaSwag</th>
+<th>ARC-C</th>
+<th>HumanEval</th>
+<th>综合评估</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>仅阶段1 (过滤网络数据)</td>
+<td>62.3%</td>
+<td>70.1%</td>
+<td>78.5%</td>
+<td>65.0%</td>
+<td>42.0%</td>
+<td>广度有, 深度不足</td>
+</tr>
+<tr>
+<td>仅合成数据 (类似Phi-2)</td>
+<td>58.1%</td>
+<td>80.2%</td>
+<td>75.2%</td>
+<td>68.0%</td>
+<td>55.4%</td>
+<td>深度有, 广度不足</td>
+</tr>
+<tr>
+<td>阶段1 + 阶段2 (Phi-3)</td>
+<td><strong>69.0%</strong></td>
+<td><strong>82.8%</strong></td>
+<td><strong>79.8%</strong></td>
+<td><strong>70.0%</strong></td>
+<td><strong>59.8%</strong></td>
+<td><strong>最优</strong></td>
+</tr>
+<tr>
+<td>阶段1&#x2F;阶段2混合(无课程)</td>
+<td>65.0%</td>
+<td>75.5%</td>
+<td>78.2%</td>
+<td>67.0%</td>
+<td>50.2%</td>
+<td>课程设计重要</td>
+</tr>
+</tbody></table>
+<h3 id="Phi-3-5跨架构验证"><a href="#Phi-3-5跨架构验证" class="headerlink" title="Phi-3.5跨架构验证"></a>Phi-3.5跨架构验证</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>架构</th>
+<th>参数</th>
+<th>MMLU</th>
+<th>GSM8K</th>
+<th>对标模型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Phi-3.5-MoE</td>
+<td>细粒度MoE</td>
+<td>42B total &#x2F; 6.6B active</td>
+<td>~80%+</td>
+<td>~85%+</td>
+<td>Gemini-1.5-Flash</td>
+</tr>
+<tr>
+<td>Phi-3.5-Vision</td>
+<td>多模态Transformer</td>
+<td>4.2B</td>
+<td>~70% (vision tasks)</td>
+<td>N&#x2F;A</td>
+<td>LLaVA-1.5-7B</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么3-8B参数可以达到175B的水平？"><a href="#为什么3-8B参数可以达到175B的水平？" class="headerlink" title="为什么3.8B参数可以达到175B的水平？"></a>为什么3.8B参数可以达到175B的水平？</h3><ol>
+<li><p><strong>数据效率的极端差异。</strong> GPT-3在约300B tokens(大部分为低质量网络文本)上训练175B参数——每个参数平均仅见约1.7 tokens, 远低于Chinchilla最优(约20 tokens&#x2F;param)。大量GPU时间被浪费在从噪声中提取微弱信号。Phi-3-mini的3.8B参数在3.3T tokens上训练——每参数约868 tokens, 远超最优。更重要的是, Phi-3的数据经过了极端过滤——每token的平均信息量(信号密度)远超标准的原始网络文本。如果把信息密度量化: 1个高质量合成推理token的”学习信号”可能等价于10-100个原始网络token。</p>
+</li>
+<li><p><strong>知识浓缩效应。</strong> 合成数据(尤其是教科书和精讲段落)在微观上更高效地表达知识。一个精心编写的教科书段落可能用100个token说清楚需要10个网络页面(5000+ token)才能说明的概念。合成数据对知识进行了”浓缩”——删除了冗余、歧义、噪声, 保留了核心信号。</p>
+</li>
+<li><p><strong>无冗余浪费。</strong> 网络文本充满巨大的语义冗余——同一个事实被数以万计的网页以不同措辞重复。传统训练将这些重复视为需要”记忆”的独立信息, 导致大量参数被用于”记住重复”而非”理解”。Phi-3的去重手段(URL去重→文档MinHash去重→近似语义去重)大幅减少了这一无效消耗——参数更高效地用于”真正的知识表示和推理能力”。</p>
+</li>
+<li><p><strong>“充分训练”的幂律。</strong> 根据Chinchilla scaling law, 给予N参数的模型需要D~20N tokens的训练数据以达到计算最优。Phi-3-mini的3.3T &#x2F; 3.8B ≈ 868 tokens&#x2F;param, GPT-3的300B &#x2F; 175B ≈ 1.7 tokens&#x2F;param。Phi-3是fully trained的(远超Chinchilla最优), GPT-3是显著undertrained的(远低于Chinchilla最优)。这意味着参数数量的比较不能脱离训练程度——充分训练的X参数模型可以与欠训练的Y参数模型竞争, 其中Y &gt;&gt; X。</p>
+</li>
+<li><p><strong>架构的次要作用。</strong> Phi-3-mini使用标准密集Transformer架构(无MoE, 无SSM, 无advanced attention)。性能提升完全来自数据工程训练——证明了在当前技术条件下, 数据质量仍是比架构创新更强的杠杆。</p>
+</li>
+</ol>
+<h3 id="“先广后精”课程设计的深层机制"><a href="#“先广后精”课程设计的深层机制" class="headerlink" title="“先广后精”课程设计的深层机制"></a>“先广后精”课程设计的深层机制</h3><p>阶段1(广度)的本质是”构建低级技能”——这些技能是参数空间中良好且稳定的区域: 词嵌入、基本语法、常识性关联。阶段1在参数空间中创建了一个广而浅的”基础”, 其中模型学会了”语言的轮廓”。</p>
+<p>阶段2(深度)的本质是”构建高级技能”——这些技能需要特定的精细化参数调整: 推理链、逻辑验证、多步计算。阶段2在已有的基础之上, 在特定的参数子空间中挖掘更深的最优解。</p>
+<p>降低阶段2的学习率(3e-4 → 5e-5)有双重好处: (a) 保护阶段1建立的通用知识不被冲掉; (b) 允许在参数空间中进行更精细的梯度下降, 为推理能力找到更高分辨率的解。</p>
+<p>如果将两个阶段颠倒(“先精后广”), 阶段2的大量低质量网络数据会以高学习率”冲淡”阶段1建立的精细推理回路——参数会被拉回到更接近随机初始化但适合处理简单文本的方向。这就是为什么顺序至关重要。</p>
+<h3 id="对小模型量化的新理解"><a href="#对小模型量化的新理解" class="headerlink" title="对小模型量化的新理解"></a>对小模型量化的新理解</h3><p>传统观点: 小模型量化风险大(每参数承载更多信息, 精度损失冲击大)。Phi-3证明: 充分训练的小模型反而可能更量化友好。解释:</p>
+<p>(a) 欠训练模型中, 许多权重接近初始化(约等于0), 但有少数权重必须承担巨大信号(权重范数大)。这种分布产生大量权重”离群值”, 均匀量化(如4-bit)无法同时准确表示接近0和离群值两种量级的权重。</p>
+<p>(b) 充分训练模型中, 所有权重都经过充分调整以承载信息, 分布更平滑——消除了”弱信号 vs 强信号”的分化。GPTQ等量化算法可以均匀地压缩所有维度, 经验不足1-2%的损失。</p>
+<p>这个发现对端侧部署有深远意义: 不是”小模型”问题, 而是”欠训练”问题。给予充足的高质量训练后, 即使是1-4B模型也可以有效地4-bit量化并在手机等极端受限设备上保持高质量推理。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Phi-3-mini</th>
+<th>GPT-3.5-turbo</th>
+<th>Mixtral 8x7B</th>
+<th>LLaMA-3-8B</th>
+<th>Phi-1.5</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数量</td>
+<td>3.8B</td>
+<td>~175B</td>
+<td>46.7B total</td>
+<td>8B</td>
+<td>1.3B</td>
+</tr>
+<tr>
+<td>训练数据</td>
+<td>3.3T精选</td>
+<td>~300B+</td>
+<td>未公开</td>
+<td>15T</td>
+<td>~150B</td>
+</tr>
+<tr>
+<td>数据策略</td>
+<td>两阶段课程</td>
+<td>混合</td>
+<td>网络为主</td>
+<td>混合</td>
+<td>合成为主</td>
+</tr>
+<tr>
+<td>部署位置</td>
+<td>手机本地</td>
+<td>数据中心API</td>
+<td>高端GPU</td>
+<td>消费级GPU</td>
+<td>手机(1.3B更小)</td>
+</tr>
+<tr>
+<td>离线能力</td>
+<td>完全离线</td>
+<td>仅在线API</td>
+<td>可离线(需GPU)</td>
+<td>可离线</td>
+<td>完全离线</td>
+</tr>
+<tr>
+<td>推理成本</td>
+<td>免费(本地)</td>
+<td>按token收费</td>
+<td>免费(本地GPU)</td>
+<td>免费(本地GPU)</td>
+<td>免费(本地)</td>
+</tr>
+<tr>
+<td>MMLU</td>
+<td>69%</td>
+<td>70%</td>
+<td>70.6%</td>
+<td>68.4%</td>
+<td>~56%</td>
+</tr>
+<tr>
+<td>核心优势</td>
+<td>端侧效率+质量</td>
+<td>规模+生态</td>
+<td>MoE效率</td>
+<td>开源生态</td>
+<td>数据验证</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Phi-3</th>
+<th>GPT-4o-mini</th>
+<th>Gemini Nano</th>
+<th>Apple Intelligence (on-device)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间</td>
+<td>2024.04</td>
+<td>2024.07</td>
+<td>2024</td>
+<td>2024.06</td>
+</tr>
+<tr>
+<td>参数</td>
+<td>3.8B</td>
+<td>未公开(预估~8B)</td>
+<td>未公开(~2-3B+)</td>
+<td>未公开(~3B)</td>
+</tr>
+<tr>
+<td>部署策略</td>
+<td>开源, 自行部署</td>
+<td>闭源API</td>
+<td>闭源, 厂商集成</td>
+<td>闭源, 系统集成</td>
+</tr>
+<tr>
+<td>开发者自由度</td>
+<td>高(完全本地, 可微调)</td>
+<td>低(API only)</td>
+<td>低(Google only)</td>
+<td>极低(Apple only)</td>
+</tr>
+<tr>
+<td>数据隐私</td>
+<td>最高(本地)</td>
+<td>最低(云端API)</td>
+<td>中(厂商可信执行环境)</td>
+<td>中(系统沙盒)</td>
+</tr>
+</tbody></table>
+<h2 id="局限与实践挑战"><a href="#局限与实践挑战" class="headerlink" title="局限与实践挑战"></a>局限与实践挑战</h2><ol>
+<li><p><strong>合成数据质量的单向依赖性。</strong> Phi-3的数据工程高度依赖GPT-4等闭源教师模型生成高质量合成数据。如果教师模型在某些领域存在系统性偏见或盲区, 这些缺陷会完整传递给学生模型。在知识截止日之后的知识(SFT合成的时间点之后)完全无法覆盖。这使Phi-3成为一种”知识的二级传播”——它的知识不是直接来自世界, 而是由教师模型转录的世界的二次呈现。影响评估: 对标准benchmark(训练数据覆盖)影响小, 但对实时知识、稀有事实和小众领域的影响显著(MMLU中非英语&#x2F;非主流学科的score下降更明显)。</p>
+</li>
+<li><p><strong>多语言能力的明显缺陷。</strong> 训练数据以英语为主(估计&gt;80%), 非英语语言性能显著下降。在多语言MMLU或XGLUE等跨语言基准上, Phi-3-mini的表现显著弱于训练了更多语言数据的可比模型。根源: 高质量合成数据的生成在非英语语言上更难(教师模型在非英语上的能力本身就弱, 且成本更高)。这是一个”数据工程悖论”——教师模型偏好的语言得到更好的合成数据覆盖, 资源不足的语言在合成数据覆盖和原生网络数据质量上双输。</p>
+</li>
+<li><p><strong>知识截止日与更新成本。</strong> 预训练的基础知识截止到训练窗口的末端。对于需要最新信息的任务, Phi-3必须依赖RAG(检索增强生成)或外部工具。但小模型的上下文窗口有限(4-8K基础), 限制了RAG可以注入的信息量。更新方案(如继续训练或LoRA微调)需要精心设计的数据来避免”灾难性遗忘”——在新数据上微调可能覆盖来之不易的推理能力。这个局限对”知识密集型”应用(新闻摘要、实时问答)影响重大, 但对”推理密集型”应用(代码生成、数学解题)影响较小。</p>
+</li>
+<li><p><strong>长上下文窗口的先天不足。</strong> 基础的Phi-3-mini上下文窗口为4K(部分版本扩展到8K), 远低于GPT-4o(128K)、Claude 3(200K)、Gemini 1.5(1M+)等旗舰模型。对于需要处理长文档(合同分析、全文翻译、长篇创作)的场景, 4K窗口严重不足。更大的上下文窗口需要显著不同的训练数据配比——需要大量的长程依赖训练样本。合成数据在生成长程依赖方面尤其困难(教师模型本身长程推理也有局限), 形成了另一个”合成数据的盲区”。</p>
+</li>
+<li><p><strong>幻觉风险与小模型的”自信过度”。</strong> 小模型可能产生比大模型更隐蔽的幻觉。原因: 大模型对自身知识的边界感知更清晰(因为参数多、存的事实多——知道什么知道、什么不知道)。小模型参数中”事实”的量少, 但推理回路常被高质量合成数据训练得很好——导致”推理能力强但知识不足”的矛盾。模型可能对某个知识空白产生一个逻辑自洽但错误的推理链, 输出错误信息但充满自信。Phi-3在TruthfulQA(现实性测试)上的56.0%得分虽高于GPT-3.5的52.1%, 但明显低于大模型——说明幻觉仍是一个实质性挑战。</p>
+</li>
+<li><p><strong>数据工程的可复现性壁垒。</strong> Phi-3的数据处理管线涉及多个闭源组件(GPT-4生成的合成数据、自定义的质量分类器等)。完整复现Phi-3需要(a)相当的合成数据生成预算(估计$50-100K的GPT-4 API费用, 取决于上下文长度和生成数量); (b) 网络数据处理的基础设施(数十TB的数据处理能力); (c) 数据质量标注和过滤的专业性(需要训练自定义分类器并在反复迭代中摸索最佳过滤阈值)。这使Phi-3的数据工程与其说是”方法”, 不如说是”资产”——有价值但不可完全复现。</p>
+</li>
+<li><p><strong>端侧部署的用户体验鸿沟。</strong> 虽然12 tok&#x2F;s是”可用”的速度, 但距离”舒适”还有差距。GPT-3.5的云端推理可达50-100 tok&#x2F;s, 用户可以几乎实时地浏览长回复。12 tok&#x2F;s意味着一个200-token的回复需要约17秒生成——这对用户来说是一个明显可感的等待。当多个app同时使用本地模型时, 共享的Neural Engine可能成为瓶颈。Phi-3的端侧部署是技术成就, 但用户体验还需要时间——要么硬件再提升2-3x, 要么模型再优化2-3x。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>“先广后精”的课程设计模式。</strong> 将训练数据按”知识的广度和深度”两个维度分类, 分阶段以不同学习率注入: 阶段1高学习率+大量多样数据→建立广度; 阶段2低学习率+高质量精选数据→建立深度。这个模式可推广到任何需要同时优化广度覆盖率(如multilingual ability)和深度精准度(如reasoning)的场景。</p>
+</li>
+<li><p><strong>量化对小模型不是灾难——欠训练才是。</strong> 充分训练的小模型(远超Chinchilla最优)权重分布更均匀、更量化友好。4-bit量化对Phi-3-mini的影响仅1-2%, 远低于直觉预期。这为端侧部署提供了关键的系统性保障——设计小模型时优先确保”充分训练”, 保证后续量化可行。</p>
+</li>
+<li><p><strong>数据工程的ROI极高, 但需系统性计算。</strong> 数据工程成本(过滤、合成、评分)仅占总训练成本的5-8%,但使小模型达到大模型性能, 等效ROI约100x。这启发了一个”data-first”的模型开发策略: 在增加参数或数据量之前, 优先优化数据”质量”。</p>
+</li>
+<li><p><strong>合成数据与网络数据的互补性。</strong> 合成数据提供”高质量示范”(推理能力的模板), 网络数据提供”现实世界的多样性”(知识的广度)。两者不是替代关系, 而是互补——不能只用合成数据(知识的边界被教师模型限制), 也不能只用网络数据(缺乏精细推理的训练信号)。最优混合比例在80&#x2F;20左右(网络&#x2F;合成)。</p>
+</li>
+<li><p><strong>“端侧AI”的三个关键设计原则。</strong> 从Phi-3的部署中提炼: (a) 充分训练→量化友好(每参数&gt;500 tokens of training); (b) 架构简洁→即插即用(标准Decoder-only Transformer, 无自定义算子); (c) 量化策略匹配硬件特性(GPTQ适用于A系列芯片, AWQ可能更适合高通芯片)。</p>
+</li>
+<li><p><strong>小模型的能力上限由”知识的浓缩度”决定。</strong> 参数数量决定了模型可以存储多少”压缩的知识”。但不同的数据源对知识的”压缩效率”不同——教科书式合成数据每百万token注入的可检索知识量可能是网络文本的5-10倍。因此小模型的”有效知识容量”取决于训练数据的”浓缩质量”, 而非简单的token count。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Phi-3代表了一个AI民主化的关键拐点。如果说GPT-3&#x2F;4证明了”没有足够GPU, 就不要谈AI”, 那么Phi-3证明了”数据质量可以大幅度替代GPU预算”。这个范式转移的影响深远: 它将AI的竞争焦点从”谁能训练更大的模型”(资本密集型)转向”谁能获取&#x2F;生成更好的数据”(专业知识密集型)。对中小型AI团队和应用开发者来说, 这是一个巨大的赋能——不再受困于”我们只有A100集群, 他们有的是10K H100集群”的不对等竞争。</p>
+<p>数据工程从AI中的”脏活累活”变成了”核心竞争力”。Phi-3的pipeline读起来像一个极度详细的清洗指南: URL去重→文档MinHash→质量分类器→毒性过滤→语言识别→启发式过滤。每一步单独看都不复杂, 但组合起来的效果是惊人的——从噪声海洋中提取出足以让小模型与大模型争锋的高信号数据。这让我想到谷歌早期成功的秘诀——不是算法(PageRank)本身, 而是大规模爬取和索引整个互联网的执行力。数据工程的规模化执行力, 正在成为AI时代的新护城河。</p>
+<p>作为一个拥抱端侧部署的方案, Phi-3对”数据隐私”的暗示很重要。当3.8B模型可以在手机上完全离线地处理敏感对话(医疗、法律、个人财务), 它消解了”发送到云端”的隐私焦虑——这是B2B尤其是受管制行业(healthcare, legal, finance)的一个刚性需求。端侧AI不再是一个”缩减版”的妥协, 而是一个提供了独特价值(隐私+离线+零延迟)的差异化产品策略。</p>
+<p>Phi-3.5的MoE和Vision扩展证明了”数据工程不是一次性技巧”。同样的高质量数据策略在MoE(细粒度路由激活)和多模态架构上都产生了可复用增益——说明数据质量是一个”高度可移植”的增益因子, 不依赖架构假设。这对于评估未来的研究方向非常重要: 在考虑新的架构创新时, 应先问”这个架构是否从好数据中获益更多或更少”? 如果受益更少(即架构存在非数据效率的瓶颈), 那这个架构就有根本的设计缺陷。</p>
+<p>最后, Phi-3让我重新思考”scaling up vs scaling right”的问题。过去三年AI的主导叙事是”越大越好”(GPT-4 1.7T params? GPT-5 even more?)。Phi-3优雅地提供了”scaling right”的竞争叙事——不是反对规模化, 而是问”在规模化什么”? 规模化数据质量可能比规模化参数数量更高效, 且更公平(不依赖硬件垄断)。这个叙事在2024年获得了快速传播, 但我认为我们仍处于这场竞争的早期——数据质量的scaling law刚起步, 我们对”数据信号密度”的量化还非常粗略。未来3-5年,”高质量数据自动生成”可能会成为最大的技术突破领域。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>数据工程的极限在哪里？— 如果将Phi-3的数据工程推向极致(更好的过滤、更好的合成数据、更好的课程设计), 3.8B可以达到GPT-4的水平吗? 是否存在”知识的压缩极限”——给定3.8B参数, 无法存储超过某个上限的压缩知识?</p>
+</li>
+<li><p>数据课程能否自动化设计？— 当前的阶段划分(80&#x2F;20)、学习率衰减(6x)、每阶段数据比例等决策, 依赖研究者的经验和试错。能否通过自动化的课程学习算法(如基于验证损失的动态课程切换)来优化?</p>
+</li>
+<li><p>端侧模型的持续学习方案？— 用户使用模型的同时, 能否在不牺牲隐私的前提下更新模型知识(如通过本地LoRA fine-tune调整知识截止日)? 这需要一个全新的”端侧持续学习”框架。</p>
+</li>
+<li><p>合成数据偏见如何量化和缓解？— 如何系统地测量Phi-3从教师模型继承的偏见(风格、价值、知识)? 是否存在”独立于教师模型”的合成数据生成路径?</p>
+</li>
+<li><p>小模型推理时的”自信度校准”？— 当小模型进入”我知道逻辑但不知道事实”的状态, 它应该输出”我不确定”而非虚构。如何训练小模型的”知识边界感知”?</p>
+</li>
+<li><p>多语言高质量合成数据的规模化生成？— 如果高质量合成数据是性能的核心驱动, 如何降低其在非英语语言上的生成成本? 是否可以通过跨语言迁移在合成数据上实现?</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li><p>Abdin, M., et al. (2024). Phi-3 Technical Report. arXiv:2404.14219.</p>
+</li>
+<li><p>Abdin, M., et al. (2024). Phi-3.5 Technical Reports.</p>
+</li>
+<li><p>Gunasekar, S., et al. (2023). Textbooks Are All You Need (Phi-1). arXiv:2306.11644.</p>
+</li>
+<li><p>Li, Y., et al. (2023). Textbooks Are All You Need II: Phi-1.5 Technical Report. arXiv:2309.05463.</p>
+</li>
+<li><p>Frantar, E., et al. (2022). GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers. ICLR 2023.</p>
+</li>
+<li><p>Hoffmann, J., et al. (2022). Training Compute-Optimal Large Language Models (Chinchilla). NeurIPS 2022.</p>
+</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/" class="category-chain-item">规模定律</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-data-quality/" class="print-no-link">#papers/data-quality</a>
+      
+        <a href="/tags/papers-small-models/" class="print-no-link">#papers/small-models</a>
+      
+        <a href="/tags/papers-edge-deployment/" class="print-no-link">#papers/edge-deployment</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</div>
+      <div>https://w2ongq6.github.io/2024/04/22/llm/note/Phi3_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年4月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/04/22/inference/note/SnapKV_note/" title="SnapKV: LLM Knows What You are Looking for Before Generation">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SnapKV: LLM Knows What You are Looking for Before Generation</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/04/17/llm/note/Many_Shot_ICL_note/" title="Many-Shot In-Context Learning">
+                        <span class="hidden-mobile">Many-Shot In-Context Learning</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

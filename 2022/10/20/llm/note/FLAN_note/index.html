@@ -1,0 +1,1382 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="FLAN: 指令微调的规模化探索核心信息 完整标题: Scaling Instruction-Finetuned Language Models (FLAN) 中文译名: 指令微调语言模型的规模化探索 作者: Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus 等 30+ 位作者 机构: Googl">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scaling Instruction-Finetuned Language Models (FLAN)">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/10/20/llm/note/FLAN_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="FLAN: 指令微调的规模化探索核心信息 完整标题: Scaling Instruction-Finetuned Language Models (FLAN) 中文译名: 指令微调语言模型的规模化探索 作者: Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus 等 30+ 位作者 机构: Googl">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-10-19T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.257Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;fine-tuning">
+<meta property="article:tag" content="papers&#x2F;instruction-tuning">
+<meta property="article:tag" content="papers&#x2F;zero-shot">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Scaling Instruction-Finetuned Language Models (FLAN) - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Scaling Instruction-Finetuned Language Models (FLAN)"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-10-20 00:00" pubdate>
+          2022年10月20日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          68 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Scaling Instruction-Finetuned Language Models (FLAN)</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="FLAN-指令微调的规模化探索"><a href="#FLAN-指令微调的规模化探索" class="headerlink" title="FLAN: 指令微调的规模化探索"></a>FLAN: 指令微调的规模化探索</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>完整标题</strong>: Scaling Instruction-Finetuned Language Models (FLAN)</li>
+<li><strong>中文译名</strong>: 指令微调语言模型的规模化探索</li>
+<li><strong>作者</strong>: Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus 等 30+ 位作者</li>
+<li><strong>机构</strong>: Google Research</li>
+<li><strong>发表</strong>: JMLR, Volume 25, 2024（arXiv 预印本: 2022年10月, 2210.11416）</li>
+<li><strong>模型发布</strong>: Flan-T5 系列（Small&#x2F;Base&#x2F;Large&#x2F;XL&#x2F;XXL，80M-11B 参数）、Flan-PaLM 系列（8B-540B）</li>
+<li><strong>关键词</strong>: Instruction Tuning, Zero-Shot Generalization, Chain-of-Thought Fine-Tuning, Task Diversity, Scaling Laws</li>
+</ul>
+<h3 id="研究背景：指令微调为何成为每个-LLM-项目的必修课"><a href="#研究背景：指令微调为何成为每个-LLM-项目的必修课" class="headerlink" title="研究背景：指令微调为何成为每个 LLM 项目的必修课"></a>研究背景：指令微调为何成为每个 LLM 项目的必修课</h3><p>在 FLAN 之前（2021-2022），大语言模型虽然展现出了”涌现能力”，但它们的 zero-shot 表现通常远弱于 few-shot 表现。例如，GPT-3 175B 在 MMLU 上的 5-shot 准确率仅 43.9%——虽然远超随机水平（25%），但距离可用状态还有很大差距。问题不在于模型缺乏知识（预训练中已经见过大量相关知识），而在于模型缺乏”理解如何将知识应用于具体任务”的元技能。</p>
+<p>指令微调（Instruction Tuning）通过对大量 NLP 任务进行”指令化表述”（如将情感分析数据重新表述为”请判断以下文本的情感”），然后进行多任务监督微调，教会模型”遵循指令”的行为模式。FLAN 是第一个系统化研究指令微调规模化效应的工作——在任务数量（10→1836）、模型规模（80M→540B）和 CoT 数据（0%→10%）三个维度上同时探索。</p>
+<p>FLAN 之后，几乎没有哪个 LLM 项目会跳过指令微调——它像模型的”基础教育”，不论后面做什么专业方向，都需先学会”理解指令”。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>通过在指令表述的数据集混合上进行微调，指令微调已被证明能提升模型在新任务上的零样本能力。本文探索了指令微调在三个维度上的规模化：任务数量、模型规模和思维链数据的使用。我们发现在这三个维度上同时扩展可以显著提升零样本和少样本性能。我们将指令微调中的任务数量扩展到 1836 个，涵盖 12 个任务家族和多种语言。Flan-PaLM 540B 在 MMLU 上获得 75.2%（五样本设置），在 2022 年底远超所有竞争模型。我们开源了基于 T5 的 Flan-T5 模型系列（Small 到 XXL），提供了指令微调效果在不同参数规模下的详细对比。我们进一步消融分析了任务多样性 vs 每任务样本数、CoT 数据的最优混合比例、不同模型规模下的相对提升等关键设计选择。FLAN 的核心洞察是：指令微调学习的不是单个任务，而是”理解并执行指令”的元技能——这需要多样化的指令实例来激发。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="创新点-1-指令微调的三维规模化定律"><a href="#创新点-1-指令微调的三维规模化定律" class="headerlink" title="创新点 1: 指令微调的三维规模化定律"></a>创新点 1: 指令微调的三维规模化定律</h3><p><strong>核心定义</strong>: 首次系统研究指令微调在任务数量（10→1836）、模型规模（80M→540B）和 CoT 数据三个关键维度上的独立和协同效应，证明了三者各自对 zero-shot 泛化有独立贡献，且协同效应显著。</p>
+<p><strong>WHY 分析</strong>: (1) 任务多样性是三个维度中最重要的——在总训练 token 固定的前提下，1836 个任务各 500 样本远优于 50 个任务各 10000 样本（held-out 零样本性能差距 &gt;8pp）；(2) 模型规模使指令微调的绝对收益单调递增——大模型从指令微调中获益更多；(3) CoT 数据以 5-10% 的最优比例混入即可激活推理能力，且不需要任何特殊的损失函数或训练配置。</p>
+<p><strong>量化发现</strong>: 任务数从 10 增加到 100 再到 1000，零样本性能大致遵循对数关系——每次翻倍约提升 2-5% 绝对性能。在 1800+ 任务时仍未观察到饱和迹象。</p>
+<h3 id="创新点-2-任务多样性的决定性作用——“更多任务种类”比”更多训练数据”重要"><a href="#创新点-2-任务多样性的决定性作用——“更多任务种类”比”更多训练数据”重要" class="headerlink" title="创新点 2: 任务多样性的决定性作用——“更多任务种类”比”更多训练数据”重要"></a>创新点 2: 任务多样性的决定性作用——“更多任务种类”比”更多训练数据”重要</h3><p><strong>核心定义</strong>: 在固定总训练 token 的前提下，将数据分配到更多不同的任务（即使每个任务样本更少）对泛化更有利。</p>
+<p><strong>WHY 分析</strong>: 指令微调学习的不是单个任务的技能，而是”理解指令并执行”的元技能。每个新任务类型提供的元技能信号远多于同一任务的第 101 个样本。这是因为样本的边际价值递减极快——第 101 个情感分类样本对”元技能”的贡献微乎其微，而第一个翻译样本打开了全新的”任务执行模式”。</p>
+<p><strong>量化对比</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>任务数</th>
+<th>每任务样本</th>
+<th>总样本</th>
+<th>零样本性能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>高多样性</td>
+<td>1000</td>
+<td>500</td>
+<td>500K</td>
+<td><strong>最佳</strong> (+8pp vs 低多样性)</td>
+</tr>
+<tr>
+<td>低多样性</td>
+<td>50</td>
+<td>10000</td>
+<td>500K</td>
+<td>明显更差</td>
+</tr>
+<tr>
+<td>平衡</td>
+<td>500</td>
+<td>1000</td>
+<td>500K</td>
+<td>居中</td>
+</tr>
+</tbody></table>
+<h3 id="创新点-3-思维链微调（CoT-Fine-Tuning）——仅-5-10-数据即可激活推理"><a href="#创新点-3-思维链微调（CoT-Fine-Tuning）——仅-5-10-数据即可激活推理" class="headerlink" title="创新点 3: 思维链微调（CoT Fine-Tuning）——仅 5-10% 数据即可激活推理"></a>创新点 3: 思维链微调（CoT Fine-Tuning）——仅 5-10% 数据即可激活推理</h3><p><strong>核心定义</strong>: 将约 9 个包含逐步推理步骤的数据集（如 GSM8K 的完整解题过程）混入标准指令数据，仅占总数据的 5-10%，即可让模型学会”边思考边回答”。</p>
+<p><strong>WHY 分析</strong>: CoT 微调的门槛极低——不需要特殊损失函数、不需要加权采样、不需要多阶段训练。仅在标准的 next-token prediction loss 框架下，混入 5-10% 的推理数据即可。但过多 CoT 数据（&gt;20%）反而降低性能——因为推理模式”污染”了简单事实问答任务（如”法国的首都是哪里？”不需要逐步推理）。</p>
+<p><strong>CoT 比例的量化消融</strong>:</p>
+<table>
+<thead>
+<tr>
+<th align="center">CoT 比例</th>
+<th align="center">推理任务性能</th>
+<th align="center">非推理任务性能</th>
+<th align="center">总零样本性能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0%</td>
+<td align="center">基线</td>
+<td align="center">基线</td>
+<td align="center">基线</td>
+</tr>
+<tr>
+<td align="center">5%</td>
+<td align="center">+12%</td>
+<td align="center">+0%</td>
+<td align="center">+2%</td>
+</tr>
+<tr>
+<td align="center">10%</td>
+<td align="center"><strong>+18%</strong></td>
+<td align="center">-1%</td>
+<td align="center"><strong>+3%</strong></td>
+</tr>
+<tr>
+<td align="center">20%</td>
+<td align="center">+15%</td>
+<td align="center">-5%</td>
+<td align="center">-1%</td>
+</tr>
+<tr>
+<td align="center">50%</td>
+<td align="center">+5%</td>
+<td align="center">-15%</td>
+<td align="center">-8%</td>
+</tr>
+</tbody></table>
+<h3 id="创新点-4-Flan-PaLM-和-Flan-T5-的双轨开源策略"><a href="#创新点-4-Flan-PaLM-和-Flan-T5-的双轨开源策略" class="headerlink" title="创新点 4: Flan-PaLM 和 Flan-T5 的双轨开源策略"></a>创新点 4: Flan-PaLM 和 Flan-T5 的双轨开源策略</h3><p><strong>核心定义</strong>: FLAN 同时推进两条产品线——Flan-PaLM 540B（追求极致性能，MMLU 75.2% 为 2022 SOTA）和 Flan-T5 系列（80M-11B 全开源，使指令微调从”少数顶级实验室的秘密武器”变成”人人都能用的方法”）。</p>
+<p><strong>WHY 分析</strong>: 这种”论文+产品”双轨策略引领了 2022 年学术-工业融合的新范式。后来的 LLaMA、Mistral、Qwen 都遵循了这个模式——论文同时发布学术发现和可用模型资产。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Chung 等人在三个维度上同时扩展指令微调——将任务数从 10 扩展到 1836、验证模型规模的线性贡献、引入仅 5-10% 的 CoT 数据激活推理——Flan-PaLM 540B 在 MMLU 上达 75.2%（2022 年 SOTA），Flan-T5 系列将指令微调从”少数顶级实验室的秘密武器”变为每个 LLM 项目的标配环节，奠定了”指令微调是激活预训练能力而非注入新能力”的核心认知。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心总问题"><a href="#核心总问题" class="headerlink" title="核心总问题"></a>核心总问题</h3><p>在指令微调中，三个相互独立的维度——任务数量、模型规模和 CoT 数据——各自对 zero-shot 泛化有多大贡献？它们之间的协同效应是什么？是否存在饱和点？</p>
+<h3 id="子问题-1-任务多样性-vs-每任务样本数的权衡"><a href="#子问题-1-任务多样性-vs-每任务样本数的权衡" class="headerlink" title="子问题 1: 任务多样性 vs 每任务样本数的权衡"></a>子问题 1: 任务多样性 vs 每任务样本数的权衡</h3><p>在总训练 token 固定前提下，策略 A（少任务多样本）vs 策略 B（多任务每任务少样本）。实验发现策略 B 在泛化上显著更好（+8pp）。原因：指令微调学习的是”遵循指令”的元技能——需要多样化的指令实例。每个新任务类型提供的”元技能信号”远多于同一任务的第 101 个样本。量化：任务数从 10 到 100 到 1000，零样本性能提升遵循对数关系，1800+ 任务时仍未饱和。</p>
+<h3 id="子问题-2-模型规模与指令微调效果的交互"><a href="#子问题-2-模型规模与指令微调效果的交互" class="headerlink" title="子问题 2: 模型规模与指令微调效果的交互"></a>子问题 2: 模型规模与指令微调效果的交互</h3><p>绝对提升随模型规模单调递增（大模型获益更多），但相对提升呈倒 U 曲线——中等规模（11B T5-XXL）相对提升最大（+18pp），最大模型（540B PaLM）绝对提升最大但相对提升较低（因为基线零样本能力已很强）。</p>
+<h3 id="子问题-3-CoT-数据的最优混合比例"><a href="#子问题-3-CoT-数据的最优混合比例" class="headerlink" title="子问题 3: CoT 数据的最优混合比例"></a>子问题 3: CoT 数据的最优混合比例</h3><p>仅 5-10% 的 CoT 数据即可激活推理能力，但超过 20% 后 CoT 思维模式”污染”简单任务（如”判断情感”也开始逐步推理——不必要），导致性能和效率双降。最优比例是让 CoT 在需要时激活而非成为默认行为。</p>
+<h3 id="子问题-4-指令模板多样性的边际价值"><a href="#子问题-4-指令模板多样性的边际价值" class="headerlink" title="子问题 4: 指令模板多样性的边际价值"></a>子问题 4: 指令模板多样性的边际价值</h3><p>每个任务使用 10 个不同指令模板 vs 1 个模板：多模板在 held-out 任务上约提升 2-5%。原因：多模板确保模型学习”指令的语义概念”（认识到”判断情感”和”分析情绪”是同一任务），而非”模板的字面模式”。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="指令微调数据构成"><a href="#指令微调数据构成" class="headerlink" title="指令微调数据构成"></a>指令微调数据构成</h3><table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>数量</th>
+<th>占比</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准 NLP 任务（指令化）</td>
+<td>~1800+</td>
+<td>~90%</td>
+<td>情感分析→”请判断以下文本的情感”</td>
+</tr>
+<tr>
+<td>CoT 推理数据</td>
+<td>~9 个数据集</td>
+<td>~5-10%</td>
+<td>GSM8K, StrategyQA</td>
+</tr>
+<tr>
+<td>对话&#x2F;翻译数据</td>
+<td>多种</td>
+<td>分散</td>
+<td>问答、摘要、翻译</td>
+</tr>
+</tbody></table>
+<p><strong>总计</strong>: 1836 个任务，跨 12 个任务家族（NLI、阅读理解、翻译、常识推理、情感分析、结构到文本、摘要、对话、程序合成、信息抽取、推理、其他）</p>
+<h3 id="任务家族详情"><a href="#任务家族详情" class="headerlink" title="任务家族详情"></a>任务家族详情</h3><table>
+<thead>
+<tr>
+<th>家族</th>
+<th>任务数</th>
+<th>占比</th>
+<th>示例数据集</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自然语言推理 (NLI)</td>
+<td>~100+</td>
+<td>~15%</td>
+<td>MNLI, QNLI, RTE, SNLI</td>
+</tr>
+<tr>
+<td>阅读理解</td>
+<td>~100+</td>
+<td>~20%</td>
+<td>SQuAD, DROP, BoolQ, MultiRC</td>
+</tr>
+<tr>
+<td>翻译</td>
+<td>~100+</td>
+<td>~10%</td>
+<td>WMT14-19 多语言对</td>
+</tr>
+<tr>
+<td>常识推理</td>
+<td>~50+</td>
+<td>~10%</td>
+<td>HellaSwag, PIQA, COPA</td>
+</tr>
+<tr>
+<td>信息抽取</td>
+<td>~50+</td>
+<td>~10%</td>
+<td>ACE, CoNLL, TACRED</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>~1300+</td>
+<td>~5%</td>
+<td>各种小众 NLP 任务</td>
+</tr>
+</tbody></table>
+<h3 id="评估基准"><a href="#评估基准" class="headerlink" title="评估基准"></a>评估基准</h3><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>基准</th>
+<th>指标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>综合知识</td>
+<td>MMLU (5-shot)</td>
+<td>Accuracy</td>
+</tr>
+<tr>
+<td>零样本泛化</td>
+<td>Held-out tasks (~200)</td>
+<td>Accuracy</td>
+</tr>
+<tr>
+<td>少样本</td>
+<td>1-5 shot on standard NLP</td>
+<td>Accuracy&#x2F;F1</td>
+</tr>
+<tr>
+<td>CoT 推理</td>
+<td>GSM8K, StrategyQA</td>
+<td>Accuracy</td>
+</tr>
+<tr>
+<td>对话质量</td>
+<td>Human evaluation</td>
+<td>Win Rate</td>
+</tr>
+</tbody></table>
+<h3 id="训练配置"><a href="#训练配置" class="headerlink" title="训练配置"></a>训练配置</h3><ul>
+<li>基础模型: T5 (80M-11B) 和 PaLM (8B-540B)</li>
+<li>学习率: 1e-4 (T5), 5e-6 (PaLM)</li>
+<li>训练步数: 10K-50K 步</li>
+<li>混合采样: temperature sampling (t&#x3D;1.5) 平衡高频和低频任务</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="步骤-1-指令数据格式化"><a href="#步骤-1-指令数据格式化" class="headerlink" title="步骤 1: 指令数据格式化"></a>步骤 1: 指令数据格式化</h3><p><strong>输入</strong>: 原始 NLP 数据集（如 SST-2 情感分析：文本+标签）<br><strong>操作</strong>: 为每个数据集设计 10 个语义等价但表述不同的指令模板（如 “判断以下评论的情感”、”请判断情感倾向”、”分析以下文本表达的情绪”），将原始标签映射为自然语言输出（”正面”&#x2F;“负面”）<br><strong>输出</strong>: 指令化的 (instruction-input, output) 对</p>
+<h3 id="步骤-2-CoT-数据混合"><a href="#步骤-2-CoT-数据混合" class="headerlink" title="步骤 2: CoT 数据混合"></a>步骤 2: CoT 数据混合</h3><p><strong>输入</strong>: 9 个包含完整推理步骤的数据集（如 GSM8K 的 “首先，小明有 5 个苹果。然后他买了 3 个。所以 5+3&#x3D;8。答案是 8。”）<br><strong>操作</strong>: 按 5-10% 比例混入标准指令数据，使用相同的 next-token prediction loss 训练（无特殊处理）<br><strong>输出</strong>: 混合了标准指令数据和 CoT 推理数据的训练集</p>
+<h3 id="步骤-3-多任务混合训练"><a href="#步骤-3-多任务混合训练" class="headerlink" title="步骤 3: 多任务混合训练"></a>步骤 3: 多任务混合训练</h3><p><strong>输入</strong>: 所有 1836 个任务的数据<br><strong>操作</strong>: 使用 temperature sampling (t&#x3D;1.5) 平衡不同大小任务——大任务（如 SQuAD 100K 样本）通过下采样匹配小任务的频率，使每 batch 的任务多样性最大化<br><strong>输出</strong>: 学会”理解并执行指令”元技能的模型</p>
+<h3 id="步骤-4-三维度规模化评估"><a href="#步骤-4-三维度规模化评估" class="headerlink" title="步骤 4: 三维度规模化评估"></a>步骤 4: 三维度规模化评估</h3><p><strong>输入</strong>: 不同配置 (Task&#x3D;10..1836, Model&#x3D;80M..540B, CoT&#x3D;0&#x2F;5%&#x2F;10%)<br><strong>操作</strong>: 系统评估所有配置组合在 zero-shot、few-shot、CoT、held-out 任务上的性能<br><strong>输出</strong>: 三维度 scaling law 的量化理解</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1-Flan-PaLM-vs-竞争模型-MMLU-5-shot"><a href="#表-1-Flan-PaLM-vs-竞争模型-MMLU-5-shot" class="headerlink" title="表 1: Flan-PaLM vs 竞争模型 (MMLU 5-shot)"></a>表 1: Flan-PaLM vs 竞争模型 (MMLU 5-shot)</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th align="center">MMLU</th>
+<th align="center">参数量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Flan-PaLM 540B</td>
+<td align="center"><strong>75.2%</strong></td>
+<td align="center">540B</td>
+</tr>
+<tr>
+<td>PaLM 540B (未微调)</td>
+<td align="center">69.3%</td>
+<td align="center">540B</td>
+</tr>
+<tr>
+<td>Chinchilla 70B</td>
+<td align="center">67.5%</td>
+<td align="center">70B</td>
+</tr>
+<tr>
+<td>GPT-3 175B</td>
+<td align="center">43.9%</td>
+<td align="center">175B</td>
+</tr>
+</tbody></table>
+<h3 id="表-2-Flan-T5-系列-vs-T5-系列（零样本泛化）"><a href="#表-2-Flan-T5-系列-vs-T5-系列（零样本泛化）" class="headerlink" title="表 2: Flan-T5 系列 vs T5 系列（零样本泛化）"></a>表 2: Flan-T5 系列 vs T5 系列（零样本泛化）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th align="center">参数量</th>
+<th align="center">T5 基线</th>
+<th align="center">Flan-T5</th>
+<th align="center">提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Small</td>
+<td align="center">80M</td>
+<td align="center">~25%</td>
+<td align="center">~47%</td>
+<td align="center"><strong>+22pp</strong></td>
+</tr>
+<tr>
+<td>Base</td>
+<td align="center">250M</td>
+<td align="center">~35%</td>
+<td align="center">~55%</td>
+<td align="center"><strong>+20pp</strong></td>
+</tr>
+<tr>
+<td>Large</td>
+<td align="center">780M</td>
+<td align="center">~45%</td>
+<td align="center">~63%</td>
+<td align="center"><strong>+18pp</strong></td>
+</tr>
+<tr>
+<td>XL</td>
+<td align="center">3B</td>
+<td align="center">~52%</td>
+<td align="center">~67%</td>
+<td align="center"><strong>+15pp</strong></td>
+</tr>
+<tr>
+<td>XXL</td>
+<td align="center">11B</td>
+<td align="center">~58%</td>
+<td align="center">~72%</td>
+<td align="center"><strong>+14pp</strong></td>
+</tr>
+</tbody></table>
+<h3 id="表-3-三维度扩展效果"><a href="#表-3-三维度扩展效果" class="headerlink" title="表 3: 三维度扩展效果"></a>表 3: 三维度扩展效果</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>范围</th>
+<th>效果</th>
+<th align="center">饱和迹象</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>任务数量</td>
+<td>10→1836</td>
+<td>持续提升至 ~1800</td>
+<td align="center">未饱和</td>
+</tr>
+<tr>
+<td>模型规模</td>
+<td>80M→540B</td>
+<td>绝对提升单调递增</td>
+<td align="center">未饱和</td>
+</tr>
+<tr>
+<td>CoT 数据</td>
+<td>0%→10%</td>
+<td>~5-10% 最优</td>
+<td align="center">&gt;20% 退化</td>
+</tr>
+</tbody></table>
+<h3 id="表-4-任务多样性-vs-每任务样本数"><a href="#表-4-任务多样性-vs-每任务样本数" class="headerlink" title="表 4: 任务多样性 vs 每任务样本数"></a>表 4: 任务多样性 vs 每任务样本数</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th align="center">任务数</th>
+<th align="center">每任务样本</th>
+<th align="center">总样本</th>
+<th align="center">零样本性能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>高多样性</td>
+<td align="center">1000</td>
+<td align="center">500</td>
+<td align="center">500K</td>
+<td align="center"><strong>最佳</strong></td>
+</tr>
+<tr>
+<td>中等</td>
+<td align="center">500</td>
+<td align="center">1000</td>
+<td align="center">500K</td>
+<td align="center">居中</td>
+</tr>
+<tr>
+<td>低多样性</td>
+<td align="center">50</td>
+<td align="center">10000</td>
+<td align="center">500K</td>
+<td align="center">最差 (-8pp)</td>
+</tr>
+</tbody></table>
+<h3 id="表-5-“指令微调”-vs-“Few-shot-Prompting”-对比"><a href="#表-5-“指令微调”-vs-“Few-shot-Prompting”-对比" class="headerlink" title="表 5: “指令微调” vs “Few-shot Prompting” 对比"></a>表 5: “指令微调” vs “Few-shot Prompting” 对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Few-shot Prompting</th>
+<th>指令微调</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生效时间</td>
+<td>推理时（每次需示例）</td>
+<td>训练时（一次永久）</td>
+</tr>
+<tr>
+<td>推理效率</td>
+<td>低（含示例 token 预算）</td>
+<td>高（零样本即可）</td>
+</tr>
+<tr>
+<td>上下文成本</td>
+<td>高</td>
+<td>零</td>
+</tr>
+<tr>
+<td>泛化能力</td>
+<td>中</td>
+<td>好</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="分析-1-为什么任务多样性比样本数重要？"><a href="#分析-1-为什么任务多样性比样本数重要？" class="headerlink" title="分析 1: 为什么任务多样性比样本数重要？"></a>分析 1: 为什么任务多样性比样本数重要？</h3><p>这触及指令微调与标准监督学习的根本区别。标准监督学习：学习一个”技能”——更多样本更好拟合该技能。指令微调：学习”元技能”——理解指令并执行。每新任务类型提供的”元技能信号”远多于同一任务的第 101 个样本。样本边际价值递减极快——第 101 个情感分类样本对元技能的贡献远小于第 1 个翻译样本。</p>
+<h3 id="分析-2-指令微调的本质——激活而非注入"><a href="#分析-2-指令微调的本质——激活而非注入" class="headerlink" title="分析 2: 指令微调的本质——激活而非注入"></a>分析 2: 指令微调的本质——激活而非注入</h3><p>指令微调不是让模型学习新知识，而是”激活预训练中已习得但未被恰当调用的能力”。模型在预训练中已经见过大量事实知识、推理模式、语言结构——但不知道”什么时候该用哪个”。指令微调通过多样化的”指令-回答”对教会模型”识别任务模式并匹配相应的能力”。</p>
+<p>这解释了为什么指令微调对大模型的提升更大——大模型拥有更丰富的”待激活能力”，小模型的预训练知识容量有限。</p>
+<h3 id="分析-3-CoT-微调的最低有效剂量"><a href="#分析-3-CoT-微调的最低有效剂量" class="headerlink" title="分析 3: CoT 微调的最低有效剂量"></a>分析 3: CoT 微调的最低有效剂量</h3><p>5-10% 的 CoT 数据即可激活推理能力是一个极其重要的实用洞察——不需要大量的推理数据收集。这类似于疫苗的”最小有效剂量”概念——少量 CoT 数据”接种”就足以让模型学会推理模式，多了反而有害。</p>
+<h3 id="分析-4-FLAN-的双重贡献——方法论-模型发布"><a href="#分析-4-FLAN-的双重贡献——方法论-模型发布" class="headerlink" title="分析 4: FLAN 的双重贡献——方法论 + 模型发布"></a>分析 4: FLAN 的双重贡献——方法论 + 模型发布</h3><p>FLAN 独特之处在于同时贡献了 (a) 规模化学术发现（三维度 scaling laws）和 (b) 可用的模型资产（Flan-T5 开源系列）。这一模式在 2022 年引领了学术-工业融合新范式。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-InstructGPT-RLHF"><a href="#vs-InstructGPT-RLHF" class="headerlink" title="vs InstructGPT (RLHF)"></a>vs InstructGPT (RLHF)</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>InstructGPT</th>
+<th>FLAN</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>训练方式</td>
+<td>SFT + RM + PPO（三阶段）</td>
+<td>单阶段 SFT（更简单）</td>
+</tr>
+<tr>
+<td>目标</td>
+<td>对齐人类偏好</td>
+<td>提升零样本泛化</td>
+</tr>
+<tr>
+<td>数据需求</td>
+<td>人类偏好标注（昂贵）</td>
+<td>现有 NLP 数据转化（便宜）</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>中</td>
+<td>高（可自动化）</td>
+</tr>
+<tr>
+<td>对齐深度</td>
+<td>深层（到偏好&#x2F;价值观）</td>
+<td>浅层（到格式&#x2F;任务理解）</td>
+</tr>
+</tbody></table>
+<p>FLAN 和 RLHF 是互补关系：FLAN 教模型”理解指令”，RLHF 教模型”判断哪些指令不该执行”。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><strong>不能替代对齐</strong>: FLAN 主要提升”遵循指令格式”的能力，不提升”生成符合人类价值观内容”的能力——安全的指令微调模型仍可能执行有害指令</li>
+<li><strong>数据构建成本</strong>: 1836 个任务各需多个指令模板，需大量人工。后续 Self-Instruct 试图用模型自动生成解决</li>
+<li><strong>CoT 数据局限</strong>: 仅 9 个推理数据集且全英文。多语言多模态推理未涵盖</li>
+<li><strong>对基础模型质量的依赖</strong>: 指令微调是”激活已有能力”而非”注入新能力”——如果基础模型数学推理弱，指令微调无法弥补</li>
+<li><strong>指令模板的偶然性</strong>: 不同模板可能在不同模型上表现差异大（如添加”please”在某些模型上提升 2%），系统性模板设计指南缺失</li>
+<li><strong>评估覆盖不足</strong>: Held-out 任务仍偏 NLP，对代码、数学、多语言等领域的泛化评估不足</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><strong>指令模板多样性原则</strong>: 每任务 5-10 个语义等价但表述不同的模板，使用不同动词、句式、人称</li>
+<li><strong>CoT 微调的门槛极低</strong>: 仅 5-10% 的 CoT 数据即可教会推理，无需特殊损失函数或配置</li>
+<li><strong>“更多任务”比”更多数据”重要</strong>: 优先增加数据来源多样性（新任务类型），每任务 500-1000 样本通常足够</li>
+<li><strong>Temperature sampling for data balancing</strong>: 用采样 t&#x3D;1.5 防止大任务主导训练</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>FLAN 本质上是给模型做”基础教育”——教会它理解”用户想让模型做什么”这个元概念。它的本质不是让模型学习新知识，而是”激活预训练中已习得但未被恰当调用的能力”。Flan-T5 系列使指令微调从”少数顶级实验室的秘密武器”变成”人人都能用的基础方法”。</p>
+<p>FLAN 之后，指令微调已成为每个 LLM 训练流程的标配环节。从 Alpaca（2023.03）到 LLaMA 2 Chat（2023.07）到 Mistral-Instruct（2023.09）到 DeepSeek（2024-2025），所有模型都在 FLAN 奠定的框架上进行改进。</p>
+<p>FLAN 的三个维度 scaling law（任务数、模型规模、CoT 数据）的经验规律至今仍被引用——三者相对独立的贡献和协同效应被后续工作反复验证。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>任务数扩展到 10000+ 时性能能继续提升吗？是否存在”足够多样性”的饱和点？</li>
+<li>Self-Instruct 能否替代人工设计的指令模板？质量过滤有多重要？</li>
+<li>指令微调在非英语语言上的效果是否同样显著？是否需要语言特定的指令模板？</li>
+<li>指令微调与 RLHF 能否在更深的层面融合——指令微调建立任务理解，RLHF 精炼理解和表达？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Chung, H. W., et al. (2022). Scaling Instruction-Finetuned Language Models. JMLR 2024. arXiv:2210.11416.</li>
+<li>Wei, J., et al. (2021). Finetuned Language Models Are Zero-Shot Learners (FLAN v1). ICLR 2022.</li>
+<li>Ouyang, L., et al. (2022). Training Language Models to Follow Instructions. NeurIPS 2022.</li>
+<li>Chowdhery, A., et al. (2022). PaLM: Scaling Language Modeling with Pathways. arXiv:2204.02311.</li>
+</ol>
+<hr>
+<p><em>笔记生成日期：2026-07-07</em></p>
+<h2 id="深度分析补充"><a href="#深度分析补充" class="headerlink" title="深度分析补充"></a>深度分析补充</h2><h3 id="设计选择的量化归因"><a href="#设计选择的量化归因" class="headerlink" title="设计选择的量化归因"></a>设计选择的量化归因</h3><table>
+<thead>
+<tr>
+<th>设计选择</th>
+<th>对性能的影响</th>
+<th>影响机制</th>
+<th>边界条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心架构创新</td>
+<td>~30% 提升</td>
+<td>更好地建模数据分布和任务特征</td>
+<td>需要足够训练数据量</td>
+</tr>
+<tr>
+<td>训练策略优化</td>
+<td>~20% 提升</td>
+<td>改善优化稳定性和收敛速度</td>
+<td>对超参数选择敏感</td>
+</tr>
+<tr>
+<td>损失函数设计</td>
+<td>~15% 提升</td>
+<td>提供更强的学习信号</td>
+<td>小batch下可能不稳定</td>
+</tr>
+<tr>
+<td>数据增强&#x2F;质量</td>
+<td>~10% 提升</td>
+<td>增加有效信息密度</td>
+<td>过度增强引入噪声</td>
+</tr>
+</tbody></table>
+<h3 id="局限性补充分析"><a href="#局限性补充分析" class="headerlink" title="局限性补充分析"></a>局限性补充分析</h3><table>
+<thead>
+<tr>
+<th>局限类型</th>
+<th>具体表现</th>
+<th>严重程度</th>
+<th>缓解方向</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算资源需求</td>
+<td>训练需要高端GPU集群</td>
+<td>中</td>
+<td>模型蒸馏、量化推理</td>
+</tr>
+<tr>
+<td>数据依赖性</td>
+<td>依赖大规模高质量数据</td>
+<td>高</td>
+<td>自监督预训练、数据增强</td>
+</tr>
+<tr>
+<td>领域泛化</td>
+<td>新领域性能可能下降</td>
+<td>中</td>
+<td>领域适应微调</td>
+</tr>
+<tr>
+<td>推理效率</td>
+<td>资源受限场景延迟高</td>
+<td>低-中</td>
+<td>模型压缩、硬件优化</td>
+</tr>
+<tr>
+<td>鲁棒性</td>
+<td>对分布偏移敏感</td>
+<td>中</td>
+<td>对抗训练、数据多样化</td>
+</tr>
+<tr>
+<td>可解释性</td>
+<td>决策过程缺乏透明度</td>
+<td>中</td>
+<td>注意力可视化、特征归因</td>
+</tr>
+</tbody></table>
+<h3 id="研究脉络定位"><a href="#研究脉络定位" class="headerlink" title="研究脉络定位"></a>研究脉络定位</h3><p>该工作在以下研究脉络中占据关键位置：前置工作提供了基础架构和基准参照，同期工作形成互补各有侧重，后续工作从效率、质量、规模多个方向进行改进。其核心贡献在于证明了特定设计选择在实践中的有效性，为后续研究提供了重要的基线和方法论参考。</p>
+<h2 id="可复用洞见补充"><a href="#可复用洞见补充" class="headerlink" title="可复用洞见补充"></a>可复用洞见补充</h2><ol>
+<li><strong>从简单到复杂的迭代</strong>: 先实现核心算法验证概念，再逐步添加优化组件</li>
+<li><strong>基准驱动的开发</strong>: 使用标准基准持续监控性能，及早发现性能退化</li>
+<li><strong>消融实验的价值</strong>: 系统的消融研究揭示每个组件的贡献度，指导资源分配</li>
+<li><strong>开源加速进步</strong>: 开源代码和模型权重加速整个领域的创新速度</li>
+</ol>
+<h2 id="后续问题补充"><a href="#后续问题补充" class="headerlink" title="后续问题补充"></a>后续问题补充</h2><ol>
+<li>如何将该方法扩展到更大规模（10倍参数量、100倍数据量）？</li>
+<li>在资源受限的场景下（边缘设备、实时系统）如何高效部署？</li>
+<li>能否与其他正交方法组合实现进一步改进？</li>
+<li>方法的理论基础如何进一步形式化和泛化？</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%8C%87%E4%BB%A4%E5%BE%AE%E8%B0%83%E4%B8%8E%E5%AF%B9%E9%BD%90/" class="category-chain-item">指令微调与对齐</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-instruction-tuning/" class="print-no-link">#papers/instruction-tuning</a>
+      
+        <a href="/tags/papers-fine-tuning/" class="print-no-link">#papers/fine-tuning</a>
+      
+        <a href="/tags/papers-zero-shot/" class="print-no-link">#papers/zero-shot</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Scaling Instruction-Finetuned Language Models (FLAN)</div>
+      <div>https://w2ongq6.github.io/2022/10/20/llm/note/FLAN_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年10月20日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/10/31/inference/note/GPTQ_note/" title="GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/07/llm/note/ReAct_note/" title="ReAct: Synergizing Reasoning and Acting in Language Models">
+                        <span class="hidden-mobile">ReAct: Synergizing Reasoning and Acting in Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1463 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="ALiBi：通过线性偏置注意力实现序列长度外推核心信息 标题: Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation 标题翻译: 短训练长测试：带线性偏置的注意力实现输入长度外推 作者: Ofir Press, Noah A. Smith, Mike Lewis 机构: Uni">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation">
+<meta property="og:url" content="https://w2ongq6.github.io/2021/08/24/llm/note/ALiBi_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="ALiBi：通过线性偏置注意力实现序列长度外推核心信息 标题: Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation 标题翻译: 短训练长测试：带线性偏置的注意力实现输入长度外推 作者: Ofir Press, Noah A. Smith, Mike Lewis 机构: Uni">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="article:published_time" content="2021-08-23T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:22.864Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-optimization">
+<meta property="article:tag" content="papers&#x2F;llm">
+<meta property="article:tag" content="papers&#x2F;long-context">
+<meta property="article:tag" content="papers&#x2F;positional-encoding">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-08-24 00:00" pubdate>
+          2021年8月24日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          91 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="ALiBi：通过线性偏置注意力实现序列长度外推"><a href="#ALiBi：通过线性偏置注意力实现序列长度外推" class="headerlink" title="ALiBi：通过线性偏置注意力实现序列长度外推"></a>ALiBi：通过线性偏置注意力实现序列长度外推</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation</li>
+<li>标题翻译: 短训练长测试：带线性偏置的注意力实现输入长度外推</li>
+<li>作者: Ofir Press, Noah A. Smith, Mike Lewis</li>
+<li>机构: University of Washington, Meta AI</li>
+<li>发表时间: 2021年8月（ICLR 2022）</li>
+<li>发表渠道: ICLR 2022</li>
+<li>arXiv: 2108.12409</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2108.12409">https://arxiv.org/abs/2108.12409</a></li>
+<li>论文类型: AI方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>位置编码对Transformer模型至关重要。我们提出Attention with Linear Biases（ALiBi）——一种简单但有效的位置编码方法。与向词嵌入添加位置嵌入不同，ALiBi直接向注意力分数添加一个与query-key距离成比例的静态、不可学习的偏置。这些偏置是几何级数分布的头部特定斜率，使模型能够自然地外推到比训练时更长的序列。在WikiText-103上，使用1024上下文训练的ALiBi模型在2048上下文的测试中仅退化0.3困惑度，而使用标准正弦位置嵌入的相同模型退化8.7困惑度。我们验证了ALiBi在十亿参数模型上同样有效，并在包括语言建模、机器翻译和文本分类在内的多个任务上进行了评估。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p><strong>核心问题</strong>：Transformer 的位置编码方法（正弦编码、可学习嵌入、RoPE）在训练时见过的序列长度内表现良好——但一旦推理时遇到更长的序列，性能急剧下降。为什么？因为训练时从未见过那些位置的值。ALiBi 提出一个替代方案：不编码绝对位置，而是给注意力机制一个”靠近的 token 更重要”的归纳偏置——并且这个偏置是距离的线性函数，在任意长度下都成立。</p>
+<hr>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-线性偏置替代位置嵌入"><a href="#1-线性偏置替代位置嵌入" class="headerlink" title="1. 线性偏置替代位置嵌入"></a>1. 线性偏置替代位置嵌入</h3><p><strong>核心思想</strong>: 在注意力计算前，直接在 score 矩阵上添加线性偏置：</p>
+<p>$$\text{softmax}\left(\frac{QK^T}{\sqrt{d}} + m \cdot B\right)$$</p>
+<p>其中 $B$ 是偏置矩阵，$B_{i,j} &#x3D; -|i-j|$（距离越大，偏置越负），$m$ 是头特定的斜率。</p>
+<p><strong>为什么重要</strong>: 这是最简位置编码方案——无可学习参数，无额外计算图，仅需在 softmax 前做一次加法。不同头有不同的”感受野”（从小到大的上下文窗口）。</p>
+<h3 id="2-天然长度外推"><a href="#2-天然长度外推" class="headerlink" title="2. 天然长度外推"></a>2. 天然长度外推</h3><p><strong>核心思想</strong>: 由于偏置是距离的线性函数，训练时未见的更长距离自动获得更大的负偏置（$-(N+1) \times m$），使模型自然倾向于关注更近的 token。</p>
+<p><strong>为什么重要</strong>: 无需微调即可将训练于 1024 token 的模型直接用于 2048+ token 推理。这是”免费的外推”——不增加训练成本，不修改模型结构。</p>
+<h3 id="3-静态偏置优于可学习偏置"><a href="#3-静态偏置优于可学习偏置" class="headerlink" title="3. 静态偏置优于可学习偏置"></a>3. 静态偏置优于可学习偏置</h3><p><strong>核心思想</strong>: 使用固定几何斜率而非可学习偏置。实验表明可学习偏置容易过拟合到训练长度，而固定斜率强制泛化。</p>
+<p><strong>为什么重要</strong>: 为”简单先验胜过复杂学习”提供了有力证据。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>ALiBi 用距离线性偏置替代位置嵌入，使 Transformer 无需额外训练即可外推到 2-3 倍训练长度，WikiText-103 上仅退化 0.3 perplexity（正弦退化 8.7）。</p>
+<hr>
+<h2 id="核心机制详解"><a href="#核心机制详解" class="headerlink" title="核心机制详解"></a>核心机制详解</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<h3 id="标准注意力-vs-ALiBi-注意力"><a href="#标准注意力-vs-ALiBi-注意力" class="headerlink" title="标准注意力 vs ALiBi 注意力"></a>标准注意力 vs ALiBi 注意力</h3><h4 id="标准注意力（Scaled-Dot-Product-Attention）"><a href="#标准注意力（Scaled-Dot-Product-Attention）" class="headerlink" title="标准注意力（Scaled Dot-Product Attention）"></a>标准注意力（Scaled Dot-Product Attention）</h4><p>$$\text{Attention}(Q, K, V) &#x3D; \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$</p>
+<p>其中 $Q, K, V$ 是查询、键、值矩阵。位置信息通过位置嵌入（加到输入上）或旋转编码（RoPE，在 Q 和 K 上应用旋转）注入。</p>
+<h4 id="ALiBi-注意力"><a href="#ALiBi-注意力" class="headerlink" title="ALiBi 注意力"></a>ALiBi 注意力</h4><p>$$\text{Attention}(Q, K, V) &#x3D; \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}} + m \cdot M\right)V$$</p>
+<p>其中：</p>
+<ul>
+<li>$M$ 是因果掩码矩阵（下三角）与距离偏置的结合</li>
+<li>$M_{i,j} &#x3D; -\infty$ 当 $j &gt; i$（因果掩码：不能关注未来）</li>
+<li>$M_{i,j} &#x3D; -(i-j)$ 当 $j \leq i$（距离偏置：越远越负）</li>
+<li>$m$ 是头特定的斜率</li>
+</ul>
+<blockquote>
+<p>左：因果自回归模型中的偏置矩阵（下三角，每行从 [0, -1, -2, …, -(i-1)]）。右：编码器中的偏置矩阵（对称，每行中心为 0，两边递减）。偏置是距离的线性函数，无需学习。</p>
+</blockquote>
+<h4 id="完整计算展开"><a href="#完整计算展开" class="headerlink" title="完整计算展开"></a>完整计算展开</h4><p>对于第 $h$ 个注意力头，斜率为 $m_h$：</p>
+<figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs autoit"><span class="hljs-keyword">Step</span> <span class="hljs-number">1</span>: 计算原始注意力分数<br>  S = Q @ K^T / <span class="hljs-built_in">sqrt</span>(d)     <span class="hljs-meta"># shape: (seq_len, seq_len)</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">2</span>: 计算距离矩阵<br>  D[i][j] = -(i - j)        <span class="hljs-meta"># query i 到 key j 的距离，负号表示越远分数越低</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">3</span>: 添加偏置<br>  S_biased = S + m_h * D    <span class="hljs-meta"># 偏置是距离的线性函数</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">4</span>: 因果掩码（解码器）<br>  S_biased[i][j] = -inf <span class="hljs-keyword">for</span> j &gt; i  <span class="hljs-meta"># 不能关注未来 token</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">5</span>: Softmax + 输出<br>  A = softmax(S_biased)<br>  O = A @ V<br></code></pre></td></tr></table></figure>
+
+<h3 id="斜率（Slope）的几何级数分布"><a href="#斜率（Slope）的几何级数分布" class="headerlink" title="斜率（Slope）的几何级数分布"></a>斜率（Slope）的几何级数分布</h3><p>不同注意力头被赋予不同的斜率 $m$，遵循几何级数分布：</p>
+<p>$$m_h &#x3D; 2^{-\frac{8h}{n_{\text{heads}}}}$$</p>
+<p>其中 $h \in {1, 2, …, n_{\text{heads}}}$</p>
+<h4 id="8头模型的斜率分布示例"><a href="#8头模型的斜率分布示例" class="headerlink" title="8头模型的斜率分布示例"></a>8头模型的斜率分布示例</h4><table>
+<thead>
+<tr>
+<th>头编号</th>
+<th>$m_h$ 公式</th>
+<th>$m_h$ 值</th>
+<th>感受野特征</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>$2^{-8 \cdot 1&#x2F;8} &#x3D; 2^{-1}$</td>
+<td>0.5</td>
+<td>极局部（远距离 token 被严重惩罚）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>$2^{-8 \cdot 2&#x2F;8} &#x3D; 2^{-2}$</td>
+<td>0.25</td>
+<td>局部</td>
+</tr>
+<tr>
+<td>3</td>
+<td>$2^{-8 \cdot 3&#x2F;8} &#x3D; 2^{-3}$</td>
+<td>0.125</td>
+<td>中等局部</td>
+</tr>
+<tr>
+<td>4</td>
+<td>$2^{-8 \cdot 4&#x2F;8} &#x3D; 2^{-4}$</td>
+<td>0.0625</td>
+<td>中等</td>
+</tr>
+<tr>
+<td>5</td>
+<td>$2^{-8 \cdot 5&#x2F;8} &#x3D; 2^{-5}$</td>
+<td>0.03125</td>
+<td>中等全局</td>
+</tr>
+<tr>
+<td>6</td>
+<td>$2^{-8 \cdot 6&#x2F;8} &#x3D; 2^{-6}$</td>
+<td>0.015625</td>
+<td>全局</td>
+</tr>
+<tr>
+<td>7</td>
+<td>$2^{-8 \cdot 7&#x2F;8} &#x3D; 2^{-7}$</td>
+<td>0.0078125</td>
+<td>很全局</td>
+</tr>
+<tr>
+<td>8</td>
+<td>$2^{-8 \cdot 8&#x2F;8} &#x3D; 2^{-8}$</td>
+<td>0.00390625</td>
+<td>极全局（几乎均匀关注）</td>
+</tr>
+</tbody></table>
+<p><strong>几何级数分布的设计意图</strong>：</p>
+<ul>
+<li>覆盖从局部到全局的连续谱</li>
+<li>确保不同头有不同的功能分工（如同 CNN 中不同卷积核大小）</li>
+<li>对于 $n&#x3D;8$ 头，比率为 $2^{-1} &#x3D; \frac{1}{2}$</li>
+<li>对于 $n&#x3D;16$ 头，比率为 $2^{-0.5} \approx 0.7071$——更密集的覆盖</li>
+</ul>
+<blockquote>
+<p>展示了 8 个头的偏置强度对比。头 0（m&#x3D;0.5，蓝色）偏置最强，注意力高度集中在近处 token。头 7（m&#x3D;0.004，红色）偏置极弱，注意力接近均匀分布。这种设计类似于多尺度卷积。</p>
+</blockquote>
+<hr>
+<h2 id="详细机制流程（Numbered）"><a href="#详细机制流程（Numbered）" class="headerlink" title="详细机制流程（Numbered）"></a>详细机制流程（Numbered）</h2><h3 id="流程-A：ALiBi-训练流程"><a href="#流程-A：ALiBi-训练流程" class="headerlink" title="流程 A：ALiBi 训练流程"></a>流程 A：ALiBi 训练流程</h3><p><strong>Step 1：模型初始化</strong></p>
+<ul>
+<li>输入：Transformer 模型（无位置嵌入层）</li>
+<li>操作：为每个注意力头计算固定斜率 $m_h &#x3D; 2^{-8h&#x2F;n}$，存储在模型中（不可训练）</li>
+<li>输出：带有固定 ALiBi 斜率的 Transformer</li>
+</ul>
+<p><strong>Step 2：前向传播 - 注意力计算</strong></p>
+<ul>
+<li>输入：输入序列 $X$（长度 $L_{\text{train}}$）</li>
+<li>操作：<br>a. 计算 $Q, K, V$ 投影（无位置信息注入）<br>b. 计算原始注意力分数 $S &#x3D; QK^T&#x2F;\sqrt{d}$<br>c. 构建偏置矩阵 $B_{i,j} &#x3D; m_h \cdot (-|i-j|)$<br>d. 计算 $S_{\text{biased}} &#x3D; S + B$<br>e. 应用因果掩码（如果自回归）<br>f. Softmax + 加权求和</li>
+<li>输出：注意力输出</li>
+</ul>
+<p><strong>Step 3：反向传播</strong></p>
+<ul>
+<li>输入：损失梯度</li>
+<li>操作：标准反向传播（ALiBi 偏置无可学习参数——梯度不流过偏置矩阵）</li>
+<li>输出：更新后的模型参数（不包含偏置）</li>
+</ul>
+<p><strong>Step 4：训练完成后的外推</strong></p>
+<ul>
+<li>输入：训练好的模型（$L_{\text{train}}$ 上下文）</li>
+<li>操作：直接输入 $L_{\text{test}} &gt; L_{\text{train}}$ 的序列——偏置矩阵自动扩展</li>
+<li>输出：外推结果</li>
+</ul>
+<h3 id="流程-B：ALiBi-外推推理"><a href="#流程-B：ALiBi-外推推理" class="headerlink" title="流程 B：ALiBi 外推推理"></a>流程 B：ALiBi 外推推理</h3><p><strong>Step 1：接收长序列</strong></p>
+<ul>
+<li>输入：长度为 $L_{\text{test}}$ 的序列（$L_{\text{test}} &gt; L_{\text{train}}$）</li>
+<li>操作：正常 tokenize 和嵌入（无位置信息）</li>
+</ul>
+<p><strong>Step 2：扩展偏置矩阵</strong></p>
+<ul>
+<li>输入：ALiBi 的固定斜率 $m_h$ + 新序列长度 $L_{\text{test}}$</li>
+<li>操作：构建大小为 $L_{\text{test}} \times L_{\text{test}}$ 的偏置矩阵<br>$B_{i,j} &#x3D; m_h \cdot (-|i-j|)$ 对于 $i,j \in [0, L_{\text{test}}-1]$<br>对于 $j &gt; i$（因果），$B_{i,j} &#x3D; -\infty$</li>
+<li>输出：扩展的偏置矩阵</li>
+</ul>
+<p><strong>Step 3：注意力计算</strong></p>
+<ul>
+<li>输入：$Q, K, V$ + 扩展的偏置矩阵</li>
+<li>操作：$O &#x3D; \text{softmax}(QK^T&#x2F;\sqrt{d} + B) V$</li>
+<li>输出：注意力输出（对于未见过的长距离，偏置自动”鼓励关注近处”）</li>
+</ul>
+<p><strong>Step 4：后续层正常处理</strong></p>
+<ul>
+<li>输入：注意力输出</li>
+<li>操作：FFN、LayerNorm 等后续层正常处理</li>
+<li>输出：最终预测</li>
+</ul>
+<hr>
+<h2 id="数学论证：为什么-ALiBi-能外推"><a href="#数学论证：为什么-ALiBi-能外推" class="headerlink" title="数学论证：为什么 ALiBi 能外推"></a>数学论证：为什么 ALiBi 能外推</h2><h3 id="位置编码外推失败的原因"><a href="#位置编码外推失败的原因" class="headerlink" title="位置编码外推失败的原因"></a>位置编码外推失败的原因</h3><p><strong>正弦位置编码（Sinusoidal）</strong>：</p>
+<p>$$<br>PE_{(pos, 2i)} &#x3D; \sin(pos &#x2F; 10000^{2i&#x2F;d})<br>$$</p>
+<p>当 $pos$ 超过训练中见过的最大值时，模型从未见过这些位置对应的正弦&#x2F;余弦值——它对 $\sin(2000)$ 和 $\sin(2048)$ 没有先验概念。模型被迫在未见过的数值空间中”猜测”注意力行为。</p>
+<p><strong>可学习位置嵌入（Learnable Position Embedding）</strong>：</p>
+<p>当序列长度超过训练时见过的最大位置索引时，模型没有对应的嵌入向量——必须截断或使用外推策略（复制、插值）。</p>
+<p><strong>RoPE（Rotary Position Embedding）</strong>：</p>
+<p>$$<br>f_{q,k}(x_m, m) &#x3D; \begin{pmatrix} \cos m\theta &amp; -\sin m\theta \ \sin m\theta &amp; \cos m\theta \end{pmatrix} \begin{pmatrix} x_m^{(1)} \ x_m^{(2)} \end{pmatrix}<br>$$</p>
+<p>旋转角度 $\theta &#x3D; 10000^{-2i&#x2F;d}$ 随位置 $m$ 线性增长。当 $m$ 超过训练范围时，$m\theta$ 可能超出模型理解的范围——特别是在高频分量中（小 $i$，大 $\theta$），旋转角度迅速进入模型”从未见过的区间”。</p>
+<h3 id="ALiBi-的外推数学基础"><a href="#ALiBi-的外推数学基础" class="headerlink" title="ALiBi 的外推数学基础"></a>ALiBi 的外推数学基础</h3><p>ALiBi 的偏置不依赖绝对位置——只依赖相对距离：</p>
+<p>$$B_{i,j} &#x3D; -m_h \cdot |i-j|$$</p>
+<p><strong>关键性质</strong>：这个公式对任意 $|i-j|$ 都是良好定义的——无论这个距离在训练中是否见过。当测试距离 $|i-j| &gt; L_{\text{train}}$ 时：</p>
+<p>$$B_{i,j} &#x3D; -m_h \cdot |i-j| &lt; -m_h \cdot L_{\text{train}}$$</p>
+<p>偏置更负 → softmax 后的注意力权重更小 → 模型自然倾向于关注更近的 token。这正是合理的归纳偏置——“越远的事物越不可能相关”。</p>
+<p><strong>与 RoPE 的数学对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>性质</th>
+<th>Sinusoidal</th>
+<th>RoPE</th>
+<th>ALiBi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>位置依赖</td>
+<td>绝对位置 → sin&#x2F;cos 值</td>
+<td>绝对位置 → 旋转角度</td>
+<td>相对距离 → 偏置值</td>
+</tr>
+<tr>
+<td>未见位置的函数可定义？</td>
+<td>是（数学上可计算）</td>
+<td>是（数学上可计算）</td>
+<td>是</td>
+</tr>
+<tr>
+<td>未见位置的值有先验吗？</td>
+<td>无（新 sin&#x2F;cos 值无意义）</td>
+<td>无（新旋转角度无意义）</td>
+<td>有（越远偏置越负 &#x3D; 越不受关注）</td>
+</tr>
+<tr>
+<td>外推机制</td>
+<td>无（纯数学映射）</td>
+<td>需插值辅助</td>
+<td>内建（距离偏置自动扩展）</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>O(1) per token</td>
+<td>O(1) per token</td>
+<td>O(1) per token</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="关键实验与量化结果"><a href="#关键实验与量化结果" class="headerlink" title="关键实验与量化结果"></a>关键实验与量化结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="主结果：WikiText-103-长度外推"><a href="#主结果：WikiText-103-长度外推" class="headerlink" title="主结果：WikiText-103 长度外推"></a>主结果：WikiText-103 长度外推</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>训练长度</th>
+<th>测试长度</th>
+<th>测试 Perplexity</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sinusoidal</td>
+<td>1024</td>
+<td>1024</td>
+<td>19.4</td>
+<td>- (基准)</td>
+</tr>
+<tr>
+<td>Sinusoidal</td>
+<td>1024</td>
+<td>1536</td>
+<td>23.1</td>
+<td>+3.7</td>
+</tr>
+<tr>
+<td>Sinusoidal</td>
+<td>1024</td>
+<td>2048</td>
+<td>28.1</td>
+<td>+8.7</td>
+</tr>
+<tr>
+<td>Rotary (RoPE)</td>
+<td>1024</td>
+<td>1024</td>
+<td>19.7</td>
+<td>- (基准)</td>
+</tr>
+<tr>
+<td>Rotary (RoPE)</td>
+<td>1024</td>
+<td>2048</td>
+<td>~24</td>
+<td>+~5</td>
+</tr>
+<tr>
+<td>T5 bias</td>
+<td>1024</td>
+<td>2048</td>
+<td>~23</td>
+<td>+~4</td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>19.4</strong></td>
+<td><strong>- (基准)</strong></td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>2048</strong></td>
+<td><strong>19.7</strong></td>
+<td><strong>+0.3</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+<li>ALiBi 从 1024 → 2048 的外推退化仅为 0.3 PPL——几乎可以忽略</li>
+<li>相比之下，正弦编码退化 8.7 PPL、RoPE 退化约 5 PPL</li>
+<li>ALiBi 在训练长度 1024 上表现与 Sinusoidal 持平——不牺牲常规长度性能</li>
+</ul>
+<h3 id="大模型验证（1-3B-参数）"><a href="#大模型验证（1-3B-参数）" class="headerlink" title="大模型验证（1.3B 参数）"></a>大模型验证（1.3B 参数）</h3><table>
+<thead>
+<tr>
+<th>模型配置</th>
+<th>训练长度</th>
+<th>测试长度</th>
+<th>Perplexity</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sinusoidal</td>
+<td>1024</td>
+<td>1024</td>
+<td>15.8</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Sinusoidal</td>
+<td>1024</td>
+<td>2048</td>
+<td>19.0</td>
+<td>+3.2</td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>14.7</strong></td>
+<td><strong>-</strong></td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td><strong>1024</strong></td>
+<td><strong>2048</strong></td>
+<td><strong>14.9</strong></td>
+<td><strong>+0.2</strong></td>
+</tr>
+</tbody></table>
+<p><strong>扩展规律</strong>：模型越大，ALiBi 的外推优势越明显。大模型在常规长度上表现更好（14.7 vs 15.8），外推退化也更小（0.2 vs 3.2）。</p>
+<h3 id="编程任务上的长度外推"><a href="#编程任务上的长度外推" class="headerlink" title="编程任务上的长度外推"></a>编程任务上的长度外推</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>训练 1K, 测试 1K</th>
+<th>训练 1K, 测试 4K</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sinusoidal</td>
+<td>23.5 PPL</td>
+<td>55.2 PPL</td>
+<td>+31.7</td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td>23.2 PPL</td>
+<td>24.8 PPL</td>
+<td><strong>+1.6</strong></td>
+</tr>
+</tbody></table>
+<h3 id="不同外推倍数的-ALiBi-表现"><a href="#不同外推倍数的-ALiBi-表现" class="headerlink" title="不同外推倍数的 ALiBi 表现"></a>不同外推倍数的 ALiBi 表现</h3><table>
+<thead>
+<tr>
+<th>外推倍数</th>
+<th>训练长度</th>
+<th>测试长度</th>
+<th>PPL</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1x</td>
+<td>1024</td>
+<td>1024</td>
+<td>19.4</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1.5x</td>
+<td>1024</td>
+<td>1536</td>
+<td>19.5</td>
+<td>+0.1</td>
+</tr>
+<tr>
+<td>2x</td>
+<td>1024</td>
+<td>2048</td>
+<td>19.7</td>
+<td>+0.3</td>
+</tr>
+<tr>
+<td>2.5x</td>
+<td>1024</td>
+<td>2560</td>
+<td>20.2</td>
+<td>+0.8</td>
+</tr>
+<tr>
+<td>3x</td>
+<td>1024</td>
+<td>3072</td>
+<td>21.1</td>
+<td>+1.7</td>
+</tr>
+</tbody></table>
+<p>退化开始加速的拐点约在 2.5x-3x——在 3 倍训练长度时仍保持可用（PPL 仅 +1.7）。</p>
+<hr>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="为什么-ALiBi-能外推而其他方法不能？——从归纳偏置角度"><a href="#为什么-ALiBi-能外推而其他方法不能？——从归纳偏置角度" class="headerlink" title="为什么 ALiBi 能外推而其他方法不能？——从归纳偏置角度"></a>为什么 ALiBi 能外推而其他方法不能？——从归纳偏置角度</h3><p>归纳偏置（Inductive Bias）是机器学习的一个核心概念：模型在数据上学到的东西，与模型”天生就假设”的东西之间的平衡。</p>
+<table>
+<thead>
+<tr>
+<th>位置编码方式</th>
+<th>归纳偏置</th>
+<th>外推表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无位置编码</td>
+<td>词袋模型假设（位置无关）</td>
+<td>差（位置信息完全丢失）</td>
+</tr>
+<tr>
+<td>Sinusoidal</td>
+<td>正弦函数的平滑性</td>
+<td>差（新位置无先验）</td>
+</tr>
+<tr>
+<td>可学习嵌入</td>
+<td>训练分布中的位置分布</td>
+<td>差（未见位置无嵌入）</td>
+</tr>
+<tr>
+<td>RoPE</td>
+<td>旋转不变性 + 距离衰减</td>
+<td>中（需要插值技巧）</td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td><strong>越近越相关</strong>（局部性先验）</td>
+<td><strong>优秀</strong></td>
+</tr>
+</tbody></table>
+<p>ALiBi 的归纳偏置——“越近越相关”——是自然界中恒成立的先验。无论序列多长，相邻 token 总是比远距离 token 更可能相关。这个先验不会被序列长度改变——这就是 ALiBi 能外推的根本原因。</p>
+<h3 id="为什么斜率是几何级数分布？"><a href="#为什么斜率是几何级数分布？" class="headerlink" title="为什么斜率是几何级数分布？"></a>为什么斜率是几何级数分布？</h3><p>不同的 $m$ 值创造了不同”视野”的注意力头。小的 $m$（全局头）可以在长序列中关注远处信息，大的 $m$（局部头）强制模型关注最近邻。</p>
+<p><strong>为什么是几何级数而非等差级数？</strong></p>
+<p>等差分布（如 $m \in {0.8, 0.6, 0.4, 0.2}$）会让大多数头的行为集中在中等偏置范围——失去了多尺度覆盖的优势。</p>
+<p>几何分布确保覆盖多个数量级——从 0.5 到 0.004 跨越约 128 倍。这种覆盖类似于 CNN 中使用不同大小的卷积核（3x3, 5x5, 7x7）——但 ALiBi 用连续的斜率谱覆盖了”局部”到”全局”的连续过渡。</p>
+<h3 id="与-CNN-中”感受野”的类比"><a href="#与-CNN-中”感受野”的类比" class="headerlink" title="与 CNN 中”感受野”的类比"></a>与 CNN 中”感受野”的类比</h3><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">CNN</span>:  不同卷积核大小 → 不同的空间感受野<br>      <span class="hljs-attribute">3x3</span> → 局部特征（边缘、角点）<br>      <span class="hljs-attribute">7x7</span> → 中等特征（纹理）<br>      <span class="hljs-attribute">11x11</span> → 全局特征（物体形状）<br><br><span class="hljs-attribute">ALiBi</span>: 不同斜率 m → 不同的<span class="hljs-string">&quot;时间感受野&quot;</span><br>       <span class="hljs-attribute">m</span>=<span class="hljs-number">0</span>.<span class="hljs-number">5</span> → 极局部（前 <span class="hljs-number">2</span>-<span class="hljs-number">3</span> 个 token 主导注意力）<br>       <span class="hljs-attribute">m</span>=<span class="hljs-number">0</span>.<span class="hljs-number">125</span> → 中等（前 <span class="hljs-number">8</span>-<span class="hljs-number">16</span> 个 token）<br>       <span class="hljs-attribute">m</span>=<span class="hljs-number">0</span>.<span class="hljs-number">004</span> → 极全局（几乎均匀关注前 <span class="hljs-number">256</span>+ 个 token）<br></code></pre></td></tr></table></figure>
+
+<p>这个类比揭示了 ALiBi 的一个深层洞察：<strong>Transformer 的多头注意力本质上是一种多尺度特征提取器</strong>——而 ALiBi 为这种多尺度提供了一种优雅的、可外推的参数化。</p>
+<hr>
+<h2 id="与主流位置编码的全面对比"><a href="#与主流位置编码的全面对比" class="headerlink" title="与主流位置编码的全面对比"></a>与主流位置编码的全面对比</h2><h3 id="Sinusoidal-Positional-Encoding-Vaswani-et-al-2017"><a href="#Sinusoidal-Positional-Encoding-Vaswani-et-al-2017" class="headerlink" title="Sinusoidal Positional Encoding (Vaswani et al., 2017)"></a>Sinusoidal Positional Encoding (Vaswani et al., 2017)</h3><p>$$\begin{aligned}<br>PE_{(pos, 2i)} &amp;&#x3D; \sin(pos &#x2F; 10000^{2i&#x2F;d_{\text{model}}}) \<br>PE_{(pos, 2i+1)} &amp;&#x3D; \cos(pos &#x2F; 10000^{2i&#x2F;d_{\text{model}}})<br>\end{aligned}$$</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Sinusoidal</th>
+<th>ALiBi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编码位置</td>
+<td>加到输入嵌入上</td>
+<td>加到注意力分数上</td>
+</tr>
+<tr>
+<td>可学习</td>
+<td>否</td>
+<td>否</td>
+</tr>
+<tr>
+<td>相对位置信息</td>
+<td>通过正弦加法性质间接获得</td>
+<td>直接编码在偏置中</td>
+</tr>
+<tr>
+<td>外推</td>
+<td>差（未见过的 sin&#x2F;cos 值）</td>
+<td>优秀（距离偏置泛化）</td>
+</tr>
+<tr>
+<td>参数量</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>额外计算</td>
+<td>O(Nd)（生成位置向量）</td>
+<td>O(N^2)（构建偏置矩阵）</td>
+</tr>
+</tbody></table>
+<h3 id="RoPE-Su-et-al-2021"><a href="#RoPE-Su-et-al-2021" class="headerlink" title="RoPE (Su et al., 2021)"></a>RoPE (Su et al., 2021)</h3><p>$$f_{q,k}(x_m, m) &#x3D; R_{\Theta,m}^d \cdot x_m$$</p>
+<p>其中 $R_{\Theta,m}^d$ 是将向量在 2D 子空间中旋转 $m\theta$ 角度的旋转矩阵。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RoPE</th>
+<th>ALiBi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编码位置</td>
+<td>旋转 Q、K 向量</td>
+<td>偏置注意力分数</td>
+</tr>
+<tr>
+<td>相对位置</td>
+<td>隐式（旋转差编码相对距离）</td>
+<td>显式（偏置是距离的线性函数）</td>
+</tr>
+<tr>
+<td>外推</td>
+<td>需 PI&#x2F;NTK 技巧</td>
+<td>天然支持</td>
+</tr>
+<tr>
+<td>长距离衰减</td>
+<td>隐式（旋转差 → 内积衰减）</td>
+<td>显式（线性偏置）</td>
+</tr>
+<tr>
+<td>主流采用</td>
+<td>LLaMA, Qwen, Mistral</td>
+<td>BLOOM, Falcon</td>
+</tr>
+<tr>
+<td>理论优雅度</td>
+<td>高（旋转群结构）</td>
+<td>极高（线性偏置）</td>
+</tr>
+</tbody></table>
+<h3 id="T5-Bias-Raffel-et-al-2020"><a href="#T5-Bias-Raffel-et-al-2020" class="headerlink" title="T5 Bias (Raffel et al., 2020)"></a>T5 Bias (Raffel et al., 2020)</h3><p>T5 使用可学习的相对位置偏置（每个相对距离对应一个可学习标量）。这是 ALiBi 最接近的前驱，但存在关键区别：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>T5 Bias</th>
+<th>ALiBi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏置来源</td>
+<td>可学习</td>
+<td>静态（几何级数分布）</td>
+</tr>
+<tr>
+<td>外推</td>
+<td>差（未见距离无偏置）</td>
+<td>优秀（距离函数可计算）</td>
+</tr>
+<tr>
+<td>参数量</td>
+<td>O(max_seq_len × n_heads)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>过拟合风险</td>
+<td>高</td>
+<td>无</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>无绝对位置信息</strong>：ALiBi 仅编码了相对距离——“我是第 5 个 token”这样的绝对位置信息完全丢失。某些任务（如生成”序列开头”和”序列结尾”语义不同的文本）可能受到影响。论文承认这一点，但在主要任务上未发现明显精度损失。</p>
+</li>
+<li><p><strong>主流模型选择了 RoPE</strong>：尽管 ALiBi 在外推方面具有显著优势，但 LLaMA 和其他主流开源模型选择了 RoPE——部分因为 RoPE 在常规长度上略占优势（旋转编码的理论特性更优雅），另一部分因为 RoPE 可以通过 PI&#x2F;NTK 等技巧扩展。ALiBi 的主要使用者是 BLOOM 和 Falcon。</p>
+</li>
+<li><p><strong>偏置的线性假设可能过于简单</strong>：真实语言中的”相关性衰减”可能不是严格线性的——某些情况下，相隔 10 个 token 和相隔 20 个 token 的相关性差异可能不是 2 倍，而是非线性关系。但论文的实验表明线性假设在实践中足够有效。</p>
+</li>
+<li><p><strong>外推倍数的实际上限</strong>：虽然退化缓慢（2x 外推仅 +0.3 PPL），但当外推倍数 &gt; 3x 时退化开始加速。模型没有真的”理解” 3x 更长序列——它只是在勉强维持。对于需要 10x+ 外推的场景，ALiBi 也不够。</p>
+</li>
+<li><p><strong>与其他位置需求的兼容性</strong>：某些模型结构（如相对位置偏置 + 绝对位置编码的组合）在特定任务上表现更好——ALiBi 的纯线性偏置缺乏这种灵活性。</p>
+</li>
+<li><p><strong>在极长序列（100K+）上的表现未知</strong>：论文主要在 1K→4K 的外推范围测试。在 100K+ 的极端长度下，ALiBi 的表现缺少实验验证——随着后续 LongLoRA、LongRoPE 等工作将上下文推进到 100K-2M，纯 ALiBi 是否能胜任仍待验证。</p>
+</li>
+</ol>
+<hr>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="洞见-1：正确的归纳偏置-更多的训练数据"><a href="#洞见-1：正确的归纳偏置-更多的训练数据" class="headerlink" title="洞见 1：正确的归纳偏置 &gt; 更多的训练数据"></a>洞见 1：正确的归纳偏置 &gt; 更多的训练数据</h3><p><strong>核心思想</strong>：ALiBi 仅通过改变位置信息的注入方式（从”加到输入”变为”加到注意力分数”），就实现了远超同期方法的长度外推。这不是更多的数据、更大的模型——而是一个更正确的假设：”注意力应该偏向近处”。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>在设计模型时，首先明确你领域的”不变性假设”——什么规律在训练和测试场景下永远成立？</li>
+<li>将这些不变性编码为你模型的”归纳偏置”（如 ALiBi 编码了局部性）</li>
+<li>好的归纳偏置的表现：在训练数据中表现不差，在未见过的数据中显著更好</li>
+<li>不要自动假设”更复杂 &#x3D; 更好”——简单的线性偏置胜过可学习的复杂系统</li>
+</ul>
+<h3 id="洞见-2：几何级数分布在多尺度设计中通用"><a href="#洞见-2：几何级数分布在多尺度设计中通用" class="headerlink" title="洞见 2：几何级数分布在多尺度设计中通用"></a>洞见 2：几何级数分布在多尺度设计中通用</h3><p><strong>核心思想</strong>：ALiBi 用几何级数分布为不同注意力头赋予不同的”尺度”——从小（局部）到大（全局）的连续覆盖。这种”多尺度 + 几何级数”的设计模式在 AI 中反复出现。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>对注意力头（或任何需要多尺度的模块），使用几何级数而非等差分布</li>
+<li>原因：几何级数覆盖多个数量级——在小尺度和大尺度上都有代表</li>
+<li>一般形式：$p_i &#x3D; \alpha \cdot \beta^{-i&#x2F;n}$，其中 $\beta$ 控制覆盖范围</li>
+<li>适用于：注意力头尺寸、卷积核大小、学习率组、Layer-wise 超参数</li>
+</ul>
+<h3 id="洞见-3：将位置编码从”输入空间”移到”分数空间”带来了外推性"><a href="#洞见-3：将位置编码从”输入空间”移到”分数空间”带来了外推性" class="headerlink" title="洞见 3：将位置编码从”输入空间”移到”分数空间”带来了外推性"></a>洞见 3：将位置编码从”输入空间”移到”分数空间”带来了外推性</h3><p><strong>核心思想</strong>：Sinusoidal 和 RoPE 在”输入空间”操作（改变 Q、K 或输入嵌入），而 ALiBi 在”分数空间”操作（改变 softmax 前的分数）。后者使偏置与模型的其他部分解耦——模型的其他部分完全不需要知道序列长度。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>当设计需要在不同尺度泛化的系统时，将”尺度敏感”部分与”尺度无关”部分分离</li>
+<li>尺度敏感部分（如 ALiBi 的偏置矩阵）可以被设计为任意尺度的函数</li>
+<li>尺度无关部分（如 ALiBi 中的 QK 投影）完全不关心尺度——天然泛化</li>
+<li>这种”分离尺度”的设计模式也适用于图像分辨率、音频采样率等</li>
+</ul>
+<h3 id="洞见-4：不可学习偏置-可学习偏置（当泛化到未见分布时）"><a href="#洞见-4：不可学习偏置-可学习偏置（当泛化到未见分布时）" class="headerlink" title="洞见 4：不可学习偏置 &gt; 可学习偏置（当泛化到未见分布时）"></a>洞见 4：不可学习偏置 &gt; 可学习偏置（当泛化到未见分布时）</h3><p><strong>核心思想</strong>：T5 的可学习偏置在外推时失败——因为在训练长度之外没有偏置值。ALiBi 的静态偏置因为由数学公式定义，在任何长度都有效。奥卡姆剃刀在泛化场景下的威力被充分展示。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>当你的测试分布可能与训练分布不同时（如外推、协变量偏移），优先考虑硬编码的数学先验而非可学习的参数</li>
+<li>可学习参数的优势在于”拟合训练数据”——但在”泛化到未见分布”时可能成为负担</li>
+<li>一个安全检查：我的模型在”未见过”的输入空间中有行为定义吗？</li>
+<li>静态先验不会过拟合——这是它们在分布外场景下的强大武器</li>
+</ul>
+<hr>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="读后反思"><a href="#读后反思" class="headerlink" title="读后反思"></a>读后反思</h3><p>ALiBi 是我认为写得最优雅的 AI 论文之一——它提出的解决方案如此简单、如此显而易见（事后看），以至于你忍不住问：”为什么之前没人想到？”</p>
+<p>答案是：之前的注意力位置编码研究几乎全部聚焦在”输入空间”（把位置信息加到输入嵌入上），而极少有人想到”分数空间”（把位置信息加到注意力分数上）。这个思维定式的打破产生了 AGI 研究中最简洁的成果之一。</p>
+<p>ALiBi 也是一个有力的”少即是多”（Less is More）的证明。没有添加可学习参数，没有修改模型结构，没有引入新概念——仅仅在 softmax 之前加了一个固定矩阵。然后性能持平常规方法，外推远超一切现有方法。</p>
+<h3 id="关键认识"><a href="#关键认识" class="headerlink" title="关键认识"></a>关键认识</h3><p><strong>归纳偏置是最被低估的设计要素。</strong> 在深度学习（特别是 LLM）领域，主流叙事是”更多数据 + 更大模型 + 更长时间训练 &#x3D; 更好结果”。ALiBi 提供了一个反例：通过正确选择归纳偏置（局部性假设），可以在不增加任何成本的情况下获得全新的能力（长度外推）。</p>
+<p>这让我思考：还有哪些我们默认”需要更多数据和更大模型”的问题，实际上可以通过更好的归纳偏置来解决？</p>
+<h3 id="为什么-RoPE-赢了而-ALiBi-输了？"><a href="#为什么-RoPE-赢了而-ALiBi-输了？" class="headerlink" title="为什么 RoPE 赢了而 ALiBi 输了？"></a>为什么 RoPE 赢了而 ALiBi 输了？</h3><p>尽管 ALiBi 在外推上有明显优势，主流模型（LLaMA、Qwen、Mistral）仍然选择了 RoPE。原因：</p>
+<ol>
+<li><strong>理论优雅度</strong>：RoPE 的旋转群结构在数学上更”漂亮”——它巧妙地将相对位置编码融入旋转操作</li>
+<li><strong>常规长度优势</strong>：RoPE 在大规模训练中（数万亿 token）表现出更好的收敛特性</li>
+<li><strong>插值技巧的后来居上</strong>：PI（Position Interpolation）、NTK-aware 和 YaRN 等 RoPE 扩展技术缩小了外推差距</li>
+<li><strong>先发优势和生态锁定</strong>：LLaMA 选择了 RoPE，后发模型为了兼容性也更可能跟随</li>
+</ol>
+<p>但 ALiBi 的核心洞察——“将偏置加到分数空间而非输入空间”——启发了一系列后续工作。</p>
+<hr>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;press2022train,<br>  title=&#123;Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation&#125;,<br>  author=&#123;Press, Ofir and Smith, Noah A. and Lewis, Mike&#125;,<br>  booktitle=&#123;International Conference on Learning Representations&#125;,<br>  year=&#123;2022&#125;,<br>  url=&#123;https://arxiv.org/abs/2108.12409&#125;<br>&#125;<br><br>@article&#123;vaswani2017attention,<br>  title=&#123;Attention Is All You Need&#125;,<br>  author=&#123;Vaswani, Ashish and others&#125;,<br>  journal=&#123;Advances in Neural Information Processing Systems&#125;,<br>  year=&#123;2017&#125;<br>&#125;<br><br>@article&#123;su2021roformer,<br>  title=&#123;RoFormer: Enhanced Transformer with Rotary Position Embedding&#125;,<br>  author=&#123;Su, Jianlin and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2104.09864&#125;,<br>  year=&#123;2021&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%9E%B6%E6%9E%84%E5%9F%BA%E7%A1%80/" class="category-chain-item">架构基础</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-llm/" class="print-no-link">#papers/llm</a>
+      
+        <a href="/tags/papers-attention-optimization/" class="print-no-link">#papers/attention-optimization</a>
+      
+        <a href="/tags/papers-long-context/" class="print-no-link">#papers/long-context</a>
+      
+        <a href="/tags/papers-positional-encoding/" class="print-no-link">#papers/positional-encoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation</div>
+      <div>https://w2ongq6.github.io/2021/08/24/llm/note/ALiBi_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2021年8月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/12/20/aigc/note/StableDiffusion_note/" title="High-Resolution Image Synthesis with Latent Diffusion Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">High-Resolution Image Synthesis with Latent Diffusion Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/07/14/aigc/note/Codex_note/" title="Codex: Evaluating Large Language Models Trained on Code">
+                        <span class="hidden-mobile">Codex: Evaluating Large Language Models Trained on Code</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

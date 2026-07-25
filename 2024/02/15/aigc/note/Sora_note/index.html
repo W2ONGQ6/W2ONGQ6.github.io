@@ -1,0 +1,1340 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Sora: 从文本创建视频1. 一句话总结Sora 是一个大规模视频生成扩散 Transformer，通过将视频表示为时空补丁（spacetime patches），在多样化时长、分辨率和宽高比的视频数据上进行联合训练，展示了对物理世界运动规律、长期一致性和三维空间理解的涌现能力，将视频生成长度从数秒推升至最长一分钟，标志着视觉生成模型从”帧生成”全面迈入”世界模拟”阶段。 2. 研究背景与动机2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sora: Creating Video from Text">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/02/15/aigc/note/Sora_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Sora: 从文本创建视频1. 一句话总结Sora 是一个大规模视频生成扩散 Transformer，通过将视频表示为时空补丁（spacetime patches），在多样化时长、分辨率和宽高比的视频数据上进行联合训练，展示了对物理世界运动规律、长期一致性和三维空间理解的涌现能力，将视频生成长度从数秒推升至最长一分钟，标志着视觉生成模型从”帧生成”全面迈入”世界模拟”阶段。 2. 研究背景与动机2">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-02-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:26.495Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="diffusion-transformer">
+<meta property="article:tag" content="scalable-visual-model">
+<meta property="article:tag" content="spacetime-patches">
+<meta property="article:tag" content="video-generation">
+<meta property="article:tag" content="world-model">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Sora: Creating Video from Text - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Sora: Creating Video from Text"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-02-15 00:00" pubdate>
+          2024年2月15日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          74 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Sora: Creating Video from Text</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Sora-从文本创建视频"><a href="#Sora-从文本创建视频" class="headerlink" title="Sora: 从文本创建视频"></a>Sora: 从文本创建视频</h1><h2 id="1-一句话总结"><a href="#1-一句话总结" class="headerlink" title="1. 一句话总结"></a>1. 一句话总结</h2><p>Sora 是一个大规模视频生成扩散 Transformer，通过将视频表示为时空补丁（spacetime patches），在多样化时长、分辨率和宽高比的视频数据上进行联合训练，展示了对物理世界运动规律、长期一致性和三维空间理解的涌现能力，将视频生成长度从数秒推升至最长一分钟，标志着视觉生成模型从”帧生成”全面迈入”世界模拟”阶段。</p>
+<h2 id="2-研究背景与动机"><a href="#2-研究背景与动机" class="headerlink" title="2. 研究背景与动机"></a>2. 研究背景与动机</h2><h3 id="2-1-视频生成的核心挑战"><a href="#2-1-视频生成的核心挑战" class="headerlink" title="2.1 视频生成的核心挑战"></a>2.1 视频生成的核心挑战</h3><p>在 Sora 之前，视频生成面临几个根本性的技术瓶颈：</p>
+<ol>
+<li><strong>时序一致性</strong>：如何在数秒甚至一小时的连续帧之间保持物体、动作、光照的高度一致性？大多数模型只能生成几秒的视频。</li>
+<li><strong>物理规律理解</strong>：模型如何理解重力、碰撞、流体运动等物理现象，使生成的视频看起来”真实”而非”荒谬”？</li>
+<li><strong>多样化格式</strong>：训练数据中的视频有着不同的分辨率、宽高比和帧率——如何处理这种多样性而不损失信息？</li>
+<li><strong>长程依赖</strong>：如何建模跨越几十秒甚至一分钟的因果依赖关系？一个动作在视频开端的影响可能在 30 秒后才展现。</li>
+</ol>
+<h3 id="2-2-前-Sora-时代的视频生成"><a href="#2-2-前-Sora-时代的视频生成" class="headerlink" title="2.2 前 Sora 时代的视频生成"></a>2.2 前 Sora 时代的视频生成</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>典型时长</th>
+<th>主要局限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Video Diffusion Models (VDM)</td>
+<td>2-5 秒</td>
+<td>固定分辨率，生成质量有限</td>
+</tr>
+<tr>
+<td>Make-A-Video (Meta)</td>
+<td>5 秒</td>
+<td>时序一致性差，高动态场景崩塌</td>
+</tr>
+<tr>
+<td>Imagen Video (Google)</td>
+<td>5.6 秒</td>
+<td>级联模型复杂，无法处理长视频</td>
+</tr>
+<tr>
+<td>Video LDM (Stability AI)</td>
+<td>3-5 秒</td>
+<td>帧数固定，多样性受限于分辨率</td>
+</tr>
+<tr>
+<td>AnimateDiff</td>
+<td>2-4 秒</td>
+<td>基于预训练图像模型的运动模块，物理理解有限</td>
+</tr>
+</tbody></table>
+<p>所有先前的方法都在”几秒”时间尺度上挣扎，且视频长度、分辨率和宽高比都受限于固定设定。</p>
+<h3 id="2-3-核心研究问题"><a href="#2-3-核心研究问题" class="headerlink" title="2.3 核心研究问题"></a>2.3 核心研究问题</h3><p>Sora 试图回答几个根本问题：</p>
+<ol>
+<li><strong>视频能否被表示为”时空补丁”</strong>，就像文本可以被表示为 token、图像可以被表示为 patch 一样？</li>
+<li><strong>大规模 Transformer 训练能否让模型涌现出对物理世界的基本理解</strong>，而不仅仅是学习表面关联？</li>
+<li><strong>是否可能训练一个统一的视觉模型来处理任意分辨率、宽高比和时长的视频</strong>，就像 LLM 可以处理任意长度的文本一样？</li>
+</ol>
+<h2 id="3-方法论"><a href="#3-方法论" class="headerlink" title="3. 方法论"></a>3. 方法论</h2><h3 id="3-1-核心表示：时空补丁（Spacetime-Patches）"><a href="#3-1-核心表示：时空补丁（Spacetime-Patches）" class="headerlink" title="3.1 核心表示：时空补丁（Spacetime Patches）"></a>3.1 核心表示：时空补丁（Spacetime Patches）</h3><p>Sora 最根本的创新在于视频的表示方式。</p>
+<blockquote>
+<p>[!figure] Figure 1: 时空补丁表示——从文本 Token 到视频 Patch 的统一类比<br>建议位置：3.1节开头<br>放置原因：这是 Sora 最根本的创新——在一张图中直观对比三种模态的切分方式（文本 token、图像 2D patch、视频 3D spacetime patch），展示 “将一切视为 token 序列” 的统一哲学<br>当前状态：图表占位<br>图表元素：</p>
+<ul>
+<li>三行并排对比：<br>第 1 行：文本 “一只狗在草地上奔跑” → Tokenize → [一, 只, 狗, 在, 草, 地, …]（1D 序列）<br>第 2 行：图像 512×512 → Patchify → 16×16 grid of 2D patches (t&#x3D;1, h&#x3D;32, w&#x3D;32)<br>第 3 行：视频 60s×512×512 → Spacetime Patchify → 3D grid of patches (t&#x3D;4, h&#x3D;32, w&#x3D;32)</li>
+<li>右侧：序列化后的 Patch Tokens → Transformer 输入</li>
+<li>标注每种表示的维度、压缩率和 Transformer 可处理的 token 数量</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 2: Sora 的 DiT 架构——视频扩散 Transformer<br>建议位置：3.2节之后<br>放置原因：展示 Sora 的核心架构组件——视频压缩编码器→时空补丁化→DiT (自注意力 + 交叉注意力) → 视频解码器——以及文本条件的注入路径<br>当前状态：图表占位<br>图表元素：</p>
+<ul>
+<li>上部：用户 prompt → LLM Re-captioner → 详细描述 → Text Encoder → 条件嵌入</li>
+<li>中部：视频 → Video Encoder → 潜变量时空网格 → Spacetime Patchify → Patch Tokens → N 层 DiT (Self-Attention block + Cross-Attention block) → 去噪 Patch Tokens → Unpatchify → 潜变量</li>
+<li>下部：潜变量 → Video Decoder → 输出视频</li>
+<li>标注：DiT 层数、注意力头数、推理时的 Classifier-Free Guidance 权重</li>
+</ul>
+</blockquote>
+<p><strong>从文本 Token 到视觉 Patch 的类比</strong>：</p>
+<ul>
+<li>LLM 将文本切分为 token 序列进行训练，token 是不可再分的语义单元</li>
+<li>ViT（Vision Transformer）将图像切分为 2D patch 序列</li>
+<li>Sora 将视频切分为 <strong>3D 时空补丁</strong>序列——每个补丁是视频的一个小立方体（时间x高度x宽度）</li>
+</ul>
+<figure class="highlight glsl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs glsl">文本: token → token → token → token<br>图像: <span class="hljs-number">2</span>D <span class="hljs-keyword">patch</span> (h×w) → <span class="hljs-number">2</span>D <span class="hljs-keyword">patch</span> → <span class="hljs-number">2</span>D <span class="hljs-keyword">patch</span><br>视频: <span class="hljs-number">3</span>D <span class="hljs-keyword">patch</span> (t×h×w) → <span class="hljs-number">3</span>D <span class="hljs-keyword">patch</span> → <span class="hljs-number">3</span>D <span class="hljs-keyword">patch</span>  (Sora的创新)<br></code></pre></td></tr></table></figure>
+
+<p><strong>补丁化的实现</strong>（逐步骤详述）：</p>
+<p>Step 1: 视频编码压缩——将原始视频 (T_frames × H × W × 3) 通过训练好的视频压缩网络映射到低维潜空间 (T’ × h × w × c)，压缩率约 4-8x<br>Step 2: 时空补丁提取——从压缩潜空间中沿时间-空间维度切分 3D 立方体 patch (t_patch × h_patch × w_patch)<br>Step 3: 序列化——将三维网格展平为 1D 序列 [patch_1, patch_2, …, patch_M]<br>Step 4: Patch Token 投影——每个补丁通过线性层投影为 Transformer 可处理的 embedding 向量（维度 d）<br>Step 5: 位置编码——添加可学习的位置编码以保留时空位置信息</p>
+<p><strong>为什么这很重要</strong>：</p>
+<ul>
+<li>补丁化是 Sora 能处理任意分辨率、宽高比和时长的<strong>唯一原因</strong>。不需要固定输入尺寸——就像 BERT 可以通过 padding 处理不同长度的句子但 Sora 更优雅地不需要 padding。</li>
+<li>补丁大小控制着压缩率：更小的补丁保留更多细节但需要处理更多 token；更大的补丁更高效但可能丢失细节。</li>
+<li>与 LLM 处理 token 的方式完全一致——这使 Sora 可以直接复用 LLM 的 Transformer 架构和大规模训练经验。</li>
+</ul>
+<h3 id="3-2-架构：视频扩散-Transformer"><a href="#3-2-架构：视频扩散-Transformer" class="headerlink" title="3.2 架构：视频扩散 Transformer"></a>3.2 架构：视频扩散 Transformer</h3><p>Sora 使用扩散模型 + Transformer 的组合架构：</p>
+<p><strong>扩散过程</strong>：</p>
+<ul>
+<li>前向过程：在潜空间中向干净视频潜变量逐步添加高斯噪声</li>
+<li>反向过程：训练一个 DiT（Diffusion Transformer）从噪声中预测干净潜变量</li>
+<li>条件机制：通过交叉注意力将文本条件（caption，由 DALL-E 3 风格的描述器生成）注入去噪过程</li>
+</ul>
+<p><strong>Transformer 架构设计</strong>：</p>
+<ul>
+<li>基于 DiT（Peebles &amp; Xie, 2023）的设计哲学：”用 Transformer 替代 U-Net”，基于可扩展性和长程建模能力的考量</li>
+<li>与 U-Net 不同，Transformer 可以自然地处理可变长度的输入序列。这对于视频的多样化格式处理至关重要</li>
+<li>自注意力层在所有 token（空间上近邻和远距离的 patch token）之间建模关系</li>
+<li>交叉注意力层将文本条件的语义信息注入到视觉 token 中</li>
+</ul>
+<p><strong>文本条件嵌入</strong>：</p>
+<ul>
+<li>Sora 使用了一个重新描述的文本编码流程：LLM 先将用户简短 prompt 扩展为详细的视频描述，编码后的文本嵌入作为生成条件</li>
+<li>这与 DALL-E 3 的做法相似——使用 GPT 重新描述用户的简短 prompt 为更详细的描述</li>
+</ul>
+<p><strong>Sora 核心技术堆栈</strong>：</p>
+<figure class="highlight livescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs livescript">User Prompt <br>  -&gt; LLM Re-captioner <span class="hljs-function"><span class="hljs-params">(重新描述为详细视频描述)</span></span><br><span class="hljs-function">  -&gt;</span> Text Encoder <span class="hljs-function"><span class="hljs-params">(文本嵌入)</span></span><br><span class="hljs-function">  -&gt;</span> Diffusion Transformer (在时空补丁空间中逐步去噪)<br>    - Spacetime Latent Patches (来自视频编码器的压缩表示)<br>    - Cross-Attention (文本条件注入)<br>    - Self-Attention <span class="hljs-function"><span class="hljs-params">(全局时空关系建模)</span></span><br><span class="hljs-function">  -&gt;</span> Video Decoder <span class="hljs-function"><span class="hljs-params">(潜空间解码回像素空间)</span></span><br><span class="hljs-function">  -&gt;</span> Final Video Output<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-3-原生多样化训练"><a href="#3-3-原生多样化训练" class="headerlink" title="3.3 原生多样化训练"></a>3.3 原生多样化训练</h3><p>Sora 的一个关键设计决策是<strong>在原生分辨率和宽高比上训练</strong>，而非将所有视频裁剪为统一尺寸。</p>
+<blockquote>
+<p>[!figure] Figure 3: 原生多样化训练 vs 传统固定尺寸训练的对比<br>建议位置：3.3节之后<br>放置原因：直观对比传统方法（所有视频裁剪到 256x256 → 信息丢失）和 Sora 方法（保持原生分辨率 → Patch 数量变化 → Transformer 天然适应），解释为什么 Sora 能生成任意宽高比的视频<br>当前状态：图表占位<br>图表元素：</p>
+<ul>
+<li>左半（传统方法）：三种源视频 (16:9电影, 1:1方形, 9:16竖屏) → 全部裁剪&#x2F;缩放到 256x256 → 模型学到 “方形世界”</li>
+<li>右半（Sora方法）：三种源视频分别保持原生尺寸 → Patchify 得到不同数量的 Patch Tokens (e.g., 480, 256, 240) → Transformer 处理变长序列 → 推断时可生成任意比例</li>
+<li>底部标注涌现优势：更好的构图、多样化的输出格式、同一模型支持所有宽高比</li>
+</ul>
+</blockquote>
+<p><strong>传统方法的局限</strong>：</p>
+<ul>
+<li>将所有视频裁剪&#x2F;缩放到固定分辨率（如 256x256），丢失了大量视觉信息</li>
+<li>宽屏视频（如电影 21:9）和竖屏视频（如手机视频 9:16）被强行压缩</li>
+<li>模型学到的”世界”是一个固定尺寸的小窗口</li>
+</ul>
+<p><strong>Sora 的多样化训练</strong>：</p>
+<ul>
+<li>直接使用视频的原生宽高比和分辨率进行训练</li>
+<li>由于补丁机制，不同比例的视频产生不同数量的 patch token——Transformer 天然可以处理</li>
+<li>这使 Sora 能够：<ul>
+<li>生成宽屏电影（如 1920x800）</li>
+<li>生成竖屏短视频（如 1080x1920）</li>
+<li>生成方形视频</li>
+<li>在同一模型内处理所有格式</li>
+</ul>
+</li>
+</ul>
+<p><strong>多样化训练的涌现优势</strong>：</p>
+<ul>
+<li>模型学到了更好的构图原则（宽屏适合风景，竖屏适合人物），因为在训练中看到了各种格式的样本</li>
+<li>用户可以在推理时指定目标宽高比，获得最佳构图</li>
+<li>这是大语言模型早已做到（任意长度文本）但在视频领域首次实现的能力</li>
+</ul>
+<h3 id="3-4-长视频生成的扩展能力"><a href="#3-4-长视频生成的扩展能力" class="headerlink" title="3.4 长视频生成的扩展能力"></a>3.4 长视频生成的扩展能力</h3><p><strong>训练时的长视频处理</strong>：</p>
+<ul>
+<li>Sora 可以处理长达一分钟的视频（远超此前模型的 2-5 秒）</li>
+<li>具体来说是训练在持续时间不等的视频片段上</li>
+</ul>
+<p><strong>推理时的扩展</strong>：</p>
+<ul>
+<li>通过训练中的多样化时长学习，Sora 可以在推理时生成远长于训练片段的视频</li>
+<li>这类似于 LLM 的外推能力——训练在 2048 上下文但推理时可以处理更长的序列</li>
+</ul>
+<p><strong>长程一致性</strong>：</p>
+<ul>
+<li>论文展示了 Sora 能够”记住”视频开头的人物、物体和场景，即使中间经历了视角切换、遮挡或场景变换</li>
+<li>例如：一条被咬过的汉堡在一分钟后仍然保持着被咬过的痕迹——展现了持续性物体跟踪能力</li>
+<li>这与之前的模型形成鲜明对比，后者在几秒后就会”忘记”并改变物体状态</li>
+</ul>
+<h2 id="4-涌现的物理世界理解"><a href="#4-涌现的物理世界理解" class="headerlink" title="4. 涌现的物理世界理解"></a>4. 涌现的物理世界理解</h2><blockquote>
+<p>[!figure] Figure 4: Sora 涌现能力分类图——三维空间+物理交互+物体持久性+摄像机运动+数字世界<br>建议位置：第4节开头<br>放置原因：将 Sora 最令人印象深刻的五类涌现能力可视化为一个能力矩阵，每类展示关键示例和学习来源（没有任何显式 3D 建模或物理引擎）<br>当前状态：图表占位<br>图表元素：</p>
+<ul>
+<li>五宫格布局，每格包含：<br>能力图标 + 标题 + 关键示例<ol>
+<li>3D 空间一致性：多镜头旋转时物体保持正确遮挡关系</li>
+<li>物理交互：碰撞、流体、布料模拟</li>
+<li>物体持久性：遮挡后重新出现保持外观</li>
+<li>摄像机运动：推拉&#x2F;平移&#x2F;环绕等镜头语言</li>
+<li>数字世界：Minecraft 风格的体素世界</li>
+</ol>
+</li>
+<li>中心标注：”纯数据驱动，无显式 3D&#x2F;物理建模”</li>
+<li>底部表格：每种能力 vs 传统方法的对比</li>
+</ul>
+</blockquote>
+<p>Sora 在完全没有显式 3D 建模的情况下，展示了对三维空间的理解：</p>
+<ul>
+<li><strong>多镜头一致性</strong>：当相机围绕场景旋转时，物体保持正确的 3D 位置和遮挡关系</li>
+<li><strong>透视投影</strong>：远小近大的透视规律被保持</li>
+<li><strong>前后景分离</strong>：前景物体的运动方式与背景不同，自然地创造了纵深感</li>
+</ul>
+<p>这暗示了 Sora 的内部表示中蕴含了某种隐式的 3D 世界模型——不需显式的 NeRF 或三维重建。</p>
+<h3 id="4-2-物理交互的模拟"><a href="#4-2-物理交互的模拟" class="headerlink" title="4.2 物理交互的模拟"></a>4.2 物理交互的模拟</h3><p>Sora 展示了对多种物理现象的理解：</p>
+<ul>
+<li><strong>刚体和软体运动</strong>：物体碰撞、下落、弹跳的物理规律基本正确</li>
+<li><strong>流体模拟</strong>：液体的流动、飞溅、扩散</li>
+<li><strong>布料模拟</strong>：衣服、窗帘等软材料的自然褶皱和摆动</li>
+<li><strong>光影效果</strong>：光源变化、阴影、反射的一致性</li>
+<li><strong>粒子系统</strong>：雪花飘落、尘土飞扬等大规模粒子运动</li>
+</ul>
+<h3 id="4-3-物体持久性（Object-Permanence）"><a href="#4-3-物体持久性（Object-Permanence）" class="headerlink" title="4.3 物体持久性（Object Permanence）"></a>4.3 物体持久性（Object Permanence）</h3><p>Sora 最令人印象深刻的涌现能力之一是<strong>物体持久性</strong>：</p>
+<ul>
+<li>当一个物体被暂时遮挡（经过一棵树后面），Sora 在物体重新出现时保持了它的外观和运动状态</li>
+<li>当一个角色离开画面后再次出现，其衣着、发型、体态保持一致</li>
+<li>视频中”虚拟拍摄”的多镜头切换之间，场景元素保持高度一致</li>
+</ul>
+<h3 id="4-4-摄像机运动"><a href="#4-4-摄像机运动" class="headerlink" title="4.4 摄像机运动"></a>4.4 摄像机运动</h3><p>Sora 还可以模拟多样的摄像机运动：</p>
+<ul>
+<li>推拉镜头（dolly zoom）</li>
+<li>平移跟随（tracking shot）</li>
+<li>环绕拍摄（orbit shot）</li>
+<li>特写到全景的转换</li>
+</ul>
+<p>这些镜头语言不是被编程出来的——它们从训练数据中自然学习而来，并可以通过 prompt 引导。</p>
+<h3 id="4-5-模拟数字世界"><a href="#4-5-模拟数字世界" class="headerlink" title="4.5 模拟数字世界"></a>4.5 模拟数字世界</h3><p>Sora 也能生成数字化、游戏化的场景：</p>
+<ul>
+<li>Minecraft 风格的体素世界，具有正确的方块物理和游戏逻辑</li>
+<li>模型在生成 Minecraft 视频时，甚至展现了对玩家视角移动、方块颜色一致性、HUD 元素等的理解</li>
+<li>这表明 Sora 不仅可以模拟物理世界，也可以模拟<strong>规则定义的人造世界</strong></li>
+</ul>
+<blockquote>
+<p>[!figure] Figure 5: Sora 视频生成能力随训练计算量的缩放曲线<br>建议位置：5.2节之后<br>放置原因：展示类似 LLM 的 “规模效应” 在视频生成中的体现——随着训练计算增加，视频质量、时序一致性、物理理解持续提升且无饱和迹象<br>当前状态：图表占位<br>图表元素：</p>
+<ul>
+<li>三条曲线：视频质量 (FVD, 越低越好)、时序一致性、物理理解准确率，均随训练计算量提升</li>
+<li>X 轴 &#x3D; 训练计算量 (对数刻度)，Y 轴 &#x3D; 各项指标</li>
+<li>关键标注：”无饱和迹象——更多计算 &#x3D; 更好视频 &#x3D; 更强涌现”</li>
+</ul>
+</blockquote>
+<h3 id="5-1-视频质量"><a href="#5-1-视频质量" class="headerlink" title="5.1 视频质量"></a>5.1 视频质量</h3><table>
+<thead>
+<tr>
+<th>评估维度</th>
+<th>Sora 表现</th>
+<th>此前最佳</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>帧级质量</td>
+<td>接近照片级</td>
+<td>-</td>
+</tr>
+<tr>
+<td>时序一致性</td>
+<td>远超此前方法</td>
+<td>约 5 秒后显著退化</td>
+</tr>
+<tr>
+<td>最长视频</td>
+<td>1 分钟</td>
+<td>约 5.6 秒 (Imagen Video)</td>
+</tr>
+<tr>
+<td>分辨率范围</td>
+<td>原生多分辨率</td>
+<td>固定分辨率</td>
+</tr>
+<tr>
+<td>宽高比</td>
+<td>任意</td>
+<td>固定</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-训练规模效应"><a href="#5-2-训练规模效应" class="headerlink" title="5.2 训练规模效应"></a>5.2 训练规模效应</h3><p>与 LLM 类似，Sora 展示了强烈的规模效应：</p>
+<ul>
+<li>随着训练计算的增加，视频质量、时序一致性和物理理解能力持续提升</li>
+<li>没有任何饱和的迹象——更多的计算 &#x3D; 更好的视频 &#x3D; 更强的涌现能力</li>
+<li>这暗示着视频生成可能也遵循类似语言模型的缩放定律</li>
+</ul>
+<h3 id="5-3-图像生成能力"><a href="#5-3-图像生成能力" class="headerlink" title="5.3 图像生成能力"></a>5.3 图像生成能力</h3><p>由于视频可视为一系列连续的图像帧，Sora 也具备图像生成能力：</p>
+<ul>
+<li>通过仅使用一帧（时间维度上的单个 “frame” patch），Sora 可以生成高质量的单张图像</li>
+<li>生成的图像展现了多物体组合、复杂场景构造能力</li>
+<li>支持图像编辑、图像扩展（outpainting）、图像插值等任务</li>
+</ul>
+<h3 id="5-4-视频编辑能力"><a href="#5-4-视频编辑能力" class="headerlink" title="5.4 视频编辑能力"></a>5.4 视频编辑能力</h3><p>Sora 支持多种视频编辑任务：</p>
+<ul>
+<li><strong>时间插值</strong>：在两个给定的关键帧之间生成平滑的过渡动画</li>
+<li><strong>前向&#x2F;后向扩展</strong>：给定初始几帧，向前或向后继续生成视频</li>
+<li><strong>风格迁移</strong>：通过文本引导改变视频风格</li>
+<li><strong>主题保持</strong>：在编辑中保持人物或物体的外观一致性</li>
+</ul>
+<h2 id="6-关键公式和概念"><a href="#6-关键公式和概念" class="headerlink" title="6. 关键公式和概念"></a>6. 关键公式和概念</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Spacetime Patch</td>
+<td>视频的 3D (t x h x w) 基本表示单元，类似于 token 之于文本</td>
+</tr>
+<tr>
+<td>Diffusion Transformer</td>
+<td>用 Transformer 而非 U-Net 的扩散模型架构</td>
+</tr>
+<tr>
+<td>Diverse Native Training</td>
+<td>在原生分辨率&#x2F;宽高比&#x2F;时长上训练，不裁剪为标准尺寸</td>
+</tr>
+<tr>
+<td>Emergent 3D Understanding</td>
+<td>不需要显式 3D 建模，涌现出的三维空间理解</td>
+</tr>
+<tr>
+<td>Object Permanence</td>
+<td>在被遮挡后仍保持物体外观和状态的涌现能力</td>
+</tr>
+</tbody></table>
+<h2 id="7-创新点与贡献"><a href="#7-创新点与贡献" class="headerlink" title="7. 创新点与贡献"></a>7. 创新点与贡献</h2><h3 id="7-1-核心创新"><a href="#7-1-核心创新" class="headerlink" title="7.1 核心创新"></a>7.1 核心创新</h3><ol>
+<li><p><strong>时空补丁表示</strong>：将视频统一表示为 3D 补丁序列，使得视频可以像语言一样被 Transformer 建模。这是 Sora 架构哲学中最根本的创新。</p>
+</li>
+<li><p><strong>原生多样化训练</strong>：首次在视频生成中实现原生分辨率&#x2F;宽高比训练，突破了此前所有模型的固定尺寸限制。</p>
+</li>
+<li><p><strong>大规模涌现的物理理解</strong>：证明了纯数据驱动的 Transformer 可以达到对三维空间、物理交互、物体持久性的基本理解——无需显式的物理引擎、3D 几何建模或世界模型。</p>
+</li>
+<li><p><strong>一分钟长视频</strong>：将视频生成的实用长度从 2-5 秒推升到 1 分钟，跨越了一个数量级。这不仅要求更好的生成质量，更要求模型有实际的”记忆”和时序推理能力。</p>
+</li>
+<li><p><strong>统一框架</strong>：Sora 的架构同时支持视频生成、图像生成、视频编辑、时间插值等多种任务，无需为每种任务设计专门模型。</p>
+</li>
+</ol>
+<h3 id="7-2-对-AI-研究的深远影响"><a href="#7-2-对-AI-研究的深远影响" class="headerlink" title="7.2 对 AI 研究的深远影响"></a>7.2 对 AI 研究的深远影响</h3><ol>
+<li><p><strong>世界模拟器的可能性</strong>：Sora 证明了当前的深度学习方法可以通过足够的数据和计算来学习世界运行的规律（物理、空间、持久性），而不仅仅是表面的视觉模式。</p>
+</li>
+<li><p><strong>视觉模型的”GPT 时刻”</strong>：Sora 之于视频的意义类似于 GPT 之于文本——一个足够大的通用架构 + 足够多的数据 + 足够强的计算 &#x3D; 涌现出远超预期的能力。</p>
+</li>
+<li><p><strong>从生成到理解</strong>：Sora 的 3D 空间理解和物理模拟能力暗示，生成能力可能是理解能力的副产品——模型为了更好地生成而学会了更深入地理解世界。</p>
+</li>
+</ol>
+<h2 id="8-局限性与后续工作"><a href="#8-局限性与后续工作" class="headerlink" title="8. 局限性与后续工作"></a>8. 局限性与后续工作</h2><h3 id="8-1-已知局限（论文中承认）"><a href="#8-1-已知局限（论文中承认）" class="headerlink" title="8.1 已知局限（论文中承认）"></a>8.1 已知局限（论文中承认）</h3><ol>
+<li><p><strong>因果逻辑错误</strong>：Sora 有时会生成物理上不合理的场景。例如一个人跑步的画面中，脚下的地面纹理会反向移动。或者杯子掉落时摔碎后重新愈合。</p>
+</li>
+<li><p><strong>复杂物理交互</strong>：在复杂的多物体交互场景（如碰撞后碎片轨迹、多个角色互相推搡）中，物理一致性容易崩塌。</p>
+</li>
+<li><p><strong>左右方向混淆</strong>：模型对空间方向的判断（如左右区分）有时出错——这暴露了缺乏真实 3D 理解。</p>
+</li>
+<li><p><strong>长视频一致性退化</strong>：虽然 1 分钟远超此前方法，但在接近 1 分钟的时间尺度上，场景元素仍然可能出现不一致（如一件衣服的颜色突然变化）。</p>
+</li>
+<li><p><strong>计算成本高</strong>：训练和推理都需要巨大的计算资源，目前不是面向普通用户的实用产品。</p>
+</li>
+<li><p><strong>生成内容的可控性有限</strong>：虽然文本控制有效，但对镜头运动的精确控制、对特定物体运动的约束等仍然困难。</p>
+</li>
+</ol>
+<h3 id="8-2-未公开的细节"><a href="#8-2-未公开的细节" class="headerlink" title="8.2 未公开的细节"></a>8.2 未公开的细节</h3><p>Sora 的技术报告没有公开以下关键细节：</p>
+<ul>
+<li>模型的具体参数量和架构规格</li>
+<li>训练数据的确切规模和来源</li>
+<li>训练计算量</li>
+<li>视频编码器和解码器的设计</li>
+<li>推理时的具体采样策略</li>
+</ul>
+<p>这使得外部研究者无法完全复现或验证该方法。</p>
+<h2 id="9-对比定位"><a href="#9-对比定位" class="headerlink" title="9. 对比定位"></a>9. 对比定位</h2><h3 id="9-1-与之前视频生成模型的对比"><a href="#9-1-与之前视频生成模型的对比" class="headerlink" title="9.1 与之前视频生成模型的对比"></a>9.1 与之前视频生成模型的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Imagen Video</th>
+<th>Make-A-Video</th>
+<th>Video LDM</th>
+<th>Sora</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>级联扩散 + T5</td>
+<td>时空扩散</td>
+<td>潜空间扩散 + 时序层</td>
+<td><strong>扩散 Transformer + 时空补丁</strong></td>
+</tr>
+<tr>
+<td>最长视频</td>
+<td>5.6s</td>
+<td>5s</td>
+<td>4s</td>
+<td><strong>~60s</strong></td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>固定</td>
+<td>固定</td>
+<td>固定</td>
+<td><strong>任意原生</strong></td>
+</tr>
+<tr>
+<td>宽高比</td>
+<td>固定</td>
+<td>固定</td>
+<td>固定</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>物理理解</td>
+<td>弱</td>
+<td>弱</td>
+<td>弱</td>
+<td><strong>涌现</strong></td>
+</tr>
+<tr>
+<td>3D 空间</td>
+<td>弱</td>
+<td>弱</td>
+<td>弱</td>
+<td><strong>涌现</strong></td>
+</tr>
+<tr>
+<td>物体持久性</td>
+<td>无</td>
+<td>无</td>
+<td>无</td>
+<td><strong>涌现</strong></td>
+</tr>
+<tr>
+<td>开源</td>
+<td>否</td>
+<td>否</td>
+<td>是</td>
+<td><strong>否</strong></td>
+</tr>
+</tbody></table>
+<h3 id="9-2-与图像生成模型的对比"><a href="#9-2-与图像生成模型的对比" class="headerlink" title="9.2 与图像生成模型的对比"></a>9.2 与图像生成模型的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Stable Diffusion 3</th>
+<th>DALL-E 3</th>
+<th>Sora</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>输出类型</td>
+<td>图像</td>
+<td>图像</td>
+<td><strong>视频 + 图像</strong></td>
+</tr>
+<tr>
+<td>表示</td>
+<td>VAE 潜空间</td>
+<td>CLIP 潜空间</td>
+<td><strong>时空补丁潜空间</strong></td>
+</tr>
+<tr>
+<td>架构</td>
+<td>MMDiT</td>
+<td>未公开</td>
+<td><strong>DiT</strong></td>
+</tr>
+<tr>
+<td>文本编码</td>
+<td>T5 + CLIP</td>
+<td>GPT re-captioning</td>
+<td><strong>LLM re-captioning</strong></td>
+</tr>
+<tr>
+<td>物理理解</td>
+<td>无</td>
+<td>无</td>
+<td><strong>涌现</strong></td>
+</tr>
+</tbody></table>
+<h2 id="10-对世界模型的深远启示"><a href="#10-对世界模型的深远启示" class="headerlink" title="10. 对世界模型的深远启示"></a>10. 对世界模型的深远启示</h2><p>Sora 最深刻的意义不在于视频生成本身，而在于它对构建 <strong>AI 世界模型</strong> 的启示：</p>
+<ol>
+<li><p><strong>“学习物理”不需要物理引擎</strong>：足够的数据和 Transformer 可以从观测数据中隐式学习物理规律。这与神经科学中”大脑通过观测学习世界规律”的理念一致。</p>
+</li>
+<li><p><strong>生成 &#x3D; 理解的路径</strong>：通过学会”生成逼真的视频”，模型被迫学习世界的底层结构和规律。好生成是好理解的副产品。</p>
+</li>
+<li><p><strong>尺度是一切</strong>：Sora 的涌现能力强烈依赖于训练规模。小规模模型的视频生成仅仅是像素预测，但大规模模型的视频生成变成了世界模拟。</p>
+</li>
+<li><p><strong>通用架构的价值</strong>：Sora 使用了与 LLM 相同的 Transformer 架构核心（尽管在扩散框架中），验证了”统一的通用架构可以处理跨模态数据”的思想。</p>
+</li>
+</ol>
+<h2 id="11-实现建议与技巧"><a href="#11-实现建议与技巧" class="headerlink" title="11. 实现建议与技巧"></a>11. 实现建议与技巧</h2><h3 id="11-1-架构设计原则"><a href="#11-1-架构设计原则" class="headerlink" title="11.1 架构设计原则"></a>11.1 架构设计原则</h3><ul>
+<li><strong>补丁化是核心</strong>：将视频视为时空补丁序列，避免对特定分辨率和时长的依赖</li>
+<li><strong>Transformer 优于 U-Net 用于长程建模</strong>：当视频时长增加时，Transformer 的自注意力机制天然适合建模全局依赖</li>
+<li><strong>原生多样化训练</strong>：不要强行裁剪视频到统一尺寸——让模型从数据的天然多样性中学习</li>
+<li><strong>重新描述文本</strong>：使用强力的 LLM 将简短 prompt 扩展为详细描述，这显著提升了文本条件的语义质量</li>
+</ul>
+<h3 id="11-2-训练策略"><a href="#11-2-训练策略" class="headerlink" title="11.2 训练策略"></a>11.2 训练策略</h3><ul>
+<li>优先使用大规模视频数据 + 足够的计算</li>
+<li>训练数据的多样性（场景类型、摄像机运动、视频长度）比数据数量更重要</li>
+<li>长视频训练数据不需要连续的长片段——训练在间隔不等的视频片段上也可以支撑外推</li>
+</ul>
+<h2 id="12-后续问题"><a href="#12-后续问题" class="headerlink" title="12. 后续问题"></a>12. 后续问题</h2><ol>
+<li><p><strong>Sora 之后，视频生成的下一个突破在哪里？</strong></p>
+<ul>
+<li>推理时搜索&#x2F;规划？通过多次生成+选择来提升质量？</li>
+<li>直接与物理引擎结合？用生成+模拟的混合方案？</li>
+<li>交互式视频生成？用户可以实时操控生成过程中的物体？</li>
+</ul>
+</li>
+<li><p><strong>世界模型什么时候可以用于实际决策和规划？</strong></p>
+<ul>
+<li>Sora 生成的视频是对”可能发生的事”的预测吗？可不可以用于机器人规划和自动驾驶的场景预测？</li>
+</ul>
+</li>
+<li><p><strong>视频生成的安全性控制如何系统化？</strong></p>
+<ul>
+<li>什么样的水印和检测技术可以应对大规模视频生成？</li>
+<li>视频生成的 C2PA 内容认证标准演进方向？</li>
+</ul>
+</li>
+<li><p><strong>Sora 可以被复现吗？</strong></p>
+<ul>
+<li>开源社区能否在合理资源限制内复现类似能力？</li>
+<li>什么是最小的 Sora 等效模型规模？</li>
+</ul>
+</li>
+</ol>
+<h2 id="13-深入研究资源"><a href="#13-深入研究资源" class="headerlink" title="13. 深入研究资源"></a>13. 深入研究资源</h2><ul>
+<li>Sora 技术报告：OpenAI, 2024</li>
+<li>DiT 论文：Peebles &amp; Xie, “Scalable Diffusion Models with Transformers”, ICCV 2023</li>
+<li>ViT 论文：Dosovitskiy et al., “An Image is Worth 16x16 Words”, ICLR 2021</li>
+<li>Video Diffusion Models：Ho et al., “Video Diffusion Models”, NeurIPS 2022</li>
+<li>Imagen Video：Ho et al., “Imagen Video: High Definition Video Generation with Diffusion Models”, 2022</li>
+<li>官方页面：<a target="_blank" rel="noopener" href="https://openai.com/sora">https://openai.com/sora</a></li>
+</ul>
+<hr>
+<p><em>笔记生成日期：2026-07-07</em></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90/" class="category-chain-item">视频生成</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/video-generation/" class="print-no-link">#video-generation</a>
+      
+        <a href="/tags/diffusion-transformer/" class="print-no-link">#diffusion-transformer</a>
+      
+        <a href="/tags/spacetime-patches/" class="print-no-link">#spacetime-patches</a>
+      
+        <a href="/tags/world-model/" class="print-no-link">#world-model</a>
+      
+        <a href="/tags/scalable-visual-model/" class="print-no-link">#scalable-visual-model</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Sora: Creating Video from Text</div>
+      <div>https://w2ongq6.github.io/2024/02/15/aigc/note/Sora_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年2月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/02/22/inference/note/LongRoPE_note/" title="LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/02/07/aigc/note/LGM_note/" title="LGM: Large Multi-View Gaussian Model for High-Resolution 3D Content Creation">
+                        <span class="hidden-mobile">LGM: Large Multi-View Gaussian Model for High-Resolution 3D Content Creation</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

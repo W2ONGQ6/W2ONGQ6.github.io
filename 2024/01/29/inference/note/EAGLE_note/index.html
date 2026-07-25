@@ -1,0 +1,1450 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="EAGLE: 投机采样需要重新思考特征不确定性核心信息 标题: EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty 标题翻译: EAGLE：投机采样需要重新思考特征不确定性 作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang 机构: University of">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/01/29/inference/note/EAGLE_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="EAGLE: 投机采样需要重新思考特征不确定性核心信息 标题: EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty 标题翻译: EAGLE：投机采样需要重新思考特征不确定性 作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang 机构: University of">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_img_01.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="article:published_time" content="2024-01-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.325Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;inference">
+<meta property="article:tag" content="papers&#x2F;speculative-decoding">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-01-29 00:00" pubdate>
+          2024年1月29日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          104 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="EAGLE-投机采样需要重新思考特征不确定性"><a href="#EAGLE-投机采样需要重新思考特征不确定性" class="headerlink" title="EAGLE: 投机采样需要重新思考特征不确定性"></a>EAGLE: 投机采样需要重新思考特征不确定性</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty</li>
+<li>标题翻译: EAGLE：投机采样需要重新思考特征不确定性</li>
+<li>作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang</li>
+<li>机构: University of Waterloo（滑铁卢大学）, Microsoft Research（微软研究院）</li>
+<li>发表时间: 2024年1月29日</li>
+<li>发表渠道: ICML 2024 (Poster)</li>
+<li>arXiv: 2401.15077</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.15077">https://arxiv.org/abs/2401.15077</a></li>
+<li>论文类型: AI推理系统方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>投机采样（投机解码）通过使用草稿模型生成候选token再由目标模型验证，实现了对大型语言模型的加速推理。现有方法通常在token层面进行草稿预测，但我们认为这种方法忽视了关键的不确定性因素。本文提出EAGLE，一种在特征层面而非token层面进行草稿预测的新方法。具体而言，EAGLE自回归地预测倒数第二层的特征向量，再将其解码为token。特征预测相比token预测是一个更直接且不确定性更低的任务，因此能获得更高的接受率。此外，我们提出token-advanced特征预测策略，通过将当前token序列向前推进一个时间步，为草稿模型提供更多上下文信息。EAGLE是无损方法，无需对目标LLM进行微调。在MT-bench上，EAGLE比普通自回归解码快3倍，比Lookahead解码快2倍，比Medusa快1.6倍。在单张RTX 3090 GPU上，LLaMA2-Chat 13B达到约160 tokens&#x2F;s。对于LLaMA2-Chat 70B模型，EAGLE实现2.7至3.5倍的延迟加速。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-特征级草稿预测（Feature-Level-Draft）"><a href="#1-特征级草稿预测（Feature-Level-Draft）" class="headerlink" title="1. 特征级草稿预测（Feature-Level Draft）"></a>1. 特征级草稿预测（Feature-Level Draft）</h3><p><strong>核心思想</strong>: 不预测离散的token，而是预测Transformer倒数第二层的连续特征向量（在最后一层线性投影之前的表示），再将预测的特征向量通过目标模型的最后一层解码为token。</p>
+<p><strong>为什么重要</strong>: 这是EAGLE最核心的洞见——预测连续特征比预测离散token从根本上更容易且精确度更高。离散token预测是一个高维分类问题（词汇表大小V可达数万到数十万），而连续特征向量的回归是一个d维（通常768-8192维）的连续空间预测问题。连续空间的误差可以通过向量距离自然度量，而离散token的错误是”全有或全无”的。这一洞察从根本上改变了投机解码的研究方向——从”预测什么”转向”在什么层级预测”。</p>
+<h3 id="2-不确定性分析作为设计依据"><a href="#2-不确定性分析作为设计依据" class="headerlink" title="2. 不确定性分析作为设计依据"></a>2. 不确定性分析作为设计依据</h3><p><strong>核心思想</strong>: 对投机解码进行形式化的不确定性分解——总的不确定性来自两部分：草稿模型本身的不确定性（预测连续特征的困难程度）+ 特征到token的映射不确定性（softmax的离散化损耗）。EAGLE选择在不确定性更低的特征层进行预测，从根本上提高了草稿质量。</p>
+<p><strong>为什么重要</strong>: 这种系统性的不确定性分析提供了理论分析框架，解释了为什么token级草稿预测的接受率有上限，而特征级预测可以突破这个上限。这是将工程直觉上升为理论洞见的典范。</p>
+<h3 id="3-Token-Advanced特征预测策略"><a href="#3-Token-Advanced特征预测策略" class="headerlink" title="3. Token-Advanced特征预测策略"></a>3. Token-Advanced特征预测策略</h3><p><strong>核心思想</strong>: 草稿模型在预测下一个特征向量时，不仅看到当前的特征向量，还看到”向前推进”一个时间步的token信息。具体而言，使用已确认生成的当前token的embedding和当前token对应的特征向量，一同预测下一个特征向量。</p>
+<p><strong>为什么重要</strong>: 这解决了特征级自回归的一个固有困难——标准自回归中，每个时间步都已知前一步的输出token；但在特征级预测中，如果只使用特征向量，就缺少了上一个token的明确信息。Token-advanced策略通过显式引入上一个已确认token的信息，为特征预测提供了额外的定位信号，显著提升了预测精度。</p>
+<h3 id="4-无损且不需要微调目标模型"><a href="#4-无损且不需要微调目标模型" class="headerlink" title="4. 无损且不需要微调目标模型"></a>4. 无损且不需要微调目标模型</h3><p><strong>核心思想</strong>: EAGLE的草稿模块完全独立于目标模型——它是一个轻量级的特征预测网络，使用目标模型倒数第二层的特征作为输入进行训练，但目标模型参数完全冻结。验证阶段仍然使用目标模型的标准输出层进行token验证。</p>
+<p><strong>为什么重要</strong>: 这保证了EAGLE是严格无损的——目标模型的参数完全没有改变，输出分布与标准自回归解码完全一致。同时，由于目标模型冻结，已经部署的生产模型可以直接使用EAGLE而无需任何修改或重新部署。</p>
+<h3 id="5-极低的特征预测成本"><a href="#5-极低的特征预测成本" class="headerlink" title="5. 极低的特征预测成本"></a>5. 极低的特征预测成本</h3><p><strong>核心思想</strong>: EAGLE的特征预测模块是一个轻量级的自回归Transformer（通常1-2层），其输入维度远小于完整token embedding的维度，因此推理成本极低。</p>
+<p><strong>为什么重要</strong>: 特征预测的成本比token预测（需要跑完整的Transformer前向传播）低1-2个数量级。这是EAGLE能实现更高有效加速比的关键——即使特征预测是自回归的（顺序执行多次），每次预测的成本极低，整体草稿生成时间远少于一次完整前向传播。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>EAGLE通过将投机解码的草稿预测从离散token空间转移到连续特征空间，利用预测连续特征比预测离散token不确定性更低的根本优势，结合token-advanced预测策略和轻量级自回归特征预测模块，在多个基准和模型上实现3-3.5倍无损加速，显著优于token级别的Medusa（+60%）和Lookahead解码（+100%），证明了”在什么层级预测”比”用什么预测”更为关键。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>投机解码的有效性根本取决于草稿模型的预测质量——接受率越高，加速越大。现有方法在token层面预测时面临两个基本限制：</p>
+<ol>
+<li><p><strong>离散化损耗</strong>: Token是一个离散符号，从连续特征到离散token的映射（softmax后argmax&#x2F;sampling）本质上是有损的。两个接近的特征向量可能映射到同一个token，而两个相同的特征向量中微小的噪声差异可能导致映射到不同token。</p>
+</li>
+<li><p><strong>词汇表大小的规模化挑战</strong>: Token预测是一个$V$分类问题（$V$可达256K+），而特征预测是一个$d$维回归问题（$d$通常768-8192）。对于大词汇表模型，$V \gg d$，分类空间的稀疏性使得精确token预测极为困难。</p>
+</li>
+</ol>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>Token级投机解码（Leviathan et al.）</strong>: 草稿模型在token空间中自回归预测，受限于上述离散化损耗和分类空间规模问题，接受率通常不超过70-75%。</p>
+</li>
+<li><p><strong>Medusa（Cai et al.）</strong>: 仍然在token层面预测，只是将预测头放在目标模型隐藏表示之上。虽然消除了独立草稿模型，但没有改变预测粒度的根本限制。</p>
+</li>
+<li><p><strong>Lookahead解码（Fu et al.）</strong>: 使用Jacobi迭代直接修正token预测，跳过了草稿模型，但收敛速度受限于token空间的稀疏性，通常每个验证周期只接受1.5-2个token。</p>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>连续特征预测比离散token预测更容易</strong>: 预测一个768维的连续向量比从32000个token中精确选出正确的那个，从统计学习的角度是根本不同的难度级别。连续空间的预测误差可以平滑地影响最终结果（相似的特征产生相似的token概率分布），而离散token预测的错误是灾难性的（选错token完全改变了后续生成）。特征级预测可以看作是在一个信息更丰富、误差容忍度更高的空间中进行”软”预测。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练设置"><a href="#训练设置" class="headerlink" title="训练设置"></a>训练设置</h3><p><strong>EAGLE特征预测模块的训练</strong>:</p>
+<ul>
+<li>训练数据：ShareGPT数据集（约7万条对话）或类似通用语料</li>
+<li>输入：从目标模型提取的倒数第二层隐藏状态序列</li>
+<li>目标：下一个时间步的倒数第二层隐藏状态（自回归回归任务）</li>
+<li>损失函数：平滑L1损失（Smooth L1 Loss）或均方误差</li>
+<li>对每个训练序列，提取完整的前向传播特征作为训练标签</li>
+</ul>
+<h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><p><strong>模型系列</strong>:</p>
+<ul>
+<li>Vicuna-7B&#x2F;13B&#x2F;33B</li>
+<li>LLaMA2-Chat-7B&#x2F;13B&#x2F;70B</li>
+<li>LLaMA3-Instruct-8B（部分实验）</li>
+</ul>
+<p><strong>基准任务</strong>:</p>
+<ul>
+<li>MT-bench：多轮对话质量评估</li>
+<li>AlpacaEval：指令遵循评估</li>
+<li>HumanEval：代码生成评估</li>
+<li>GSM8K：数学推理评估</li>
+<li>Spec-Bench：投机解码专用基准（作者新引入）</li>
+</ul>
+<p><strong>评估指标</strong>:</p>
+<ul>
+<li>墙钟加速比</li>
+<li>平均接受长度</li>
+<li>接受率（Accepted tokens per draft step）</li>
+<li>质量保持度（对比原始模型输出）</li>
+</ul>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>GPU: NVIDIA RTX 3090 24GB（主要测试硬件）</li>
+<li>对比基线: 标准自回归解码, Medusa, Lookahead解码, 原始投机解码</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p>EAGLE的核心架构包括三个组件：特征提取、特征级自回归草稿、通过目标模型输出层的验证解码。</p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_001_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 特征提取与准备</strong></p>
+<p><strong>步骤输入</strong>: 目标模型的前缀序列 $x_{\leq t}$，目标模型参数 $\theta_{\text{target}}$（冻结）<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>通过目标模型的一次前向传播，获得前缀序列中每个位置的特征表示</li>
+<li>提取倒数第二层的特征向量 $f_t \in \mathbb{R}^d$（在最后一层分类头之前的表示）</li>
+<li>同时获得已确认生成的当前token的embedding $e(x_t) \in \mathbb{R}^{d}$</li>
+<li>整个前缀序列的KV缓存被保留以供后续验证<br><strong>步骤输出</strong>: 当前特征向量 $f_t$，当前token embedding $e(x_t)$，前缀KV缓存</li>
+</ul>
+<p><strong>步骤2: Token-Advanced特征自回归预测</strong></p>
+<p><strong>步骤输入</strong>: 特征向量 $f_t$，token embedding $e(x_t)$，特征预测模块 $\text{EAGLE}_{\theta}$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>拼接输入：$h_0 &#x3D; \text{concat}(f_t, e(x_t)) \in \mathbb{R}^{2d}$</li>
+<li>通过轻量级自回归Transformer（1层或多层）：<ul>
+<li>Input embedding: $h_0’ &#x3D; W_{\text{in}} \cdot h_0 \in \mathbb{R}^{d_{\text{hidden}}}$</li>
+<li>自回归生成K个特征预测（顺序执行）：<ul>
+<li>$\hat{f}<em>{t+1} &#x3D; \text{EAGLE}</em>{\theta}(h_0’)$</li>
+<li>$\hat{f}<em>{t+2} &#x3D; \text{EAGLE}</em>{\theta}(\text{concat}(\hat{f}<em>{t+1}, e(\hat{x}</em>{t+1})))$</li>
+<li>…（共K步）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>其中 $\hat{x}<em>{t+i}$ 是通过目标模型的最后一层从 $\hat{f}</em>{t+i}$ 解码得到的候选token<br><strong>步骤输出</strong>: K个预测的特征向量 ${\hat{f}<em>{t+1}, \ldots, \hat{f}</em>{t+K}}$ 和对应的候选token</li>
+</ul>
+<p><strong>步骤3: 候选树构建</strong></p>
+<p><strong>步骤输入</strong>: K个预测的特征向量，每个特征向量解码后的top-$s$个候选token<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>对每个预测位置，从解码后的token分布中选取top-$s_k$个候选</li>
+<li>使用与Medusa类似的树构建方法，生成候选token树</li>
+<li>第k层包含$s_k$组候选，每组对应上一层的每个候选节点</li>
+<li>树节点总数为 $1 + s_1 + s_1s_2 + \ldots + s_1s_2\ldots s_K$<br><strong>步骤输出</strong>: 候选token树</li>
+</ul>
+<p><strong>步骤4: 目标模型树验证</strong></p>
+<p><strong>步骤输入</strong>: 候选token树，前缀序列，前缀KV缓存<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>使用树注意力掩码，目标模型一次前向传播处理候选树中的所有节点</li>
+<li>对于树中的每个候选token，计算精确的目标模型条件概率</li>
+<li>执行投机采样验证：从根节点开始，逐路径使用拒绝采样规则接受或拒绝token</li>
+<li>接受条件：$\min(1, p_{\text{target}}(x) &#x2F; p_{\text{draft}}(x))$<br><strong>步骤输出</strong>: 被接受的token序列</li>
+</ul>
+<h3 id="不确定性分析的形式化"><a href="#不确定性分析的形式化" class="headerlink" title="不确定性分析的形式化"></a>不确定性分析的形式化</h3><p><strong>核心分析框架</strong>:</p>
+<p>令 $p(y|x)$ 为目标模型在给定前缀x时下一个token的真实分布。投机解码的草稿模型输出一个提议分布 $q(y|x)$。</p>
+<p>不确定性可以分解为两部分：</p>
+<ol>
+<li><p><strong>特征不确定性（Feature Uncertainty）</strong>: 预测特征向量时的误差<br>$$\epsilon_f &#x3D; |\hat{f} - f^<em>|$$<br>其中 $\hat{f}$ 是草稿模型预测的特征向量，$f^</em>$ 是目标模型实际生成的特征向量。</p>
+</li>
+<li><p><strong>解码不确定性（Decoding Uncertainty）</strong>: 从特征向量到token分布的映射误差<br>$$\epsilon_d &#x3D; D_{KL}(p_{\text{target}}(\cdot|f^*) | p_{\text{draft}}(\cdot|\hat{f}))$$<br>其中 $D_{KL}$ 是KL散度。</p>
+</li>
+</ol>
+<p><strong>EAGLE的关键主张</strong>: </p>
+<ul>
+<li>特征不确定性 $\epsilon_f$ 通常较小（连续空间回归），而解码不确定性 $\epsilon_d$ 也可以控制（因为特征误差小时，softmax输出变化平滑）</li>
+<li>Token级草稿预测跳过了特征层级，直接在高维离散空间中预测，同时承担了特征不确定性和解码不确定性的叠加效应</li>
+</ul>
+<p><strong>Token-Advanced策略减少不确定性</strong>:</p>
+<ul>
+<li>标准特征预测：$P(f_{t+1} | f_t)$——只知道当前特征，缺少上一个明确token的信息</li>
+<li>Token-Advanced预测：$P(f_{t+1} | f_t, e(x_t))$——额外知道”我们刚刚确认生成了那个token”，提供了更精确的上下文定位</li>
+</ul>
+<h3 id="EAGLE特征预测模块架构"><a href="#EAGLE特征预测模块架构" class="headerlink" title="EAGLE特征预测模块架构"></a>EAGLE特征预测模块架构</h3><p><strong>EAGLE的草稿Transformer</strong>:</p>
+<ul>
+<li>层数：1层（默认），也可配置为2-3层</li>
+<li>隐藏维度：与目标模型相同或略小</li>
+<li>输入：特征向量拼接token embedding，维度 $2d$</li>
+<li>输出：预测的下一个特征向量，维度 $d$</li>
+<li>参数总量：约$4d^2$（单层时），对于7B模型(d&#x3D;4096)，约67M参数（占目标模型的1%）</li>
+<li>自回归机制：上一时间步的输出特征和对应解码的token被反馈作为下一时间步的输入</li>
+</ul>
+<p><strong>关键优势</strong>:</p>
+<ul>
+<li>草稿模型前向传播成本远低于目标模型（1层 vs 32-80层）</li>
+<li>每次草稿迭代（预测一个特征向量）的成本是目标模型完整前向传播的$1&#x2F;30$至$1&#x2F;80$</li>
+<li>即使自回归预测K步，总草稿生成成本仍低于一次目标模型前向传播</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="主要加速结果（Vicuna和LLaMA2系列）"><a href="#主要加速结果（Vicuna和LLaMA2系列）" class="headerlink" title="主要加速结果（Vicuna和LLaMA2系列）"></a>主要加速结果（Vicuna和LLaMA2系列）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>方法</th>
+<th>加速比</th>
+<th>平均接受长度</th>
+<th>tokens&#x2F;s</th>
+<th>质量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vicuna-7B</td>
+<td>标准解码</td>
+<td>1.0x</td>
+<td>-</td>
+<td>43.5</td>
+<td>baseline</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p>*70B模型的tokens&#x2F;s取决于GPU显存配置；在A100 80GB上测试</p>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>EAGLE在所有模型和任务上一致超越Medusa（+60%）和Lookahead（+100%）</li>
+<li>平均接受长度4.0-4.5，显著高于Medusa的3.3-3.5，验证了特征级预测带来了更高的草稿质量</li>
+<li>在RTX 3090消费级GPU上，7B和13B模型分别达到约130和105 tokens&#x2F;s的实际生成速度</li>
+<li>70B模型在A100上达到2.7-3.5倍加速，证明了方法的可扩展性</li>
+</ul>
+<h3 id="EAGLE-vs-其他方法的接受率对比"><a href="#EAGLE-vs-其他方法的接受率对比" class="headerlink" title="EAGLE vs 其他方法的接受率对比"></a>EAGLE vs 其他方法的接受率对比</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>平均接受长度</th>
+<th>接受率（per position）</th>
+<th>每个周期有效token数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准投机解码</td>
+<td>2.8</td>
+<td>56%</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>Medusa</td>
+<td>3.5</td>
+<td>65%</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td>Lookahead</td>
+<td>1.8</td>
+<td>45%</td>
+<td>1.8</td>
+</tr>
+<tr>
+<td><strong>EAGLE</strong></td>
+<td><strong>4.2</strong></td>
+<td><strong>78%</strong></td>
+<td><strong>4.2</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>EAGLE的78%接受率远高于token级方法的56-65%</li>
+<li>接受率的提升直接归因于特征级预测的更高精度</li>
+<li>每个周期接受的4.2个token意味着：每进行一次目标模型的前向传播，可以向前推进约4个token</li>
+</ul>
+<h3 id="消融实验：特征级-vs-Token级预测"><a href="#消融实验：特征级-vs-Token级预测" class="headerlink" title="消融实验：特征级 vs Token级预测"></a>消融实验：特征级 vs Token级预测</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>加速比</th>
+<th>接受率</th>
+<th>接受长度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Token级预测（类似Medusa）</td>
+<td>2.18x</td>
+<td>65%</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td>特征级预测（无Token-Advanced）</td>
+<td>2.62x</td>
+<td>72%</td>
+<td>3.8</td>
+</tr>
+<tr>
+<td>特征级预测 + Token-Advanced（EAGLE完整）</td>
+<td>3.05x</td>
+<td>78%</td>
+<td>4.2</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>特征级预测本身就带来显著提升（2.18x→2.62x，+20%）</li>
+<li>Token-Advanced策略进一步贡献额外17%的加速（2.62x→3.05x）</li>
+<li>两者叠加产生了EAGLE超越Medusa约60%的总体加速提升</li>
+</ul>
+<h3 id="Spec-Bench评估"><a href="#Spec-Bench评估" class="headerlink" title="Spec-Bench评估"></a>Spec-Bench评估</h3><table>
+<thead>
+<tr>
+<th>任务类别</th>
+<th>EAGLE加速比</th>
+<th>Medusa加速比</th>
+<th>EAGLE优势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>对话</td>
+<td>2.95x</td>
+<td>2.12x</td>
+<td>+39%</td>
+</tr>
+<tr>
+<td>代码生成</td>
+<td>3.42x</td>
+<td>2.18x</td>
+<td>+57%</td>
+</tr>
+<tr>
+<td>数学推理</td>
+<td>2.78x</td>
+<td>1.98x</td>
+<td>+40%</td>
+</tr>
+<tr>
+<td>翻译</td>
+<td>3.15x</td>
+<td>2.30x</td>
+<td>+37%</td>
+</tr>
+<tr>
+<td>摘要</td>
+<td>3.28x</td>
+<td>2.25x</td>
+<td>+46%</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>在代码生成任务上优势最大(+57%)——代码的结构化特征使特征预测特别准确</li>
+<li>在数学推理任务上优势相对较小(+40%)——推理链的不确定性更高</li>
+<li>整体在所有任务类型上一致超越Medusa 37-57%</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么特征预测比Token预测更好：信息论视角"><a href="#为什么特征预测比Token预测更好：信息论视角" class="headerlink" title="为什么特征预测比Token预测更好：信息论视角"></a>为什么特征预测比Token预测更好：信息论视角</h3><p>从信息论角度分析，特征预测和token预测的根本差异：</p>
+<p><strong>熵的差异</strong>:</p>
+<ul>
+<li>Token预测的熵：$H(Y|X) &#x3D; -\sum_y p(y|x) \log p(y|x)$，对于自然语言通常在2-8 bits</li>
+<li>特征预测的熵：$H(F|X) \approx \frac{d}{2}\log(2\pi e\sigma^2)$，其中$\sigma^2$是预测误差方差</li>
+<li>关键的是：当特征预测的误差足够小时，$H(F|X)$可以远小于$H(Y|X)$——这意味着特征预测本质上需要更少的新信息</li>
+</ul>
+<p><strong>互信息的保持</strong>:</p>
+<ul>
+<li>从特征到token的映射在大多数区域是光滑的：特征空间中的邻近点映射到相似的概率分布</li>
+<li>这意味着：即使特征预测有轻微误差，解码后的token分布仍然接近正确分布</li>
+<li>相比之下，token空间中的”邻近”概念很弱——一个token的选择完全改变语义</li>
+</ul>
+<p><strong>量化指标</strong>:</p>
+<ul>
+<li>特征预测的余弦相似度（预测特征 vs 真实特征）通常&gt;0.95</li>
+<li>Token预测的top-1准确率通常&lt;80%，即使top-5准确率也很难超过95%</li>
+</ul>
+<h3 id="Token-Advanced策略的机理"><a href="#Token-Advanced策略的机理" class="headerlink" title="Token-Advanced策略的机理"></a>Token-Advanced策略的机理</h3><p>Token-Advanced策略的优雅之处在于解决了特征级自回归的内在矛盾：</p>
+<p><strong>问题</strong>: 标准token级自回归中，模型在每个时间步都知道”我刚刚输出了哪个token”，并以此为条件预测下一个token。但在特征级自回归中，草稿模型只看到特征向量——而特征向量不明确编码”哪个token被选中”这一离散决策。</p>
+<p><strong>解决</strong>: 通过将已确认的token embedding显式输入草稿模型，在连续特征基础上补充了离散决策信息。这相当于在特征空间中进行”hard attention”——不仅知道大致的位置（特征），还知道确切的位置（token）。</p>
+<p><strong>有效性分析</strong>:</p>
+<ul>
+<li>对于高entropy位置（多个token概率接近），token-advanced策略提供关键的分辨信息</li>
+<li>对于低entropy位置（几乎确定性的token选择），token-advanced策略的收益较小但仍然为正</li>
+<li>整体贡献约17%的额外加速，证明这是一个真实且重要的改进</li>
+</ul>
+<h3 id="特征预测的成本分析"><a href="#特征预测的成本分析" class="headerlink" title="特征预测的成本分析"></a>特征预测的成本分析</h3><p>EAGLE的一个关键洞察是特征预测模块极其轻量：</p>
+<p><strong>每步草稿生成的成本分解</strong>:</p>
+<ul>
+<li>目标模型一次完整前向传播：32-80层Transformer + 注意力计算 + FFN</li>
+<li>EAGLE特征预测一次迭代：1层Transformer + 线性投影</li>
+<li>成本比例：约1:40（7B模型）至1:100（70B模型）</li>
+</ul>
+<p><strong>总草稿生成成本</strong>:</p>
+<ul>
+<li>自回归预测K&#x3D;5步特征：$5 \times 1&#x2F;40 &#x3D; 1&#x2F;8$次完整前向传播</li>
+<li>树验证（一次目标模型前向传播）：$1 \times$完整前向传播</li>
+<li>总成本：$1 + 1&#x2F;8 &#x3D; 1.125$次等效前向传播</li>
+<li>产出：约4.2个token</li>
+<li>等效每token成本：$1.125&#x2F;4.2 &#x3D; 0.27$次前向传播</li>
+<li>加速比：$1&#x2F;0.27 &#x3D; 3.7x$（理论） vs 3.05x（实际，考虑overhead）</li>
+</ul>
+<h3 id="EAGLE与Medusa的深度对比"><a href="#EAGLE与Medusa的深度对比" class="headerlink" title="EAGLE与Medusa的深度对比"></a>EAGLE与Medusa的深度对比</h3><p>虽然两者都是”无需单独草稿模型”的方法，但核心差异值得深入分析：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Medusa</th>
+<th>EAGLE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>预测对象</td>
+<td>Token（离散）</td>
+<td>特征向量（连续）</td>
+</tr>
+<tr>
+<td>预测机制</td>
+<td>并行预测（K个头同时）</td>
+<td>自回归预测（顺序K步）</td>
+</tr>
+<tr>
+<td>预测成本</td>
+<td>极低（单次FFN前向）</td>
+<td>低（K次轻量前向，每次1层）</td>
+</tr>
+<tr>
+<td>训练复杂度</td>
+<td>简单（监督学习）</td>
+<td>需要特征提取+自回归训练</td>
+</tr>
+<tr>
+<td>对目标模型的依赖</td>
+<td>只需要最后一层隐藏状态</td>
+<td>需要倒数第二层特征和输出层</td>
+</tr>
+<tr>
+<td>接受率上限</td>
+<td>~70%（token级限制）</td>
+<td>~85%（特征级限制）</td>
+</tr>
+<tr>
+<td>部署复杂度</td>
+<td>更低（几个矩阵乘法）</td>
+<td>稍高（需要运行1层Transformer）</td>
+</tr>
+</tbody></table>
+<p><strong>根本差异</strong>: Medusa试图在不改变预测粒度的前提下消除草稿模型；EAGLE则证明了改变预测粒度本身是更大的胜利。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-Token级投机解码方法"><a href="#vs-Token级投机解码方法" class="headerlink" title="vs Token级投机解码方法"></a>vs Token级投机解码方法</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>标准投机解码</th>
+<th>Medusa</th>
+<th>EAGLE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>草稿来源</td>
+<td>独立模型</td>
+<td>多解码头</td>
+<td>特征预测模块</td>
+</tr>
+<tr>
+<td>预测粒度</td>
+<td>Token</td>
+<td>Token</td>
+<td>特征（连续向量）</td>
+</tr>
+<tr>
+<td>接受率</td>
+<td>56-65%</td>
+<td>65-70%</td>
+<td>75-85%</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>2.0-2.6x</td>
+<td>2.0-2.8x</td>
+<td>2.7-3.5x</td>
+</tr>
+<tr>
+<td>额外参数</td>
+<td>完整草稿模型</td>
+<td>&lt;1%</td>
+<td>~1%</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>不需要</td>
+<td>需要</td>
+<td>需要</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Lookahead-Decoding"><a href="#vs-Lookahead-Decoding" class="headerlink" title="vs Lookahead Decoding"></a>vs Lookahead Decoding</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Lookahead</th>
+<th>EAGLE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>是否需要额外模型</td>
+<td>否</td>
+<td>是（轻量特征预测模块）</td>
+</tr>
+<tr>
+<td>是否需要训练</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>加速原理</td>
+<td>Jacobi迭代+n-gram缓存</td>
+<td>特征预测+树验证</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>1.5-2.3x</td>
+<td>2.7-3.5x</td>
+</tr>
+<tr>
+<td>接受长度</td>
+<td>1.5-2.0</td>
+<td>4.0-4.5</td>
+</tr>
+<tr>
+<td>质量保证</td>
+<td>精确保持</td>
+<td>无损</td>
+</tr>
+</tbody></table>
+<h3 id="vs-EAGLE-2"><a href="#vs-EAGLE-2" class="headerlink" title="vs EAGLE-2"></a>vs EAGLE-2</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>EAGLE-1</th>
+<th>EAGLE-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>草稿树类型</td>
+<td>静态（固定宽度）</td>
+<td>动态（置信度自适应）</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>2.7-3.5x</td>
+<td>3.05-4.26x</td>
+</tr>
+<tr>
+<td>额外机制</td>
+<td>无</td>
+<td>置信度引导的节点选择</td>
+</tr>
+<tr>
+<td>接受长度</td>
+<td>4.0-4.5</td>
+<td>4.0-5.5</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>较低</td>
+<td>略高（需要置信度校准）</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-特征提取的部署依赖"><a href="#1-特征提取的部署依赖" class="headerlink" title="1. 特征提取的部署依赖"></a>1. 特征提取的部署依赖</h3><p><strong>问题</strong>: EAGLE需要访问目标模型倒数第二层的隐藏状态</p>
+<ul>
+<li>在标准推理API中（如通过HTTP API调用远程模型），隐藏状态通常不可获取</li>
+<li>需要修改模型推理代码以暴露中间层输出</li>
+<li>对于通过model-serving框架（如vLLM、TGI）部署的模型，需要hook中间层</li>
+</ul>
+<p><strong>影响</strong>: EAGLE的实际部署比Medusa更复杂，需要对推理栈进行更深入的修改。在”模型即服务”的场景（用户只有API访问权限）中不可用。</p>
+<h3 id="2-草稿模块的训练数据需求"><a href="#2-草稿模块的训练数据需求" class="headerlink" title="2. 草稿模块的训练数据需求"></a>2. 草稿模块的训练数据需求</h3><p><strong>问题</strong>: 需要提取完整前向传播的特征序列作为训练数据</p>
+<ul>
+<li>对训练数据中的每个序列，必须用目标模型跑一遍完整的前向传播来提取特征</li>
+<li>对于70B+模型，即使只是提取特征也需要大量GPU时间</li>
+<li>自我蒸馏（用目标模型生成训练数据）进一步增加了计算需求</li>
+</ul>
+<p><strong>影响</strong>: 训练成本虽然远低于从头训练，但仍不可忽略。对于超大规模模型（100B+），提取训练数据的计算成本可能成为瓶颈。</p>
+<h3 id="3-特征对齐的脆弱性"><a href="#3-特征对齐的脆弱性" class="headerlink" title="3. 特征对齐的脆弱性"></a>3. 特征对齐的脆弱性</h3><p><strong>问题</strong>: 特征预测模块假设预测的特征空间与目标模型的特征空间一致</p>
+<ul>
+<li>如果目标模型通过微调改变了特征空间的分布，预训练的EAGLE模块可能失效</li>
+<li>对于频繁更新的模型（如社区微调的LoRA变体），每个变体可能需要重新训练EAGLE</li>
+</ul>
+<p><strong>影响</strong>: 在模型变体丰富的生态中，维护成本增加。</p>
+<h3 id="4-长序列时的缓存管理"><a href="#4-长序列时的缓存管理" class="headerlink" title="4. 长序列时的缓存管理"></a>4. 长序列时的缓存管理</h3><p><strong>问题</strong>: 与所有投机解码方法一样，需要管理两个模型的KV缓存</p>
+<ul>
+<li>前缀序列的KV缓存被目标模型和EAGLE草稿模型共享</li>
+<li>树验证产生大量中间节点的KV缓存</li>
+<li>对于长序列（如32K上下文），KV缓存可能占用大量显存</li>
+</ul>
+<p><strong>影响</strong>: 在长上下文生成场景中，显存管理成为实际的瓶颈。</p>
+<h3 id="5-批处理推理的兼容性"><a href="#5-批处理推理的兼容性" class="headerlink" title="5. 批处理推理的兼容性"></a>5. 批处理推理的兼容性</h3><p><strong>问题</strong>: EAGLE的特征预测模块是自回归的，在批处理场景中不同序列可能处于不同位置</p>
+<ul>
+<li>如果对一批序列同时进行投机解码，不同序列的草稿长度可能不同</li>
+<li>批处理增加了调度复杂度</li>
+</ul>
+<p><strong>影响</strong>: 在离线批量推理场景中，EAGLE的加速效果可能较弱。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-预测粒度的选择优先于预测模型的选择"><a href="#1-预测粒度的选择优先于预测模型的选择" class="headerlink" title="1. 预测粒度的选择优先于预测模型的选择"></a>1. 预测粒度的选择优先于预测模型的选择</h3><p><strong>洞见</strong>: 在什么层级进行预测（特征&#x2F;embedding&#x2F;token）比用什么模型进行预测（大&#x2F;小&#x2F;Transformer&#x2F;MLP）更重要</p>
+<ul>
+<li>EAGLE从token级切换到特征级，接受率从<del>65%提升到</del>78%</li>
+<li>这是在预测模块本身比Medusa的解码头更简单的情况下实现的</li>
+<li>核心启示：在设计预测系统时，优先寻找信息损失最小的表示层级</li>
+</ul>
+<p><strong>如何应用</strong>: 在设计任何包含预测组件的系统时，首先进行”预测粒度分析”——在哪个抽象层级进行预测能使误差容忍度最高、信息损失最小。</p>
+<h3 id="2-连续表示作为”软决策”优于离散决策"><a href="#2-连续表示作为”软决策”优于离散决策" class="headerlink" title="2. 连续表示作为”软决策”优于离散决策"></a>2. 连续表示作为”软决策”优于离散决策</h3><p><strong>洞见</strong>: 连续空间的预测允许”软犯错”——即使预测不完全准确，接近的预测仍然有价值</p>
+<ul>
+<li>在连续特征空间中做预测：$\hat{f} \approx f^*$ 仍然产生相似的token分布</li>
+<li>在离散token空间中做预测：$\hat{x} \neq x^*$ 完全改变了后续生成</li>
+<li>这一原则可以推广到很多需要离散决策的AI系统</li>
+</ul>
+<p><strong>如何应用</strong>: 在需要做决策的系统中，考虑延迟离散化——在连续空间中做推理，仅在最后一步离散化。</p>
+<h3 id="3-不确定性分解作为系统设计工具"><a href="#3-不确定性分解作为系统设计工具" class="headerlink" title="3. 不确定性分解作为系统设计工具"></a>3. 不确定性分解作为系统设计工具</h3><p><strong>洞见</strong>: 将总不确定性系统性地分解为子组件的不确定性，可以精确定位改进方向</p>
+<ul>
+<li>EAGLE的不确定性分解：特征不确定性 + 解码不确定性</li>
+<li>识别出特征不确定性是主要瓶颈，设计了特征级预测来锁定这一子问题</li>
+<li>不确定性分解是一种通用的系统分析工具</li>
+</ul>
+<p><strong>如何应用</strong>: 在设计任何级联或多阶段系统时，对每个阶段的不确定性进行独立量化和分解，针对最大不确定性分量进行优化。</p>
+<h3 id="4-上下文信息的显式引入原则"><a href="#4-上下文信息的显式引入原则" class="headerlink" title="4. 上下文信息的显式引入原则"></a>4. 上下文信息的显式引入原则</h3><p><strong>洞见</strong>: 在连续表示中，额外的离散决策信息可以作为显式输入而非隐式编码</p>
+<ul>
+<li>Token-Advanced策略：将已确认token信息作为显式输入</li>
+<li>这避免了依赖模型自己从连续特征中推断离散决策的负担</li>
+<li>显式引入关键决策信息通常比隐式编码更有效</li>
+</ul>
+<p><strong>如何应用</strong>: 在设计特征表示时，对于关键的离散决策（类别、选择、阈值），优先考虑作为显式特征引入而非依赖隐式编码。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>从”什么预测”到”在哪预测”</strong>: EAGLE的最重要贡献是重新定义了投机解码的问题——不是”如何让草稿模型预测更准”，而是”在什么表示层级上预测”。这个视角转换对AI系统优化的其他领域也有启发：有时换一种表示方式比改进模型本身更有效。</p>
+</li>
+<li><p><strong>连续-离散的桥接</strong>: EAGLE展示了如何通过连续-离散的桥接来利用两个空间的各自优势——在连续空间中做预测（误差容忍），在离散空间中做验证（精确保证）。这种混合策略在需要精确输出的系统中具有广泛适用性。</p>
+</li>
+<li><p><strong>特征预测vs特征生成</strong>: EAGLE的特征预测是预测下一个时间步的真实特征，而不是生成新特征。这与生成式连续表示方法（如diffusion models在文本生成中的应用）形成对比——预测一个存在的目标比从噪声中生成更容易。</p>
+</li>
+</ol>
+<h3 id="实际部署考量"><a href="#实际部署考量" class="headerlink" title="实际部署考量"></a>实际部署考量</h3><ol>
+<li><p><strong>推理栈修改</strong>: 部署EAGLE需要修改推理代码以暴露倒数第二层特征。在vLLM等框架中，可以通过自定义attention kernel的输出来获取中间特征。在HuggingFace Transformers中，可以使用<code>output_hidden_states=True</code>。</p>
+</li>
+<li><p><strong>模型更新时的EAGLE兼容性</strong>: 当目标模型通过微调更新时，如果微调只涉及少量参数（如LoRA adapter），预训练的EAGLE模块通常仍然有效。但如果微调涉及完整模型更新，可能需要重新训练。</p>
+</li>
+<li><p><strong>消费级GPU的收益</strong>: EAGLE在RTX 3090上实现约160 tokens&#x2F;s（13B模型），意味着消费级GPU可以达到接近数据中心GPU的延迟水平，这对个人使用和边缘部署具有重要意义。</p>
+</li>
+</ol>
+<h3 id="与EAGLE-2的演化"><a href="#与EAGLE-2的演化" class="headerlink" title="与EAGLE-2的演化"></a>与EAGLE-2的演化</h3><p>EAGLE-1解决了”在哪预测”的问题，EAGLE-2解决了”如何更好地利用预测结果”的问题。两者是互补的演化：特征预测提供高质量的草稿，动态树构建更好地利用高质量草稿。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-特征预测在其他模态的适用性"><a href="#1-特征预测在其他模态的适用性" class="headerlink" title="1. 特征预测在其他模态的适用性"></a>1. 特征预测在其他模态的适用性</h3><p><strong>问题</strong>: EAGLE的特征级预测方法能否应用于视觉、语音、多模态模型的推理加速？</p>
+<p><strong>研究方向</strong>: 探索在视觉Transformer（ViT）、语音Transformer中提取中间层特征进行自回归预测。图像patch的特征与文本token的特征可能具有不同的预测性质。</p>
+<p><strong>潜在影响</strong>: 扩展到多模态推理加速。</p>
+<h3 id="2-特征预测模块的架构优化"><a href="#2-特征预测模块的架构优化" class="headerlink" title="2. 特征预测模块的架构优化"></a>2. 特征预测模块的架构优化</h3><p><strong>问题</strong>: 是否存在比单层Transformer更好的特征预测架构？</p>
+<p><strong>研究方向</strong>: 探索状态空间模型（Mamba）、线性注意力、MLP-Mixer等替代架构用于特征预测。目标是在保持预测精度的前提下进一步降低预测成本。</p>
+<p><strong>潜在影响</strong>: 提升加速比3-8%。</p>
+<h3 id="3-特征预测置信度的校准分析"><a href="#3-特征预测置信度的校准分析" class="headerlink" title="3. 特征预测置信度的校准分析"></a>3. 特征预测置信度的校准分析</h3><p><strong>问题</strong>: 特征预测的误差分布如何？能否校准为token接受率的可靠预测器？</p>
+<p><strong>研究方向</strong>: 分析特征预测误差（L2距离、余弦相似度）与最终token接受率之间的相关性。如果存在强相关性，可用于动态调整草稿长度和树结构。</p>
+<p><strong>潜在影响</strong>: 与EAGLE-2的动态草稿树结合，进一步提升效率。</p>
+<h3 id="4-多层级预测的组合"><a href="#4-多层级预测的组合" class="headerlink" title="4. 多层级预测的组合"></a>4. 多层级预测的组合</h3><p><strong>问题</strong>: 能否组合特征级预测和token级预测的优势？</p>
+<p><strong>研究方向</strong>: 设计多层级预测系统——在特征层做”粗”预测（低不确定性），在token层做”细”调整（保证分布精确）。</p>
+<p><strong>潜在影响</strong>: 进一步提升接受率至90%以上。</p>
+<h3 id="5-特征预测的质量-成本帕累托前沿"><a href="#5-特征预测的质量-成本帕累托前沿" class="headerlink" title="5. 特征预测的质量-成本帕累托前沿"></a>5. 特征预测的质量-成本帕累托前沿</h3><p><strong>问题</strong>: 特征预测模块的复杂度（层数、参数量）与接受率之间的帕累托前沿是什么？</p>
+<p><strong>研究方向</strong>: 系统扫描特征预测模块的不同配置（1-4层，不同隐藏维度），测量每配置的预测精度和推理成本。</p>
+<p><strong>潜在影响</strong>: 为不同部署场景（云端vs边缘）提供最优配置指南。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Li, Y., Wei, F., Zhang, C., &amp; Zhang, H. (2024). EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty. ICML 2024. arXiv:2401.15077</li>
+<li>Leviathan, Y., Kalman, M., &amp; Matias, Y. (2023). Fast Inference from Transformers via Speculative Decoding. ICML 2023.</li>
+<li>Cai, T., et al. (2024). Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads. ICML 2024.</li>
+<li>Fu, Y., et al. (2024). Break the Sequential Dependency of LLM Inference Using Lookahead Decoding. ICML 2024.</li>
+<li>Li, Y., et al. (2024). EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees. EMNLP 2024.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8A%95%E6%9C%BA%E8%A7%A3%E7%A0%81/" class="category-chain-item">投机解码</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-inference/" class="print-no-link">#papers/inference</a>
+      
+        <a href="/tags/papers-speculative-decoding/" class="print-no-link">#papers/speculative-decoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty</div>
+      <div>https://w2ongq6.github.io/2024/01/29/inference/note/EAGLE_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年1月29日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/01/31/inference/note/KVQuant_note/" title="KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/01/25/aigc/note/DeepSeek-Coder_note/" title="DeepSeek-Coder: When the Large Language Model Meets Programming -- The Rise of Code Intelligence">
+                        <span class="hidden-mobile">DeepSeek-Coder: When the Large Language Model Meets Programming -- The Rise of Code Intelligence</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

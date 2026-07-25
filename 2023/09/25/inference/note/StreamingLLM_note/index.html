@@ -1,0 +1,1591 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="StreamingLLM: 基于注意力汇的高效流式大语言模型核心信息 标题: StreamingLLM: Efficient Streaming Language Models with Attention Sinks 标题翻译: StreamingLLM：基于注意力汇的高效流式大语言模型 作者: Guangxuan Xiao, Yuandong Tian, Beidi Chen, Song Ha">
+<meta property="og:type" content="article">
+<meta property="og:title" content="StreamingLLM: Efficient Streaming Language Models with Attention Sinks">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/09/25/inference/note/StreamingLLM_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="StreamingLLM: 基于注意力汇的高效流式大语言模型核心信息 标题: StreamingLLM: Efficient Streaming Language Models with Attention Sinks 标题翻译: StreamingLLM：基于注意力汇的高效流式大语言模型 作者: Guangxuan Xiao, Yuandong Tian, Beidi Chen, Song Ha">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2023-09-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.375Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-mechanism">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>StreamingLLM: Efficient Streaming Language Models with Attention Sinks - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="StreamingLLM: Efficient Streaming Language Models with Attention Sinks"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-09-25 00:00" pubdate>
+          2023年9月25日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          113 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">StreamingLLM: Efficient Streaming Language Models with Attention Sinks</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="StreamingLLM-基于注意力汇的高效流式大语言模型"><a href="#StreamingLLM-基于注意力汇的高效流式大语言模型" class="headerlink" title="StreamingLLM: 基于注意力汇的高效流式大语言模型"></a>StreamingLLM: 基于注意力汇的高效流式大语言模型</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: StreamingLLM: Efficient Streaming Language Models with Attention Sinks</li>
+<li>标题翻译: StreamingLLM：基于注意力汇的高效流式大语言模型</li>
+<li>作者: Guangxuan Xiao, Yuandong Tian, Beidi Chen, Song Han, Mike Lewis</li>
+<li>机构: MIT, Meta AI, CMU, NVIDIA</li>
+<li>发表时间: 2023年9月25日</li>
+<li>发表渠道: ICLR 2024</li>
+<li>arXiv: 2309.17453</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2309.17453">https://arxiv.org/abs/2309.17453</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/mit-han-lab/streaming-llm">https://github.com/mit-han-lab/streaming-llm</a></li>
+<li>论文类型: 大语言模型推理优化与KV缓存管理</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>将大型语言模型部署为多轮对话应用，要求模型能够处理持续增长的对话历史（即流式输入）。然而，由于KV缓存的内存消耗随序列长度线性增长，预训练LLM通常受限于固定长度的输入窗口。以往的工作通过丢弃KV缓存中过时的token来在长文本上实现流式部署，但这种方法会导致灾难性的模型退化——当序列长度超过训练时的注意力窗口时，困惑度会急剧飙升。我们发现了一个引人注目的现象——“注意力汇”（attention sink）：初始token即使缺乏语义重要性，也会吸收异常高的注意力分数。我们认为出现这种现象是因为模型倾向于将不必要的注意力质量倾泻到特定的token上。基于以上发现，我们提出了StreamingLLM，一个简单而高效的框架，它使采用有限注意力窗口训练的LLM能够处理无限长度的流式文本，而无需微调。我们展示了StreamingLLM能够使LLaMA-2、MPT、Falcon和Pythia等模型在高达400万token的输入长度上实现稳定、高效的语言建模，这一点与基线形成鲜明对比。此外，我们发现向预训练中添加一个专用的可学习注意力汇token可以进一步提升流式性能。在这种情况下，仅需一个单一的注意力汇token就足以吸收过多的注意力，而不会损害零样本性能。最后，我们展示了StreamingLLM的效果可以无缝扩展到KV缓存量化方法，使其成为一种可广泛部署于各种LLM的高效流式推理方案。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-注意力汇（Attention-Sink）现象的发现"><a href="#1-注意力汇（Attention-Sink）现象的发现" class="headerlink" title="1. 注意力汇（Attention Sink）现象的发现"></a>1. 注意力汇（Attention Sink）现象的发现</h3><p><strong>核心思想</strong>: 预训练LLM的注意力分布中存在一个惊人的模式——无论语义内容如何，序列开头的几个初始token都会稳定地获得异常高的注意力分数。这些初始token充当了”注意力汇”，即模型将不必要的注意力质量倾泻到这些特定的token上。一旦这些初始token从KV缓存中被移除，模型会遭遇灾难性的困惑度爆炸。</p>
+<p><strong>为什么重要</strong>: 这是对LLM注意力机制本质的一个基础性发现。它揭示了Transformer在自回归解码过程中固有的注意力分配模式，而非某个特定模型或训练数据的偶然产物。该发现解释了为什么简单的滑动窗口机制会失败——并非因为模型无法处理超出训练窗口的序列长度，而是因为被移除的初始token充当了关键的注意力稳定器。这一洞察从根本上重塑了社区对KV缓存管理策略的设计思路。</p>
+<h3 id="2-注意力汇-滑动窗口的简单修复方案"><a href="#2-注意力汇-滑动窗口的简单修复方案" class="headerlink" title="2. 注意力汇 + 滑动窗口的简单修复方案"></a>2. 注意力汇 + 滑动窗口的简单修复方案</h3><p><strong>核心机制</strong>:</p>
+<ul>
+<li><strong>注意力汇保留</strong>: 始终保留KV缓存中最早的4个token（作为注意力汇），无论序列多长</li>
+<li><strong>滑动窗口</strong>: 保留最近期的token（窗口大小 $L$），使模型能够关注局部上下文</li>
+<li><strong>组合策略</strong>: 总缓存大小 &#x3D; 4 (sink tokens) + $L$ (recent window tokens)</li>
+</ul>
+<p><strong>为什么重要</strong>: 这个方案极其简单——仅需4个额外的token就能将LLM从灾难性退化中拯救出来。不需要微调、不需要校准数据、不需要复杂的驱逐策略。对于实际部署而言，这种简洁性意味着极低的工程成本和高可靠性。实验证明，在Llama-2-7B上，4个注意力汇token就能将困惑度从5158（仅滑动窗口）恢复到约10（与密集注意力相当）。</p>
+<h3 id="3-RoPE位置重映射技术"><a href="#3-RoPE位置重映射技术" class="headerlink" title="3. RoPE位置重映射技术"></a>3. RoPE位置重映射技术</h3><p><strong>核心贡献</strong>:</p>
+<ul>
+<li>将注意力汇token始终映射到位置0到3</li>
+<li>滑动窗口中的最近token占据位置4及以后</li>
+<li>为每个新生成的token递增位置索引</li>
+</ul>
+<p><strong>为什么重要</strong>: RoPE（旋转位置编码）使用绝对位置，因此如果注意力汇token保留其原始位置（如0-3），随着序列增长，它们与最新token的位置距离会越来越远，导致模型看到训练中从未出现的”分布外”相对位置。通过持续重映射，注意力汇token始终占据位置0-3，使得相对注意力距离保持在训练分布的范围内。这是使流式推理在数学上保持稳定的关键工程决策。</p>
+<h3 id="4-可选的预训练可学习注意力汇token"><a href="#4-可选的预训练可学习注意力汇token" class="headerlink" title="4. 可选的预训练可学习注意力汇token"></a>4. 可选的预训练可学习注意力汇token</h3><p><strong>核心扩展</strong>: 在预训练阶段引入一个专用的可学习sink token，置于序列开头。该token在每个注意力层、每个注意力头都参与计算，从而学会高效地吸收多余的注意力质量。</p>
+<p><strong>为什么重要</strong>: 只需要一个专用sink token就能替代4个普通sink token的任务，并且不损害模型在零样本基准测试上的性能。这证明了注意力汇机制可以通过有目的的架构设计来进一步增强，为下一代支持流式推理的LLM预训练提供了方向。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>StreamingLLM通过发现”注意力汇”现象——初始token吸收不成比例的高注意力分数，提出仅需保留4个注意力汇token加一个滑动窗口即可实现超过400万token的稳定流式推理，使任意预训练LLM在不经微调的情况下以常量内存部署于无限长度的流式场景。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>自回归LLM在生成每个新token时需要访问所有历史token的KV缓存。随着对话或生成过程推进，KV缓存的内存消耗线性增长：对于$L$层、$H$个注意力头、维度$d$的模型，缓存$N$个token需要$2LHNd$个浮点数。对于LLaMA-2-7B模型（$L&#x3D;32$, $H&#x3D;32$, $d&#x3D;128$），100万token需要约64GB内存。</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>窗口注意力（Window Attention）</strong>:</p>
+<ul>
+<li>仅保留最近$L_W$个token的KV缓存</li>
+<li>一旦序列长度超出预训练时的注意力窗口，困惑度（PPL）从约10飙升至5158</li>
+<li>根本原因：移除了充当注意力稳定器的初始token</li>
+</ul>
+</li>
+<li><p><strong>重计算（Re-computation）</strong>:</p>
+<ul>
+<li>丢弃旧的KV缓存，需要时重新计算</li>
+<li>计算代价太高，生成阶段等待时间不可接受</li>
+</ul>
+</li>
+<li><p><strong>KV缓存量化&#x2F;压缩</strong>:</p>
+<ul>
+<li>可以减小每个token的存储成本，但无法阻止缓存总量的线性增长</li>
+<li>与StreamingLLM正交，可以组合使用</li>
+</ul>
+</li>
+<li><p><strong>长度外推方法（如Position Interpolation、NTK-aware RoPE）</strong>:</p>
+<ul>
+<li>需要在推理前对模型进行微调或修改位置编码</li>
+<li>不能直接应用于任意预训练LLM</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>注意力汇是关键</strong>: 预训练LLM在自回归解码过程中，无论输入语义内容如何，都会将异常高的注意力分配给序列开头的初始token。这些token充当了”注意力垃圾桶”——移除它们会导致注意力分布崩溃，而保留它们就足以维持稳定推理。</p>
+</blockquote>
+<h3 id="问题形式化"><a href="#问题形式化" class="headerlink" title="问题形式化"></a>问题形式化</h3><p><strong>目标</strong>: 给定一个预训练的因果LLM $M$ 和无限长的输入序列 $x_1, x_2, \ldots$，需要为每个生成步骤 $t$ 维护一个固定大小的KV缓存，使得模型能够以与密集注意力相当的困惑度生成token，同时内存使用量保持恒定。</p>
+<p><strong>约束</strong>:</p>
+<ul>
+<li>不需要对模型进行任何微调或参数修改</li>
+<li>不需要额外的校准数据</li>
+<li>KV缓存大小恒定，不随序列长度增长</li>
+</ul>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><ol>
+<li><p><strong>长序列语言建模</strong>:</p>
+<ul>
+<li>数据集: PG-19, ArXiv, GitHub</li>
+<li>序列长度: 4K到4M+ tokens</li>
+<li>评估指标: 困惑度（PPL）</li>
+<li>对比基线: 密集注意力（上界）、滑动窗口（下界）、滑动窗口+重计算</li>
+</ul>
+</li>
+<li><p><strong>标准基准测试</strong>（验证零样本性能）:</p>
+<ul>
+<li>ARC-Easy, ARC-Challenge, HellaSwag, OpenBookQA, PIQA, BoolQ, RACE</li>
+<li>评估指标: 准确率</li>
+</ul>
+</li>
+<li><p><strong>指令跟随任务</strong>（多轮对话场景）:</p>
+<ul>
+<li>AlpacaEval, MT-Bench</li>
+<li>评估指标: 生成质量评分</li>
+</ul>
+</li>
+</ol>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><ul>
+<li>LLaMA-2 (7B, 13B, 70B)</li>
+<li>MPT (7B)</li>
+<li>Falcon (7B)</li>
+<li>Pythia (1.4B, 2.8B, 6.9B, 12B)</li>
+</ul>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>GPU: NVIDIA A100 (80GB)</li>
+<li>对比基线: 密集注意力（内存线性增长）、滑动窗口（固定内存但灾难性退化）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 注意力汇现象分析</strong></p>
+<p>当分析预训练LLM中自回归解码的注意力分布时（与训练中的双向&#x2F;因果注意力不同），观察到以下模式：</p>
+<ol>
+<li>序列中前几个token（特别是第一个token）始终获得最高的注意力分数</li>
+<li>这种现象在Llama-2、MPT、Falcon、Pythia等不同架构和规模的模型中均存在</li>
+<li>无论初始token的语义内容如何，这一模式都持续存在</li>
+<li>在模型的各个注意力层和各注意力头中均有体现</li>
+</ol>
+<p><strong>数值证据</strong>：在Llama-2-7B上，第1层和第32层中第一个token的平均注意力分数均显著高于其他位置。某些注意力头中，超过70%的注意力权重集中在第一个token上。</p>
+<p><strong>步骤2: 移除注意力汇的灾难性后果</strong></p>
+<p>仅使用最近$L_W$个token的滑动窗口注意力时：</p>
+<ul>
+<li>在PG-19数据集上，当序列长度超过4K（LLaMA-2-7B的训练窗口大小）后，困惑度从约10跃升至5158</li>
+<li>这个退化与注意力窗口内的内容完全无关</li>
+<li>退化是瞬间的、灾难性的，而非渐进的</li>
+</ul>
+<p><strong>步骤3: StreamingLLM的KV缓存管理</strong></p>
+<p>StreamingLLM维护一个固定大小为 $4 + L_W$ 的KV缓存：</p>
+<p><strong>步骤注意力汇缓存</strong>（固定4个位置）:</p>
+<ul>
+<li>位置0-3: 初始的4个token（第一个token + 紧随的3个token）</li>
+<li>这些token永远不会被驱逐</li>
+<li>为模型提供稳定的注意力倾泻目标</li>
+</ul>
+<p><strong>步骤滑动窗口缓存</strong>（固定 $L_W$ 个位置）:</p>
+<ul>
+<li>始终保留最近生成的 $L_W$ 个token</li>
+<li>当新token到达时，最老的窗口token被驱逐（FIFO）</li>
+</ul>
+<p><strong>步骤中间位置缓存</strong>（可选，有空间时保留）:</p>
+<ul>
+<li>当序列长度小于 $4 + L_W$ 时，缓存所有中间token</li>
+<li>一旦序列长度超过 $4 + L_W$，中间位置的token按到达顺序被驱逐</li>
+</ul>
+<p><strong>步骤4: RoPE位置重映射</strong></p>
+<p>与标准位置编码不同，StreamingLLM持续重映射注意力汇token的位置：</p>
+<ul>
+<li>缓存位置0中的token（初始第一个token）始终被赋予位置索引0</li>
+<li>缓存位置1中的token始终被赋予位置索引1</li>
+<li>缓存位置3中的token始终被赋予位置索引3</li>
+<li>滑动窗口中的第一个token被赋予位置索引4</li>
+<li>滑动窗口中的最后一个token被赋予位置索引 $4 + N_W - 1$</li>
+<li>新生成的token获取下一个顺序位置索引</li>
+</ul>
+<p>这确保了：</p>
+<ul>
+<li>$Q_{\text{pos}}(token)$ 按token在缓存中的位置计算（而非原始序列位置）</li>
+<li>注意力汇token始终”看起来像”序列开头的位置</li>
+<li>相对位置距离保持在实际训练过的范围内</li>
+</ul>
+<p><strong>步骤5: 流式生成循环</strong></p>
+<p>对于每个新token $x_t$:</p>
+<ol>
+<li>计算 $x_t$ 的Query向量</li>
+<li>计算 $x_t$ 对缓存中所有 $4 + L_W$ 个token的Key向量的注意力分数</li>
+<li>计算Softmax归一化的注意力权重</li>
+<li>计算对缓存中所有 $4 + L_W$ 个Value向量的加权和</li>
+<li>通过模型其余部分生成下一个token的概率分布</li>
+<li>采样&#x2F;选择下一个token</li>
+<li>如果缓存已满（$4 + L_W$ 个token），从滑动窗口中驱逐最老的token</li>
+<li>将 $x_t$ 的Key和Value向量加入滑动窗口（位置 $4 + N_W - 1$）</li>
+</ol>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="为什么SWA失败"><a href="#为什么SWA失败" class="headerlink" title="为什么SWA失败"></a>为什么SWA失败</h4><p>设模型训练时的最大序列长度为 $T_{\text{train}}$。对于滑动窗口注意力（SWA），当解码序列长度 $t &gt; T_{\text{train}}$ 时：</p>
+<p>$$\text{PPL}(t) &#x3D; \exp\left(-\frac{1}{t}\sum_{i&#x3D;1}^{t} \log p_\theta(x_i | x_{\max(1, i-L_W)}^{i-1})\right)$$</p>
+<p>其中 $L_W &lt; t$。当 $t$ 超过 $T_{\text{train}}$ 后，注意力汇token已被驱逐，模型失去了稳定的注意力分配目标。</p>
+<h4 id="StreamingLLM的优势"><a href="#StreamingLLM的优势" class="headerlink" title="StreamingLLM的优势"></a>StreamingLLM的优势</h4><p>对于StreamingLLM，条件概率变为：</p>
+<p>$$p_\theta(x_i | \underbrace{x_1, \ldots, x_4}<em>{\text{sink tokens}}, \underbrace{x</em>{i-L_W}, \ldots, x_{i-1}}_{\text{recent window}})$$</p>
+<p>其中注意力汇token的位置通过RoPE重映射保持为0-3，使得注意力模式与训练时保持一致。</p>
+<h4 id="稳定性分析"><a href="#稳定性分析" class="headerlink" title="稳定性分析"></a>稳定性分析</h4><p>关键洞察：注意力汇token的存在使得Softmax注意力分布保持稳定。当注意力汇token的注意力分数为 $\alpha_s$（一个大值）时，其他token的注意力权重被强制收缩：</p>
+<p>$$\text{Attention}(Q, K_i) &#x3D; \frac{\exp(QK_i^T)}{\exp(QK_s^T) + \sum_{j \neq s} \exp(QK_j^T)} &#x3D; \frac{1}{\exp(QK_s^T - QK_i^T) + \ldots}$$</p>
+<p>当 $QK_s^T \gg QK_i^T$ 时，Attention(Q, K_i) 趋向于接近0，但对于非汇token，它们的相对注意力权重保持稳定。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="长序列语言建模困惑度"><a href="#长序列语言建模困惑度" class="headerlink" title="长序列语言建模困惑度"></a>长序列语言建模困惑度</h3><h4 id="PG-19数据集上的PPL"><a href="#PG-19数据集上的PPL" class="headerlink" title="PG-19数据集上的PPL"></a>PG-19数据集上的PPL</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>LLaMA-2-7B (4K)</th>
+<th>LLaMA-2-7B (100K)</th>
+<th>LLaMA-2-7B (500K)</th>
+<th>LLaMA-2-7B (4M)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>密集注意力</td>
+<td>9.91</td>
+<td>OOM</td>
+<td>OOM</td>
+<td>OOM</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果</strong>: StreamingLLM在超过400万token的序列上保持约10的困惑度，与密集注意力的9.91几乎无差异。而滑动窗口即使在1024的窗口大小下也会遭遇灾难性退化（PPL &#x3D; 5158.3）。</p>
+<h4 id="序列长度与困惑度的稳定性"><a href="#序列长度与困惑度的稳定性" class="headerlink" title="序列长度与困惑度的稳定性"></a>序列长度与困惑度的稳定性</h4><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>密集注意力</th>
+<th>StreamingLLM (4 sink + 1024 window)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K</td>
+<td>9.91</td>
+<td>9.93</td>
+</tr>
+<tr>
+<td>2K</td>
+<td>9.91</td>
+<td>9.94</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>9.91</td>
+<td>9.98</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>OOM</td>
+<td>10.02</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+<tr>
+<td>100K</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+<tr>
+<td>500K</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+<tr>
+<td>1M</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+<tr>
+<td>4M</td>
+<td>OOM</td>
+<td>10.28</td>
+</tr>
+</tbody></table>
+<p><strong>核心发现</strong>: 一旦序列超过缓存容量，困惑度立即稳定在一个略高的水平，之后完全保持不变。这证明了StreamingLLM实现了真正的常量内存、稳定质量推理。</p>
+<h3 id="不同滑动窗口大小的影响"><a href="#不同滑动窗口大小的影响" class="headerlink" title="不同滑动窗口大小的影响"></a>不同滑动窗口大小的影响</h3><table>
+<thead>
+<tr>
+<th>滑动窗口大小</th>
+<th>PPL (PG-19)</th>
+<th>LLaMA-2-7B</th>
+<th>LLaMA-2-13B</th>
+<th>LLaMA-2-70B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>64</td>
+<td>11.56</td>
+<td>11.32</td>
+<td>10.89</td>
+<td>9.68</td>
+</tr>
+<tr>
+<td>128</td>
+<td>10.89</td>
+<td>10.67</td>
+<td>10.34</td>
+<td>9.28</td>
+</tr>
+<tr>
+<td>256</td>
+<td>10.45</td>
+<td>10.23</td>
+<td>9.99</td>
+<td>9.04</td>
+</tr>
+<tr>
+<td>512</td>
+<td>10.12</td>
+<td>9.98</td>
+<td>9.76</td>
+<td>8.91</td>
+</tr>
+<tr>
+<td>1024</td>
+<td>9.98</td>
+<td>9.85</td>
+<td>9.64</td>
+<td>8.83</td>
+</tr>
+<tr>
+<td>2048</td>
+<td>9.97</td>
+<td>9.83</td>
+<td>9.62</td>
+<td>8.82</td>
+</tr>
+<tr>
+<td>密集注意力</td>
+<td>9.91</td>
+<td>9.76</td>
+<td>9.56</td>
+<td>8.75</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: </p>
+<ul>
+<li>使用256+窗口大小，困惑度退化可忽略（&lt;1%退化）</li>
+<li>大模型（70B）对窗口大小更不敏感</li>
+<li>512窗口和2048窗口之间的PPL差异仅0.15</li>
+</ul>
+<h3 id="注意力汇token数量的消融实验"><a href="#注意力汇token数量的消融实验" class="headerlink" title="注意力汇token数量的消融实验"></a>注意力汇token数量的消融实验</h3><table>
+<thead>
+<tr>
+<th>Sink Token数量</th>
+<th>0 (纯SWA)</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>8</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PPL (PG-19)</td>
+<td>5158.3</td>
+<td>13.42</td>
+<td>10.89</td>
+<td>10.23</td>
+<td>9.98</td>
+<td>9.97</td>
+</tr>
+</tbody></table>
+<p><strong>关键洞察</strong>: </p>
+<ul>
+<li>0个sink token: 灾难性退化</li>
+<li>1个sink token: PPL从5158急剧下降到13.42（但仍有显著退化）</li>
+<li>4个sink token: 基本收敛到接近密集注意力水平</li>
+<li>超过4个sink token后收益递减，增加额外的sink token几乎无帮助</li>
+</ul>
+<h3 id="可学习注意力汇token的预训练效果"><a href="#可学习注意力汇token的预训练效果" class="headerlink" title="可学习注意力汇token的预训练效果"></a>可学习注意力汇token的预训练效果</h3><table>
+<thead>
+<tr>
+<th>模型变体</th>
+<th>配置</th>
+<th>PPL (PG-19)</th>
+<th>ARC-E</th>
+<th>ARC-C</th>
+<th>HellaSwag</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原始 Pythia-1.4B</td>
+<td>-</td>
+<td>-</td>
+<td>42.57</td>
+<td>22.42</td>
+<td>38.19</td>
+</tr>
+<tr>
+<td>+ 1 learnable sink</td>
+<td>预训练中加入</td>
+<td>-</td>
+<td>43.13</td>
+<td>22.22</td>
+<td>38.11</td>
+</tr>
+<tr>
+<td>Streaming (1 sink)</td>
+<td>未预训练sink</td>
+<td>20.34</td>
+<td>43.13</td>
+<td>22.22</td>
+<td>38.11</td>
+</tr>
+<tr>
+<td>Streaming (1 sink)</td>
+<td>预训练sink</td>
+<td>14.82</td>
+<td>43.13</td>
+<td>22.22</td>
+<td>38.11</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 预训练中加入可学习注意力汇token后，仅需1个sink token即可显著降低PPL（14.82 vs 20.34），零样本基准测试准确率完全不受影响。</p>
+<h3 id="跨模型泛化性"><a href="#跨模型泛化性" class="headerlink" title="跨模型泛化性"></a>跨模型泛化性</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>密集注意力 PPL</th>
+<th>StreamingLLM PPL</th>
+<th>PPL退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2-7B</td>
+<td>9.91</td>
+<td>9.98</td>
+<td>+0.07</td>
+</tr>
+<tr>
+<td>LLaMA-2-13B</td>
+<td>9.76</td>
+<td>9.85</td>
+<td>+0.09</td>
+</tr>
+<tr>
+<td>LLaMA-2-70B</td>
+<td>8.75</td>
+<td>8.83</td>
+<td>+0.08</td>
+</tr>
+<tr>
+<td>MPT-7B</td>
+<td>10.72</td>
+<td>10.89</td>
+<td>+0.17</td>
+</tr>
+<tr>
+<td>Falcon-7B</td>
+<td>11.34</td>
+<td>11.56</td>
+<td>+0.22</td>
+</tr>
+<tr>
+<td>Pythia-12B</td>
+<td>12.91</td>
+<td>13.12</td>
+<td>+0.21</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: StreamingLLM在所有测试模型上均有效，证明注意力汇现象是预训练因果LLM的普遍属性，而非特定模型架构或训练数据的产物。</p>
+<h3 id="与KV缓存量化的组合效果"><a href="#与KV缓存量化的组合效果" class="headerlink" title="与KV缓存量化的组合效果"></a>与KV缓存量化的组合效果</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>KV缓存大小 (per token)</th>
+<th>总内存 (256K tokens)</th>
+<th>PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>密集注意力 (FP16)</td>
+<td>2.625 MB</td>
+<td>672 GB</td>
+<td>9.91</td>
+</tr>
+<tr>
+<td>StreamingLLM + Quant (4-bit)</td>
+<td>0.656 MB</td>
+<td>2.69 GB</td>
+<td>10.12</td>
+</tr>
+<tr>
+<td>StreamingLLM + Quant (2-bit)</td>
+<td>0.328 MB</td>
+<td>1.34 GB</td>
+<td>10.25</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: StreamingLLM与KV缓存量化方法可以无缝组合，在极端内存限制下仍保持高质量生成。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="注意力汇的成因分析"><a href="#注意力汇的成因分析" class="headerlink" title="注意力汇的成因分析"></a>注意力汇的成因分析</h3><p>注意力汇现象的本质是什么？论文提供了观察和推测，但深层机理仍有待探索：</p>
+<ol>
+<li><p><strong>Softmax的数学约束</strong>: 因果注意力中的Softmax操作要求所有注意力权重之和为1。即使模型”不想”关注某些token，也不得不为它们分配非零权重。模型很自然地学会了将这种”强制关注”集中到最安全的候选者——序列开头的初始token。</p>
+</li>
+<li><p><strong>自回归解码的特殊性</strong>: 注意这与训练时的双向注意力模式不同。在训练中，每个token可以关注其前后的所有token，注意力分布更加分散。但在推理中的自回归解码阶段，每个新token只能关注之前的token，第一个token的KV始终存在。</p>
+</li>
+<li><p><strong>信息瓶颈效应</strong>: 初始token位于信息流的最前端。在自回归解码中，第一个token的KV向量经过了所有后续层的处理，其表示中积累了丰富的全局上下文信息——即使具体语义内容在后续处理中被稀释。</p>
+</li>
+</ol>
+<h3 id="失效模式的深层分析"><a href="#失效模式的深层分析" class="headerlink" title="失效模式的深层分析"></a>失效模式的深层分析</h3><p>为什么滑动窗口会遭遇如此灾难性的退化（PPL从10到5158）？</p>
+<ol>
+<li><p><strong>注意力分布崩溃</strong>: 当注意力汇token被移除后，Softmax必须在剩余token之间重新分配注意力权重。由于没有天然的”安全阀”，模型被迫将过大比例的注意力权重分配给语义上不相关的token，导致后续层的表示质量全面退化。</p>
+</li>
+<li><p><strong>层叠效应</strong>: 退化发生在第一层，然后通过残差连接传播到所有后续层。每一层的输出质量都依赖于前一层的注意力质量，因此第一层的崩溃会导致整个模型的级联失败。</p>
+</li>
+<li><p><strong>与预训练分布的偏离</strong>: 在预训练中，模型从未遇到”序列开头token缺失”的情况。在推理中突然移除它们，使模型暴露在从未见过的注意力分布模式中。</p>
+</li>
+</ol>
+<h3 id="工程实践中的权衡"><a href="#工程实践中的权衡" class="headerlink" title="工程实践中的权衡"></a>工程实践中的权衡</h3><p><strong>缓存大小选择</strong>: $4 + L_W$ 的缓存大小需要在质量和内存之间权衡：</p>
+<ul>
+<li>$L_W &#x3D; 512$: 内存2.7MB&#x2F;token, PPL接近密集注意力</li>
+<li>$L_W &#x3D; 256$: 内存1.4MB&#x2F;token, PPL轻微退化</li>
+<li>$L_W &#x3D; 64$: 内存0.36MB&#x2F;token, PPL可见退化但远优于纯SWA</li>
+</ul>
+<p>对于实际部署，$L_W &#x3D; 512$或$1024$通常提供了最佳的质量-效率平衡。</p>
+<h3 id="为什么恰好是4个注意力汇token？"><a href="#为什么恰好是4个注意力汇token？" class="headerlink" title="为什么恰好是4个注意力汇token？"></a>为什么恰好是4个注意力汇token？</h3><p>实验结果表明，注意力汇token的数量从0增加到4时，PPL从5158迅速下降到接近密集水平。这个数值不能从理论直接推导，但可以从Softmax的行为特性来理解：</p>
+<p>注意力汇token的数量 $k$ 决定了”注意力垃圾桶”的容量。当 $k$ 太小时，多余的注意力质量会溢出到语义相关token上，导致噪声增加。当 $k$ 达到约4时，”垃圾桶”足够大以吸收所有多余的注意力质量，再增加 $k$ 不再带来额外收益。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-滑动窗口注意力"><a href="#vs-滑动窗口注意力" class="headerlink" title="vs 滑动窗口注意力"></a>vs 滑动窗口注意力</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>滑动窗口</th>
+<th>StreamingLLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KV缓存大小</td>
+<td>$L_W$</td>
+<td>$4 + L_W$</td>
+</tr>
+<tr>
+<td>超训练窗口PPL</td>
+<td>灾难性退化 (5158)</td>
+<td>稳定 (约10)</td>
+</tr>
+<tr>
+<td>内存使用</td>
+<td>恒定</td>
+<td>恒定（多4个token）</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>极简</td>
+<td>极简（额外4个缓存位+位置重映射）</td>
+</tr>
+<tr>
+<td>是否需要微调</td>
+<td>否</td>
+<td>否</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 仅多4个token的缓存开销，StreamingLLM将SWA从完全不可用提升到与密集注意力几乎无差异的水平。这是LLM推理优化中”最高性价比”的改进之一。</p>
+<h3 id="vs-Position-Interpolation-NTK-aware-Scaling-YaRN"><a href="#vs-Position-Interpolation-NTK-aware-Scaling-YaRN" class="headerlink" title="vs Position Interpolation &#x2F; NTK-aware Scaling &#x2F; YaRN"></a>vs Position Interpolation &#x2F; NTK-aware Scaling &#x2F; YaRN</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>位置插值类方法</th>
+<th>StreamingLLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原理</td>
+<td>修改位置编码以支持长序列</td>
+<td>利用注意力汇维持稳定性</td>
+</tr>
+<tr>
+<td>是否需要微调</td>
+<td>是（推荐或必需）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>是否需要修改模型</td>
+<td>是（修改RoPE基数或缩放）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>通用性</td>
+<td>特定于RoPE模型</td>
+<td>所有因果LLM</td>
+</tr>
+<tr>
+<td>序列长度上限</td>
+<td>有限（如8x训练长度）</td>
+<td>理论上无限</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: StreamingLLM不需要任何模型修改或微调，使其在工程部署中更加灵活。位置插值类方法在某些场景下可能获得更好的长上下文理解质量（因为使用了更多有效的KV缓存），但StreamingLLM在流式场景下的稳定性无可匹敌。</p>
+<h3 id="vs-H2O-SnapKV"><a href="#vs-H2O-SnapKV" class="headerlink" title="vs H2O &#x2F; SnapKV"></a>vs H2O &#x2F; SnapKV</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>H2O &#x2F; SnapKV</th>
+<th>StreamingLLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>驱逐策略</td>
+<td>基于注意力的动态驱逐</td>
+<td>简单的FIFO（除注意力汇外）</td>
+</tr>
+<tr>
+<td>需要校准&#x2F;N帧分析</td>
+<td>是&#x2F;否（因方法而异）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>固定输入处理</td>
+<td>流式&#x2F;无限长度输入</td>
+</tr>
+<tr>
+<td>缓存大小</td>
+<td>动态&#x2F;预设</td>
+<td>固定&#x2F;预设</td>
+</tr>
+<tr>
+<td>组合适用性</td>
+<td>可与StreamingLLM结合</td>
+<td>可与驱逐方法结合</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: StreamingLLM提供了一个基础保障层——保留注意力汇token。H2O和SnapKV的策略可以在此基础上进一步优化滑动窗口内的token选择（而非简单的FIFO）。这三种方法是互补的，而非互相替代的。</p>
+<h3 id="vs-KV缓存量化方法（KIVI-KVQuant）"><a href="#vs-KV缓存量化方法（KIVI-KVQuant）" class="headerlink" title="vs KV缓存量化方法（KIVI, KVQuant）"></a>vs KV缓存量化方法（KIVI, KVQuant）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>量化方法</th>
+<th>StreamingLLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维度</td>
+<td>每个token的存储精度</td>
+<td>KV缓存中的token数量</td>
+</tr>
+<tr>
+<td>缓存增长</td>
+<td>仍然线性增长</td>
+<td>固定上限</td>
+</tr>
+<tr>
+<td>组合效果</td>
+<td>与StreamingLLM正交</td>
+<td>与量化方法正交</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 量化方法减少每个token的存储成本，StreamingLLM限制缓存中token的总数。两者正交组合时，可以同时获得两种压缩的收益。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-注意窗口上下文信息永久丢失"><a href="#1-注意窗口上下文信息永久丢失" class="headerlink" title="1. 注意窗口上下文信息永久丢失"></a>1. 注意窗口上下文信息永久丢失</h3><p><strong>问题</strong>: 一旦KV缓存中的中间token被驱逐，模型就永久丢失了对这些token内容的访问。对于需要全局理解或跨段落推理的任务（如长文档问答、多跳推理），这可能是有害的。</p>
+<p><strong>影响</strong>: StreamingLLM最适合对话式、实时流式场景，这些场景中模型主要只需要最近上下文。对于需要精确回忆远处信息的任务，需要结合检索或压缩技术。</p>
+<h3 id="2-初始token的语义依赖性"><a href="#2-初始token的语义依赖性" class="headerlink" title="2. 初始token的语义依赖性"></a>2. 初始token的语义依赖性</h3><p><strong>问题</strong>: 注意力汇token的位置固定在索引0-3，这意味着模型总是需要从这4个初始token开始。在某些场景中，如果前4个token是BOS token或其他非语义token，这可能不会造成问题；但如果前4个token包含重要的语义信息，它们在注意力计算中可能被”过度使用”。</p>
+<p><strong>影响</strong>: 在实际部署中，建议前4个token使用BOS&#x2F;padding token而非实际内容，或使用预训练的专用sink token。</p>
+<h3 id="3-滑动窗口大小需要手动设置"><a href="#3-滑动窗口大小需要手动设置" class="headerlink" title="3. 滑动窗口大小需要手动设置"></a>3. 滑动窗口大小需要手动设置</h3><p><strong>问题</strong>: 滑动窗口大小 $L_W$ 是超参数，需要根据任务需求和硬件约束手动设置。不同任务对局部上下文的需求不同，没有一套自动确定最优窗口大小的机制。</p>
+<p><strong>影响</strong>: 在实际部署中需要进行工程调优。$L_W&#x3D;512$ 是一个在实践中表现良好的默认值。</p>
+<h3 id="4-位置重映射的理论完备性"><a href="#4-位置重映射的理论完备性" class="headerlink" title="4. 位置重映射的理论完备性"></a>4. 位置重映射的理论完备性</h3><p><strong>问题</strong>: 持续重映射位置编码是工程上有效的trick，但其理论基础不如Position Interpolation等方法坚实。没有形式化的分析证明重映射后的注意力分布在理论上等价于原始分布。</p>
+<p><strong>影响</strong>: 虽然在实践中表现良好，但在极端情况下可能出现不可预见的数值不稳定。</p>
+<h3 id="5-缺乏对注意力汇的因果机制解释"><a href="#5-缺乏对注意力汇的因果机制解释" class="headerlink" title="5. 缺乏对注意力汇的因果机制解释"></a>5. 缺乏对注意力汇的因果机制解释</h3><p><strong>问题</strong>: 论文描述了注意力汇的”是什么”和”如何利用”，但对”为什么会出现”没有提供完整的因果解释。注意力汇是Softmax的必然数学结果，还是预训练目标的副产品，还是两者的结合？</p>
+<p><strong>影响</strong>: 理解不够深入可能限制从注意力汇现象中推导出更广泛设计启示的能力。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-注意力汇作为注意力调节器"><a href="#1-注意力汇作为注意力调节器" class="headerlink" title="1. 注意力汇作为注意力调节器"></a>1. 注意力汇作为注意力调节器</h3><p><strong>洞见</strong>: 预训练LLM的注意力机制中存在天然的安全阀——注意力汇token。它们充当了”注意力垃圾桶”的角色，吸收多余的注意力质量。这个洞见可以推广到其他注意力相关的优化设计中。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在微调期间保留注意力汇token，避免改变模型的基础注意力分布</li>
+<li>在新的注意力变体设计中显式考虑注意力缓冲机制</li>
+<li>在分析模型行为时，将注意力汇token作为参考基线</li>
+</ul>
+<h3 id="2-简单修复往往比复杂方案更有价值"><a href="#2-简单修复往往比复杂方案更有价值" class="headerlink" title="2. 简单修复往往比复杂方案更有价值"></a>2. 简单修复往往比复杂方案更有价值</h3><p><strong>洞见</strong>: StreamingLLM仅需4个额外token的缓存就能解决SWA的灾难性退化问题。在工程实践中，”几乎零成本的修复”比”复杂的完美解决方案”更有价值，因为它们可以在不引入新失败模式的情况下大幅提升可用性。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在优化其他系统时，优先寻找具有高性价比的简单修复</li>
+<li>将注意力汇保留作为KV缓存管理的默认基础配置</li>
+<li>在构建新的推理优化方法时，将StreamingLLM作为基线之一</li>
+</ul>
+<h3 id="3-位置编码是流式推理的关键桥梁"><a href="#3-位置编码是流式推理的关键桥梁" class="headerlink" title="3. 位置编码是流式推理的关键桥梁"></a>3. 位置编码是流式推理的关键桥梁</h3><p><strong>洞见</strong>: StreamingLLM的成功很大程度上依赖于正确的位置重映射。位置编码是连接固定窗口注意力和流式推理的数学桥梁——如果位置编码处理不当，即使保留了注意力汇，也会因为分布外相对位置而导致性能退化。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在任何涉及WV缓存管理的方案中，将位置编码考虑为第一优先级</li>
+<li>对于不同位置编码方案（RoPE、ALiBi、绝对位置等），设计对应的流式适配策略</li>
+<li>在模型架构设计阶段就考虑流式推理需求</li>
+</ul>
+<h3 id="4-注意力分析与系统优化的结合"><a href="#4-注意力分析与系统优化的结合" class="headerlink" title="4. 注意力分析与系统优化的结合"></a>4. 注意力分析与系统优化的结合</h3><p><strong>洞见</strong>: StreamingLLM将注意力分布分析（研究）直接转化为系统优化（工程）——从”发现注意力汇”到”保留注意力汇”的路径非常直接。这是一种高效的研究-工程转换模式。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在开发LLM优化方案时，从注意力模式分析开始</li>
+<li>寻找其他可以被直接利用的注意力统计规律</li>
+<li>将观察到的模型行为直接映射为缓存管理策略</li>
+</ul>
+<h3 id="5-正交优化原则"><a href="#5-正交优化原则" class="headerlink" title="5. 正交优化原则"></a>5. 正交优化原则</h3><p><strong>洞见</strong>: StreamingLLM与KV缓存量化（减少每个token的存储）、token驱逐策略（选择性保留）是正交的优化维度。这种正交性意味着它们可以相乘地组合，带来远超单一方法的压缩效果。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在实际部署中，组合StreamingLLM（token数量）+ 量化（per-token压缩）+ 选择性驱逐（token质量）</li>
+<li>在设计新方法时，明确其对其他优化维度的正交性</li>
+<li>建立多维度的KV缓存优化矩阵</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>注意力模型分析的新维度</strong>: StreamingLLM展示了将注意力分布作为模型”行为签名”进行分析的价值。未来的研究可以系统性地分析不同模型、不同架构、不同训练策略下的注意力分布模式，寻找更多可被工程化利用的规律。</p>
+</li>
+<li><p><strong>从观察到解决方案的短路径</strong>: 从发现”模型在自回归解码时将异常高注意力分配给初始token”到提出”保留这些token”仅需一步推理。这提醒我们，仔细分析模型的内在行为，有时能直接导出简洁高效的解决方案。</p>
+</li>
+<li><p><strong>流式推理的工程化启示</strong>: StreamingLLM证明了常量内存的流式推理是可行的，这为构建能够运行无限长时间的LLM服务提供了基础。结合量化和选择性驱逐，可以在消费级硬件上运行流式LLM。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>多轮对话系统</strong>: 聊天机器人需要处理无限增长的对话历史，StreamingLLM可以在不增加内存的情况下维持稳定的对话质量。</p>
+</li>
+<li><p><strong>实时流式Agent</strong>: 持续监听环境并做出反应的AI agent需要处理无限长度的输入流，StreamingLLM提供了可行的基础架构。</p>
+</li>
+<li><p><strong>代码补全&#x2F;编辑</strong>: 在处理大型代码文件时，StreamingLLM可以同时保留文件的初始部分（通常包含重要上下文如imports）和最近编辑区域。</p>
+</li>
+<li><p><strong>流式翻译&#x2F;转录</strong>: 对于实时语音转文本或流式翻译任务，输入是无限长的流，StreamingLLM提供了一种可持续的处理方案。</p>
+</li>
+</ol>
+<h3 id="与其他技术的协同"><a href="#与其他技术的协同" class="headerlink" title="与其他技术的协同"></a>与其他技术的协同</h3><ul>
+<li><strong>+ 量化</strong>: 使用KIVI或KVQuant将每个缓存的token量化为2-4位，进一步减少内存占用</li>
+<li><strong>+ 选择性驱逐</strong>: 用H2O或SnapKV的驱逐策略替换简单的FIFO，更智能地选择保留哪些窗口token</li>
+<li><strong>+ 跨层压缩</strong>: 与MiniCache结合，在深度维度上进一步压缩KV缓存</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-注意力汇的因果机制"><a href="#1-注意力汇的因果机制" class="headerlink" title="1. 注意力汇的因果机制"></a>1. 注意力汇的因果机制</h3><p><strong>问题</strong>: 注意力汇现象的根本成因是什么？它是Softmax的必然数学结果，还是预训练过程中学到的具体策略？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在从头训练模型的过程中追踪注意力汇的形成过程</li>
+<li>分析不同Softmax变体（如sparse softmax、clipped softmax）对注意力汇的影响</li>
+<li>研究注意力汇现象是否与特定的预训练目标（下一个token预测）有关</li>
+</ul>
+<p><strong>潜在影响</strong>: 理解成因可以帮助我们更好地设计注意力机制和训练策略。</p>
+<h3 id="2-注意力汇token的最优选择"><a href="#2-注意力汇token的最优选择" class="headerlink" title="2. 注意力汇token的最优选择"></a>2. 注意力汇token的最优选择</h3><p><strong>问题</strong>: 4个注意力汇token是否是全局最优的？不同模型、不同任务是否有不同的最优sink数量？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>为不同模型规模和架构自动确定最优sink token数量</li>
+<li>研究注意力汇token的”质量”（不同语义内容的token作为sink的效果差异）</li>
+<li>探索非固定数量的动态注意力汇策略</li>
+</ul>
+<p><strong>潜在影响</strong>: 进一步提升内存效率，在不牺牲质量的前提下最小化开销。</p>
+<h3 id="3-可学习注意力汇的预训练集成"><a href="#3-可学习注意力汇的预训练集成" class="headerlink" title="3. 可学习注意力汇的预训练集成"></a>3. 可学习注意力汇的预训练集成</h3><p><strong>问题</strong>: 是否应该将专用的可学习注意力汇token纳入未来所有LLM的标准预训练？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在大规模预训练中测试可学习注意力汇token的泛化效果</li>
+<li>研究多个专用sink token的效果 vs 单一sink token</li>
+<li>探索sink token的最优初始化和训练策略</li>
+</ul>
+<p><strong>潜在影响</strong>: 如果被广泛采用，可以成为LLM架构的标准组件。</p>
+<h3 id="4-注意力汇与其他注意模式的关系"><a href="#4-注意力汇与其他注意模式的关系" class="headerlink" title="4. 注意力汇与其他注意模式的关系"></a>4. 注意力汇与其他注意模式的关系</h3><p><strong>问题</strong>: 注意力汇现象与注意力矩阵中的其他已知模式（如对角优势、局部性偏差）如何相互作用？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>系统分析不同注意力模式之间的数学关系</li>
+<li>研究注意力汇在不同模型深度中的分布变化</li>
+<li>分析注意力汇对注意力稀疏化和压缩方法的影响</li>
+</ul>
+<p><strong>潜在影响</strong>: 构建统一的注意力模式理论。</p>
+<h3 id="5-非Transformer架构中的对应现象"><a href="#5-非Transformer架构中的对应现象" class="headerlink" title="5. 非Transformer架构中的对应现象"></a>5. 非Transformer架构中的对应现象</h3><p><strong>问题</strong>: 注意力汇现象是否仅存在于Transformer中？Mamba、RWKV等状态空间模型是否有对应的”状态汇”机制？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在各类LLM架构中系统性搜索类似的”稳定性保障”机制</li>
+<li>比较不同架构在流式推理中的稳定性和退化模式</li>
+<li>寻找不同架构间的通用”稳定推理”设计原则</li>
+</ul>
+<p><strong>潜在影响</strong>: 为新一代架构设计提供理论基础。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Xiao, G., et al. (2023). Efficient Streaming Language Models with Attention Sinks. ICLR 2024. arXiv:2309.17453</li>
+<li>Touvron, H., et al. (2023). Llama 2: Open Foundation and Fine-Tuned Chat Models. arXiv:2307.09288</li>
+<li>Zhang, Z., et al. (2023). H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models. NeurIPS 2023. arXiv:2306.14048</li>
+<li>Su, J., et al. (2023). RoFormer: Enhanced Transformer with Rotary Position Embedding. arXiv:2104.09864</li>
+<li>Chen, S., et al. (2023). Extending Context Window of Large Language Models via Positional Interpolation. arXiv:2306.15595</li>
+<li>Press, O., et al. (2022). Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation. ICLR 2022. arXiv:2108.12409</li>
+<li>Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Biderman, S., et al. (2023). Pythia: A Suite for Analyzing Large Language Models Across Training and Scaling. ICML 2023. arXiv:2304.01373</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/KV-Cache/" class="category-chain-item">KV-Cache</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+        <a href="/tags/papers-attention-mechanism/" class="print-no-link">#papers/attention-mechanism</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>StreamingLLM: Efficient Streaming Language Models with Attention Sinks</div>
+      <div>https://w2ongq6.github.io/2023/09/25/inference/note/StreamingLLM_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年9月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/09/27/inference/note/PoSE_note/" title="PoSE: Efficient Context Window Extension with Positional Skip-wise Training">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">PoSE: Efficient Context Window Extension with Positional Skip-wise Training</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/09/21/inference/note/LongLoRA_note/" title="LongLoRA: Efficient Fine-tuning of Long-Context Large Language Models">
+                        <span class="hidden-mobile">LongLoRA: Efficient Fine-tuning of Long-Context Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1314 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Wanda: A Simple and Effective Pruning Approach for Large Language Models核心信息 作者: Mingjie Sun, Zhuang Liu, Anna Bair, J. Zico Kolter 发表: ICML 2024 (Spotlight) arXiv: 2306.11695 代码: locuslab&#x2F;wanda">
+<meta property="og:type" content="article">
+<meta property="og:title" content="A Simple and Effective Pruning Approach for Large Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/06/20/inference/note/Wanda_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Wanda: A Simple and Effective Pruning Approach for Large Language Models核心信息 作者: Mingjie Sun, Zhuang Liu, Anna Bair, J. Zico Kolter 发表: ICML 2024 (Spotlight) arXiv: 2306.11695 代码: locuslab&#x2F;wanda">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-20T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.444Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="activation-aware">
+<meta property="article:tag" content="llm-compression">
+<meta property="article:tag" content="magnitude-pruning">
+<meta property="article:tag" content="pruning">
+<meta property="article:tag" content="sparsegpt">
+<meta property="article:tag" content="unstructured-pruning">
+<meta property="article:tag" content="wanda">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>A Simple and Effective Pruning Approach for Large Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="A Simple and Effective Pruning Approach for Large Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-06-20 08:00" pubdate>
+          2023年6月20日 早上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          74 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">A Simple and Effective Pruning Approach for Large Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Wanda-A-Simple-and-Effective-Pruning-Approach-for-Large-Language-Models"><a href="#Wanda-A-Simple-and-Effective-Pruning-Approach-for-Large-Language-Models" class="headerlink" title="Wanda: A Simple and Effective Pruning Approach for Large Language Models"></a>Wanda: A Simple and Effective Pruning Approach for Large Language Models</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>作者</strong>: Mingjie Sun, Zhuang Liu, Anna Bair, J. Zico Kolter</li>
+<li><strong>发表</strong>: ICML 2024 (Spotlight)</li>
+<li><strong>arXiv</strong>: 2306.11695</li>
+<li><strong>代码</strong>: <a target="_blank" rel="noopener" href="https://github.com/locuslab/wanda">locuslab&#x2F;wanda</a></li>
+<li><strong>关键词</strong>: Pruning, Activation-Aware, Magnitude Pruning, Unstructured Sparsity, Wanda</li>
+</ul>
+<p>Wanda（Pruning by Weights AND Activations）是 LLM 剪枝领域的一次”简化革命”。它的核心思想极其简单：评估每个权重的重要性时，同时考虑权重的绝对值和对应输入激活值的 L2 范数，即使用乘积 |W_ij| × ||X_j||_2 作为重要性分数（权重矩阵的第 i 行第 j 列 × 激活值第 j 个通道的 L2 范数）。令人惊讶的是，这个如此简单的一阶准则在剪枝质量上几乎与 SparseGPT（基于 Hessian 二阶信息）持平，而计算开销仅为幅度剪枝的水平。Wanda 证明了：在 LLM 剪枝这个看似需要复杂二阶方法的问题上，一个经过精心设计的简单准则已经足够。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>大语言模型（LLM）的规模带来了巨大的计算成本。最近，SparseGPT 表明，大规模 LLM 可以在不需要任何重训练的情况下被精确地剪枝到高稀疏度。SparseGPT 基于 Optimal Brain Surgeon 框架，这使其成为一个复杂的方法。在本文中，我们展示了这样一个复杂的框架对于精确剪枝并非必要——我们提出了 Wanda（Pruning by Weights AND Activations），一种新颖的、简单的一步式剪枝方法。Wanda 通过一级数据驱动准则评估权重重要性：权重大小与对应输入激活 L2 范数的乘积。我们观察到，这一简单的乘积度量与 SparseGPT 等更复杂的方法具有很高的相关性。Wanda 在各种大规模语言模型上均能匹配甚至超越 SparseGPT 的性能，包括 LLaMA、LLaMA-2 和 OPT。此外，Wanda 在内存消耗和延迟方面效率极高，可在数秒内剪枝 LLaMA-7B 模型。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>Wanda 重要性准则: |W| × ||X||_2</strong>: 提出了一种新的权重重要性度量，将权重大小与对应输入通道的激活值 L2 范数相乘。这个简单的乘积在效果上接近 Hessian 引导的 OBS 准则。</p>
+</li>
+<li><p><strong>揭示了一阶准则与二阶方法的相关性</strong>: 通过实验证明 Wanda 分数与 SparseGPT 的剪枝决策高度相关（Spearman 相关系数 &gt; 0.9），从实证角度解释了为什么简单方法可以匹敌复杂方法。</p>
+</li>
+<li><p><strong>极简的实现与极高的效率</strong>: Wanda 只需要一次前向传播收集激活值统计信息，然后逐行应用阈值。剪枝 LLaMA-7B 仅需 ~5 秒，比 SparseGPT 快 ~40 倍。</p>
+</li>
+<li><p><strong>统一了多种剪枝方法的视角</strong>: 论文论证了 Wanda 对幅度剪枝和 SparseGPT 的统一——幅度剪枝是 Wanda 在均匀激活假设下的特例，SparseGPT 隐式地近似了 Wanda 的准则。</p>
+</li>
+<li><p><strong>结构化剪枝扩展（Sparse-Wanda）</strong>: 将 Wanda 扩展到 N:M 半结构化稀疏和 2:4 结构化剪枝场景。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Wanda 提出了一种极简的剪枝准则 |W| × ||X||_2，在效果上匹敌需要 Hessian 矩阵的 SparseGPT，但计算效率高数个数量级，证明了 LLM 剪枝不需要复杂的二阶方法。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p>SparseGPT 证明了 LLM 可以被准确地一次性剪枝，但它的实现涉及 Hessian 矩阵计算和权重更新补偿，相对复杂。这引发了一个基本问题：<strong>剪枝 LLM 真的需要二阶信息吗？是否存在一种更简单的准则可以达到类似的效果？</strong></p>
+<p>Wanda 的研究假设是：如果同时考虑权重和激活值的统计信息，一种简单的一阶乘积准则就足以识别重要的权重。这个假设的出发点是观察到不同 token 对同一通道的激活值具有相似的模式（通道级一致性），因此可以用一个通道级的标量（L2 范数）来概括激活值的”重要性”。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="任务定义"><a href="#任务定义" class="headerlink" title="任务定义"></a>任务定义</h3><p>给定预训练的 Transformer 模型和每层的目标稀疏度 s（如 50%），对每个线性层（权重矩阵 W，输入激活 X），找到剪枝掩码 M，使得：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs coq">M_ij = <span class="hljs-number">1</span>  <span class="hljs-keyword">if</span>  |<span class="hljs-type">W_ij</span>| <span class="hljs-type">× ||X_j</span>|<span class="hljs-type">|_2</span> ∈ <span class="hljs-built_in">top</span>-k of row i,  <span class="hljs-keyword">else</span> <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>其中 k &#x3D; (1-s) × d_col，||X_j||_2 是输入激活值在第 j 个通道（即权重矩阵 W 的第 j 行）上的 L2 范数，通过在一批校准数据上的前向传播计算。</p>
+<h3 id="校准数据"><a href="#校准数据" class="headerlink" title="校准数据"></a>校准数据</h3><ul>
+<li>从 C4 训练集中随机采样 128 个序列，每个 2048 tokens</li>
+<li>用于前向传播计算每个通道的激活值 L2 范数</li>
+</ul>
+<h3 id="评估"><a href="#评估" class="headerlink" title="评估"></a>评估</h3><ul>
+<li><strong>语言建模困惑度</strong>: WikiText-2, PTB, C4</li>
+<li><strong>零样本任务</strong>: BoolQ, RTE, HellaSwag, WinoGrande, ARC-e, ARC-c, OBQA</li>
+</ul>
+<h2 id="方法主线-机制流程"><a href="#方法主线-机制流程" class="headerlink" title="方法主线 + 机制流程"></a>方法主线 + 机制流程</h2><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-Wanda-核心准则"><a href="#1-Wanda-核心准则" class="headerlink" title="1. Wanda 核心准则"></a>1. Wanda 核心准则</h3><p>对于权重矩阵 W ∈ R^{d_out × d_in} 和校准输入 X ∈ R^{d_in × N}：</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">S_ij = |<span class="hljs-string">W_ij</span>|<span class="hljs-string"> × </span>||<span class="hljs-string">X_j</span>||_2<br></code></pre></td></tr></table></figure>
+
+<p>其中 ||X_j||_2 &#x3D; √(Σ_n X_jn^2) 是第 j 个输入通道在所有校准 token 上的 L2 范数。</p>
+<p>然后对于 W 的每一行（即每个输出神经元），保留 S_ij 最大的 k 个权重，将其余的设为零。</p>
+<p><strong>与幅度剪枝的区别</strong>:</p>
+<ul>
+<li>幅度剪枝: S_ij &#x3D; |W_ij|（仅看权重）</li>
+<li>Wanda: S_ij &#x3D; |W_ij| × ||X_j||_2（权重 × 激活）</li>
+</ul>
+<p>这个简单的乘法带来了关键差别：一个数值很小的权重如果对应的输入通道激活值很大，其重要性会显著提升，反之亦然。</p>
+<h3 id="2-为什么-X-2-而非均方根或其他统计量？"><a href="#2-为什么-X-2-而非均方根或其他统计量？" class="headerlink" title="2. 为什么 ||X||_2 而非均方根或其他统计量？"></a>2. 为什么 ||X||_2 而非均方根或其他统计量？</h3><p>Wanda 选择 L2 范数有几个原因：</p>
+<ol>
+<li>L2 范数自然地对异常值敏感（因为有平方项），这使得大激活值通道得到更强的权重</li>
+<li>L2 范数是欧几里得距离&#x2F;范数的自然推广，与 MSE 误差最小化的目标一致</li>
+<li>与 SparseGPT 的 Hessian 准则有数学联系：Hessian H &#x3D; XX^T 的对角元就是 ||X_j||_2^2</li>
+</ol>
+<h3 id="3-完整-Wanda-算法"><a href="#3-完整-Wanda-算法" class="headerlink" title="3. 完整 Wanda 算法"></a>3. 完整 Wanda 算法</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">输入</span><span class="hljs-punctuation">:</span> <span class="hljs-string">权重矩阵 W, 校准激活 X, 稀疏度 s</span><br><span class="hljs-attribute">输出</span><span class="hljs-punctuation">:</span> <span class="hljs-string">剪枝掩码 M</span><br><br><span class="hljs-attribute">对于每个线性层</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">1. 前向传播</span><span class="hljs-punctuation">:</span> <span class="hljs-string">收集输入激活值 X</span><br>  <span class="hljs-attribute">2. 计算通道级重要性</span><span class="hljs-punctuation">:</span> <span class="hljs-string">a_j = ||X_j||_2 for j = 1..d_in</span><br>  <span class="hljs-attribute">3. 对于输出维度 i = 1..d_out</span><span class="hljs-punctuation">:</span><br>     <span class="hljs-attribute">a. 计算重要性分数</span><span class="hljs-punctuation">:</span> <span class="hljs-string">S_ij = |W_ij| × a_j</span><br>     <span class="hljs-attribute">b. 选择 S_ij 最大的 k 个索引（k = (1-s) × d_in）</span><br><span class="hljs-attribute">     c. 设置 M_ij = 1 对选中的索引, M_ij = 0 对未选中的</span><br><span class="hljs-attribute">  4. 应用掩码</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Ŵ = M ⊙ W</span><br></code></pre></td></tr></table></figure>
+
+<p>算法复杂度：O(d_out × d_in × log(k)) per layer（主要是排序开销），实际上是 O(d_out × d_in)（可以用 top-k 选择算法）。</p>
+<h3 id="4-Wanda-与-SparseGPT-的关系"><a href="#4-Wanda-与-SparseGPT-的关系" class="headerlink" title="4. Wanda 与 SparseGPT 的关系"></a>4. Wanda 与 SparseGPT 的关系</h3><p>论文从两个角度分析了 Wanda 和 SparseGPT 的等价性：</p>
+<p><strong>视角1: OBS 准则的近似</strong><br>SparseGPT 基于 OBS 准则，权重的显著性分数为：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">S_ij^</span><span class="hljs-template-variable">&#123;OBS&#125;</span><span class="language-xml"> = |W_ij| / [H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">]_</span><span class="hljs-template-variable">&#123;jj&#125;</span><br></code></pre></td></tr></table></figure>
+<p>其中 H &#x3D; XX^T。如果假设不同输入通道之间是独立的（即 H 是对角矩阵），则：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">[H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">]_</span><span class="hljs-template-variable">&#123;jj&#125;</span><span class="language-xml"> = 1/H_</span><span class="hljs-template-variable">&#123;jj&#125;</span><span class="language-xml"> = 1/||X_j||_2^2</span><br></code></pre></td></tr></table></figure>
+<p>代入得到 S_ij^{OBS} ∝ |W_ij| × ||X_j||_2，这正是 Wanda 的准则。</p>
+<p><strong>视角2: 输出误差最小化</strong><br>剪枝引入的输出误差近似为：</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">||<span class="hljs-string">ΔY</span>||<span class="hljs-string"> = </span>||<span class="hljs-string">ΔW · X</span>||<span class="hljs-string"> ≈ </span>|<span class="hljs-string">Δw_ij</span>|<span class="hljs-string"> × </span>||<span class="hljs-string">X_j</span>||<br></code></pre></td></tr></table></figure>
+<p>最小化这个误差意味着应该剪掉 |Δw_ij| × ||X_j|| 最小的权重。对于幅度剪枝（Δw &#x3D; W），这等价于 Wanda。</p>
+<h3 id="5-扩展：结构化-N-M-稀疏"><a href="#5-扩展：结构化-N-M-稀疏" class="headerlink" title="5. 扩展：结构化 N:M 稀疏"></a>5. 扩展：结构化 N:M 稀疏</h3><p>Wanda 可以自然地扩展到 N:M 结构化稀疏（如 2:4）：</p>
+<ul>
+<li>将权重按 M 个一组分组</li>
+<li>在每组内用 Wanda 分数选择 N 个最重要的权重</li>
+<li>不需要修改算法框架，只需修改 top-k 选择的粒度</li>
+</ul>
+<h2 id="关键结果-表格"><a href="#关键结果-表格" class="headerlink" title="关键结果 + 表格"></a>关键结果 + 表格</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="语言建模困惑度（WikiText-2-LLaMA-模型-50-非结构化稀疏）"><a href="#语言建模困惑度（WikiText-2-LLaMA-模型-50-非结构化稀疏）" class="headerlink" title="语言建模困惑度（WikiText-2, LLaMA 模型, 50% 非结构化稀疏）"></a>语言建模困惑度（WikiText-2, LLaMA 模型, 50% 非结构化稀疏）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Dense</th>
+<th align="center">Magnitude</th>
+<th align="center">SparseGPT</th>
+<th align="center">Wanda</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td align="center">5.68</td>
+<td align="center">99.43</td>
+<td align="center">6.06</td>
+<td align="center"><strong>5.92</strong></td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td align="center">5.09</td>
+<td align="center">44.24</td>
+<td align="center">5.34</td>
+<td align="center"><strong>5.26</strong></td>
+</tr>
+<tr>
+<td>LLaMA-30B</td>
+<td align="center">4.10</td>
+<td align="center">52.63</td>
+<td align="center">4.27</td>
+<td align="center"><strong>4.21</strong></td>
+</tr>
+<tr>
+<td>LLaMA-65B</td>
+<td align="center">3.56</td>
+<td align="center">9.77</td>
+<td align="center">3.68</td>
+<td align="center"><strong>3.64</strong></td>
+</tr>
+</tbody></table>
+<h3 id="LLaMA-2-模型（50-非结构化稀疏）"><a href="#LLaMA-2-模型（50-非结构化稀疏）" class="headerlink" title="LLaMA-2 模型（50% 非结构化稀疏）"></a>LLaMA-2 模型（50% 非结构化稀疏）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Dense</th>
+<th align="center">Magnitude</th>
+<th align="center">SparseGPT</th>
+<th align="center">Wanda</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2-7B</td>
+<td align="center">5.47</td>
+<td align="center">21.47</td>
+<td align="center">5.73</td>
+<td align="center"><strong>5.69</strong></td>
+</tr>
+<tr>
+<td>LLaMA-2-13B</td>
+<td align="center">4.88</td>
+<td align="center">10.83</td>
+<td align="center">5.05</td>
+<td align="center"><strong>5.01</strong></td>
+</tr>
+<tr>
+<td>LLaMA-2-70B</td>
+<td align="center">3.31</td>
+<td align="center">7.46</td>
+<td align="center">3.48</td>
+<td align="center"><strong>3.46</strong></td>
+</tr>
+</tbody></table>
+<h3 id="不同稀疏度下的表现（LLaMA-7B-WikiText-2-PPL）"><a href="#不同稀疏度下的表现（LLaMA-7B-WikiText-2-PPL）" class="headerlink" title="不同稀疏度下的表现（LLaMA-7B, WikiText-2 PPL）"></a>不同稀疏度下的表现（LLaMA-7B, WikiText-2 PPL）</h3><table>
+<thead>
+<tr>
+<th align="center">Sparsity</th>
+<th align="center">Magnitude</th>
+<th align="center">SparseGPT</th>
+<th align="center">Wanda</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0% (Dense)</td>
+<td align="center">5.68</td>
+<td align="center">5.68</td>
+<td align="center">5.68</td>
+</tr>
+<tr>
+<td align="center">20%</td>
+<td align="center">7.12</td>
+<td align="center">5.75</td>
+<td align="center"><strong>5.71</strong></td>
+</tr>
+<tr>
+<td align="center">30%</td>
+<td align="center">8.55</td>
+<td align="center">5.82</td>
+<td align="center"><strong>5.79</strong></td>
+</tr>
+<tr>
+<td align="center">40%</td>
+<td align="center">14.62</td>
+<td align="center">5.93</td>
+<td align="center"><strong>5.84</strong></td>
+</tr>
+<tr>
+<td align="center">50%</td>
+<td align="center">99.43</td>
+<td align="center">6.06</td>
+<td align="center"><strong>5.92</strong></td>
+</tr>
+<tr>
+<td align="center">60%</td>
+<td align="center">NaN</td>
+<td align="center">6.54</td>
+<td align="center"><strong>6.35</strong></td>
+</tr>
+</tbody></table>
+<h3 id="零样本任务（LLaMA-7B-50-稀疏）"><a href="#零样本任务（LLaMA-7B-50-稀疏）" class="headerlink" title="零样本任务（LLaMA-7B, 50% 稀疏）"></a>零样本任务（LLaMA-7B, 50% 稀疏）</h3><table>
+<thead>
+<tr>
+<th>Task</th>
+<th align="center">Dense</th>
+<th align="center">Magnitude</th>
+<th align="center">SparseGPT</th>
+<th align="center">Wanda</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BoolQ</td>
+<td align="center">75.1</td>
+<td align="center">61.5</td>
+<td align="center">72.5</td>
+<td align="center"><strong>72.8</strong></td>
+</tr>
+<tr>
+<td>RTE</td>
+<td align="center">66.2</td>
+<td align="center">52.3</td>
+<td align="center">63.4</td>
+<td align="center"><strong>64.1</strong></td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td align="center">57.2</td>
+<td align="center">34.5</td>
+<td align="center">55.1</td>
+<td align="center"><strong>55.8</strong></td>
+</tr>
+<tr>
+<td>WinoGrande</td>
+<td align="center">68.4</td>
+<td align="center">52.2</td>
+<td align="center">66.7</td>
+<td align="center"><strong>67.0</strong></td>
+</tr>
+<tr>
+<td>ARC-easy</td>
+<td align="center">72.9</td>
+<td align="center">52.5</td>
+<td align="center">71.0</td>
+<td align="center"><strong>71.5</strong></td>
+</tr>
+<tr>
+<td>ARC-challenge</td>
+<td align="center">44.8</td>
+<td align="center">28.4</td>
+<td align="center">42.3</td>
+<td align="center"><strong>43.6</strong></td>
+</tr>
+<tr>
+<td>OBQA</td>
+<td align="center">44.4</td>
+<td align="center">29.2</td>
+<td align="center">42.2</td>
+<td align="center"><strong>42.8</strong></td>
+</tr>
+<tr>
+<td><strong>Average</strong></td>
+<td align="center">61.3</td>
+<td align="center">44.4</td>
+<td align="center">59.0</td>
+<td align="center"><strong>59.7</strong></td>
+</tr>
+</tbody></table>
+<h3 id="2-4-半结构化稀疏（LLaMA-WikiText-2-PPL）"><a href="#2-4-半结构化稀疏（LLaMA-WikiText-2-PPL）" class="headerlink" title="2:4 半结构化稀疏（LLaMA, WikiText-2 PPL）"></a>2:4 半结构化稀疏（LLaMA, WikiText-2 PPL）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Dense</th>
+<th align="center">SparseGPT 2:4</th>
+<th align="center">Wanda 2:4</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td align="center">5.68</td>
+<td align="center">6.42</td>
+<td align="center"><strong>6.38</strong></td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td align="center">5.09</td>
+<td align="center">5.54</td>
+<td align="center"><strong>5.52</strong></td>
+</tr>
+<tr>
+<td>LLaMA-30B</td>
+<td align="center">4.10</td>
+<td align="center">4.33</td>
+<td align="center"><strong>4.33</strong></td>
+</tr>
+</tbody></table>
+<h3 id="剪枝速度（LLaMA-7B-50-稀疏）"><a href="#剪枝速度（LLaMA-7B-50-稀疏）" class="headerlink" title="剪枝速度（LLaMA-7B, 50% 稀疏）"></a>剪枝速度（LLaMA-7B, 50% 稀疏）</h3><table>
+<thead>
+<tr>
+<th>Method</th>
+<th align="center">时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Magnitude</td>
+<td align="center">&lt; 1s</td>
+</tr>
+<tr>
+<td>Wanda</td>
+<td align="center">~5.6s</td>
+</tr>
+<tr>
+<td>SparseGPT</td>
+<td align="center"><del>217s (</del>3.6min)</td>
+</tr>
+</tbody></table>
+<h3 id="与-SparseGPT-剪枝决策的相关性"><a href="#与-SparseGPT-剪枝决策的相关性" class="headerlink" title="与 SparseGPT 剪枝决策的相关性"></a>与 SparseGPT 剪枝决策的相关性</h3><p>Wanda 和 SparseGPT 选择保留的权重索引的 Jaccard 相似度：</p>
+<ul>
+<li>LLaMA-7B: 0.82（所有层平均）</li>
+<li>LLaMA-13B: 0.80</li>
+<li>LLaMA-65B: 0.84</li>
+</ul>
+<p>随着模型规模增大，相关性上升，说明在大模型上两者收敛到类似的决策。</p>
+<h3 id="消融实验-不同激活统计量的影响"><a href="#消融实验-不同激活统计量的影响" class="headerlink" title="消融实验: 不同激活统计量的影响"></a>消融实验: 不同激活统计量的影响</h3><table>
+<thead>
+<tr>
+<th>统计量</th>
+<th align="center">LLaMA-7B 50% PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td>mean(</td>
+<td align="center">X</td>
+</tr>
+<tr>
+<td>max(</td>
+<td align="center">X</td>
+</tr>
+<tr>
+<td>variance(X)</td>
+<td align="center">6.05</td>
+</tr>
+<tr>
+<td>No activation (Magnitude)</td>
+<td align="center">99.43</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="为什么-Wanda-这么简单却这么有效？"><a href="#为什么-Wanda-这么简单却这么有效？" class="headerlink" title="为什么 Wanda 这么简单却这么有效？"></a>为什么 Wanda 这么简单却这么有效？</h3><p>这是论文最核心的问题。答案涉及几个层面：</p>
+<p><strong>1. 激活值的通道级一致性</strong></p>
+<p>LLM 的激活值表现出极强的通道级一致性：同一通道在不同 token 上的激活幅度具有很高的相关性。这意味着用一个标量（L2 范数）来概括整个通道的”重要程度”是合理的近似。这种通道级一致性在 SmoothQuant 和 AWQ 中也被观察到——它们都利用了异常值集中出现在特定通道上的特性。</p>
+<p><strong>2. 对角线 Hessian 近似</strong></p>
+<p>在 OBS 框架中，权重显著性 &#x3D; |W| &#x2F; [H^{-1}]<em>{jj}。如果假设不同输入通道之间不相关（H 是对角矩阵），则 [H^{-1}]</em>{jj} &#x3D; 1&#x2F;||X_j||^2，这样就得到 |W| × ||X_j||。虽然不同通道间实际上存在相关性（非对角元不为零），但在足够大的维度下，对角近似可能是对 Hessian 的一个合理近似。</p>
+<p><strong>3. 大规模模型的自然正则化</strong></p>
+<p>LLM 具有大量参数和高度冗余的结构，这使得”不完美”的剪枝决策也能被其他参数补偿。Wanda 不需要显式地补偿误差（不像 SparseGPT 的权重更新步骤），但模型的过度参数化提供了隐式的补偿能力。</p>
+<h3 id="Wanda-的设计哲学"><a href="#Wanda-的设计哲学" class="headerlink" title="Wanda 的设计哲学"></a>Wanda 的设计哲学</h3><p>Wanda 体现了一种重要的研究哲学：<strong>在尝试复杂解决方案之前，先尝试找出最简单的有效方法</strong>。SparseGPT 引入 Hessian 矩阵和权重更新来解决剪枝问题，但 Wanda 证明了一个简单的乘积准则就足以获得 90%+ 的收益。这种”够好的简单方案”在工程实践中有巨大的价值。</p>
+<p>这与 AWQ 对 GPTQ 的关系类似——都用更简单的统计信息替换了复杂的二阶计算，且几乎不牺牲精度。</p>
+<h3 id="Wanda-的权重更新（或缺乏更新）"><a href="#Wanda-的权重更新（或缺乏更新）" class="headerlink" title="Wanda 的权重更新（或缺乏更新）"></a>Wanda 的权重更新（或缺乏更新）</h3><p>一个值得注意的细节是：Wanda <strong>不更新保留的权重</strong>。这与 SparseGPT 形成对比，后者会更新保留权重以补偿剪枝误差。这意味着 Wanda 所有剪掉的权重信息都永久丢失了。然而实验结果却表明 Wanda 在大部分场景下匹敌 SparseGPT。</p>
+<p>可能的解释：</p>
+<ol>
+<li>对 50% 的稀疏度，剩余 50% 的参数已经足够补偿</li>
+<li>SparseGPT 的权重更新实际上可以通过调整来补偿”不太完美”的掩码选择，而 Wanda 的掩码选择本身已经足够好</li>
+<li>在极高稀疏度（80%+）下，Wanda 会开始落后于 SparseGPT，说明权重更新在那时变得关键</li>
+</ol>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="LLM-剪枝方法对比"><a href="#LLM-剪枝方法对比" class="headerlink" title="LLM 剪枝方法对比"></a>LLM 剪枝方法对比</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th align="center">需要梯度&#x2F;二阶</th>
+<th align="center">需要校准数据</th>
+<th align="center">更新权重</th>
+<th>复杂度</th>
+<th align="center">50% 质量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Magnitude</td>
+<td align="center">否</td>
+<td align="center">否</td>
+<td align="center">否</td>
+<td>O(n)</td>
+<td align="center">崩溃</td>
+</tr>
+<tr>
+<td>SparseGPT</td>
+<td align="center">是 (Hessian)</td>
+<td align="center">是</td>
+<td align="center">是</td>
+<td>O(nd^2)</td>
+<td align="center">很好</td>
+</tr>
+<tr>
+<td><strong>Wanda</strong></td>
+<td align="center"><strong>否</strong></td>
+<td align="center"><strong>是</strong></td>
+<td align="center"><strong>否</strong></td>
+<td><strong>O(n)</strong></td>
+<td align="center"><strong>很好</strong></td>
+</tr>
+<tr>
+<td>OBS</td>
+<td align="center">是 (Hessian)</td>
+<td align="center">是</td>
+<td align="center">是</td>
+<td>O(n^4)</td>
+<td align="center">-</td>
+</tr>
+</tbody></table>
+<h3 id="与-AWQ-的平行关系"><a href="#与-AWQ-的平行关系" class="headerlink" title="与 AWQ 的平行关系"></a>与 AWQ 的平行关系</h3><p>Wanda 与 AWQ 存在有趣的平行，二者都来自不同的研究组，但基于相似的洞察：</p>
+<table>
+<thead>
+<tr>
+<th>方面</th>
+<th>AWQ (量化)</th>
+<th>Wanda (剪枝)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心洞察</td>
+<td>大激活值通道的权重对量化敏感</td>
+<td>大激活值通道的权重不应被剪掉</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!figure] Figure 4: 消融实验&#x2F;详细分析图<br>建议位置：关键结果<br>放置原因：展示各组件对最终性能的贡献（消融实验）、参数敏感性分析或速度-质量权衡曲线<br>当前状态：图表占位<br>| 重要性度量 | 激活值幅度确定显著通道 | |W| × ||X||_2 |<br>| 操作类型 | Per-channel 缩放（保留所有） | Per-weight 剪枝（删除部分） |<br>| 校准数据 | 激活值统计量 | 激活值 L2 范数 |<br>| 与 Hessian 的关系 | 替代二阶信息 | 近似 Hessian 对角元 |</p>
+</blockquote>
+<p>两者的共同本质是：<strong>激活值（非权重）决定了哪些参数是”重要的”</strong>。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>校准数据依赖</strong>: Wanda 需要代表性校准数据来计算激活值统计量。如果推理时输入分布与校准时显著不同，剪枝决策可能不再是次优的。</p>
+</li>
+<li><p><strong>极高稀疏度下退化</strong>: 在 70-80% 的极高稀疏度下，Wanda 开始明显落后于 SparseGPT，说明 Hessian 补偿机制在极端情况下仍有不可替代的价值。</p>
+</li>
+<li><p><strong>粗粒度的通道级近似</strong>: 使用单个标量 ||X_j||_2 来概括整个通道，可能丢失了 token 级别的偏差信息。对于激活值在不同 token 上变化很大的通道，这种近似不够精确。</p>
+</li>
+<li><p><strong>缺乏权重更新</strong>: 不更新保留的权重意味着剪枝引入的偏置无法被补偿。对于需要极高精度的下游任务，这可能是一个限制。</p>
+</li>
+<li><p><strong>非结构化稀疏的硬件挑战</strong>: 与 SparseGPT 一样，Wanda 的非结构化稀疏在通用 GPU 上难以获得实质性的推理加速。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>简单准则的威力</strong>: Wanda 是”简单方法打败复杂方法”的又一个例证。在投入大量精力实现复杂方案之前，总是值得先尝试简单的 baseline——有时简单方案已经足够好。</p>
+</li>
+<li><p><strong>权重的价值由输入定义</strong>: 权重的重要性取决于它在做什么（与什么输入交互），而非它本身的大小。这个原则在 AWQ、SmoothQuant、Wanda 三个独立的工作中都被验证。</p>
+</li>
+<li><p><strong>通道级聚合的有效性</strong>: 将 token 级别的激活值信息聚合成通道级统计量（L2 范数），在 LLM 上是一种有效且高效的做法。这不仅适用于剪枝，也可能适用于其他需要评估参数重要性的场景。</p>
+</li>
+<li><p><strong>对角近似的普遍性</strong>: Wanda 通过对 Hessian 做对角近似（忽略通道间相关性），取得了与全 Hessian 方法接近的效果。这暗示在 LLM 的高维参数空间中，对角近似可能是一个普遍有效的工具。</p>
+</li>
+<li><p><strong>Jaccard 相似度作为分析工具</strong>: Wanda 使用 Jaccard 相似度来量化不同方法剪枝决策的一致性，这是一个简单而有效的分析工具，可以在其他方法对比中复用。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Wanda 是一篇”少即是多”（less is more）的典范论文。它没有提出新的理论框架，没有设计复杂的算法——只是观察到一个简单的事实：|W| × ||X||_2 在剪枝决策上与复杂的 Hessian 方法高度相关。但正是这种简单性使它具有持久的价值。</p>
+<p>一个有趣的思考实验：如果 Wanda 在 SparseGPT 之前发表会怎样？可能 SparseGPT 的接受度会大不相同——因为一旦简单方法被证明有效，读者对复杂方法的额外收益期望会大大提高。这提醒我们，方法发表的顺序有时会影响我们对方法价值的判断。</p>
+<p>Wanda 也提供了一种方法论启示：好的实证分析（相关性分析、消融实验）可以是研究贡献的核心，而不仅仅是辅助材料。论文中 Wanda 与 SparseGPT 的决策相似度分析就是一个典范。</p>
+<p>从工程角度看，Wanda 的”秒级剪枝”能力使其在实际部署中非常有吸引力。它可以在模型加载时动态进行剪枝，根据目标设备的约束（内存、计算）实时调整稀疏度。这种灵活性是 SparseGPT 不具备的。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>Wanda 准则 |W| × ||X||_2 是否可以直接用于训练过程中的动态剪枝（而非仅限于训练后剪枝）？</li>
+<li>能否将 Wanda 的激活感知思想应用于量化？即用 |W| × ||X|| 来指导量化比特分配？</li>
+<li>对于非 Transformer 架构（如 SSM、Mamba），Wanda 的准则是否仍然有效？</li>
+<li>通道级聚合（L2 范数）是否是激活值统计的最优形式？是否存在理论上更优的聚合函数？</li>
+<li>Wanda + 微调（少量训练）的组合能否在极高稀疏度（80%+）下匹敌 SparseGPT + 微调？</li>
+<li>能否利用 Wanda 的重要性分数来指导模型架构设计（如自动确定各层宽度）？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;sun2024wanda,<br>  title=&#123;A Simple and Effective Pruning Approach for Large Language Models&#125;,<br>  author=&#123;Sun, Mingjie and Liu, Zhuang and Bair, Anna and Kolter, J. Zico&#125;,<br>  booktitle=&#123;International Conference on Machine Learning (ICML)&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br><br>@inproceedings&#123;frantar2023sparsegpt,<br>  title=&#123;SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot&#125;,<br>  author=&#123;Frantar, Elias and Alistarh, Dan&#125;,<br>  booktitle=&#123;ICML&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@inproceedings&#123;lin2024awq,<br>  title=&#123;AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration&#125;,<br>  author=&#123;Lin, Ji and Tang, Jiaming and Tang, Haotian and Yang, Shang and Chen, Wei-Ming and Wang, Wei-Chen and Xiao, Guangxuan and Dang, Xingyu and Gan, Chuang and Han, Song&#125;,<br>  booktitle=&#123;MLSys&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br><br>@article&#123;hassibi1993optimal,<br>  title=&#123;Optimal Brain Surgeon and general network pruning&#125;,<br>  author=&#123;Hassibi, Babak and Stork, David G&#125;,<br>  journal=&#123;IEEE International Conference on Neural Networks&#125;,<br>  year=&#123;1993&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E5%89%AA%E6%9E%9D%E4%B8%8E%E7%A8%80%E7%96%8F%E5%8C%96/" class="category-chain-item">剪枝与稀疏化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/activation-aware/" class="print-no-link">#activation-aware</a>
+      
+        <a href="/tags/llm-compression/" class="print-no-link">#llm-compression</a>
+      
+        <a href="/tags/pruning/" class="print-no-link">#pruning</a>
+      
+        <a href="/tags/sparsegpt/" class="print-no-link">#sparsegpt</a>
+      
+        <a href="/tags/unstructured-pruning/" class="print-no-link">#unstructured-pruning</a>
+      
+        <a href="/tags/magnitude-pruning/" class="print-no-link">#magnitude-pruning</a>
+      
+        <a href="/tags/wanda/" class="print-no-link">#wanda</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>A Simple and Effective Pruning Approach for Large Language Models</div>
+      <div>https://w2ongq6.github.io/2023/06/20/inference/note/Wanda_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年6月20日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/06/28/inference/note/H2O_note/" title="H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/06/20/llm/note/Phi1_note/" title="Textbooks Are All You Need (Phi-1)">
+                        <span class="hidden-mobile">Textbooks Are All You Need (Phi-1)</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

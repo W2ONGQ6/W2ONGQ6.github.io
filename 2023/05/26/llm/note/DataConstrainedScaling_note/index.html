@@ -1,0 +1,1298 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Scaling Data-Constrained Language Models: 数据约束下的语言模型缩放核心信息 标题: Scaling Data-Constrained Language Models 标题翻译: 数据约束下的语言模型缩放 作者: Niklas Muennighoff, Alexander M. Rush, Boaz Barak 等 机构: Hugging Face &amp;#x2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scaling Data-Constrained Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/05/26/llm/note/DataConstrainedScaling_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Scaling Data-Constrained Language Models: 数据约束下的语言模型缩放核心信息 标题: Scaling Data-Constrained Language Models 标题翻译: 数据约束下的语言模型缩放 作者: Niklas Muennighoff, Alexander M. Rush, Boaz Barak 等 机构: Hugging Face &amp;#x2">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-05-25T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.115Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;data-efficiency">
+<meta property="article:tag" content="papers&#x2F;llm-training">
+<meta property="article:tag" content="papers&#x2F;scaling-laws">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Scaling Data-Constrained Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Scaling Data-Constrained Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-05-26 00:00" pubdate>
+          2023年5月26日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          67 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Scaling Data-Constrained Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Scaling-Data-Constrained-Language-Models-数据约束下的语言模型缩放"><a href="#Scaling-Data-Constrained-Language-Models-数据约束下的语言模型缩放" class="headerlink" title="Scaling Data-Constrained Language Models: 数据约束下的语言模型缩放"></a>Scaling Data-Constrained Language Models: 数据约束下的语言模型缩放</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Scaling Data-Constrained Language Models</li>
+<li>标题翻译: 数据约束下的语言模型缩放</li>
+<li>作者: Niklas Muennighoff, Alexander M. Rush, Boaz Barak 等</li>
+<li>机构: Hugging Face &#x2F; Harvard University &#x2F; Cohere</li>
+<li>发表时间: 2023年5月26日</li>
+<li>发表渠道: NeurIPS 2023 (Outstanding Paper Runner-up)</li>
+<li>arXiv: 2305.16264</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2305.16264">https://arxiv.org/abs/2305.16264</a></li>
+<li>论文类型: 实证研究 &#x2F; 缩放定律扩展</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>当前语言模型的规模定律表明，增加模型参数和训练数据量可以持续降低损失。然而，许多人担忧互联网上唯一文本数据的数量存在上限，这意味着通过扩大数据量来继续扩展模型可能最终会走到尽头。事实上，本文表明，当数据约束成为瓶颈时，简单地扩大模型规模——如当前缩放定律所建议的——不再能带来性能提升。我们研究了在固定数据总量下，语言模型在多轮重复训练（多epoch）中的行为。我们推导并实证验证了一个数据约束下的缩放定律：在给定数据总量下，存在一个最优的模型大小，超过该大小后收益递减。我们发现，在最多4个epoch的重复训练中，几乎没有性能损失。对于额外的epoch，我们观察到计算和数据的联合缩放定律，并确定了数据和计算量在重复使用时的相对价值。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-数据约束下的缩放定律新框架"><a href="#1-数据约束下的缩放定律新框架" class="headerlink" title="1. 数据约束下的缩放定律新框架"></a>1. 数据约束下的缩放定律新框架</h3><p><strong>核心思想</strong>: 将Chinchilla缩放定律从”数据无限制”扩展到了”数据有限”的现实场景，回答了一个迫在眉睫的问题：当互联网上的文本数据耗尽时，我们该怎么办？</p>
+<p><strong>关键结论</strong>: 在数据总量固定的前提下，应该训练更小的模型并在有限数据上进行更多轮次的重复——这与Chinchilla的”1:1等比增长”策略（适用于数据无限制场景）形成对比。</p>
+<p><strong>为什么重要</strong>: 随着训练数据接近”互联网文本总量”的物理上限（据估算，高质量英文文本约10-20T token），数据约束正从学术假设变为真实瓶颈。这篇论文为即将到来的”后数据时代”提供了务实的优化方案。</p>
+<h3 id="2-数据重复的精确价值量化"><a href="#2-数据重复的精确价值量化" class="headerlink" title="2. 数据重复的精确价值量化"></a>2. 数据重复的精确价值量化</h3><p><strong>核心思想</strong>: 通过400+次训练实验，精确量化了数据重复的边际价值，发现了”4 epoch的无损重复区”和”16 epoch后的饱和区”。</p>
+<p><strong>具体结果</strong>:</p>
+<ul>
+<li>0-4个epoch（数据重复0-3次）：几乎零性能损失</li>
+<li>4-16个epoch（重复3-15次）：收益递减，但仍有改善</li>
+<li>16+个epoch（重复15+次）：额外计算几乎不再带来性能提升</li>
+</ul>
+<p><strong>为什么重要</strong>: 这为”数据不够时怎么办”提供了精确的决策依据。4 epoch的”免费重复区”意味着在数据总量不变的情况下，可以有4倍的有效扩展空间而几乎不损失效率。</p>
+<h3 id="3-代码数据的”数据增强”效应"><a href="#3-代码数据的”数据增强”效应" class="headerlink" title="3. 代码数据的”数据增强”效应"></a>3. 代码数据的”数据增强”效应</h3><p><strong>核心思想</strong>: 论文发现将代码数据混合到自然语言训练数据中，可以等效地将有效token预算扩大约2倍——即加入代码后，等量自然语言数据上的模型表现与大2倍的数据量相当。</p>
+<p><strong>为什么重要</strong>: 这是一个低成本的数据扩展策略。代码数据通常比自然语言数据更容易获取（有大量开源代码仓库），混合代码可以让自然语言模型”从代码中学到推理能力”。</p>
+<h3 id="4-数据约束下的计算-数据-参数三重关系"><a href="#4-数据约束下的计算-数据-参数三重关系" class="headerlink" title="4. 数据约束下的计算-数据-参数三重关系"></a>4. 数据约束下的计算-数据-参数三重关系</h3><p><strong>核心思想</strong>: 论文建立了数据约束场景下的完整缩放模型，涵盖计算量C、模型参数N、数据量D、重复epoch数E之间的定量关系。</p>
+<p><strong>为什么重要</strong>: 这为数据受限场景提供了完整的最优化框架，可以在确定可用数据总量后，逆向求解最优的模型大小和训练计算量。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Muennighoff等人通过400+次训练实验，建立了数据约束下的语言模型缩放定律——当可用数据总量固定时，最优策略是训练更小的模型并进行有限次数的数据重复（4个epoch内几乎无损，16个epoch后饱和），并发现混合代码数据可将有效数据量放大约2倍，为即将到来的”后数据时代”提供了务实的优化路线图。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战与子问题分解"><a href="#核心挑战与子问题分解" class="headerlink" title="核心挑战与子问题分解"></a>核心挑战与子问题分解</h3><p>Chinchilla缩放定律假设可以在不重复数据的情况下无限扩展训练数据量。但物理现实是：</p>
+<ul>
+<li>互联网上的高质量文本总量是有限的（估计10-20T token）</li>
+<li>许多大模型已经接近或达到了这个上限</li>
+<li>当数据不再能线性增加时，目前的缩放定律不再适用</li>
+</ul>
+<p>核心问题：</p>
+<ol>
+<li>在可用数据总量固定的前提下，应该如何分配计算和参数？</li>
+<li>数据重复（多epoch训练）在什么程度上是有效的？</li>
+<li>数据重复的边际价值如何随重复次数衰减？</li>
+<li>能否通过改变数据组成（如加入代码）来变相扩展有效数据量？</li>
+</ol>
+<h3 id="子问题1：免费重复区的机制——为什么4个epoch内几乎无损？"><a href="#子问题1：免费重复区的机制——为什么4个epoch内几乎无损？" class="headerlink" title="子问题1：免费重复区的机制——为什么4个epoch内几乎无损？"></a>子问题1：免费重复区的机制——为什么4个epoch内几乎无损？</h3><p>实验发现重复数据的前4个epoch几乎不增加损失。这个”免费重复区”是论文最令人惊讶的发现。为什么前4个epoch是”免费”的？</p>
+<p>可能的机制（按可信度排序）：</p>
+<p><strong>机制A：学习率调度效应（最可信）</strong><br>第一个epoch中，模型在较高学习率下快速学习，未能充分利用每个样本中的信号。高学习率使参数更新步幅大，容易”跳过”局部最优。第二到第四个epoch给了模型”在已学习的知识基础上再精细化”的机会——学习率缓慢下降，参数在更精细的网格上搜索更优解。</p>
+<p>验证：如果固定学习率（不做cosine decay），免费重复区应该缩小或消失——因为这消除了”学习率降低带来的精细搜索”效应。</p>
+<p><strong>机制B：dropout和随机数据增强</strong><br>每个epoch中数据的shuffle顺序不同（提供了不同的上下文窗口），dropout mask也不同（随机丢弃不同的神经元）。这意味着每个epoch对模型来说是”略有不同”的数据视角——尽管底层文本相同，但输入形式和训练动态不同。这相当于一种隐式的数据增强。</p>
+<p><strong>机制C：过拟合是渐进的</strong><br>神经网络在训练的初始阶段泛化良好（处于”特征学习”阶段），过拟合是逐步发生的（进入”记忆”阶段）。前几个epoch中，模型仍在学习”通用模式”而非记忆特定样本。”记忆”（过拟合）需要更多的epoch才能显现。4个epoch对应的总梯度更新次数足以让模型”充分学习”数据中的通用模式，但不足以”记住”具体的样本。</p>
+<p>量化：在C4数据上训练的小模型（10M参数），过拟合的onset约在第8-12个epoch（训练损失持续下降但验证损失开始上升）。在数据量更大或模型更大时，过拟合onset更晚——因为参数&#x2F;数据比更低。</p>
+<h3 id="子问题2：饱和阈值的理论含义——为什么是16-epoch？"><a href="#子问题2：饱和阈值的理论含义——为什么是16-epoch？" class="headerlink" title="子问题2：饱和阈值的理论含义——为什么是16 epoch？"></a>子问题2：饱和阈值的理论含义——为什么是16 epoch？</h3><p>16个epoch后的饱和表明数据重复最多能将有效数据量放大约7-8倍。这个数字不是任意的——它可能由数据的”内在信息密度”决定。</p>
+<p>C4数据集（过滤后的Common Crawl）的信息密度：每10个token中约1-2个包含”对预测下一个token真正有用的新信息”。这意味着在1个epoch中，模型提取了约10-20%的有效信息。4个epoch &#x3D; 提取约40-60%，8个epoch &#x3D; 提取约60-80%，16个epoch &#x3D; 提取约80-95%——之后剩余的”新信息”几乎为零。</p>
+<p>如果这个解释成立，那么”更高质量的数据”应该有更高的”免费重复区”和”饱和阈值”——因为每epoch提取的有效信息更多，但总的信息量也更大（需要更多epoch来提取全部）。</p>
+<h3 id="子问题3：代码混合为什么能放大有效数据量？"><a href="#子问题3：代码混合为什么能放大有效数据量？" class="headerlink" title="子问题3：代码混合为什么能放大有效数据量？"></a>子问题3：代码混合为什么能放大有效数据量？</h3><p>代码数据放大有效数据量的机制分析：</p>
+<ol>
+<li><p><strong>逻辑推理迁移（最直接）</strong>：代码中的逻辑结构（条件判断if&#x2F;else、循环for&#x2F;while、函数抽象）迫使模型学习基本的推理模式——这些模式与自然语言中的推理有相同的底层结构（如因果推理、条件关系）。</p>
+</li>
+<li><p><strong>结构化知识迁移</strong>：代码中的变量命名（有意义的名称如”user_age”而非”x”）、文档字符串（函数的自然语言说明）、类型注解（int, str等类别信息）都在强化文本的理解——因为代码本身就是”形式化的自然语言”。</p>
+</li>
+<li><p><strong>语言共性学习</strong>：编程语言和自然语言共享某些深层的组合模式——递归结构（句子嵌套vs函数嵌套）、层级组织（段落vs模块）、指代消解（代词vs变量引用）。在代码上训练迫使模型学习这些通用模式。</p>
+</li>
+<li><p><strong>注意力跨度扩展</strong>：代码中的变量引用经常跨越很长的距离（函数开头的变量在函数末尾被使用），这迫使模型发展更长的依赖跟踪能力——对长文本自然语言理解有直接好处。</p>
+</li>
+</ol>
+<p>量化验证：50%代码混合比例约等效于2x自然语言数据。这暗示”代码训练的效率是自然语言训练的约2倍”——即每代码token提供的”有效学习信号”约是自然语言token的2倍。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="实验设计"><a href="#实验设计" class="headerlink" title="实验设计"></a>实验设计</h3><table>
+<thead>
+<tr>
+<th>实验维度</th>
+<th>范围</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型参数量</td>
+<td>10M - 9B</td>
+</tr>
+<tr>
+<td>数据量</td>
+<td>不同规模的C4（Colossal Clean Crawled Corpus）子集</td>
+</tr>
+<tr>
+<td>重复epoch</td>
+<td>1 - 1500</td>
+</tr>
+<tr>
+<td>总训练实验数</td>
+<td>400+</td>
+</tr>
+<tr>
+<td>是否包含代码</td>
+<td>有&#x2F;无对照实验</td>
+</tr>
+</tbody></table>
+<h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>描述</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>C4</td>
+<td>过滤后的Common Crawl</td>
+<td>主要训练数据（纯文本）</td>
+</tr>
+<tr>
+<td>Python代码</td>
+<td>开源Python代码</td>
+<td>代码混合实验</td>
+</tr>
+<tr>
+<td>The Stack</td>
+<td>从GitHub抓取的代码</td>
+<td>扩展代码混合实验</td>
+</tr>
+</tbody></table>
+<h3 id="评估方式"><a href="#评估方式" class="headerlink" title="评估方式"></a>评估方式</h3><ul>
+<li>预训练验证损失（主要指标）</li>
+<li>下游任务性能（GLUE、SuperGLUE等）</li>
+<li>困惑度</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制（Numbered-Steps-with-Input-Operation-Output）"><a href="#核心机制（Numbered-Steps-with-Input-Operation-Output）" class="headerlink" title="核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）"></a>核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）</h3><p><strong>步骤1: 大规模多epoch训练实验</strong></p>
+<p>输入: 不同的 (N, D_unique, E) 组合，其中N是模型参数，D_unique是唯一数据量，E是epoch数（D_total &#x3D; E × D_unique）</p>
+<p>操作:</p>
+<ul>
+<li>对于每种(N, D_unique)组合，训练E个epoch（从1到1500）</li>
+<li>对每个epoch检查点，记录验证损失</li>
+<li>分析损失如何随epoch增加而变化</li>
+<li>总实验数：约400+次训练运行</li>
+</ul>
+<p>输出: Loss vs Epoch曲线（每种N, D组合一条曲线），epoch vs 有效数据量映射表</p>
+<p><strong>步骤2: “免费重复区”的识别</strong></p>
+<p>输入: 所有Loss vs Epoch曲线</p>
+<p>操作:</p>
+<ul>
+<li>对每条曲线，计算前N个epoch的损失变化率 dL&#x2F;dE</li>
+<li>识别”损失几乎不增加”的epoch范围（dL&#x2F;dE ≈ 0, 即损失变化&lt;5%基线）</li>
+<li>确定免费重复区的上界：约4个epoch（数据重复3次）</li>
+<li>验证这个上界在不同N和D组合下的一致性</li>
+</ul>
+<p>输出: 免费重复区 &#x3D; 约4个epoch（数据重复3次）</p>
+<p><strong>步骤3: 计算等价值分析</strong></p>
+<p>输入: 重复训练的实验损失 和 不重复训练的对照损失</p>
+<p>操作:</p>
+<ul>
+<li>建立映射关系：在D_unique数据上训练E个epoch的损失 &#x3D; 在D_equivalent不重复数据上训练1个epoch的损失</li>
+<li>对每个D_unique，计算g(E) &#x3D; D_equivalent &#x2F; D_unique（等效数据放大因子）</li>
+<li>拟合g(E)的函数形式：g(E) &#x3D; E^alpha（早期alpha≈1, 后期alpha→0）</li>
+</ul>
+<p>输出: 数据重复的价值衰减曲线和等效放大因子表</p>
+<p><strong>步骤4: 数据约束下的缩放定律推导</strong></p>
+<p>输入: 所有实验数据 Loss(N, D_unique, E)</p>
+<p>操作:</p>
+<ul>
+<li>拟合联合缩放模型: L(N, D_U, E) &#x3D; E + A&#x2F;N^alpha + B&#x2F;(D_U * g(E))^beta</li>
+<li>推导在D_unique固定下的最优N: ∂L&#x2F;∂N &#x3D; 0 → N_opt ∝ (D_unique * g(E))^(beta&#x2F;alpha)</li>
+<li>对比”数据无限制”vs”数据受限”场景下的最优策略差异</li>
+</ul>
+<p>输出: 数据约束缩放定律公式和最优参数推荐</p>
+<p><strong>步骤5: 代码混合实验</strong></p>
+<p>输入: 自然语言数据 + 代码数据的不同混合比例</p>
+<p>操作:</p>
+<ul>
+<li>固定总token数，改变代码&#x2F;文本比例(0%, 25%, 50%, 75%, 100%)</li>
+<li>训练模型并在纯自然语言评估集上测试</li>
+<li>测量代码混合对自然语言性能的影响（寻找”正向迁移”效应）</li>
+</ul>
+<p>输出: 最优代码混合比例 ≈ 50%（等效数据放大 ≈ 2×）</p>
+<h3 id="关键公式"><a href="#关键公式" class="headerlink" title="关键公式"></a>关键公式</h3><p>数据约束下的缩放定律扩展形式:</p>
+<p>$$L(N, D_U, E_D) &#x3D; E + \frac{A}{N^\alpha} + \frac{B}{(D_U)^{\beta}} \cdot f(E_D)$$</p>
+<p>其中:</p>
+<ul>
+<li>D_U是唯一数据量（unique data）</li>
+<li>E_D是数据重复的epoch数</li>
+<li>f(E_D)是重复价值的衰减函数，满足 f(1) &#x3D; 1, f(4) ≈ 1, f(16) → 饱和</li>
+</ul>
+<p>实际使用时，D_effective &#x3D; D_U × g(E_D)，其中g是有效数据放大因子。</p>
+<h3 id="数据重复价值的衰减模式"><a href="#数据重复价值的衰减模式" class="headerlink" title="数据重复价值的衰减模式"></a>数据重复价值的衰减模式</h3><table>
+<thead>
+<tr>
+<th>Epoch数</th>
+<th>等效唯一数据放大因子</th>
+<th>边际价值</th>
+<th>推荐等级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>1.0×</td>
+<td>基准</td>
+<td>必须</td>
+</tr>
+<tr>
+<td>2</td>
+<td>~2.0×</td>
+<td>近乎完全等效</td>
+<td>强烈推荐</td>
+</tr>
+<tr>
+<td>4</td>
+<td>~3.8×</td>
+<td>轻微衰减</td>
+<td>推荐</td>
+</tr>
+<tr>
+<td>8</td>
+<td>~5.5×</td>
+<td>明显衰减</td>
+<td>根据预算决定</td>
+</tr>
+<tr>
+<td>16</td>
+<td>~6.5×</td>
+<td>接近饱和</td>
+<td>仅数据极度稀缺</td>
+</tr>
+<tr>
+<td>32+</td>
+<td>~7.0×</td>
+<td>基本饱和</td>
+<td>不推荐</td>
+</tr>
+</tbody></table>
+<p><strong>关键发现</strong>: 超过16个epoch后，数据重复的价值趋近于零——继续增加重复不会带来更多等效数据量。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="数据重复的epoch价值表"><a href="#数据重复的epoch价值表" class="headerlink" title="数据重复的epoch价值表"></a>数据重复的epoch价值表</h3><table>
+<thead>
+<tr>
+<th>Epoch数</th>
+<th>验证损失变化</th>
+<th>等效数据放大</th>
+<th>推荐行动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 → 2</td>
+<td>几乎无变化</td>
+<td>~1.95×</td>
+<td>强烈推荐</td>
+</tr>
+<tr>
+<td>2 → 4</td>
+<td>极轻微增加</td>
+<td>~3.8×</td>
+<td>推荐重复</td>
+</tr>
+<tr>
+<td>4 → 8</td>
+<td>小幅增加</td>
+<td>~5.5×</td>
+<td>根据计算预算决定</td>
+</tr>
+<tr>
+<td>8 → 16</td>
+<td>明显增加</td>
+<td>~6.5×</td>
+<td>仅推荐数据极度稀缺时</td>
+</tr>
+<tr>
+<td>16 → 32</td>
+<td>大幅增加</td>
+<td>~6.8×</td>
+<td>不推荐</td>
+</tr>
+<tr>
+<td>32+</td>
+<td>趋近于零</td>
+<td>~7.0×</td>
+<td>几乎无效</td>
+</tr>
+</tbody></table>
+<h3 id="不同重复策略下的最优模型大小"><a href="#不同重复策略下的最优模型大小" class="headerlink" title="不同重复策略下的最优模型大小"></a>不同重复策略下的最优模型大小</h3><table>
+<thead>
+<tr>
+<th>数据量(唯一)</th>
+<th>1 epoch的最优N</th>
+<th>4 epoch的最优N</th>
+<th>16 epoch的最优N</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10B token</td>
+<td>~0.5B</td>
+<td>~0.3B</td>
+<td>~0.2B</td>
+</tr>
+<tr>
+<td>50B token</td>
+<td>~1B</td>
+<td>~0.7B</td>
+<td>~0.5B</td>
+</tr>
+<tr>
+<td>200B token</td>
+<td>~4B</td>
+<td>~2.5B</td>
+<td>~1.5B</td>
+</tr>
+</tbody></table>
+<p><strong>核心洞察</strong>: 在数据固定时，更多的epoch意味着应该选择更小的模型。这与”数据无限制”时的策略相反。</p>
+<h3 id="代码混合的等效数据放大"><a href="#代码混合的等效数据放大" class="headerlink" title="代码混合的等效数据放大"></a>代码混合的等效数据放大</h3><table>
+<thead>
+<tr>
+<th>混合比例</th>
+<th>等效数据放大</th>
+<th>纯文本任务表现变化</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0%代码 (纯文本)</td>
+<td>1.0×</td>
+<td>基准</td>
+<td>纯文本任务</td>
+</tr>
+<tr>
+<td>25%代码</td>
+<td>~1.5×</td>
+<td>略有提升</td>
+<td>文本+代码混合任务</td>
+</tr>
+<tr>
+<td>50%代码</td>
+<td>~2.0×</td>
+<td>显著提升</td>
+<td>最优通用比例</td>
+</tr>
+<tr>
+<td>75%代码</td>
+<td>~1.8×</td>
+<td>仍然提升（但边际递减）</td>
+<td>代码偏重场景</td>
+</tr>
+<tr>
+<td>100%代码</td>
+<td>~1.2×</td>
+<td>文本能力大幅退化</td>
+<td>仅代码场景</td>
+</tr>
+</tbody></table>
+<p><strong>核心发现</strong>: 约50%的代码混合比例达到等效数据放大的峰值（约2×）。超过后收益递减，可能因为自然语言数据的比例不够（文本能力退化开始超过代码能力的正向迁移）。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="“免费重复区”的完整机制解释"><a href="#“免费重复区”的完整机制解释" class="headerlink" title="“免费重复区”的完整机制解释"></a>“免费重复区”的完整机制解释</h3><p>为什么4个epoch内的数据重复几乎没有损失？三层原因：</p>
+<ol>
+<li><p><strong>学习率调度</strong>: 在第一个epoch中，模型在较高学习率下快速学习，未能充分利用每个样本的信号。第二个epoch给了模型”在已学习的知识基础上再精细化”的机会。</p>
+</li>
+<li><p><strong>dropout和数据随机性</strong>: 每个epoch中数据的顺序和dropout mask都不同，导致每个epoch对模型来说实际上是”略有不同”的数据。</p>
+</li>
+<li><p><strong>过拟合需要时间</strong>: 神经网络在初始阶段泛化良好，过拟合是逐步发生的。前几个epoch中，模型仍在学习”通用模式”而非记忆特定样本。</p>
+</li>
+</ol>
+<h3 id="饱和阈值-16-epoch-的含义"><a href="#饱和阈值-16-epoch-的含义" class="headerlink" title="饱和阈值(16 epoch)的含义"></a>饱和阈值(16 epoch)的含义</h3><p>16个epoch后的饱和表明，数据重复最多能将有效数据量放大约7-8倍。这意味着：</p>
+<ul>
+<li>即使数据总量有限，通过重复可以在”计算允许”的前提下获得相当于7-8倍数据量的提升</li>
+<li>但存在硬上限——无限的epoch不能替代无限的数据</li>
+<li>这个7-8x因子是”数据约束下的最大扩展空间”</li>
+</ul>
+<h3 id="代码混合效应的深层机制"><a href="#代码混合效应的深层机制" class="headerlink" title="代码混合效应的深层机制"></a>代码混合效应的深层机制</h3><p>代码数据能放大有效数据量的机制可能是多重的：</p>
+<ol>
+<li><strong>逻辑推理迁移</strong>: 代码中的逻辑结构（条件判断、循环、函数抽象）迫使模型学习基本的推理模式</li>
+<li><strong>结构化知识</strong>: 代码中的结构（变量命名、文档字符串、类型注解）强化了文本的理解</li>
+<li><strong>语言共性</strong>: 编程语言和自然语言共享某些深层的组合模式</li>
+</ol>
+<h3 id="WHY分析：为什么最优模型更小？"><a href="#WHY分析：为什么最优模型更小？" class="headerlink" title="WHY分析：为什么最优模型更小？"></a>WHY分析：为什么最优模型更小？</h3><p>在数据固定时，最优模型更小的深层原因：</p>
+<ul>
+<li>大模型有更多参数需要更新，但数据中的信息量是固定的</li>
+<li>当每条数据被重复更多次时，大模型的过拟合风险比小模型更大（因为大模型可以”记住”更多样本）</li>
+<li>小模型的参数更少，”被迫”学习通用模式而非记忆——这恰好是我们想要的</li>
+</ul>
+<p>数学上：过拟合风险 ∝ N &#x2F; (D_unique * g(E))。当D_unique固定时，增加E只能通过g(E)补偿，而g(E)是凹函数（边际递减）。增加N直接增加过拟合风险。因此最优N应该随E的增加而减小。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-Chinchilla缩放定律"><a href="#vs-Chinchilla缩放定律" class="headerlink" title="vs Chinchilla缩放定律"></a>vs Chinchilla缩放定律</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Chinchilla</th>
+<th>Data-Constrained (本文)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据假设</td>
+<td>无限不重复数据</td>
+<td>有限数据，可重复</td>
+</tr>
+<tr>
+<td>核心策略</td>
+<td>N与D等比增长</td>
+<td>固定D下选最优N</td>
+</tr>
+<tr>
+<td>epoch建议</td>
+<td>1 epoch（不重复）</td>
+<td>4 epoch内可免费重复</td>
+</tr>
+<tr>
+<td>数据放大</td>
+<td>只能通过新数据</td>
+<td>可通过重复+代码混合</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Phi-1数据质量路线"><a href="#vs-Phi-1数据质量路线" class="headerlink" title="vs Phi-1数据质量路线"></a>vs Phi-1数据质量路线</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Data-Constrained (本文)</th>
+<th>Phi-1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心思路</td>
+<td>数据不够时，合理重复</td>
+<td>数据不够时，提高质量</td>
+</tr>
+<tr>
+<td>策略取向</td>
+<td>在现有数据上”压榨”</td>
+<td>合成更好的数据</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>已有大量一般质量数据</td>
+<td>愿意投入资源合成高质量数据</td>
+</tr>
+<tr>
+<td>可结合性</td>
+<td>两者可以叠加——高质量数据+合理重复</td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>仅研究了文本预训练</strong> — 所有实验在文本数据上完成，未涉及多模态、代码为主的模型等场景。</p>
+</li>
+<li><p><strong>下游任务性能未充分验证</strong> — 研究主要基于验证损失，下游任务（如数学推理、对话）的表现与损失之间的关系可能更复杂。</p>
+</li>
+<li><p><strong>重复策略与数据质量的交互未研究</strong> — 高质量数据和低质量数据的重复价值可能不同——高质量数据可能更”耐重复”。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>“先重复后扩展”的策略</strong> — 在数据总量有限时，先利用”免费重复区”（4 epoch），再用实际需求决定是否收集更多数据。</p>
+<p>如何应用：在规划训练时，将预算分为”唯一数据预算”和”重复预算”。对每个数据源评估其”耐重复性”。在重复超过4 epoch后逐步收敛。</p>
+</li>
+<li><p><strong>代码作为数据增强</strong> — 在训练自然语言模型时混合代码数据，可以在不增加自然语言数据的前提下等效放大有效数据量约2倍。</p>
+<p>如何应用：在收集自然语言数据困难时，混合开源代码作为替代。实验不同的代码&#x2F;文本比例找到最优混合。在评估时仅看自然语言任务，确保提升是真实的”数据放大”而非代码任务上的进步。</p>
+</li>
+<li><p><strong>在数据约束下缩小模型</strong> — 当数据总量固定时，不要盲目扩大模型——更大的模型反而会过拟合更快。计算出针对你的数据量的最优N。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>后数据时代的现实主义</strong>: 这篇论文直面了一个令人不安的真相——互联网文本是有限的。它为”数据耗尽后怎么办”提供了第一个系统性答案。</p>
+</li>
+<li><p><strong>数据质量的更高维度</strong>: 本文和Phi-1从两个互补的方向回答了同一问题——数据不够时：可以在现有数据上多重复（本文），也可以合成更好的新数据（Phi-1）。两者结合可能产生更大的效果。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><strong>小数据集场景</strong>: 在领域特定应用中（如医疗、法律），数据集本身就有限，数据重复是必然选择</li>
+<li><strong>开源模型训练</strong>: 开源团队通常数据获取能力有限，4 epoch策略可以最大化已有数据价值</li>
+<li><strong>多模态预训练</strong>: 图像-文本对数据比纯文本更稀缺，需要更依赖数据重复策略</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>验证损失的重复价值曲线是否完全映射到下游任务？</li>
+<li>随着上下文窗口增长（128K、1M token），数据重复的折旧速率是否改变？</li>
+<li>Phi-1式的教科书级数据是否可以承受更多epoch的重复而不损失效益？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Muennighoff, N., et al. (2023). Scaling Data-Constrained Language Models. NeurIPS 2023.</li>
+<li>Hoffmann, J., et al. (2022). Training Compute-Optimal Large Language Models. NeurIPS 2022.</li>
+<li>Gunasekar, S., et al. (2023). Textbooks Are All You Need (Phi-1). arXiv:2306.11644.</li>
+<li>Kaplan, J., et al. (2020). Scaling Laws for Neural Language Models. arXiv:2001.08361.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/" class="category-chain-item">规模定律</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-scaling-laws/" class="print-no-link">#papers/scaling-laws</a>
+      
+        <a href="/tags/papers-llm-training/" class="print-no-link">#papers/llm-training</a>
+      
+        <a href="/tags/papers-data-efficiency/" class="print-no-link">#papers/data-efficiency</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Scaling Data-Constrained Language Models</div>
+      <div>https://w2ongq6.github.io/2023/05/26/llm/note/DataConstrainedScaling_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年5月26日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/05/29/llm/note/DPO_note/" title="Direct Preference Optimization: Your Language Model is Secretly a Reward Model">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Direct Preference Optimization: Your Language Model is Secretly a Reward Model</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/05/25/inference/note/FlexGen_note/" title="FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU">
+                        <span class="hidden-mobile">FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

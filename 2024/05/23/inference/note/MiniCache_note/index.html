@@ -1,0 +1,1580 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="MiniCache: 深度维度的大语言模型KV缓存压缩核心信息 标题: MiniCache: KV Cache Compression in Depth Dimension for Large Language Models 标题翻译: MiniCache：深度维度的大语言模型KV缓存压缩 作者: Akide Liu, Jing Liu, Zizheng Pan, Yefei He, Gholam">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MiniCache: KV Cache Compression in Depth Dimension for Large Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/05/23/inference/note/MiniCache_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="MiniCache: 深度维度的大语言模型KV缓存压缩核心信息 标题: MiniCache: KV Cache Compression in Depth Dimension for Large Language Models 标题翻译: MiniCache：深度维度的大语言模型KV缓存压缩 作者: Akide Liu, Jing Liu, Zizheng Pan, Yefei He, Gholam">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-05-22T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.945Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;model-compression">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>MiniCache: KV Cache Compression in Depth Dimension for Large Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="MiniCache: KV Cache Compression in Depth Dimension for Large Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-05-23 00:00" pubdate>
+          2024年5月23日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          112 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">MiniCache: KV Cache Compression in Depth Dimension for Large Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="MiniCache-深度维度的大语言模型KV缓存压缩"><a href="#MiniCache-深度维度的大语言模型KV缓存压缩" class="headerlink" title="MiniCache: 深度维度的大语言模型KV缓存压缩"></a>MiniCache: 深度维度的大语言模型KV缓存压缩</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: MiniCache: KV Cache Compression in Depth Dimension for Large Language Models</li>
+<li>标题翻译: MiniCache：深度维度的大语言模型KV缓存压缩</li>
+<li>作者: Akide Liu, Jing Liu, Zizheng Pan, Yefei He, Gholamreza Haffari, Bohan Zhuang</li>
+<li>机构: Monash University, ZIP Lab</li>
+<li>发表时间: 2024年5月23日</li>
+<li>发表渠道: arXiv预印本（NeurIPS 2024审稿中）</li>
+<li>arXiv: 2405.14366</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.14366">https://arxiv.org/abs/2405.14366</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/AkideLiu/MiniCache">https://github.com/AkideLiu/MiniCache</a></li>
+<li>论文类型: 大语言模型推理优化与KV缓存深度维压缩</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大型语言模型（LLM）的推理过程受限于KV缓存的高内存占用。现有研究主要通过在序列长度维度上减少缓存的token数量来压缩KV缓存。然而，本文观察到LLM相邻层之间的KV缓存状态存在高度相似性，这为在深度维度上进行压缩提供了机会。基于这一观察，我们提出MiniCache——一种新颖的KV缓存压缩方法，通过合并相邻层之间高度相似的KV状态来压缩深度维度。具体而言，MiniCache将每个KV状态解耦为幅度和方向分量，利用方向分量的相似性进行跨层合并，同时保留幅度分量以保持原始表示的强度。此外，我们提出一种token保留策略，在合并时保留高度发散的KV状态对。MiniCache与现有的序列维度压缩和量化方法完全正交，可与其组合以实现更强的压缩。实验表明，MiniCache在不需要微调的情况下，将KV缓存的内存占用减少41%，同时在语言建模和长上下文基准测试中保持与全量缓存基线相当的性能。与其他方法（如4比特量化）结合后，压缩比可进一步提升至5倍。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-深度维度KV缓存压缩（全新的压缩维度）"><a href="#1-深度维度KV缓存压缩（全新的压缩维度）" class="headerlink" title="1. 深度维度KV缓存压缩（全新的压缩维度）"></a>1. 深度维度KV缓存压缩（全新的压缩维度）</h3><p><strong>核心思想</strong>: 此前所有KV缓存压缩工作都沿序列长度维度（减少缓存的token数量）或精度维度（降低每个token的存储精度）进行。MiniCache开辟了第三个维度——深度维度（层数维度）。它观察到一个关键现象：深层Transformer的相邻层之间的KV状态向量具有极高的余弦相似度（&gt;0.9），意味着相邻层在存储高度冗余的信息。</p>
+<p><strong>为什么重要</strong>: 这是一个真正的”范式扩展”——在现有压缩维度（序列、精度）之外，开辟了一个完全正交的新维度。深度维度的KV压缩与序列维度压缩（如H2O）和精度压缩（如KIVI）完全独立，可以相乘地叠加。这意味着MiniCache不是替代现有方法，而是可以在任何现有方法的基础上进一步压缩。此外，这种深度维度的冗余可能揭示了Transformer架构设计本身的一个可优化方向。</p>
+<h3 id="2-幅度-方向解耦（Magnitude-Direction-Decoupling）"><a href="#2-幅度-方向解耦（Magnitude-Direction-Decoupling）" class="headerlink" title="2. 幅度-方向解耦（Magnitude-Direction Decoupling）"></a>2. 幅度-方向解耦（Magnitude-Direction Decoupling）</h3><p><strong>核心机制</strong>: 在合并相邻层的KV状态之前，将每个向量分解为：</p>
+<p>$$\mathbf{v} &#x3D; |\mathbf{v}| \cdot \frac{\mathbf{v}}{|\mathbf{v}|} &#x3D; m \cdot \mathbf{u}$$</p>
+<p>其中 $m &#x3D; |\mathbf{v}|$ 是幅度（magnitude），$\mathbf{u} &#x3D; \mathbf{v} &#x2F; |\mathbf{v}|$ 是方向（direction，单位向量）。</p>
+<p>合并时仅对方向分量进行插值&#x2F;平均（因为相邻层的方向高度相似），而保留各自的幅度不变：</p>
+<p>$$\mathbf{v}<em>{\text{merged}} &#x3D; m</em>{\text{layer }l} \cdot \text{interp}(\mathbf{u}<em>l, \mathbf{u}</em>{l+1})$$</p>
+<p><strong>为什么重要</strong>: 这个设计体现了对向量表示语义的深入理解。在Transformer中，向量的幅度$m$通常编码了”置信度”或”重要性”信息（一个强特征应该具有大激活值），而方向$\mathbf{u}$编码了”身份”或”语义”信息。直接平均两个向量（$\frac{\mathbf{v}<em>l + \mathbf{v}</em>{l+1}}{2}$）会破坏幅度信息（例如一个强信号和一个弱信号平均后就变成两个中等信号）。幅度-方向解耦后在方向上进行插值，同时保留独立的幅度，更忠实地保持了原始表示的信息。</p>
+<h3 id="3-基于相似度的自适应合并策略"><a href="#3-基于相似度的自适应合并策略" class="headerlink" title="3. 基于相似度的自适应合并策略"></a>3. 基于相似度的自适应合并策略</h3><p><strong>核心扩展</strong>: MiniCache不会不加区别地合并所有相邻层。它引入了token级别的合并判断：</p>
+<ol>
+<li><strong>层级层面</strong>: 仅在深层区域（浅层的KV状态往往更独特，深层更冗余）</li>
+<li><strong>Token层面</strong>: 对于某些高度发散的KV状态对（余弦相似度低于阈值），选择保留两个独立的副本而非合并</li>
+<li><strong>自适应阈值</strong>: 基于统计异常检测自动设置合并-保留的截止点</li>
+</ol>
+<p><strong>为什么重要</strong>: 不是所有相邻层对都适合合并。浅层通常编码更基础和独特的信息（如语法模式），深层编码更抽象和相似的信息（如语义理解）。同样，某些token在特定层对的表示可能高度专业化，合并它们会丢失关键信息。自适应策略在压缩比和质量之间实现了更智能的权衡——愿意保留一些token的高质量副本，以换取在大多数字段上安全地合并。</p>
+<h3 id="4-与所有现有压缩方法的正交互补"><a href="#4-与所有现有压缩方法的正交互补" class="headerlink" title="4. 与所有现有压缩方法的正交互补"></a>4. 与所有现有压缩方法的正交互补</h3><p><strong>系统价值</strong>: MiniCache明确展示了其与其他方法的组合效果：</p>
+<ul>
+<li>单独MiniCache: 41%内存减少（~1.7x压缩）</li>
+<li>MiniCache + 4-bit量化: ~5x压缩</li>
+<li>MiniCache + H2O + 量化: 潜在的~10x+总压缩</li>
+</ul>
+<p><strong>为什么重要</strong>: 在KV缓存管理中，多个正交的压缩维度可以相乘组合，产生远超单一方法的总体压缩比。MiniCache的41%深度压缩与4倍精度压缩组合后产生5倍总压缩，证明了这种组合策略的威力。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>MiniCache开辟了KV缓存压缩的第三个维度——深度维度，通过发现相邻层层间KV状态的极高余弦相似度（&gt;0.9），利用幅度-方向解耦和自适应合并策略，在41%内存减少下保持全量缓存相当的性能，与序列维度压缩和量化方法正交互补。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>KV缓存大小的公式为：</p>
+<p>$$M_{\text{KV}} &#x3D; 2 \times L \times H \times d \times N \times \text{bytes_per_element}$$</p>
+<p>其中$L$是层数。现有工作全部集中在减少$N$（序列维度，如H2O、StreamingLLM）或减少$\text{bytes_per_element}$（精度维度，如KIVI、KVQuant）。但$L$——层数——是第二个乘因子，同样支配着总内存。</p>
+<p>问题：能否在不损害模型质量的情况下减少$L$的有效值？即减少需要存储KV缓存的”有效层数”？</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>序列维度压缩（H2O、StreamingLLM、SnapKV）</strong>:</p>
+<ul>
+<li>减少$N$但$L$不变</li>
+<li>有上限（最小需要注意力汇+足够上下文窗口）</li>
+<li>信息永久丢失</li>
+</ul>
+</li>
+<li><p><strong>精度压缩（KIVI、KVQuant）</strong>:</p>
+<ul>
+<li>减少$\text{bytes_per_element}$但$L$和$N$不变</li>
+<li>有精度下界（通常2-4比特）</li>
+<li>可能引入量化噪声</li>
+</ul>
+</li>
+<li><p><strong>维度瓶颈</strong>:</p>
+<ul>
+<li>序列维度: 无法无限减少（最少需要某些token）</li>
+<li>精度维度: 无法无限降低（比特太低质量崩溃）</li>
+<li>需要第三维度来突破串行优化的上限</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>层间冗余</strong>: 深层Transformer相邻层之间的KV缓存状态存在极高的余弦相似度。这意味着相邻层在KV缓存中存储了高度冗余的信息，为深度维度压缩提供了理论基础。</p>
+</blockquote>
+<h3 id="实证证据"><a href="#实证证据" class="headerlink" title="实证证据"></a>实证证据</h3><p>论文对LLaMA-2-7B的KV缓存进行了层间相似度分析：</p>
+<ul>
+<li><strong>浅层（层0-8）</strong>: 余弦相似度$0.6-0.8$，仍有显著差异</li>
+<li><strong>中层（层9-20）</strong>: 余弦相似度$0.8-0.9$，开始高度相似</li>
+<li><strong>深层（层21-31）</strong>: 余弦相似度$&gt;0.9$，极端冗余</li>
+</ul>
+<p>注意力分数分布也随深度趋于稳定——浅层的注意力模式多样，深层的注意力模式趋于一致。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><ol>
+<li><p><strong>语言建模困惑度</strong>:</p>
+<ul>
+<li>数据集: WikiText-2, C4</li>
+<li>序列长度: 2K, 4K, 8K</li>
+<li>评估指标: ppl</li>
+</ul>
+</li>
+<li><p><strong>零样本基准测试</strong>:</p>
+<ul>
+<li>MMLU, HellaSwag, ARC, PIQA, Winogrande</li>
+<li>评估指标: 准确率</li>
+</ul>
+</li>
+<li><p><strong>长上下文基准测试</strong>:</p>
+<ul>
+<li>LongBench</li>
+<li>评估指标: 准确率</li>
+</ul>
+</li>
+<li><p><strong>实际服务性能</strong>:</p>
+<ul>
+<li>ShareGPT工作负载</li>
+<li>评估指标: tokens&#x2F;s, 最大batch size, 内存使用</li>
+</ul>
+</li>
+</ol>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><ul>
+<li>LLaMA-2 (7B, 13B)</li>
+<li>LLaMA (7B, 13B)</li>
+<li>Mistral (7B)</li>
+</ul>
+<h3 id="硬件和基线"><a href="#硬件和基线" class="headerlink" title="硬件和基线"></a>硬件和基线</h3><ul>
+<li>GPU: NVIDIA A100 (80GB)</li>
+<li>基线: 全量FP16缓存, 4-bit均匀量化, 滑动窗口</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="层间KV相似度的量化分析"><a href="#层间KV相似度的量化分析" class="headerlink" title="层间KV相似度的量化分析"></a>层间KV相似度的量化分析</h4><p>MiniCache首先对目标模型的KV缓存进行系统性的层间相似度分析：</p>
+<p>对于模型中的每一对相邻层$(l, l+1)$：</p>
+<ol>
+<li>计算层间余弦相似度：</li>
+</ol>
+<p>$$\text{sim}(K_l, K_{l+1}) &#x3D; \frac{1}{HN} \sum_{h&#x3D;1}^{H} \sum_{t&#x3D;1}^{N} \cos(K_{l,h,t}, K_{l+1,h,t})$$</p>
+<p>其中$K_{l,h,t} \in \mathbb{R}^d$是层$l$、头$h$、token $t$的Key向量。</p>
+<ol start="2">
+<li><p>绘制相似度热图，识别适合合并的高相似度层区域。</p>
+</li>
+<li><p>分析$K$和$V$的相似度分布，发现它们具有不同的模式（Value的相似度通常略低于Key）。</p>
+</li>
+</ol>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 幅度-方向分解</strong></p>
+<p>对于每个需要合并的KV向量$\mathbf{v}_{l,h,t}$（层$l$、头$h$、token $t$）：</p>
+<p>$$m_{l,h,t} &#x3D; |\mathbf{v}_{l,h,t}|_2$$</p>
+<p>$$\mathbf{u}<em>{l,h,t} &#x3D; \frac{\mathbf{v}</em>{l,h,t}}{m_{l,h,t}}$$</p>
+<p>幅度$m$和方向单位向量$\mathbf{u}$分别存储。</p>
+<p><strong>步骤2: 合并决策</strong></p>
+<p>对于相邻层对$(l, l+1)$，判断是否合并其KV缓存：</p>
+<p><strong>层级决策</strong>: 根据预分析的层间相似度模式：</p>
+<ul>
+<li>浅层（相似度&lt;0.8）：不合并（保留独立KV）</li>
+<li>深层（相似度&gt;0.9）：合并（共享KV）</li>
+<li>中层（相似度0.8-0.9）：根据token级别进一步判断</li>
+</ul>
+<p><strong>Token级决策</strong>: 对于位于可合并区域的层对，进一步判断每个token的KV对是否应合并：</p>
+<p>$$\text{merge_flag}<em>{h,t} &#x3D; \mathbb{1}[\cos(\mathbf{u}</em>{l,h,t}, \mathbf{u}<em>{l+1,h,t}) &gt; \tau</em>{\text{merge}}]$$</p>
+<p>其中$\tau_{\text{merge}}$是自适应阈值（如0.95）。</p>
+<p><strong>步骤3: 方向合并（对于标记为合并的token）</strong></p>
+<p>对于应合并的token，创建合并后的方向：</p>
+<p>$$\mathbf{u}<em>{\text{shared}, h,t} &#x3D; \text{normalize}\left(\frac{\mathbf{u}</em>{l,h,t} + \mathbf{u}_{l+1,h,t}}{2}\right)$$</p>
+<p>这个共享方向服务于两个层，但每层保留独立的幅度：</p>
+<ul>
+<li>层$l$使用: $m_{l,h,t} \cdot \mathbf{u}_{\text{shared}, h,t}$</li>
+<li>层$l+1$使用: $m_{l+1,h,t} \cdot \mathbf{u}_{\text{shared}, h,t}$</li>
+</ul>
+<p><strong>存储</strong>: 方向$\mathbf{u}<em>{\text{shared}}$存储一次（两层的FP16方向存储合并为一个），幅度$(m_l, m</em>{l+1})$分别存储。</p>
+<p><strong>步骤4: Token保留（对于标记为不合并的token）</strong></p>
+<p>对于高度发散的token对（$\cos &lt; \tau_{\text{merge}}$），保留两个独立的方向和幅度：</p>
+<ul>
+<li>层$l$: $\mathbf{u}<em>{l,h,t}, m</em>{l,h,t}$（独立存储）</li>
+<li>层$l+1$: $\mathbf{u}<em>{l+1,h,t}, m</em>{l+1,h,t}$（独立存储）</li>
+</ul>
+<p>保留的额外存储开销通过大多数token的合并节省来抵消。</p>
+<p><strong>步骤5: 内存账本</strong></p>
+<p>原始两层KV存储:<br>$$M_{\text{original}} &#x3D; 2 \times (H \times N \times d) \times 2 \text{ bytes}$$</p>
+<p>合并后存储:<br>$$M_{\text{compressed}} &#x3D; (1-p_{\text{retain}}) \times \left[H \times N \times (d + 2)\right] \times 2 + p_{\text{retain}} \times \left[2 \times H \times N \times (d + 2)\right] \times 2$$</p>
+<p>其中$p_{\text{retain}}$是保留比例（不变合并的token），$d$是方向维度，$2$是幅度标量。</p>
+<p>压缩比:<br>$$C &#x3D; \frac{M_{\text{original}}}{M_{\text{compressed}}} &#x3D; \frac{2 \times d}{(1-p_{\text{retain}}) \times (d+2) + p_{\text{retain}} \times 2(d+2)}$$</p>
+<p>对于典型的$d&#x3D;128$, $p_{\text{retain}}&#x3D;0.1$:<br>$$C \approx \frac{256}{0.9 \times 130 + 0.1 \times 260} \approx 1.83\text{x}$$</p>
+<p>即对于这个层对，KV缓存节省约45%。</p>
+<p><strong>步骤6: 全模型pipeline集成</strong></p>
+<ol>
+<li><p><strong>分析阶段</strong>（离线，一次）:</p>
+<ul>
+<li>在代表性数据上运行模型</li>
+<li>收集层间KV相似度矩阵</li>
+<li>确定每层的合并策略和阈值</li>
+</ul>
+</li>
+<li><p><strong>推理阶段</strong>（在线）:</p>
+<ul>
+<li>正常计算所有层的KV</li>
+<li>对于合并层对，实时合并方向并分别存储幅度</li>
+<li>对于注意力计算，从共享方向+层特定幅度重建KV</li>
+<li>通过FlashAttention-2或其他高效实现进行计算</li>
+</ul>
+</li>
+</ol>
+<h4 id="与量化的组合"><a href="#与量化的组合" class="headerlink" title="与量化的组合"></a>与量化的组合</h4><p>MiniCache + 4-bit量化：</p>
+<ol>
+<li>先应用MiniCache的深度维度压缩（减少总KV向量数）</li>
+<li>再对剩余的KV向量应用4-bit量化（减少每个向量的存储）</li>
+</ol>
+<p>总压缩比: $\approx 1.83\text{x}<em>{\text{depth}} \times 4\text{x}</em>{\text{precision}} \approx 7.3\text{x}$</p>
+<p>实际测量（论文报告）: $\sim 5\text{x}$（考虑元数据和保留token的开销）</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="层间相似度分析"><a href="#层间相似度分析" class="headerlink" title="层间相似度分析"></a>层间相似度分析</h3><h4 id="LLaMA-2-7B各层KV余弦相似度"><a href="#LLaMA-2-7B各层KV余弦相似度" class="headerlink" title="LLaMA-2-7B各层KV余弦相似度"></a>LLaMA-2-7B各层KV余弦相似度</h4><table>
+<thead>
+<tr>
+<th>层范围</th>
+<th>K相似度</th>
+<th>V相似度</th>
+<th>合并建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>层 0-4</td>
+<td>0.52-0.67</td>
+<td>0.48-0.63</td>
+<td>不合并</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果</strong>: 超过50%的层对（层11-31，约20层对）具有&gt;0.85的KV余弦相似度，可以进行安全合并。</p>
+<h3 id="语言建模困惑度"><a href="#语言建模困惑度" class="headerlink" title="语言建模困惑度"></a>语言建模困惑度</h3><h4 id="LLaMA-2-7B在WikiText-2上（序列长度4K）"><a href="#LLaMA-2-7B在WikiText-2上（序列长度4K）" class="headerlink" title="LLaMA-2-7B在WikiText-2上（序列长度4K）"></a>LLaMA-2-7B在WikiText-2上（序列长度4K）</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>PPL</th>
+<th>退化</th>
+<th>内存节省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全量缓存 (FP16)</td>
+<td>5.47</td>
+<td>-</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>纯深度压缩（层11-31合并）</td>
+<td>5.62</td>
+<td>+0.15</td>
+<td>-38%</td>
+</tr>
+<tr>
+<td>MiniCache（幅度-方向解耦 + 自适应）</td>
+<td>5.54</td>
+<td>+0.07</td>
+<td>-41%</td>
+</tr>
+<tr>
+<td>MiniCache + 4-bit量化</td>
+<td>5.69</td>
+<td>+0.22</td>
+<td>-76% (约5x)</td>
+</tr>
+<tr>
+<td>仅4-bit量化</td>
+<td>5.62</td>
+<td>+0.15</td>
+<td>-75%</td>
+</tr>
+<tr>
+<td>MiniCache + H2O (k&#x3D;128, r&#x3D;128)</td>
+<td>5.67</td>
+<td>+0.20</td>
+<td>-67%</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: </p>
+<ul>
+<li>纯深度压缩（简单平均）不如MiniCache的解耦方法（PPL 5.62 vs 5.54）</li>
+<li>MiniCache单独有41%的内存节省，PPL退化仅+0.07</li>
+<li>MiniCache+4bit实现5倍压缩，PPL退化仅+0.22，优于仅量化（+0.15 PPL退化但仅4倍压缩）</li>
+</ul>
+<h4 id="不同合并区域的影响"><a href="#不同合并区域的影响" class="headerlink" title="不同合并区域的影响"></a>不同合并区域的影响</h4><table>
+<thead>
+<tr>
+<th>合并区域</th>
+<th>合并层对数</th>
+<th>内存节省</th>
+<th>PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全量（不合并）</td>
+<td>0</td>
+<td>0%</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>仅深层（21-31）</td>
+<td>10</td>
+<td>-15%</td>
+<td>5.50</td>
+</tr>
+<tr>
+<td>深层+中层（11-31）</td>
+<td>20</td>
+<td>-41%</td>
+<td>5.54</td>
+</tr>
+<tr>
+<td>所有层（0-31）</td>
+<td>31</td>
+<td>-58%</td>
+<td>6.89</td>
+</tr>
+<tr>
+<td>自适应策略</td>
+<td>~20</td>
+<td>-41%</td>
+<td>5.54</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 合并所有层导致严重退化（+1.42 PPL），证明浅层KV必须保持独立。自适应策略与固定合并深层+中层相当（因为自适应策略本身就会选择基本相同的合并范围）。</p>
+<h3 id="零样本基准测试"><a href="#零样本基准测试" class="headerlink" title="零样本基准测试"></a>零样本基准测试</h3><h4 id="LLaMA-2-7B-MiniCache-vs-全量缓存"><a href="#LLaMA-2-7B-MiniCache-vs-全量缓存" class="headerlink" title="LLaMA-2-7B, MiniCache vs 全量缓存"></a>LLaMA-2-7B, MiniCache vs 全量缓存</h4><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>FP16全量</th>
+<th>MiniCache</th>
+<th>差异</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ARC-E</td>
+<td>76.3</td>
+<td>76.1</td>
+<td>-0.2</td>
+</tr>
+<tr>
+<td>ARC-C</td>
+<td>43.5</td>
+<td>43.2</td>
+<td>-0.3</td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td>57.1</td>
+<td>56.8</td>
+<td>-0.3</td>
+</tr>
+<tr>
+<td>MMLU</td>
+<td>45.3</td>
+<td>45.3</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>BoolQ</td>
+<td>77.7</td>
+<td>77.5</td>
+<td>-0.2</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td>79.2</td>
+<td>79.0</td>
+<td>-0.2</td>
+</tr>
+<tr>
+<td>Winogrande</td>
+<td>69.2</td>
+<td>68.9</td>
+<td>-0.3</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 所有基准测试退化&lt;&#x3D;0.3个百分点，MMLU完全无退化。证明了深度压缩几乎无损语义理解能力。</p>
+<h3 id="长上下文基准测试"><a href="#长上下文基准测试" class="headerlink" title="长上下文基准测试"></a>长上下文基准测试</h3><h4 id="LongBench在16K上下文下"><a href="#LongBench在16K上下文下" class="headerlink" title="LongBench在16K上下文下"></a>LongBench在16K上下文下</h4><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>FP16全量</th>
+<th>MiniCache</th>
+<th>MiniCache + 4-bit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单文档QA</td>
+<td>28.1</td>
+<td>28.0</td>
+<td>27.6</td>
+</tr>
+<tr>
+<td>多文档QA</td>
+<td>22.4</td>
+<td>22.2</td>
+<td>21.8</td>
+</tr>
+<tr>
+<td>摘要</td>
+<td>24.5</td>
+<td>24.3</td>
+<td>24.0</td>
+</tr>
+<tr>
+<td>代码</td>
+<td>47.9</td>
+<td>47.7</td>
+<td>47.2</td>
+</tr>
+<tr>
+<td>Few-shot学习</td>
+<td>58.2</td>
+<td>58.0</td>
+<td>57.6</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 在所有长上下文任务上，MiniCache性能和全量缓存几乎相同，退化&lt;0.5%。</p>
+<h3 id="实际推理吞吐量"><a href="#实际推理吞吐量" class="headerlink" title="实际推理吞吐量"></a>实际推理吞吐量</h3><h4 id="ShareGPT工作负载（LLaMA-2-7B）"><a href="#ShareGPT工作负载（LLaMA-2-7B）" class="headerlink" title="ShareGPT工作负载（LLaMA-2-7B）"></a>ShareGPT工作负载（LLaMA-2-7B）</h4><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>最大Batch Size</th>
+<th>Tokens&#x2F;s</th>
+<th>内存使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16全量</td>
+<td>32</td>
+<td>843</td>
+<td>68.2 GB</td>
+</tr>
+<tr>
+<td>MiniCache</td>
+<td>54</td>
+<td>1423</td>
+<td>68.2 GB</td>
+</tr>
+<tr>
+<td>MiniCache + 4-bit</td>
+<td>128</td>
+<td>2876</td>
+<td>68.2 GB</td>
+</tr>
+<tr>
+<td>H2O + 4-bit</td>
+<td>96</td>
+<td>2108</td>
+<td>68.2 GB</td>
+</tr>
+<tr>
+<td>MiniCache + H2O + 4-bit</td>
+<td>156</td>
+<td>3642</td>
+<td>68.2 GB</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: MiniCache+4bit在相同内存下实现3.4倍吞吐量提升。三个正交方法（深度、序列、精度）组合达到4.3倍吞吐量提升。</p>
+<h3 id="不同模型上的泛化"><a href="#不同模型上的泛化" class="headerlink" title="不同模型上的泛化"></a>不同模型上的泛化</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FP16 PPL</th>
+<th>MiniCache PPL</th>
+<th>退化</th>
+<th>内存节省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2-7B</td>
+<td>5.47</td>
+<td>5.54</td>
+<td>+0.07</td>
+<td>-41%</td>
+</tr>
+<tr>
+<td>LLaMA-2-13B</td>
+<td>4.88</td>
+<td>4.94</td>
+<td>+0.06</td>
+<td>-38%</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>5.68</td>
+<td>5.74</td>
+<td>+0.06</td>
+<td>-40%</td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>5.09</td>
+<td>5.14</td>
+<td>+0.05</td>
+<td>-40%</td>
+</tr>
+<tr>
+<td>Mistral-7B</td>
+<td>5.25</td>
+<td>5.32</td>
+<td>+0.07</td>
+<td>-39%</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 深度压缩在所有模型上均有效，退化稳定在0.05-0.07 PPL。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="层间冗余的理论解释"><a href="#层间冗余的理论解释" class="headerlink" title="层间冗余的理论解释"></a>层间冗余的理论解释</h3><p>为什么深层Transformer的相邻层之间会表现出如此高的KV相似度？几种可能的解释：</p>
+<ol>
+<li><p><strong>残差连接的收敛效应</strong>: Transformer中的残差连接使每一层仅学习残差变换。随着深度增加，残差增量逐渐减小，这意味着层输出越来越接近其输入。这自然导致相邻层的KV状态相似。</p>
+</li>
+<li><p><strong>表征的精细化过程</strong>: 浅层学习基础特征（如词性、句法），深层对这些特征进行精细化。精细化是微小的调整，因此相邻深层的表征差异很小。</p>
+</li>
+<li><p><strong>信息瓶颈理论</strong>: 在信息瓶颈框架下，深层网络逐渐压缩输入信息，只保留任务相关的信息。一旦这个压缩过程接近完成（通常在中深层），额外的层更多是在维持而非转换当前的压缩表示。</p>
+</li>
+<li><p><strong>训练动力学的隐含偏见</strong>: 随机初始化+梯度下降训练倾向于产生”路径对齐”的深层网络——相邻层的权重矩阵趋于正交补空间较小。</p>
+</li>
+</ol>
+<h3 id="幅度-方向解耦的向量空间几何解释"><a href="#幅度-方向解耦的向量空间几何解释" class="headerlink" title="幅度-方向解耦的向量空间几何解释"></a>幅度-方向解耦的向量空间几何解释</h3><p>在$d$维向量空间中，幅度和方向编码不同的信息类型：</p>
+<ul>
+<li><p><strong>方向</strong>: 编码了该向量在$d$维空间中的”身份”——即它指向空间中的哪个子区域。在高维空间中，两个随机单位向量几乎总是接近正交（余弦相似度接近0），因此观察到的0.9+余弦相似度表明方向高度一致而非随机。</p>
+</li>
+<li><p><strong>幅度</strong>: 编码了该向量的”显著性”——即该特征在多大程度上被激活。具有相同方向但不同幅度的两个向量意味着”同一件事，但确信度&#x2F;重要度不同”。</p>
+</li>
+</ul>
+<p>解耦后对方向进行合并而保留幅度，相当于说：”层$l$和层$l+1$在关注同一件事（方向相同），但对该事件的置信度&#x2F;强调程度不同（幅度不同）。”这个解释与Transformer中残差连接的语义一致——残差调整的是”强调程度”而非”关注内容”。</p>
+<h3 id="为什么浅层不应合并"><a href="#为什么浅层不应合并" class="headerlink" title="为什么浅层不应合并"></a>为什么浅层不应合并</h3><p>浅层的低相似度反映了Transformer中浅层和深层学习到的不同特征层次：</p>
+<ul>
+<li><strong>浅层特征</strong>: 语法标记、局部搭配、词性——层次低、多样性高、相邻层间变化大</li>
+<li><strong>深层特征</strong>: 语义概念、文档主题、全局意图——层次高、通用性高、相邻层间趋于一致</li>
+</ul>
+<p>这与计算机视觉中CNN的层次特征类似——浅层学习边缘和纹理（层间差异大），深层学习对象部件和整体（层间趋于稳定）。</p>
+<h3 id="Token保留策略的工程价值"><a href="#Token保留策略的工程价值" class="headerlink" title="Token保留策略的工程价值"></a>Token保留策略的工程价值</h3><p>保留少量发散token而非强制合并它们的价值：</p>
+<p>假设99%的token可以安全合并（节省存储），1%的token需要保留独立性（额外存储）。对两层对：</p>
+<ul>
+<li>无保留策略: 100%合并, PPL退化 +0.15（因为1%的关键token被损坏）</li>
+<li>有保留策略: 99%合并+1%保留, PPL退化 +0.07, 额外存储1%</li>
+<li>净收益: 0.08 PPL改善，仅付出1%的额外存储</li>
+</ul>
+<p>这体现了”为了质量的小额投资”原则。在某些场景中，额外付出1-2%存储来保护关键token是极其划算的。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-序列维度压缩（H2O、StreamingLLM）"><a href="#vs-序列维度压缩（H2O、StreamingLLM）" class="headerlink" title="vs 序列维度压缩（H2O、StreamingLLM）"></a>vs 序列维度压缩（H2O、StreamingLLM）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>序列压缩方法</th>
+<th>MiniCache</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维度</td>
+<td>token数量（$N$）</td>
+<td>层数（$L$）</td>
+</tr>
+<tr>
+<td>信息损失</td>
+<td>token级信息永久丢失</td>
+<td>层间方向信息轻微混合</td>
+</tr>
+<tr>
+<td>关键观察</td>
+<td>注意力幂律分布&#x2F;注意力汇</td>
+<td>相邻层KV余弦相似度&gt;0.9</td>
+</tr>
+<tr>
+<td>是否互补</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>叠加效果</td>
+<td>H2O串行后叠加</td>
+<td>MiniCache并行叠加</td>
+</tr>
+</tbody></table>
+<h3 id="vs-精度压缩（KIVI、KVQuant）"><a href="#vs-精度压缩（KIVI、KVQuant）" class="headerlink" title="vs 精度压缩（KIVI、KVQuant）"></a>vs 精度压缩（KIVI、KVQuant）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>精度压缩</th>
+<th>MiniCache</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维度</td>
+<td>per-element精度</td>
+<td>层数</td>
+</tr>
+<tr>
+<td>信息损失</td>
+<td>引入量化噪声</td>
+<td>方向分量合并</td>
+</tr>
+<tr>
+<td>关键技术</td>
+<td>逐通道&#x2F;逐token量化</td>
+<td>幅度-方向解耦</td>
+</tr>
+<tr>
+<td>是否互补</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>组合增益</td>
+<td>1.7x (depth) x 4x (precision) &#x3D; ~5x total</td>
+<td></td>
+</tr>
+</tbody></table>
+<h3 id="vs-模型剪枝中的深度压缩"><a href="#vs-模型剪枝中的深度压缩" class="headerlink" title="vs 模型剪枝中的深度压缩"></a>vs 模型剪枝中的深度压缩</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>层剪枝（LayerDrop等）</th>
+<th>MiniCache</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>方法</td>
+<td>随机&#x2F;学习性地丢弃整个层</td>
+<td>合并相邻层的KV缓存</td>
+</tr>
+<tr>
+<td>训练需求</td>
+<td>需要特定训练策略</td>
+<td>无需微调</td>
+</tr>
+<tr>
+<td>适用阶段</td>
+<td>训练+推理一起</td>
+<td>仅推理</td>
+</tr>
+<tr>
+<td>模型质量</td>
+<td>永久改变模型</td>
+<td>原始模型不变</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 层剪枝移除整层（包括权重+计算），MiniCache仅合并KV缓存，保留所有权重和计算（即仍计算所有层的FFN和后续投影），但共享KV缓存。这是一种更温和、更可逆的优化。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-压缩比受限于层间相似度"><a href="#1-压缩比受限于层间相似度" class="headerlink" title="1. 压缩比受限于层间相似度"></a>1. 压缩比受限于层间相似度</h3><p><strong>问题</strong>: MiniCache的深度压缩比由自然存在的层间相似度决定。对于相似度较低的模型（如非常浅的Transformer、或使用不同架构归一化方法的模型），压缩比将受到限制。</p>
+<p><strong>影响</strong>: LLama-2系列表现良好（~41%压缩），但对于更小的模型（如OPT-125M，层数少、层间差异大）可能收效甚微。</p>
+<h3 id="2-预分析开销"><a href="#2-预分析开销" class="headerlink" title="2. 预分析开销"></a>2. 预分析开销</h3><p><strong>问题</strong>: MiniCache需要在代表性数据上运行模型进行层间相似度分析，以确定合适的合并策略。对于每个新模型或新领域，这个分析步骤需要额外计算。</p>
+<p><strong>影响</strong>: 虽然是一次性成本，但对于频繁切换模型或领域的部署场景，可能不是零成本的。</p>
+<h3 id="3-共享方向的注意力计算复杂性"><a href="#3-共享方向的注意力计算复杂性" class="headerlink" title="3. 共享方向的注意力计算复杂性"></a>3. 共享方向的注意力计算复杂性</h3><p><strong>问题</strong>: 当两个层共享相同的方向但幅度不同时，注意力计算需要区分层特定的幅度。这引入了额外的”重建”步骤（方向+层特定幅度-&gt;完整KV），在注意力计算的快速路径上增加了开销。</p>
+<p><strong>影响</strong>: 实践中记忆节省的幅度可能大于延迟改善的幅度（因为重建步骤的额外计算）。</p>
+<h3 id="4-对其他KV缓存优化方法的干扰"><a href="#4-对其他KV缓存优化方法的干扰" class="headerlink" title="4. 对其他KV缓存优化方法的干扰"></a>4. 对其他KV缓存优化方法的干扰</h3><p><strong>问题</strong>: MiniCache的方向-幅度解耦可能干扰一些假设KV以完整向量形式存在的方法：</p>
+<ul>
+<li>H2O的累计注意力分数计算需要考虑合并层的影响</li>
+<li>KVQuant的Pre-RoPE量化时序可能与合并策略冲突</li>
+<li>FlashAttention的分块计算可能无法直接利用共享方向</li>
+</ul>
+<p><strong>影响</strong>: 与这些方法的组合需要仔细的工程集成，而非简单的即插即用。</p>
+<h3 id="5-仅适用于Decoder-only架构"><a href="#5-仅适用于Decoder-only架构" class="headerlink" title="5. 仅适用于Decoder-only架构"></a>5. 仅适用于Decoder-only架构</h3><p><strong>问题</strong>: 层间KV相似度分析是针对自回归decoder-only架构进行的。Encoder-decoder模型（如T5）中，encoder的KV和decoder的KV具有不同的功能和分布，层间相似度模式可能完全不同。</p>
+<p><strong>影响</strong>: MiniCache的发现和方法可能无法直接应用于encoder-decoder或多模态模型。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-寻找新的优化维度"><a href="#1-寻找新的优化维度" class="headerlink" title="1. 寻找新的优化维度"></a>1. 寻找新的优化维度</h3><p><strong>洞见</strong>: 当一个优化问题看起来”维度已被穷尽”时，可能存在尚未被探索的维度。KV缓存管理在MiniCache之前集中在两个维度（序列和精度），但第三个维度（深度）一直未被触及。开辟新维度往往比在已有维度上挤最后一点优化的收益更大。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在优化任何系统时，主动问”还有哪些维度尚未被考虑？”</li>
+<li>绘制”优化空间地图”——列出所有乘因子并标注已探索和未探索的</li>
+<li>寻找与现有方法正交的优化维度</li>
+</ul>
+<h3 id="2-架构冗余可能揭示优化机会"><a href="#2-架构冗余可能揭示优化机会" class="headerlink" title="2. 架构冗余可能揭示优化机会"></a>2. 架构冗余可能揭示优化机会</h3><p><strong>洞见</strong>: 深层Transformer中层间KV的高相似度可能揭示了当前架构设计中的冗余。这既是一个优化机会（MiniCache利用了它），也是一个架构改进方向（是否可以设计不需要这种冗余的Transformer？）。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>分析目标模型的内在冗余模式，寻找优化机会</li>
+<li>如果某个冗余在多个模型和规模中一致出现，考虑它是架构设计缺陷的信号</li>
+<li>将冗余分析作为模型选择的标准之一</li>
+</ul>
+<h3 id="3-向量解耦作为通用的压缩预处理"><a href="#3-向量解耦作为通用的压缩预处理" class="headerlink" title="3. 向量解耦作为通用的压缩预处理"></a>3. 向量解耦作为通用的压缩预处理</h3><p><strong>洞见</strong>: MiniCache的幅度-方向解耦是一个通用技术——在压缩前将向量分解为不同语义分量，对不同分量应用不同策略。这可以推广到其他压缩场景。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在压缩前先分析数据的语义分解</li>
+<li>对每个分量设计最合适的压缩策略（而非对所有分量一视同仁）</li>
+<li>考虑更高阶的分解（如方向+幅度+相位、均值+残差+异常值）</li>
+</ul>
+<h3 id="4-自适应保留-vs-强制压缩"><a href="#4-自适应保留-vs-强制压缩" class="headerlink" title="4. 自适应保留 vs 强制压缩"></a>4. 自适应保留 vs 强制压缩</h3><p><strong>洞见</strong>: MiniCache的token保留策略体现了”识别并保护少数不适宜压缩的元素”的智慧。在绝大多数压缩场景中，100%的强压缩策略往往因为少数”不适宜压缩”的元素的损坏而导致不成比例的质量损失。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>设计压缩方案时，始终加入”异常检测+保留”机制</li>
+<li>分析如果不保留，哪些元素被损坏最严重</li>
+<li>将保留机制的开销纳入总体效率计算</li>
+</ul>
+<h3 id="5-压缩维度的乘法组合"><a href="#5-压缩维度的乘法组合" class="headerlink" title="5. 压缩维度的乘法组合"></a>5. 压缩维度的乘法组合</h3><p><strong>洞见</strong>: 深度（1.7x）x 序列（<del>3-4x H2O）x 精度（</del>4x KIVI）&#x3D; ~20-27x 总压缩。这种乘法组合是KV缓存管理领域最有价值的系统设计原则——不要试图在一个维度上达到极致的压缩，而是结合多个维度的中等压缩来获得乘积效应。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>规划KV缓存优化时，考虑多维度组合而非单维度极致优化</li>
+<li>为每个优化的方法评估其与其他方法的正交性</li>
+<li>构建”优化组合矩阵”来选择互补的方法集</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>深度维优化的更多可能</strong>: MiniCache展示了深度维度上最简单的优化——合并相邻层。但深度维度上可能还有更多操作空间：非相邻层间的KV冗余、层组间共享全局上下文、动态层分配。</p>
+</li>
+<li><p><strong>Transformer架构设计的新方向</strong>: 如果深层KV如此冗余，是否可以从架构层面减少这种冗余？例如设计跨层共享的KV缓存模块（类似ALBERT的跨层参数共享），或在预训练中鼓励层间KV差异。</p>
+</li>
+<li><p><strong>“优化维度空间”的思考框架</strong>: MiniCache让我意识到应该建立一个”KV缓存优化维度空间”的系统框架：维度包括序列（$N$）、精度（$\text{bpp}$）、深度（$L$）、头数（$H$）、头维度（$d$）等。每个维度都可以用压缩因子来表示，总压缩是各因子的乘积。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>超大模型服务</strong>: 对于70B+模型，层的数量是KV缓存的主导因素。MiniCache可以在不减损上下文窗口的情况下减少约40%的KV内存。</p>
+</li>
+<li><p><strong>边缘设备部署</strong>: 内存极度受限的边缘设备（如手机、IoT设备）中，每个维度的小幅节省累积起来可能是运行与否的区别。</p>
+</li>
+<li><p><strong>多租户系统</strong>: 在服务多个独立用户的系统中，每个用户的KV缓存减少40%意味着可以同时服务约1.7倍的用户。</p>
+</li>
+</ol>
+<h3 id="与其他技术的关系"><a href="#与其他技术的关系" class="headerlink" title="与其他技术的关系"></a>与其他技术的关系</h3><p>MiniCache不是一个独立的完整解决方案，而是一个可以增强所有现有方法的”放大器”。在KV缓存优化工具箱中，它的角色类似于”在所有现有优化的基础上再挤出40%”。一个完整的优化pipeline可能包括：</p>
+<ol>
+<li>StreamingLLM（基础：保留注意力汇）</li>
+<li>H2O（序列维度：驱逐非重击者）</li>
+<li>MiniCache（深度维度：合并冗余层KV）</li>
+<li>KIVI&#x2F;KVQuant（精度维度：2-4比特量化）</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-非相邻层合并"><a href="#1-非相邻层合并" class="headerlink" title="1. 非相邻层合并"></a>1. 非相邻层合并</h3><p><strong>问题</strong>: MiniCache仅合并相邻层。是否存在非相邻层之间的KV相似度模式？例如，层5和层25可能学习相似的特征（在非常不同的抽象层次上）但方向可能一致？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>绘制全层对的KV相似度矩阵</li>
+<li>探索”跳跃合并”策略（如合并层3和层5而非层3和层4）</li>
+<li>设计最优的层合并拓扑（图论问题）</li>
+</ul>
+<p><strong>潜在影响</strong>: 可能实现超过41%的深度压缩。</p>
+<h3 id="2-训练阶段的反向利用"><a href="#2-训练阶段的反向利用" class="headerlink" title="2. 训练阶段的反向利用"></a>2. 训练阶段的反向利用</h3><p><strong>问题</strong>: 如果层间KV冗余是预训练的副产品，是否可以在训练中添加正则化项来减少这种冗余？或者反过来，是否可以故意培养更多的层间冗余以增加MiniCache的压缩效率？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在训练中添加”层间正交性”正则化（减少冗余）</li>
+<li>或者添加”层间一致性”正则化（增加冗余以支持压缩）</li>
+<li>研究压缩-质量-训练成本的三维权衡</li>
+</ul>
+<p><strong>潜在影响</strong>: 为不同应用场景（质量优先 vs 效率优先）训练不同的模型变体。</p>
+<h3 id="3-KV共享的硬件优化"><a href="#3-KV共享的硬件优化" class="headerlink" title="3. KV共享的硬件优化"></a>3. KV共享的硬件优化</h3><p><strong>问题</strong>: MiniCache引入的共享KV方向意味着两个不同的注意力计算需要访问同一个内存位置。这可能导致新的内存访问争用。是否可以设计针对”共享KV缓存”的硬件优化？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析共享KV访问模式的内存带宽效率</li>
+<li>设计缓存友好的共享KV内存布局</li>
+<li>探索GPU上共享KV的广播读取机制</li>
+</ul>
+<p><strong>潜在影响</strong>: 弥合理论内存节省与实际延迟改善之间的差距。</p>
+<h3 id="4-动态层合并策略"><a href="#4-动态层合并策略" class="headerlink" title="4. 动态层合并策略"></a>4. 动态层合并策略</h3><p><strong>问题</strong>: 不同输入可能从不同的层合并策略中受益。是否可以基于输入内容动态决定哪些层合并？例如，简单输入（单句）可以更激进地合并，复杂输入（多文档推理）需要更保守的合并。</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计基于运行时注意熵或困惑度的合并策略</li>
+<li>学习一个轻量级控制器来预测最优合并配置</li>
+<li>研究输入复杂度与最优合并深度之间的关系</li>
+</ul>
+<p><strong>潜在影响</strong>: 在不降低平均质量的前提下最大化平均压缩比。</p>
+<h3 id="5-深度压缩与知识蒸馏的关系"><a href="#5-深度压缩与知识蒸馏的关系" class="headerlink" title="5. 深度压缩与知识蒸馏的关系"></a>5. 深度压缩与知识蒸馏的关系</h3><p><strong>问题</strong>: 深度维度KV合并可以被视为一种特殊的”在线知识蒸馏”——层$l+1$被迫使用与层$l$共享的方向。这是否意味着经过合并的模型在某种程度上被”蒸馏”了？知识蒸馏的哪些技术可以应用于深度压缩？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>比较深度压缩与显式知识蒸馏对KV表示的影响</li>
+<li>探索是否可以微调合并后的模型以恢复质量（类似蒸馏后的微调）</li>
+<li>研究多层合并（3+层共享KV）的蒸馏视角</li>
+</ul>
+<p><strong>潜在影响</strong>: 构建深度压缩和知识蒸馏之间的理论桥梁。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Liu, A., et al. (2024). MiniCache: KV Cache Compression in Depth Dimension for Large Language Models. arXiv:2405.14366</li>
+<li>Xiao, G., et al. (2023). Efficient Streaming Language Models with Attention Sinks. ICLR 2024. arXiv:2309.17453</li>
+<li>Zhang, Z., et al. (2023). H2O: Heavy-Hitter Oracle for Efficient Generative Inference. NeurIPS 2023. arXiv:2306.14048</li>
+<li>Liu, Z., et al. (2024). KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache. ICML 2024. arXiv:2402.02750</li>
+<li>Hooper, C., et al. (2024). KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization. NeurIPS 2024. arXiv:2401.18079</li>
+<li>Lan, Z., et al. (2020). ALBERT: A Lite BERT for Self-supervised Learning of Language Representations. ICLR 2020. arXiv:1909.11942</li>
+<li>Fan, A., et al. (2020). Reducing Transformer Depth on Demand with Structured Dropout. ICLR 2020. arXiv:1909.11556</li>
+<li>Touvron, H., et al. (2023). Llama 2: Open Foundation and Fine-Tuned Chat Models. arXiv:2307.09288</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/KV-Cache/" class="category-chain-item">KV-Cache</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-model-compression/" class="print-no-link">#papers/model-compression</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>MiniCache: KV Cache Compression in Depth Dimension for Large Language Models</div>
+      <div>https://w2ongq6.github.io/2024/05/23/inference/note/MiniCache_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年5月23日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/05/24/llm/note/SWE_agent_note/" title="SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/05/21/llm/note/ScalingMonosemanticity_note/" title="Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet">
+                        <span class="hidden-mobile">Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

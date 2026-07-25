@@ -1,0 +1,1508 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="“SWE-bench: Can Language Models Resolve Real-World GitHub Issues?”核心信息 标题: SWE-bench: Can Language Models Resolve Real-World GitHub Issues? 标题翻译: SWE-bench: 语言模型能否解决真实世界的GitHub Issue? 作者: Carlos E. Ji">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/10/10/llm/note/SWE-bench_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="“SWE-bench: Can Language Models Resolve Real-World GitHub Issues?”核心信息 标题: SWE-bench: Can Language Models Resolve Real-World GitHub Issues? 标题翻译: SWE-bench: 语言模型能否解决真实世界的GitHub Issue? 作者: Carlos E. Ji">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-10-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.645Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;benchmark">
+<meta property="article:tag" content="papers&#x2F;code-generation">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>SWE-bench: Can Language Models Resolve Real-World GitHub Issues? - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-10 00:00" pubdate>
+          2023年10月10日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          133 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="“SWE-bench-Can-Language-Models-Resolve-Real-World-GitHub-Issues-”"><a href="#“SWE-bench-Can-Language-Models-Resolve-Real-World-GitHub-Issues-”" class="headerlink" title="“SWE-bench: Can Language Models Resolve Real-World GitHub Issues?”"></a>“SWE-bench: Can Language Models Resolve Real-World GitHub Issues?”</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</li>
+<li>标题翻译: SWE-bench: 语言模型能否解决真实世界的GitHub Issue?</li>
+<li>作者: Carlos E. Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir Press, Karthik Narasimhan</li>
+<li>机构: Princeton University</li>
+<li>发表时间: 2023年10月</li>
+<li>发表渠道: ICLR 2024</li>
+<li>arXiv: 2310.06770</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.06770">https://arxiv.org/abs/2310.06770</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://swebench.com/">https://swebench.com</a></li>
+<li>论文类型: 基准论文</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>语言模型在代码生成方面已变得越来越强大，但现有基准主要关注独立函数或单文件编程任务。真实的软件工程需要理解和修改整个代码仓库，解决涉及多个文件、函数和模块的复杂问题。本文提出SWE-bench，一个包含2294个真实GitHub Issue的评估基准，来自12个流行的Python开源项目。每个实例包括Issue描述、对应的代码仓库快照、以及验证解决方案的单元测试。我们评估了多个前沿语言模型，结果显示最先进的模型（如Claude 2）仅能解决4.1%的问题。这一显著的能力差距表明，当前的语言模型距离解决真实的软件工程问题还有很长的路要走。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>从”函数级”到”仓库级”的评测范式升级</strong>：SWE-bench将代码生成评测从孤立的单函数编程（HumanEval的风格）提升到真实的跨文件软件工程任务。解决SWE-bench中的一个实例通常需要：理解整个代码库的架构、定位问题所在的多个文件和函数、修改代码并确保不破坏现有功能。这是评测粒度的量变导致的质变。</p>
+</li>
+<li><p><strong>真实Issue-PR对作为测试用例</strong>：不再是手写编程题，而是从12个开源项目的真实开发历史中提取。每个测试用例包含：原始的GitHub Issue描述、当时的代码仓库状态、解决该Issue的PR中引入的测试用例。这种真实性避免了手写题可能存在的”人造偏差”。</p>
+</li>
+<li><p><strong>自动化可执行评测</strong>：尽管任务涉及整个代码仓库，SWE-bench的评测完全自动化——每个实例都有对应的单元测试和回归测试，可以在修改后的代码仓库中运行。评测在Docker容器中隔离执行，保证了可重复性和安全性。</p>
+</li>
+<li><p><strong>暴露LLM的真实软件工程能力差距</strong>：发布之初，Claude 2仅解决4.1%的问题，GPT-4也低于5%。这一”令人震惊的低分”清晰暴露了当前LLM在真实软件工程任务上的巨大能力差距，成为推动AI软件工程Agent研究爆发的催化剂。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>SWE-bench将代码生成评测从独立函数提升到真实软件工程，通过2294个真实GitHub Issue暴露了前沿LLM仅能解决4.1%的问题，推动了从”代码补全”到”AI软件工程Agent”的研究范式转变。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心问题分解"><a href="#核心问题分解" class="headerlink" title="核心问题分解"></a>核心问题分解</h3><p>当前最先进的LLM在面对真实的软件工程任务时——理解整个代码库、定位问题根源、修改多个文件、通过回归测试——表现如何？</p>
+<h3 id="子问题-1：评测粒度的量变到质变"><a href="#子问题-1：评测粒度的量变到质变" class="headerlink" title="子问题 1：评测粒度的量变到质变"></a>子问题 1：评测粒度的量变到质变</h3><p>HumanEval类基准评测的是”函数生成”——给定函数签名和docstring，生成约10-30行的Python函数。但真实的软件工程任务（如修bug）需要的技能完全不同：</p>
+<ul>
+<li>在数百个文件、数万行代码中找到问题的根源</li>
+<li>理解跨文件的控制流和数据流</li>
+<li>修改2-10个文件中的代码，每处修改需要精确理解上下文</li>
+<li>确保修改不破坏项目的其他部分（回归测试）</li>
+<li>遵循项目的代码规范和架构模式</li>
+</ul>
+<p>这些技能在HumanEval上完全无法被评测——HumanEval的pass@1（GPT-4: 87%）和SWE-bench的pass@1（GPT-4: &lt;5%）之间的巨大鸿沟正是评测粒度差异的体现。</p>
+<h3 id="子问题-2：LLM在真实软件工程中的根本性局限"><a href="#子问题-2：LLM在真实软件工程中的根本性局限" class="headerlink" title="子问题 2：LLM在真实软件工程中的根本性局限"></a>子问题 2：LLM在真实软件工程中的根本性局限</h3><p>4.1%（Claude 2）、&lt;5%（GPT-4）的初始解决率暴露了三个根本性局限：</p>
+<ul>
+<li><strong>代码库规模理解</strong>：在128K上下文中无法放入整个Django代码库（数十万行代码）。模型必须学会有选择性地”搜索”和”阅读”相关代码。</li>
+<li><strong>跨文件依赖性推理</strong>：理解一个bug可能需要追踪从路由层到ORM层的完整调用链——跨越5-10个文件、数十个函数。</li>
+<li><strong>精确的多文件修改</strong>：不是写新代码，而是在现有的、复杂的代码中间精确地插入&#x2F;修改几行，同时不破坏周围的逻辑。</li>
+</ul>
+<h3 id="子问题-3：基准构建的自动化与真实性平衡"><a href="#子问题-3：基准构建的自动化与真实性平衡" class="headerlink" title="子问题 3：基准构建的自动化与真实性平衡"></a>子问题 3：基准构建的自动化与真实性平衡</h3><p>如何从真实项目中自动提取Issue-PR对，同时保证：</p>
+<ul>
+<li>PR确实解决了对应的Issue（通过引用关系验证）</li>
+<li>PR引入了测试用例（用于自动化评测）</li>
+<li>代码快照反映的是Issue创建时的真实状态（而非现在的状态）</li>
+<li>评测环境可以被一致地复现（Docker容器化）</li>
+</ul>
+<h3 id="Sub问题-4：SWE-bench是否能在模型快速发展中保持区分度"><a href="#Sub问题-4：SWE-bench是否能在模型快速发展中保持区分度" class="headerlink" title="Sub问题 4：SWE-bench是否能在模型快速发展中保持区分度"></a>Sub问题 4：SWE-bench是否能在模型快速发展中保持区分度</h3><p>4.1%的初始解决率极低——这是好事（有足够的进步空间），但也可能有风险（如果未来模型的解决率仍低于20%，基准可能被认为”太难”而非”有区分度”）。基准的设计者需要预判3-5年内模型能达到的水平。</p>
+<h3 id="Before-This-Paper-Pain-Points"><a href="#Before-This-Paper-Pain-Points" class="headerlink" title="Before-This-Paper Pain Points"></a>Before-This-Paper Pain Points</h3><ol>
+<li><strong>HumanEval的”假象”</strong>：GPT-4在HumanEval上pass@1&#x3D;87%给公众造成”AI已经会编程了”的错误印象。但实际上，87%解决的是”在30行内写一个反转字符串的函数”——这与实际软件工程师的工作内容无关。</li>
+<li><strong>无法量化”AI软件工程师”的能力</strong>：没有基准能回答”这个模型能否修复一个真实的bug？能否实现一个真实的功能请求？”——这些问题对评估AI在软件开发中的实际效用至关重要。</li>
+<li><strong>“代码生成”过分简化为”函数编写”</strong>：整个代码生成研究社区被限制在一个对实际软件工程无关紧要的评测范式内。</li>
+</ol>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="数据集构建管线"><a href="#数据集构建管线" class="headerlink" title="数据集构建管线"></a>数据集构建管线</h3><p><strong>来源项目</strong>（12个热门Python开源项目）：</p>
+<ul>
+<li>Web框架：Django (89K stars), Flask (68K stars)</li>
+<li>数据处理：scikit-learn (61K stars), pandas-sql (数据科学), xarray (多维数组)</li>
+<li>可视化：matplotlib (20K stars), seaborn (12K stars)</li>
+<li>科学计算：sympy (13K stars), astropy (天文)</li>
+<li>测试：pytest (12K stars)</li>
+<li>HTTP：requests (52K stars)</li>
+<li>文档：sphinx (6K stars)</li>
+<li>序列化：marshmallow (7K stars)</li>
+</ul>
+<p><strong>提取管线</strong>（6步）：</p>
+<ol>
+<li><strong>GitHub API爬取</strong>：获取每个仓库指定时间范围内的所有Issue和关联的PR（使用”fixes #XXX”、”closes #XXX”等引用关系）</li>
+<li><strong>测试过滤</strong>：仅保留PR中包含新增测试或修改现有测试的实例——这是自动化评测的前提</li>
+<li><strong>代码快照提取</strong>：checkout PR合并前的最后一次commit作为”基准状态”，记录PR合并后的代码作为”目标状态”</li>
+<li><strong>测试提取</strong>：从目标状态中提取解决该Issue新增&#x2F;修改的测试用例（fail_to_pass tests），同时提取基准状态中原有的测试（pass_to_pass tests作为回归测试）</li>
+<li><strong>环境配置</strong>：为每个仓库构建Docker镜像，包含所有依赖和环境——固定版本号确保可复现性</li>
+<li><strong>最终筛选</strong>：2294个实例，去除人类开发者也无法解决的案例（约5-8%）</li>
+</ol>
+<h3 id="任务定义"><a href="#任务定义" class="headerlink" title="任务定义"></a>任务定义</h3><ul>
+<li><strong>输入</strong>：Issue描述（自然语言文本，通常50-500字）+ 代码仓库快照（Issue创建时的完整代码状态）</li>
+<li><strong>输出</strong>：代码补丁（unified diff格式），修改仓库中的文件以解决问题</li>
+<li><strong>评测</strong>：在Docker容器中应用补丁到仓库，运行fail_to_pass测试 + pass_to_pass测试</li>
+<li><strong>成功条件</strong>：所有fail_to_pass测试通过（证明问题解决了）AND 所有pass_to_pass测试仍然通过（证明没有破坏已有功能）</li>
+</ul>
+<h3 id="评测指标"><a href="#评测指标" class="headerlink" title="评测指标"></a>评测指标</h3><ul>
+<li><strong>Pass@1</strong>：模型单次尝试解决问题的比例（最接近实际用户场景）</li>
+<li><strong>测试通过率</strong>：部分解决的实例比例（至少一个测试通过）</li>
+<li><strong>平均补丁质量</strong>：修改的文件数、行数、是否仅通过添加&#x2F;修改测试本身来”作弊”</li>
+</ul>
+<h3 id="数据划分"><a href="#数据划分" class="headerlink" title="数据划分"></a>数据划分</h3><ul>
+<li><strong>Dev set</strong>：225实例（用于方法调试、prompt优化、策略迭代）</li>
+<li><strong>Test set</strong>：230实例（严格度量的最终评测，仅在方法完全固定后使用）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程：SWE-bench的6步基准构建与评测"><a href="#机制流程：SWE-bench的6步基准构建与评测" class="headerlink" title="机制流程：SWE-bench的6步基准构建与评测"></a>机制流程：SWE-bench的6步基准构建与评测</h3><p><strong>Step 1：候选Issue-PR对的爬取与链接</strong></p>
+<ul>
+<li>输入：12个GitHub仓库、时间范围、GitHub API token</li>
+<li>操作：<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs applescript"><span class="hljs-keyword">for</span> repo <span class="hljs-keyword">in</span> repositories:<br>  <span class="hljs-keyword">for</span> issue <span class="hljs-keyword">in</span> github_api.issues(repo, <span class="hljs-keyword">since</span>=START_DATE, <span class="hljs-keyword">until</span>=END_DATE):<br>    <span class="hljs-comment"># 只保留通过PR解决的Issue</span><br>    <span class="hljs-keyword">if</span> issue.pull_request <span class="hljs-keyword">is</span> None:<br>      <span class="hljs-comment"># 检查Issue是否被PR关闭</span><br>      closing_pr = find_closing_pr(issue)<br>      <span class="hljs-keyword">if</span> closing_pr <span class="hljs-keyword">is</span> None:<br>        <span class="hljs-keyword">continue</span><br>    <span class="hljs-keyword">else</span>:<br>      closing_pr = issue.pull_request<br>    <br>    <span class="hljs-comment"># 保存候选(Issue, PR)对</span><br>    candidates.append((issue, closing_pr))<br></code></pre></td></tr></table></figure></li>
+<li>输出：初始约5000对Issue-PR候选</li>
+<li>目标：建立Issue与其解决方案之间的链接关系</li>
+</ul>
+<p><strong>Step 2：测试用例过滤</strong></p>
+<ul>
+<li>输入：候选Issue-PR对</li>
+<li>操作：<ol>
+<li>Checkout PR合并前后的代码状态</li>
+<li>比较两组状态之间的测试文件差异</li>
+<li>识别新增&#x2F;修改的测试函数——这些是”目标测试”</li>
+<li>过滤标准：<ul>
+<li>PR必须引入至少1个新的测试函数或修改至少1个现有测试</li>
+<li>新增&#x2F;修改的测试必须在基准状态下失败（fail）且在PR合并后通过（pass）——验证测试确实反映了问题</li>
+</ul>
+</li>
+<li>标记测试：fail_to_pass（基准状态失败、修复后通过）和 pass_to_pass（基准状态通过、修复后仍需通过）</li>
+</ol>
+</li>
+<li>输出：约3000对包含有效测试的Issue-PR</li>
+<li>目标：确保每个实例有可自动化的评测标准</li>
+</ul>
+<p><strong>Step 3：代码快照与环境构建</strong></p>
+<ul>
+<li>输入：过滤后的Issue-PR对</li>
+<li>操作：<ol>
+<li>对每个实例，checkout基准状态的commit（PR合并前的最后一次commit）</li>
+<li>记录仓库的完整文件树和内容</li>
+<li>构建Docker镜像：<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs dockerfile"><span class="hljs-comment"># Dockerfile (per-repo basis)</span><br><span class="hljs-keyword">FROM</span> python:<span class="hljs-number">3.9</span><br><span class="hljs-keyword">COPY</span><span class="language-bash"> repo_snapshot /repo</span><br><span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /repo</span><br><span class="hljs-keyword">RUN</span><span class="language-bash"> pip install -r requirements.txt</span><br><span class="hljs-keyword">RUN</span><span class="language-bash"> pip install -e .  <span class="hljs-comment"># 安装仓库本身</span></span><br></code></pre></td></tr></table></figure></li>
+<li>在Docker中验证：<ul>
+<li>fail_to_pass tests确实失败（预期行为）</li>
+<li>pass_to_pass tests确实通过（基础环境正确）</li>
+</ul>
+</li>
+</ol>
+</li>
+<li>输出：2294个可复现的评测环境（Docker镜像 + 代码快照 + 测试套件）</li>
+<li>目标：创建隔离的、可复现的、自验证的评测环境</li>
+</ul>
+<p><strong>Step 4：模型推理——代码补丁生成</strong></p>
+<ul>
+<li>输入：Issue描述 + 代码仓库快照 + 模型</li>
+<li>操作（针对不同的模型设置）：<ol>
+<li><strong>Oracle retrieval</strong>（理想化基线）：将Issue相关的所有代码文件直接提供给模型作为上下文（这在实际中是不可能的，因为没有oracle告诉你哪些文件相关，但提供了方法的上限）</li>
+<li><strong>Sparse retrieval (BM25)</strong>：使用Issue文本作为查询，通过BM25检索top-k最相关的文件（k通常为10-20），将这些文件的内容放入prompt</li>
+<li><strong>Agent-based</strong>（后续方法如SWE-agent）：模型自主决定查看哪些文件、搜索哪些关键词、修改哪些文件</li>
+<li>模型生成一个unified diff格式的补丁</li>
+</ol>
+</li>
+<li>输出：代码补丁（patch文件）</li>
+<li>目标：根据Issue描述生成能解决问题的代码修改</li>
+</ul>
+<p><strong>Step 5：补丁应用与测试执行</strong></p>
+<ul>
+<li>输入：生成的补丁 + Docker环境</li>
+<li>操作：<ol>
+<li>在Docker容器中应用补丁：<code>git apply patch_file</code></li>
+<li>如果应用失败（代码上下文不匹配）→ 实例标记为”未解决”</li>
+<li>如果应用成功，运行测试套件：<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs applescript"><span class="hljs-comment"># 先运行回归测试（确保没有破坏已有功能）</span><br><span class="hljs-keyword">for</span> test <span class="hljs-keyword">in</span> pass_to_pass_tests:<br>  <span class="hljs-literal">result</span> = run_test(test)<br>  <span class="hljs-keyword">if</span> <span class="hljs-literal">result</span>.failed:<br><span class="hljs-built_in">    return</span> <span class="hljs-string">&quot;FAILED (regression)&quot;</span><br><br><span class="hljs-comment"># 再运行目标测试（确保问题确实解决了）</span><br><span class="hljs-keyword">for</span> test <span class="hljs-keyword">in</span> fail_to_pass_tests:<br>  <span class="hljs-literal">result</span> = run_test(test)<br>  <span class="hljs-keyword">if</span> <span class="hljs-literal">result</span>.failed:<br><span class="hljs-built_in">    return</span> <span class="hljs-string">&quot;FAILED (issue not resolved)&quot;</span><br><span class="hljs-built_in"></span><br><span class="hljs-built_in">return</span> <span class="hljs-string">&quot;SUCCESS&quot;</span><br></code></pre></td></tr></table></figure></li>
+<li>超时保护：每个实例最多执行10分钟的测试</li>
+</ol>
+</li>
+<li>输出：每个实例的通过&#x2F;失败状态</li>
+<li>目标：自动化地验证补丁的正确性和无回归性</li>
+</ul>
+<p><strong>Step 6：结果汇总与分析</strong></p>
+<ul>
+<li>输入：2294个实例的评测结果</li>
+<li>操作：<ol>
+<li>计算pass@1：<code>#success / #total</code></li>
+<li>按项目分拆报告（哪个项目的解决率最高&#x2F;最低）</li>
+<li>按Issue类型分类（bug修复、功能请求、文档修改等）</li>
+<li>按补丁复杂度分析（修改的文件数、行数）</li>
+<li>错误分析——模型失败的主要原因类别</li>
+</ol>
+</li>
+<li>输出：评测报告和分析</li>
+<li>目标：提供细粒度的能力画像以指导后续改进</li>
+</ul>
+<h3 id="算法伪代码：SWE-bench评测主循环"><a href="#算法伪代码：SWE-bench评测主循环" class="headerlink" title="算法伪代码：SWE-bench评测主循环"></a>算法伪代码：SWE-bench评测主循环</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><code class="hljs python">Algorithm: SWE-bench Evaluation<br><br>Input: model M, dataset D = &#123;instances&#125;, max_attempts=<span class="hljs-number">1</span><br><br><span class="hljs-keyword">for</span> instance <span class="hljs-keyword">in</span> D:<br>    <span class="hljs-comment"># Step 1: Retrieve relevant context</span><br>    <span class="hljs-keyword">if</span> method == <span class="hljs-string">&quot;oracle&quot;</span>:<br>        context_files = instance.relevant_files   <span class="hljs-comment"># 仅用于上限分析</span><br>    <span class="hljs-keyword">elif</span> method == <span class="hljs-string">&quot;bm25&quot;</span>:<br>        context_files = bm25_retrieve(instance.issue_text, instance.repo)<br>    <span class="hljs-keyword">elif</span> method == <span class="hljs-string">&quot;agent&quot;</span>:<br>        <span class="hljs-comment"># 模型自主决定查看哪些文件（后续方法）</span><br>        context_files = agent_explore(M, instance)<br>    <br>    <span class="hljs-comment"># Step 2: Construct prompt</span><br>    prompt = <span class="hljs-string">f&quot;&quot;&quot;</span><br><span class="hljs-string">    Repository: <span class="hljs-subst">&#123;instance.repo_name&#125;</span></span><br><span class="hljs-string">    Issue: <span class="hljs-subst">&#123;instance.issue_text&#125;</span></span><br><span class="hljs-string">    </span><br><span class="hljs-string">    Relevant files:</span><br><span class="hljs-string">    <span class="hljs-subst">&#123;<span class="hljs-string">&quot;&quot;</span>.join(<span class="hljs-string">f&quot;--- <span class="hljs-subst">&#123;f&#125;</span> ---\n<span class="hljs-subst">&#123;read(f)&#125;</span>&quot;</span> <span class="hljs-keyword">for</span> f <span class="hljs-keyword">in</span> context_files)&#125;</span></span><br><span class="hljs-string">    </span><br><span class="hljs-string">    Generate a patch to fix this issue. Output in unified diff format (diff --git ...)</span><br><span class="hljs-string">    &quot;&quot;&quot;</span><br>    <br>    <span class="hljs-comment"># Step 3: Generate patch</span><br>    patch = M.generate(prompt, max_tokens=<span class="hljs-number">4096</span>)<br>    <br>    <span class="hljs-comment"># Step 4: Apply patch in Docker</span><br>    result = docker_execute(<br>        image=instance.docker_image,<br>        commands=[<br>            <span class="hljs-string">f&quot;git apply &lt;&lt;EOF\n<span class="hljs-subst">&#123;patch&#125;</span>\nEOF&quot;</span>,<br>            <span class="hljs-string">f&quot;python -m pytest <span class="hljs-subst">&#123;instance.fail_to_pass_tests&#125;</span>&quot;</span>,<br>            <span class="hljs-string">f&quot;python -m pytest <span class="hljs-subst">&#123;instance.pass_to_pass_tests&#125;</span>&quot;</span><br>        ]<br>    )<br>    <br>    <span class="hljs-comment"># Step 5: Evaluate</span><br>    instance.resolved = result.all_tests_passed<br><br><span class="hljs-keyword">return</span> <span class="hljs-built_in">sum</span>(i.resolved <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> D) / <span class="hljs-built_in">len</span>(D)<br></code></pre></td></tr></table></figure>
+
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1：发布之初（2023年10月）各系统的初始表现"><a href="#表-1：发布之初（2023年10月）各系统的初始表现" class="headerlink" title="表 1：发布之初（2023年10月）各系统的初始表现"></a>表 1：发布之初（2023年10月）各系统的初始表现</h3><table>
+<thead>
+<tr>
+<th>模型&#x2F;系统</th>
+<th>设置</th>
+<th>Pass@1 (全量测试集)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Random baseline</td>
+<td>随机修改代码</td>
+<td>0.0%</td>
+</tr>
+<tr>
+<td>Claude 2 (zero-shot)</td>
+<td>仅Issue描述</td>
+<td>1.96%</td>
+</tr>
+<tr>
+<td>GPT-4 (zero-shot)</td>
+<td>仅Issue描述</td>
+<td>1.74%</td>
+</tr>
+<tr>
+<td>Claude 2 + Oracle retrieval</td>
+<td>Issue + 相关文件</td>
+<td>4.08%</td>
+</tr>
+<tr>
+<td>GPT-4 + Oracle retrieval</td>
+<td>Issue + 相关文件</td>
+<td>3.91%</td>
+</tr>
+<tr>
+<td>Claude 2 + BM25 retrieval</td>
+<td>Issue + BM25检索文件</td>
+<td>4.14%</td>
+</tr>
+<tr>
+<td>GPT-4 + BM25 retrieval</td>
+<td>Issue + BM25检索文件</td>
+<td>4.80%</td>
+</tr>
+</tbody></table>
+<p>关键发现：（a）纯zero-shot（无额外上下文）的解决率约2%——模型几乎无法仅通过阅读Issue描述就生成正确的修复；（b）加入oracle检索（理想相关文件）后提升至约4%——即使用”作弊”给了正确的文件，模型也只能解决4%的问题；（c）BM25检索与oracle检索效果相当——说明简单的关键词匹配在识别相关文件上已经足够有效，真正的瓶颈在于”理解代码并生成正确修复”。</p>
+<h3 id="表-2：困难度按项目分析（GPT-4-BM25）"><a href="#表-2：困难度按项目分析（GPT-4-BM25）" class="headerlink" title="表 2：困难度按项目分析（GPT-4 + BM25）"></a>表 2：困难度按项目分析（GPT-4 + BM25）</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>Instance数</th>
+<th>Pass@1</th>
+<th>项目类型</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Django</td>
+<td>345</td>
+<td>4.3%</td>
+<td>Web框架</td>
+<td>大型代码库，复杂架构</td>
+</tr>
+<tr>
+<td>scikit-learn</td>
+<td>246</td>
+<td>5.1%</td>
+<td>机器学习库</td>
+<td>算法密集，数学复杂</td>
+</tr>
+<tr>
+<td>sympy</td>
+<td>184</td>
+<td>3.8%</td>
+<td>符号计算</td>
+<td>高度抽象，数学逻辑</td>
+</tr>
+<tr>
+<td>matplotlib</td>
+<td>172</td>
+<td>4.2%</td>
+<td>可视化</td>
+<td>图形渲染逻辑</td>
+</tr>
+<tr>
+<td>flask</td>
+<td>123</td>
+<td>5.8%</td>
+<td>微框架</td>
+<td>相对小，结构简单</td>
+</tr>
+<tr>
+<td>pytest</td>
+<td>108</td>
+<td>5.5%</td>
+<td>测试框架</td>
+<td>插件架构</td>
+</tr>
+<tr>
+<td>requests</td>
+<td>136</td>
+<td>6.2%</td>
+<td>HTTP库</td>
+<td>API简单，文档好</td>
+</tr>
+<tr>
+<td>seaborn</td>
+<td>89</td>
+<td>5.9%</td>
+<td>统计可视化</td>
+<td>上层封装</td>
+</tr>
+<tr>
+<td>sphinx</td>
+<td>156</td>
+<td>4.8%</td>
+<td>文档生成</td>
+<td>模板系统复杂</td>
+</tr>
+<tr>
+<td>xarray</td>
+<td>98</td>
+<td>4.5%</td>
+<td>数据处理</td>
+<td>领域特定</td>
+</tr>
+<tr>
+<td>astropy</td>
+<td>112</td>
+<td>4.1%</td>
+<td>天文</td>
+<td>领域特定</td>
+</tr>
+<tr>
+<td>marshmallow</td>
+<td>92</td>
+<td>5.8%</td>
+<td>序列化</td>
+<td>简单API</td>
+</tr>
+</tbody></table>
+<p>项目规模和组织质量与解决率相关：requests和flask（API清晰、文档好的项目）解决率较高，Django和sympy（大型、复杂、历史久的项目）解决率较低。</p>
+<h3 id="表-3：Issue类型的解决率差异（GPT-4-BM25）"><a href="#表-3：Issue类型的解决率差异（GPT-4-BM25）" class="headerlink" title="表 3：Issue类型的解决率差异（GPT-4 + BM25）"></a>表 3：Issue类型的解决率差异（GPT-4 + BM25）</h3><table>
+<thead>
+<tr>
+<th>Issue类型</th>
+<th>占比</th>
+<th>Pass@1</th>
+<th>平均文件修改数</th>
+<th>典型例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bug修复（逻辑错误）</td>
+<td>45%</td>
+<td>3.2%</td>
+<td>3.8</td>
+<td>异常处理缺失、参数错误</td>
+</tr>
+<tr>
+<td>Bug修复（API&#x2F;接口）</td>
+<td>15%</td>
+<td>5.1%</td>
+<td>1.5</td>
+<td>函数签名不匹配</td>
+</tr>
+<tr>
+<td>功能请求（新参数&#x2F;配置）</td>
+<td>20%</td>
+<td>4.8%</td>
+<td>2.1</td>
+<td>添加新的参数支持</td>
+</tr>
+<tr>
+<td>文档&#x2F;错误消息</td>
+<td>10%</td>
+<td>6.5%</td>
+<td>1.2</td>
+<td>更新docstring</td>
+</tr>
+<tr>
+<td>性能优化</td>
+<td>5%</td>
+<td>2.1%</td>
+<td>2.8</td>
+<td>算法&#x2F;数据结构改进</td>
+</tr>
+<tr>
+<td>依赖&#x2F;兼容性</td>
+<td>5%</td>
+<td>3.5%</td>
+<td>1.5</td>
+<td>版本兼容修复</td>
+</tr>
+</tbody></table>
+<p>文档修改类的解决率最高（6.5%）——简单的文字替换。逻辑bug修复类最难（3.2%）——需要深入理解代码逻辑。性能优化最难（2.1%）——需要算法知识。</p>
+<h3 id="表-4：模型规模效应（Pass-1-Oracle-retrieval）"><a href="#表-4：模型规模效应（Pass-1-Oracle-retrieval）" class="headerlink" title="表 4：模型规模效应（Pass@1, Oracle retrieval）"></a>表 4：模型规模效应（Pass@1, Oracle retrieval）</h3><table>
+<thead>
+<tr>
+<th>模型类别</th>
+<th>参数估计</th>
+<th>Pass@1</th>
+<th>相对小模型提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-3.5-Turbo</td>
+<td>~20B</td>
+<td>2.1%</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>Claude Instant</td>
+<td>~50B</td>
+<td>2.8%</td>
+<td>+0.7 pp</td>
+</tr>
+<tr>
+<td>GPT-4</td>
+<td>~1.7T (估计)</td>
+<td>4.0%</td>
+<td>+1.9 pp</td>
+</tr>
+<tr>
+<td>Claude 2</td>
+<td>~130B</td>
+<td>4.1%</td>
+<td>+2.0 pp</td>
+</tr>
+<tr>
+<td>SWE-Llama (Code Llama微调)</td>
+<td>13B</td>
+<td>1.7%</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<p>模型规模对SWE-bench表现的影响有限——从GPT-3.5到GPT-4的参数量增长约100倍，解决率仅从2.1%提升到4.0%（不到翻倍）。这说明”更大的参数记忆”不是解决SWE-bench的关键瓶颈——瓶颈在于”与代码库进行智能交互”的能力（搜索、阅读、推理、修改）。</p>
+<h3 id="表-5：6个月内的急速进展（SWE-bench排行榜）"><a href="#表-5：6个月内的急速进展（SWE-bench排行榜）" class="headerlink" title="表 5：6个月内的急速进展（SWE-bench排行榜）"></a>表 5：6个月内的急速进展（SWE-bench排行榜）</h3><table>
+<thead>
+<tr>
+<th>系统&#x2F;模型</th>
+<th>发布时间</th>
+<th>Pass@1 (test)</th>
+<th>方法创新</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claude 2 (BM25)</td>
+<td>2023.10</td>
+<td>4.14%</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>Devin (Cognition AI)</td>
+<td>2024.03</td>
+<td>13.86%</td>
+<td>专有Agent系统（未公开细节）</td>
+</tr>
+<tr>
+<td>SWE-agent (Princeton)</td>
+<td>2024.04</td>
+<td>12.47%</td>
+<td>Agent-Computer Interface (ACI)</td>
+</tr>
+<tr>
+<td>AutoCodeRover (NUS&#x2F;SUSTech)</td>
+<td>2024.04</td>
+<td>~15%</td>
+<td>多层次代码搜索</td>
+</tr>
+<tr>
+<td>OpenHands (All Hands AI)</td>
+<td>2024.05</td>
+<td>~12%</td>
+<td>开源Agent框架</td>
+</tr>
+<tr>
+<td>Moatless Tools</td>
+<td>2024.06</td>
+<td>~18%</td>
+<td>工具增强搜索</td>
+</tr>
+<tr>
+<td>Agentless</td>
+<td>2024.07</td>
+<td>~27%</td>
+<td>两阶段：定位+修复分离</td>
+</tr>
+</tbody></table>
+<p>6个月内从4%跃升到27%——约6-7倍的增长。这不是模型能力的突然飞跃（底层模型仍是GPT-4&#x2F;Claude），而是Agent设计、工具集成和搜索策略的系统性改进带来的。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么SWE-bench这么难——三个根本性挑战"><a href="#为什么SWE-bench这么难——三个根本性挑战" class="headerlink" title="为什么SWE-bench这么难——三个根本性挑战"></a>为什么SWE-bench这么难——三个根本性挑战</h3><p><strong>挑战1：代码库的全局理解 vs 上下文的局部限制</strong></p>
+<p>一个真实Python项目可能有500+个文件、50K+行代码。即使是最先进的LLM（GPT-4 128K上下文、Claude 200K上下文），也无法在单次prompt中放入整个代码库。关键是：模型不知道”哪些文件与Issue相关”——它必须学会搜索。</p>
+<p>这种搜索的难度在于：（a）简单的关键词匹配（grep）无法理解语义关系（”这个bug可能在ORM层的哪个文件中？”需要理解项目架构），（b）阅读一个文件可能揭示需要看其他文件（依赖链），（c）在5-10轮的文件阅读中，模型需要累积理解并定位准确的修改位置。</p>
+<p><strong>挑战2：精确的代码修改 vs 粗粒度的代码生成</strong></p>
+<p>生成一个30行的新函数（HumanEval）和在一个现有函数中间精确修改3行代码（SWE-bench）是完全不同的技能：</p>
+<ul>
+<li>新函数生成：只需要遵循签名和docstring——“白纸画画”</li>
+<li>现有代码修改：需要理解周围代码的逻辑、变量的生命周期、异常处理的范围——“在别人的画上添一笔”</li>
+<li>错误的修改可能引入新的bug——SWE-bench的pass_to_pass测试就是为了捕捉这种情况</li>
+</ul>
+<p><strong>挑战3：软件工程”常识” vs 编程”知识”</strong></p>
+<p>SWE-bench测试的是软件工程的综合能力——不仅是”是否会编程”，还包括：</p>
+<ul>
+<li>项目架构理解（MVC模式、插件系统、中间件链）</li>
+<li>调试思维（”如果这个assert失败，可能是上游数据处理有误”）</li>
+<li>测试驱动（”修复后我应该添加什么测试来防止回归？”）</li>
+<li>代码规范（遵循项目的命名约定、文件组织、import风格）</li>
+</ul>
+<p>这些”软技能”在HumanEval上完全无法被评测——HumanEval测试的是一个”程序员”的能力，SWE-bench测试的是一个”软件工程师”的能力。</p>
+<h3 id="为什么Agent方法（vs-单次检索-生成）提升这么大"><a href="#为什么Agent方法（vs-单次检索-生成）提升这么大" class="headerlink" title="为什么Agent方法（vs 单次检索+生成）提升这么大"></a>为什么Agent方法（vs 单次检索+生成）提升这么大</h3><p>从4%到27%的跃升揭示了Agent方法（如SWE-agent）的核心优势：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>单次检索+生成</th>
+<th>Agent循环</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文件选择</td>
+<td>盲猜（BM25）</td>
+<td>自适应搜索</td>
+</tr>
+<tr>
+<td>理解深度</td>
+<td>单次阅读</td>
+<td>多轮深入（可以回看）</td>
+</tr>
+<tr>
+<td>错误恢复</td>
+<td>无</td>
+<td>编辑-测试-调整循环</td>
+</tr>
+<tr>
+<td>上下文管理</td>
+<td>静态</td>
+<td>动态（发现相关性后追加）</td>
+</tr>
+</tbody></table>
+<p>Agent方法的核心是”像人类开发者一样工作”——先搜索理解问题，找到可能的根因，尝试修复，测试验证，如果不工作就调整策略。这种”感知-计划-行动”的循环将SWE-bench从一个”代码生成”任务转变为一个”问题解决”任务。</p>
+<h3 id="SWE-bench排行榜变化的解读——评测基准的”双刃剑”"><a href="#SWE-bench排行榜变化的解读——评测基准的”双刃剑”" class="headerlink" title="SWE-bench排行榜变化的解读——评测基准的”双刃剑”"></a>SWE-bench排行榜变化的解读——评测基准的”双刃剑”</h3><p>SWE-bench的快速排行榜变化（6个月从4%到27%）是评测基准的双刃剑：</p>
+<p><strong>正面</strong>：</p>
+<ul>
+<li>基准成功催化了研究进步——从”绝望的低分”到”有希望的快速爬升”</li>
+<li>定义了”AI软件工程Agent”这一新研究方向并持续驱动创新</li>
+<li>使得不同Agent方法之间可以客观量化比较</li>
+</ul>
+<p><strong>负面</strong>：</p>
+<ul>
+<li>排行榜的快速变化可能导致”过度优化”——Agent被优化来在SWE-bench上得分而非解决真实的软件工程问题</li>
+<li>可能的”基准漏洞”——如果Agent发现某些类型的Issue可以通过特定的启发式解决（如”总是添加import语句”），而不需要真正理解问题</li>
+<li>“pass_to_pass测试不完整”——现实项目中测试覆盖率远低于100%，SWE-bench的测试可能漏掉某些类型的回归错误</li>
+</ul>
+<h3 id="SWE-bench与HumanEval的互补性"><a href="#SWE-bench与HumanEval的互补性" class="headerlink" title="SWE-bench与HumanEval的互补性"></a>SWE-bench与HumanEval的互补性</h3><p>两者不是竞争关系而是互补关系，共同定义了代码AI能力的全谱系：</p>
+<figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs autoit">代码AI能力谱系:<br><br>HumanEval/CodeContests ───────────── SWE-bench ───────────── 真实软件开发<br>    (函数级)                              (仓库级)              (项目级+协作)<br>      ↓                                     ↓                       ↓<br>   <span class="hljs-string">&quot;会写代码&quot;</span>                           <span class="hljs-string">&quot;会修bug&quot;</span>              <span class="hljs-string">&quot;会做软件&quot;</span><br>   pass<span class="hljs-symbol">@1</span>: <span class="hljs-number">87</span>% (GPT<span class="hljs-number">-4</span>)                  pass<span class="hljs-symbol">@1</span>: <span class="hljs-number">27</span>%            pass<span class="hljs-symbol">@1</span>: N/A<br>                                                                  (尚无基准)<br></code></pre></td></tr></table></figure>
+
+<p>一个有趣的观察：GPT-4在HumanEval上pass@1&#x3D;87%但SWE-bench上仅4%——这意味着模型可以写出87%的’基础编程作业’，但只能修复4%的’真实软件bug’。这两者之间的差距不是10倍的能力退化，而是从”知识回忆”到”智能问题解决”的质的跃迁。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="表：SWE-bench在代码评测谱系中的位置"><a href="#表：SWE-bench在代码评测谱系中的位置" class="headerlink" title="表：SWE-bench在代码评测谱系中的位置"></a>表：SWE-bench在代码评测谱系中的位置</h3><table>
+<thead>
+<tr>
+<th>评测基准</th>
+<th>年份</th>
+<th>粒度</th>
+<th>真实性</th>
+<th>模型初始SOTA</th>
+<th>模型2024SOTA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HumanEval</td>
+<td>2021</td>
+<td>单函数</td>
+<td>手写题</td>
+<td>Codex: 28.8%</td>
+<td>GPT-4: 87.0%</td>
+</tr>
+<tr>
+<td>MBPP</td>
+<td>2021</td>
+<td>单函数</td>
+<td>手写题</td>
+<td>-</td>
+<td>GPT-4: ~83%</td>
+</tr>
+<tr>
+<td>DS-1000</td>
+<td>2022</td>
+<td>单单元格</td>
+<td>真实数据科学</td>
+<td>-</td>
+<td>DeepSeek-Coder: 51.3%</td>
+</tr>
+<tr>
+<td>CodeContests</td>
+<td>2022</td>
+<td>竞赛题</td>
+<td>真实竞赛</td>
+<td>-</td>
+<td>AlphaCode 2: ~43%</td>
+</tr>
+<tr>
+<td><strong>SWE-bench</strong></td>
+<td><strong>2023</strong></td>
+<td><strong>仓库级</strong></td>
+<td><strong>真实Issue</strong></td>
+<td><strong>Claude 2: 4.1%</strong></td>
+<td><strong>Agentless: ~27%</strong></td>
+</tr>
+<tr>
+<td>RepoBench</td>
+<td>2023</td>
+<td>仓库级</td>
+<td>真实仓库</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h3 id="SWE-bench在”领域驱动AI进步”中的角色"><a href="#SWE-bench在”领域驱动AI进步”中的角色" class="headerlink" title="SWE-bench在”领域驱动AI进步”中的角色"></a>SWE-bench在”领域驱动AI进步”中的角色</h3><p>SWE-bench与ImageNet在计算机视觉中的作用有相似之处：</p>
+<ul>
+<li>ImageNet (2009) 定义了”大规模图像分类”这一标准任务 → 催化了CNN和深度学习革命</li>
+<li>SWE-bench (2023) 定义了”仓库级软件工程”这一标准任务 → 催化了AI Agent框架的爆发</li>
+</ul>
+<p>两者的共同点：（a）问题定义清晰，（b）评测自动化、可重复，（c）初始人类表现远高于机器表现（创造了”值得攀登的山”），（d）排行榜机制驱动良性竞争和创新。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>仅Python项目限制了语言覆盖率</strong>：12个项目全为Python，缺少Java、JavaScript、TypeScript、Rust、Go等其他主流语言的覆盖。不同语言的项目结构和问题模式可能有本质差异——Java项目的类型系统、Rust的所有权系统、JavaScript的异步模式可能对模型构成不同的挑战。</p>
+<p>具体影响：从SWE-bench得出的结论（”LLM可以解决X%的真实软件工程问题”）可能仅适用于Python项目，对其他语言不一定泛化。缓解路径：构建SWE-bench-multilingual。</p>
+</li>
+<li><p><strong>知名开源项目的选择偏差</strong>：选择的12个项目都是组织良好、文档齐全、测试覆盖率高的知名开源项目。这代表的是”最佳实践”级的软件工程——而非企业遗留代码的混乱现实（零文档、零测试、混乱的架构）。在实际企业软件中，AI可能面临更大的挑战。</p>
+</li>
+<li><p><strong>测试覆盖的不完美性</strong>：从PR中提取的测试用例不一定完全覆盖Issue描述的所有方面——PR作者可能只添加了”最小必要测试”。模型中可能通过了所有的fail_to_pass测试，但实际修复不完全或引入了未测试到的回归错误。这个问题在SWE-bench的”评测框架”层面无法解决——评测只能验证它”知道要检查什么”。</p>
+</li>
+<li><p><strong>环境设置的高工程门槛</strong>：Docker镜像的构建和维护需要大量工程投入——每个仓库的依赖安装、环境配置、版本锁定都需要手工操作。这使得SWE-bench的复制、扩展和定制需要大量工程资源。对于学术团队而言，仅仅是”把SWE-bench跑起来”就可能需要1-2周的工程时间。</p>
+</li>
+<li><p><strong>Pass@1 vs 实际开发效率的不匹配</strong>：Pass@1仅衡量”第一次尝试就完全正确”的比例。但在实际开发中，开发者可能运行Agent 3-5次（每次Agent尝试不同的方法），在15分钟内解决问题——这在SWE-bench上仍算”失败”（因为pass@1&#x3D;0%）。未来版本可能需要引入”pass@k within time budget”类型的指标。</p>
+</li>
+<li><p><strong>Issue描述的异质性</strong>：真实Issue的质量参差不齐——有些Issue包含详细的复现步骤和诊断信息，有些仅有一句”X doesn’t work”。好的Issue可能包含足够的信息让人类开发者凭经验推断出修复位置，而差的Issue需要大量的调查工作。这种异质性使得不同实例的”难度”差异巨大且不可控——解决率可能反映Issue描述质量而非模型能力。</p>
+</li>
+<li><p><strong>“修复”的语义模糊性</strong>：一个通过所有测试的”修复”可能在语义上并不正确——例如，通过添加一个特殊情况的if语句来绕过测试，而非解决根本问题。SWE-bench的测试用例通常足够好来检测这种”表面修复”，但不能100%保证。</p>
+</li>
+<li><p><strong>没有评估修复代码的质量维度</strong>：与HumanEval类似，SWE-bench仅评估功能正确性（是否通过测试），不评估修复代码的质量——可读性、性能、安全性、是否引入技术债务、是否遵循项目约定。一个”通过所有测试但引入了内存泄漏”的修复在SWE-bench上被视为成功。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>“真实问题 + 自动化评测”的基准设计范式</strong>：</p>
+<ul>
+<li>洞见：SWE-bench展示了从真实世界提取问题、保留原始上下文、设计自动化可执行评测的基准构建范式。这一范式可推广到其他领域——法律分析（真实案例 + 法律检索 + 判决预测）、医疗诊断（真实病历 + 诊断标准 + 评测结果）、网络运维（真实故障报告 + 配置 + 恢复验证）。</li>
+<li>为什么泛化：真实问题天然具有”实际挑战性”（不易被人造偏差影响），自动化评测保证了可重复性和可扩展性（不受人工评分者的主观性和疲劳影响）。</li>
+<li>如何具体应用：（a）从领域工作流中识别可提取的”标准任务”（Issue→PR, 故障→修复, 问题→答案），（b）设计自动化验证机制（测试用例、规则检查、结果比对），（c）确保评测的隔离性和可复现性（Docker&#x2F;VM沙箱）。</li>
+</ul>
+</li>
+<li><p><strong>评测推动研究——“好问题”的价值</strong>：</p>
+<ul>
+<li>洞见：一个好的评测基准不仅衡量能力，更能暴露能力差距、催化新研究方向。SWE-bench直接催生了SWE-agent、Devin、OpenHands、Agentless等至少10个以上的Agent系统——这些系统在SWE-bench出现之前没有存在的”理由”。</li>
+<li>为什么泛化：明确的、定量的能力差距比模糊的”AI还不够好”更能激励研究社区——“我们只有4%、目标是80%”比”AI需要变得更好”更具体、更可操作。</li>
+<li>如何具体应用：在定义一个新的研究问题时，（a）先建立一个即使很简单但能自动化评测的基准，（b）运行最先进的模型获得”当前天花板”分数，（c）分析失败案例识别能力差距类别，（d）公开发布基准驱动社区关注。</li>
+</ul>
+</li>
+<li><p><strong>“搜索 + 修改” &gt; “直接生成”</strong>：</p>
+<ul>
+<li>洞见：SWE-bench的结果表明，对于仓库级编程任务，Agent式的”检索-理解-修改循环”远优于单次prompt生成。纯检索+生成仅解决4%，Agent循环解决12-27%。”交互式问题解决”而非”静态知识回忆”是软件工程AI的核心技能。</li>
+<li>为什么泛化：任何”在复杂环境中找到并修改特定部分”的任务（代码修复、文档更新、配置更改、建筑设计修改）都受益于交互式探索——先理解环境、再定位目标、然后精确修改。</li>
+<li>如何具体应用：设计AI工具时，赋予它们”主动搜索”的能力，而不仅是”根据你提供的信息生成”的能力。实现”search-view-edit-validate”循环而非”generate once”。</li>
+</ul>
+</li>
+<li><p><strong>Agent的”文件导航”是关键但被低估的技能</strong>：</p>
+<ul>
+<li>洞见：在SWE-bench中，Agent最大的能力差异不在于”代码行修改”的质量，而在于”找到正确的文件”的能力。成功的Agent通常能通过智能搜索在3-5次操作内定位相关文件，失败的Agent要么找了错误文件、要么看了太多不相关文件而造成上下文噪音。</li>
+<li>为什么泛化：在任何大型文档&#x2F;代码库中工作的AI系统，”信息检索”的质量是能力的决定性瓶颈。”找到正确信息”通常比”正确处理信息”更难。</li>
+<li>如何具体应用：（a）投资于更好的代码&#x2F;文档搜索工具（语义搜索、依赖图遍历、AST索引），（b）实现”相关性反馈”——Agent搜索到文件后评估其相关性并调整后续搜索，（c）对搜索结果进行排序和摘要以避免信息过载。</li>
+</ul>
+</li>
+<li><p><strong>“定位”和”修复”的分离是有效的</strong>：</p>
+<ul>
+<li>洞见：Agentless方法（2024年7月：~27% pass@1）的关键创新是将Issue解决分为两个独立阶段——“定位”（找到需要修改的文件和行）和”修复”（在定位的基础上生成精确的patch）。这种分离使得每个阶段可以用专门的策略优化。</li>
+<li>为什么泛化：许多复杂任务可以分解为”找到问题在哪”（定位）和”解决问题”（修复）——医学诊断（识别病灶 + 设计治疗方案）、安全事件响应（识别入侵点 + 制定修复方案）、性能调试（找到瓶颈 + 实施优化）。</li>
+<li>如何具体应用：在设计中复杂的AI解决方案时，考虑是否可以将任务分解为定位和修复两个子任务——每个子任务可能更容易被模型处理。</li>
+</ul>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>SWE-bench是2023-2024年编程AI领域最重要的贡献之一。它的意义不在于”又一个评测基准”，而在于定义了一个新问题——AI软件工程Agent——并提供了衡量这一问题的标准。”4%解决率”的一锤定音比任何定性描述都更有力地说明了AI和人类软件工程师之间的真实能力差距。</p>
+<p>SWE-bench的快速排行榜变化（6个月内从4%到27%+）是AI领域的典型现象：一旦一个”标准问题”被明确定义和量化，研究社区的集体智慧就会快速推动进展。这既说明了SWE-bench作为基准的成功（它定义了”登月目标”），也提醒我们27%仍然很低——73%的真实Issue仍然无法被AI解决。乐观主义者看到的是成长速度（+23pp&#x2F;6个月），悲观主义者看到的是绝对水平（27%远低于80%的”实用化阈值”）。</p>
+<p>ICLR 2024的录用标志着”AI软件工程”正式成为顶级ML会议的重要研究主题。SWE-bench在学术界和产业界同步引爆了兴趣——学术界研究Agent方法（Princeton的SWE-agent、NUS的AutoCodeRover），创业公司推出产品（Devin、OpenHands）。这种学术-产品协同推进是AI领域最有效的创新模式之一。</p>
+<p>Agentless方法在2024年7月达到的~27%值得特别关注——它通过”定位+修复”的简单两阶段拆分就超越了更复杂的端到端Agent系统。这暗示了一个更广泛的原则：在许多看似需要”高级推理”的任务中，简单的”分而治之”可能比端到端的智能循环更有效。这是对”越复杂的Agent越好”叙事的挑战——简单的分解可能在稳健性和性能上都更有优势。</p>
+<h3 id="历史定位"><a href="#历史定位" class="headerlink" title="历史定位"></a>历史定位</h3><p>SWE-bench处于代码AI评测的第二代：</p>
+<ul>
+<li><strong>第一代（2021-2022）</strong>：HumanEval&#x2F;MBPP，定义”AI写代码”的标准</li>
+<li><strong>第二代（2023-至今）</strong>：SWE-bench，定义”AI做软件工程”的标准</li>
+<li><strong>可能的第三代（2024-至今）</strong>：将包括项目规划、需求分析、代码审查等更高层面的软件工程任务</li>
+</ul>
+<p>SWE-agent作为同一Princeton团队的后续工作，展示了”定义好的基准 → 构建能在此基准上工作的系统”的研究模式的威力。SWE-agent的ACI（Agent-Computer Interface）设计——为LLM Agent设计专门的文件浏览、代码搜索、代码编辑界面——是”以人为本的Agent设计”的典范。</p>
+<h3 id="前瞻性判断"><a href="#前瞻性判断" class="headerlink" title="前瞻性判断"></a>前瞻性判断</h3><ol>
+<li><strong>到2025年底</strong>，AI在SWE-bench上的pass@1将超过50%——通过更好的Agent策略、更强的基座模型（Claude 4、GPT-5）和更高效的工具集成。</li>
+<li><strong>SWE-bench将扩展到多语言</strong>——Java&#x2F;TypeScript的版本将出现。跨语言的比较将揭示不同语言范式对AI可修复性的影响。</li>
+<li><strong>“AI软件工程师”将从学术基准走向产品落地</strong>——GitHub Copilot Workspace、Cursor Agent等产品将把SWE-bench的Agent能力带给日常开发者。</li>
+<li><strong>Pass@3或pass@budget指标将出现</strong>——更贴近实际开发者的使用模式（尝试几次、在时间预算内）。</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>SWE-bench能否扩展到多语言——构建包含Java Spring、JavaScript React、Rust Actix等项目的SWE-bench-multilingual？</p>
+</li>
+<li><p>Agent方法在SWE-bench上的解决率上限在哪里？当Agent可以无限次数浏览文件、不受token限制地搜索时，其能力上限纯粹由基座LLM的代码理解能力决定——这个上限对GPT-4来说大约在什么位置（40%？60%？）？</p>
+</li>
+<li><p>能否设计一个自动化的”跨文件依赖图提取”工具，使Agent能基于项目的实际代码结构（而非文本相似度）来导航？这会比当前的grep&#x2F;BM25方法有显著的导航效率提升吗？</p>
+</li>
+<li><p>SWE-bench的评测是否应该加入效率维度（token消耗、时间消耗、API调用次数），而不仅是pass@1？一个消耗$50才解决一个问题的Agent和一个消耗$0.50的Agent，即使两者都成功解决，也应被区别对待。</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;jimenez2024swebench,<br>  title=&#123;SWE-bench: Can Language Models Resolve Real-World GitHub Issues?&#125;,<br>  author=&#123;Jimenez, Carlos E and Yang, John and Wettig, Alexander and Yao, Shunyu and Pei, Kexin and Press, Ofir and Narasimhan, Karthik&#125;,<br>  booktitle=&#123;The Twelfth International Conference on Learning Representations&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%99%BA%E8%83%BD%E4%BD%93/" class="category-chain-item">智能体</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-code-generation/" class="print-no-link">#papers/code-generation</a>
+      
+        <a href="/tags/papers-benchmark/" class="print-no-link">#papers/benchmark</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</div>
+      <div>https://w2ongq6.github.io/2023/10/10/llm/note/SWE-bench_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/12/inference/note/Flash-Decoding_note/" title="Flash-Decoding: Accelerating LLM Inference for Long Contexts">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Flash-Decoding: Accelerating LLM Inference for Long Contexts</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/10/llm/note/SWE_bench_note/" title="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?">
+                        <span class="hidden-mobile">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

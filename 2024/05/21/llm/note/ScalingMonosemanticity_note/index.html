@@ -1,0 +1,1268 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Scaling Monosemanticity: 从Claude 3 Sonnet中提取可解释特征核心信息 标题: Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet 标题翻译: 缩放单义性：从Claude 3 Sonnet中提取可解释特征 作者: Adly Templeton, Tom C">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/05/21/llm/note/ScalingMonosemanticity_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Scaling Monosemanticity: 从Claude 3 Sonnet中提取可解释特征核心信息 标题: Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet 标题翻译: 缩放单义性：从Claude 3 Sonnet中提取可解释特征 作者: Adly Templeton, Tom C">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-05-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.808Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;AI-safety">
+<meta property="article:tag" content="papers&#x2F;interpretability">
+<meta property="article:tag" content="papers&#x2F;mechanistic-interpretability">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-05-21 00:00" pubdate>
+          2024年5月21日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.6k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          63 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Scaling-Monosemanticity-从Claude-3-Sonnet中提取可解释特征"><a href="#Scaling-Monosemanticity-从Claude-3-Sonnet中提取可解释特征" class="headerlink" title="Scaling Monosemanticity: 从Claude 3 Sonnet中提取可解释特征"></a>Scaling Monosemanticity: 从Claude 3 Sonnet中提取可解释特征</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet</li>
+<li>标题翻译: 缩放单义性：从Claude 3 Sonnet中提取可解释特征</li>
+<li>作者: Adly Templeton, Tom Conerly, Jonathan Marcus 等（28位作者）</li>
+<li>机构: Anthropic</li>
+<li>发表时间: 2024年5月21日</li>
+<li>发表渠道: Anthropic Transformer Circuits网站（交互式论文）</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://transformer-circuits.pub/2024/scaling-monosemanticity">https://transformer-circuits.pub/2024/scaling-monosemanticity</a></li>
+<li>论文类型: 可解释性研究 &#x2F; 实证验证</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们首次在商业级大语言模型（Claude 3 Sonnet）上成功训练了稀疏自编码器（Sparse Autoencoder），在模型中间层的残差流上提取了数千万个可解释的内部特征。我们训练了三个规模的SAE——约100万、400万和3400万特征——证明了该方法能够跨数量级扩展，且SAE训练本身遵循可预测的缩放定律。我们发现的这些特征令人惊讶地具体：它们对应特定的城市、人物、科学概念、编程语法，以及更抽象的概念如安全漏洞、欺骗、偏见和谄媚。值得注意的是，尽管Claude 3 Sonnet是纯文本训练的，这些特征却是跨语言和跨模态的——例如，”金门大桥”特征在英文、中文、日文的文本描述中和在图像展示中都会激活。我们进一步证明，通过人为地操纵这些特征（如clamp到高值或低值），可以因果性地改变模型的行为输出，这为AI安全研究提供了新的实验范式。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-稀疏自编码器从玩具模型到生产级模型的跨越"><a href="#1-稀疏自编码器从玩具模型到生产级模型的跨越" class="headerlink" title="1. 稀疏自编码器从玩具模型到生产级模型的跨越"></a>1. 稀疏自编码器从玩具模型到生产级模型的跨越</h3><p><strong>核心思想</strong>: 此前Anthropic的”Towards Monosemanticity”（2023年10月）仅在单层小Transformer上验证了SAE的可行性。本工作在Claude 3 Sonnet（商业级生产模型，数十亿参数，多层结构）上大规模部署SAE。</p>
+<p><strong>规模跨越</strong>:</p>
+<ul>
+<li>之前的验证: 1层小Transformer</li>
+<li>本工作: Claude 3 Sonnet（数十层，数十亿参数）</li>
+<li>SAE特征数: 从几千扩展到3400万（扩展约10^4倍）</li>
+</ul>
+<p><strong>为什么重要</strong>: 这是”机械化可解释性”（Mechanistic Interpretability）领域的里程碑。在此之前，社区普遍怀疑这些方法能否从玩具模型扩展到实用模型——毕竟两者之间的鸿沟是巨大的。这篇论文用实证回答了”能”。</p>
+<h3 id="2-跨语言和跨模态的特征统一性"><a href="#2-跨语言和跨模态的特征统一性" class="headerlink" title="2. 跨语言和跨模态的特征统一性"></a>2. 跨语言和跨模态的特征统一性</h3><p><strong>核心思想</strong>: 尽管模型是纯文本训练的，提取出的SAE特征却表现出跨语言（英语、法语、中文、日语等）和跨模态（对纯文本训练的特征却对图像中的对应概念产生响应）的激活模式。</p>
+<p><strong>具体案例</strong>:</p>
+<ul>
+<li>“金门大桥”特征: 在英文”Golden Gate Bridge”、中文”金门大桥”、日文”ゴールデンゲートブリッジ”以及金门大桥图片中都激活</li>
+<li>“数学”特征: 在英文数学讨论、中文数学题、数学公式图片中都激活</li>
+</ul>
+<p><strong>为什么重要</strong>: 这表明模型内部形成了概念级别的（而非语言级别的）内部表征——即存在某种抽象的”概念空间”，不依赖于特定的语言或模态。这对于理解LLM如何在跨语言场景中工作具有根本性启示。</p>
+<h3 id="3-安全相关特征与特征级操控"><a href="#3-安全相关特征与特征级操控" class="headerlink" title="3. 安全相关特征与特征级操控"></a>3. 安全相关特征与特征级操控</h3><p><strong>核心思想</strong>: 论文识别出了与AI安全高度相关的特征，并证明通过操控这些特征可以因果性地改变模型行为。</p>
+<p><strong>识别的安全特征类别</strong>:</p>
+<ul>
+<li>欺骗（Deception）</li>
+<li>谄媚（Sycophancy）</li>
+<li>权力追求（Power-seeking）</li>
+<li>偏见（Bias）</li>
+<li>安全漏洞（Security vulnerabilities）</li>
+<li>危险内容生成（Dangerous content）</li>
+</ul>
+<p><strong>特征操控实验</strong>: 通过将某个特征的值”clamp”（锁定）到极高或极低，观察模型行为变化。例如，将”金门大桥”特征强行激活后，模型会在完全不相关的上下文中反复提到金门大桥。</p>
+<p><strong>为什么重要</strong>: 这开启了”特征级安全调控”的新范式——相较于RLHF只能调控模型的整体输出行为，特征级操控可以精确地定位和修正特定的不安全倾向。</p>
+<h3 id="4-SAE训练的缩放定律"><a href="#4-SAE训练的缩放定律" class="headerlink" title="4. SAE训练的缩放定律"></a>4. SAE训练的缩放定律</h3><p><strong>核心思想</strong>: SAE自身的训练也遵循可预测的缩放定律——随着特征数量的增加（100万→400万→3400万），SAE的解释覆盖率和重构质量按可预测的方式提升。</p>
+<p><strong>为什么重要</strong>: 这意味着SAE方法不仅”在玩具模型上管用”，而且可以”通过增加投入来系统地提升效果”——这是从”有趣但无用的研究方向”转变为”有实际投资价值的研究方向”的关键。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Anthropic首次在商业级模型Claude 3 Sonnet上成功部署了稀疏自编码器（SAE），提取了3400万个可解释的内部特征——这些特征表现出跨语言&#x2F;跨模态的概念统一性，包括可操控的安全相关特征，证明了可解释性技术可以从玩具模型扩展到生产级模型，为AI安全的”特征级”调控提供了全新范式。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>LLM的内部运作是一个”黑箱”——我们知道输入和输出，但不知道中间发生了什么。机械化可解释性（Mechanistic Interpretability）试图打开这个黑箱，理解模型内部的”思想”。</p>
+<p>关键问题：</p>
+<ol>
+<li>能否在商业级模型（而非仅玩具模型）中提取有意义的内部特征？</li>
+<li>SAE方法能否跨数量级扩展？</li>
+<li>提取的特征是否具有跨语言和跨模态的统一性？</li>
+<li>能否通过操控特征来改变模型行为？</li>
+</ol>
+<h3 id="前人研究的局限"><a href="#前人研究的局限" class="headerlink" title="前人研究的局限"></a>前人研究的局限</h3><ol>
+<li><strong>规模鸿沟</strong>: 先前的可解释性研究主要在1-2层的小Transformer上进行，与生产级模型之间存在巨大的规模差距</li>
+<li><strong>特征可解释性有限</strong>: 即使在小模型上找到的”特征”，其可解释性也参差不齐</li>
+<li><strong>缺乏因果验证</strong>: 大多数研究只能观察到相关性（”这个神经元在X输入时激活”），无法证明因果性（”激活这个神经元会导致X行为”）</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p>稀疏自编码器可以作为”显微镜”——将一个密集激活的模型层分解为大量可解释的、独立控制的特征，而且这个”显微镜”的放大倍数可以通过增加SAE特征数来持续提升。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="SAE训练配置"><a href="#SAE训练配置" class="headerlink" title="SAE训练配置"></a>SAE训练配置</h3><table>
+<thead>
+<tr>
+<th>SAE规模</th>
+<th>特征数</th>
+<th>训练位置</th>
+<th>稀疏度目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Small</td>
+<td>~1M</td>
+<td>Claude 3 Sonnet中间层</td>
+<td>约10-20个活跃特征&#x2F;输入</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>~4M</td>
+<td>Claude 3 Sonnet中间层</td>
+<td>约10-20个活跃特征&#x2F;输入</td>
+</tr>
+<tr>
+<td>Large</td>
+<td>~34M</td>
+<td>Claude 3 Sonnet中间层</td>
+<td>约10-20个活跃特征&#x2F;输入</td>
+</tr>
+</tbody></table>
+<h3 id="评估方法"><a href="#评估方法" class="headerlink" title="评估方法"></a>评估方法</h3><table>
+<thead>
+<tr>
+<th>评估维度</th>
+<th>方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>特征可解释性</td>
+<td>人工评估、自动化评分、激活模式可视化</td>
+</tr>
+<tr>
+<td>重构质量</td>
+<td>CE损失（重构损失与原模型输出的差异）</td>
+</tr>
+<tr>
+<td>因果性</td>
+<td>特征clamp实验（测量行为变化）</td>
+</tr>
+<tr>
+<td>多语言</td>
+<td>跨语言文本激活模式对比</td>
+</tr>
+<tr>
+<td>多模态</td>
+<td>对图像的激活响应（尽管纯文本训练）</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><strong>步骤1: 稀疏自编码器（SAE）训练</strong></p>
+<p><strong>步骤位置选择</strong>: 在Claude 3 Sonnet的中间层残差流上（选择中间层是因为它编码了比底层更抽象、比顶层更”未压缩”的中间表示）<br><strong>步骤SAE架构</strong>: </p>
+<ul>
+<li>编码器: 残差流激活 → 特征激活（线性+ReLU + TopK稀疏化）</li>
+<li>解码器: 特征激活 → 重建的残差流激活（线性）<br><strong>步骤训练目标</strong>: L &#x3D; L_reconstruct + lambda * L_sparsity</li>
+<li>L_reconstruct: MSE（重建误差）</li>
+<li>L_sparsity: 鼓励仅有少量特征激活的稀疏惩罚<br><strong>步骤输出</strong>: 训练好的SAE（编码器+解码器权重）</li>
+</ul>
+<p><strong>步骤2: 特征可解释性分析</strong></p>
+<p><strong>步骤输入</strong>: SAE提取的特征激活模式<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>对每个特征，找到”最强激活”的输入文本（top-activating examples）</li>
+<li>人工审查这些文本是否围绕同一概念</li>
+<li>对特征进行主题标注（金门大桥、安全漏洞、Python代码等）<br><strong>步骤输出</strong>: 可解释特征的标注集合</li>
+</ul>
+<p><strong>步骤3: 跨语言&#x2F;跨模态验证</strong></p>
+<p><strong>步骤输入</strong>: 同一概念的不同语言描述（如中英日法）&#x2F;不同模态（文本+图像）<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>将多语言&#x2F;多模态输入通过模型生成残差流激活</li>
+<li>通过SAE查看”概念X”特征的激活强度</li>
+<li>验证该特征是否在所有语言&#x2F;模态表达中都激活<br><strong>步骤输出</strong>: 特征跨语言&#x2F;跨模态一致性的量化证据</li>
+</ul>
+<p><strong>步骤4: 特征因果操控实验</strong></p>
+<p><strong>步骤输入</strong>: Claude 3 Sonnet模型 + 训练好的SAE<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>在模型运行时，人为地将某个特征的值”clamp”到极高值</li>
+<li>观察模型输出是否被此特征”劫持”（如频繁提到金门大桥）</li>
+<li>对安全特征做类似操控，观察不安全行为增减<br><strong>步骤输出</strong>: 特征与行为之间因果关系的实证证据</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="SAE的数学框架"><a href="#SAE的数学框架" class="headerlink" title="SAE的数学框架"></a>SAE的数学框架</h4><p>稀疏自编码器将一个激活向量x（残差流）分解为:</p>
+<p>$$x \approx \sum_{i} f_i(x) \cdot d_i + b$$</p>
+<p>其中:</p>
+<ul>
+<li>f_i(x)是第i个特征在输入x上的激活值</li>
+<li>d_i是第i个特征对应的解码向量（”特征方向”）</li>
+<li>b是偏置项</li>
+</ul>
+<p>关键约束: f_i(x)在绝大多数输入上应为零（稀疏性），只在特定概念出现时才激活。</p>
+<h4 id="SAE训练的缩放定律"><a href="#SAE训练的缩放定律" class="headerlink" title="SAE训练的缩放定律"></a>SAE训练的缩放定律</h4><p>实验发现以下缩放关系:</p>
+<ul>
+<li>随着特征数N_f增加，L0（平均活跃特征数）保持大致恒定</li>
+<li>重构损失MSE随N_f的增加而递减</li>
+<li>递减模式呈现幂律: MSE ∝ N_f^(-alpha)</li>
+</ul>
+<p>这意味着”增加更多特征”是提升可解释性覆盖率的可靠方法——并且回报是可预测的。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="SAE训练的可扩展性验证"><a href="#SAE训练的可扩展性验证" class="headerlink" title="SAE训练的可扩展性验证"></a>SAE训练的可扩展性验证</h3><table>
+<thead>
+<tr>
+<th>SAE规模</th>
+<th>特征数</th>
+<th>L0 (稀疏度)</th>
+<th>重构质量 (MSE)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Small</td>
+<td>~1M</td>
+<td>~10-20</td>
+<td>较好</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!figure] Figure 4: 消融实验&#x2F;详细分析图<br>建议位置：关键结果<br>放置原因：展示各组件对最终性能的贡献（消融实验）、参数敏感性分析或速度-质量权衡曲线<br>当前状态：图表占位<br>| Medium | ~4M | ~10-20 | 更好 |<br>| Large | ~34M | ~10-20 | 最佳 |</p>
+</blockquote>
+<h3 id="识别的主要特征类别"><a href="#识别的主要特征类别" class="headerlink" title="识别的主要特征类别"></a>识别的主要特征类别</h3><table>
+<thead>
+<tr>
+<th>特征类别</th>
+<th>示例</th>
+<th>跨语言</th>
+<th>跨模态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>地理&#x2F;城市</td>
+<td>金门大桥、巴黎、东京</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>人物</td>
+<td>爱因斯坦、奥巴马、泰勒·斯威夫特</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>科学概念</td>
+<td>DNA、量子力学、微积分</td>
+<td>大多是</td>
+<td>部分</td>
+</tr>
+<tr>
+<td>编程概念</td>
+<td>Python列表推导、SQL JOIN</td>
+<td>部分(编程语言)</td>
+<td>否</td>
+</tr>
+<tr>
+<td>安全相关</td>
+<td>欺骗、谄媚、偏见、安全漏洞</td>
+<td>是</td>
+<td>未知</td>
+</tr>
+<tr>
+<td>抽象概念</td>
+<td>民主、自由、正义</td>
+<td>部分是</td>
+<td>部分</td>
+</tr>
+</tbody></table>
+<h3 id="特征操控实验的关键结果"><a href="#特征操控实验的关键结果" class="headerlink" title="特征操控实验的关键结果"></a>特征操控实验的关键结果</h3><table>
+<thead>
+<tr>
+<th>操控方式</th>
+<th>观察到的行为变化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>激活”金门大桥”特征</td>
+<td>模型在完全不相关的回答中频繁提及其桥</td>
+</tr>
+<tr>
+<td>抑制”谄媚”特征</td>
+<td>模型变得更直言不讳，减少迎合用户的倾向</td>
+</tr>
+<tr>
+<td>激活”安全漏洞”特征</td>
+<td>模型在安全审查中识别更多潜在问题</td>
+</tr>
+<tr>
+<td>操控”欺骗”特征</td>
+<td>模型输出的诚实度可被调节</td>
+</tr>
+</tbody></table>
+<h3 id="跨语言激活一致性"><a href="#跨语言激活一致性" class="headerlink" title="跨语言激活一致性"></a>跨语言激活一致性</h3><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>英文激活</th>
+<th>中文激活</th>
+<th>日文激活</th>
+<th>图像激活</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>金门大桥</td>
+<td>高</td>
+<td>高</td>
+<td>高</td>
+<td>高</td>
+</tr>
+<tr>
+<td>数学</td>
+<td>高</td>
+<td>高</td>
+<td>高</td>
+<td>中</td>
+</tr>
+<tr>
+<td>特朗普</td>
+<td>高</td>
+<td>高</td>
+<td>高</td>
+<td>高</td>
+</tr>
+<tr>
+<td>Python代码</td>
+<td>高</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="概念级表征的理论意义"><a href="#概念级表征的理论意义" class="headerlink" title="概念级表征的理论意义"></a>概念级表征的理论意义</h3><p>跨语言&#x2F;跨模态的特征统一性表明了LLM内部的一种重要结构：概念空间。</p>
+<p>模型不是分别存储”Golden Gate Bridge”、”金门大桥”、”ゴールデンゲートブリッジ”和一张桥的图片——而是存储了一个统一的”金门大桥概念”，三种语言和一种视觉表达都是该概念的”触发器”。</p>
+<p>这对语言模型的理解模式有深远启示：</p>
+<ul>
+<li>翻译不是”源语言→目标语言”的映射，而是”源语言→概念→目标语言”</li>
+<li>跨语言zero-shot能力自然产生于这种统一的概念表征</li>
+<li>视觉理解能力可能可以”诞生”于纯文本训练的概念空间中</li>
+</ul>
+<h3 id="特征级操控-vs-行为级操控"><a href="#特征级操控-vs-行为级操控" class="headerlink" title="特征级操控 vs 行为级操控"></a>特征级操控 vs 行为级操控</h3><p>RLHF是”行为级操纵”——它改变模型的最终输出行为，但不知道内部的哪个”齿轮”被调整了。SAE提供了”特征级操控”——精确地找到与特定行为相关的内部特征并调整它。</p>
+<p>两者互补：</p>
+<ul>
+<li>RLHF擅长整体行为调整（”变得更有帮助”）</li>
+<li>SAE擅长精确的局部调整（”减少在X话题上的谄媚倾向”）</li>
+<li>组合使用可能是未来的最优方案</li>
+</ul>
+<h3 id="方法论局限的现实评估"><a href="#方法论局限的现实评估" class="headerlink" title="方法论局限的现实评估"></a>方法论局限的现实评估</h3><p>论文作者坦诚了当前方法的重要局限：</p>
+<ol>
+<li><strong>特征不完整</strong>: 3400万特征仍然只覆盖了模型内部分表示的一小部分——大量的”暗物质”未被发现</li>
+<li><strong>因果性验证不足</strong>: 虽然特征clamp能改变行为，但不等于完全理解了该特征在模型计算中的完整因果角色</li>
+<li><strong>跨层机制的缺失</strong>: SAE只能分析单层，但模型的计算是跨层流动的——当前方法无法追踪一个”思想”如何在层间演化</li>
+</ol>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-神经元级别分析"><a href="#vs-神经元级别分析" class="headerlink" title="vs 神经元级别分析"></a>vs 神经元级别分析</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>神经元分析</th>
+<th>SAE特征分析（本文）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>分析粒度</td>
+<td>单个神经元</td>
+<td>特征方向（多神经元的线性组合）</td>
+</tr>
+<tr>
+<td>可解释性</td>
+<td>差（多义性，一个神经元对应多个概念）</td>
+<td>好（单义性，一个特征基本对应一个概念）</td>
+</tr>
+<tr>
+<td>覆盖性</td>
+<td>自然覆盖所有神经元</td>
+<td>通过训练SaE来增加覆盖率</td>
+</tr>
+<tr>
+<td>操控性</td>
+<td>困难（影响多个概念）</td>
+<td>精确（基本上只影响一个概念）</td>
+</tr>
+</tbody></table>
+<h3 id="vs-之前的”Monosemanticity”工作"><a href="#vs-之前的”Monosemanticity”工作" class="headerlink" title="vs 之前的”Monosemanticity”工作"></a>vs 之前的”Monosemanticity”工作</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Towards Monosemanticity (2023)</th>
+<th>Scaling Monosemanticity (本文)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>验证模型</td>
+<td>1层小Transformer</td>
+<td>Claude 3 Sonnet（商业级）</td>
+</tr>
+<tr>
+<td>特征数</td>
+<td>~10K</td>
+<td>~34M (3000×扩展)</td>
+</tr>
+<tr>
+<td>跨模态验证</td>
+<td>无</td>
+<td>有</td>
+</tr>
+<tr>
+<td>安全应用</td>
+<td>无</td>
+<td>有（安全特征+操控）</td>
+</tr>
+<tr>
+<td>因果实验</td>
+<td>有限</td>
+<td>丰富的特征操控实验</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-特征覆盖率不完整"><a href="#1-特征覆盖率不完整" class="headerlink" title="1. 特征覆盖率不完整"></a>1. 特征覆盖率不完整</h3><p><strong>问题</strong>: SAE提取的特征只覆盖了模型内部表征的一小部分。大量未被SAE捕获的计算”暗物质”仍然是黑箱。</p>
+<p><strong>影响</strong>: 不能声称已经”理解”了模型的运作——只能说在可理解的部分继续深入。</p>
+<h3 id="2-单一层级分析"><a href="#2-单一层级分析" class="headerlink" title="2. 单一层级分析"></a>2. 单一层级分析</h3><p><strong>问题</strong>: SAE仅在中间层分析，无法追踪概念如何在多层之间演化、组合和变换。</p>
+<p><strong>影响</strong>: 缺少对模型”计算流程”的端到端理解——仅知道”某一时刻”激活了哪些概念。</p>
+<h3 id="3-自动化可解释性评估的不成熟"><a href="#3-自动化可解释性评估的不成熟" class="headerlink" title="3. 自动化可解释性评估的不成熟"></a>3. 自动化可解释性评估的不成熟</h3><p><strong>问题</strong>: 特征的”可解释性”目前主要依赖人工审查（看激活最强的文本是否有关联），缺乏自动化的、可扩展的评估方法。</p>
+<p><strong>影响</strong>: 无法对每个SAE训练版本做全面评估，只能抽样检查。</p>
+<h3 id="4-无法保证”完备性”"><a href="#4-无法保证”完备性”" class="headerlink" title="4. 无法保证”完备性”"></a>4. 无法保证”完备性”</h3><p><strong>问题</strong>: 即使找到的所有特征都是可解释的，也无法保证”没有遗漏关键特征”——模型的某些危险计算可能隐藏在当前SAE无法捕获的维度中。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-SAE作为通用可解释性工具"><a href="#1-SAE作为通用可解释性工具" class="headerlink" title="1. SAE作为通用可解释性工具"></a>1. SAE作为通用可解释性工具</h3><p><strong>洞见</strong>: 稀疏自编码器可以作为任何Transformer模型的”解剖工具”——不限于Claude，适用于任何架构和领域。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在自己训练的模型上部署SAE，分析模型内部表征</li>
+<li>检查模型是否形成了不当的偏见特征</li>
+<li>验证微调是否按预期方向改变了模型的内部表征</li>
+</ul>
+<h3 id="2-跨模态概念空间的验证方法"><a href="#2-跨模态概念空间的验证方法" class="headerlink" title="2. 跨模态概念空间的验证方法"></a>2. 跨模态概念空间的验证方法</h3><p><strong>洞见</strong>: 纯文本训练的模型形成的概念表征是跨模态的，可以通过图像输入验证（即使模型本身不支持图像输入，也可以通过CLIP等外部编码器）。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>使用多模态探针测试纯文本模型的概念表征</li>
+<li>设计跨模态一致性实验来验证”概念压缩”的质量</li>
+</ul>
+<h3 id="3-特征级安全审计"><a href="#3-特征级安全审计" class="headerlink" title="3. 特征级安全审计"></a>3. 特征级安全审计</h3><p><strong>洞见</strong>: 可以审计模型内部是否存在危险的特征——如欺骗、偏见、越狱倾向等——即使这些特征没有被触发。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在模型部署前，用SAE扫描是否存在与不安全行为相关的特征</li>
+<li>监控已部署模型的特征激活模式，检测异常行为</li>
+<li>设计特征级的”安全开关”来精确禁用特定不安全倾向</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>可解释性从”学术好奇”到”工程可操作”的转变</strong>: 这篇论文最重要的遗产是将机械化可解释性从纯学术研究推向了”对商业部署AI有实际价值”的领域——安全审计、行为调控、偏见检测。</p>
+</li>
+<li><p><strong>“显微镜”隐喻的威力</strong>: SAE提供了不同”放大倍数”的模型内部视角。但正如显微镜发明后花了几个世纪才真正理解细胞生物学，SAE也需要长时间的研究积累才能达到对模型行为的完整理解。</p>
+</li>
+<li><p><strong>可解释性研究的”ChatGPT时刻”</strong>: 类似于ChatGPT让AI出圈，这篇论文让可解释性研究出圈——在安全政策和AI治理讨论中被广泛引用。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><strong>模型安全审计</strong>: 在发布前用SAE检查是否存在危险特征</li>
+<li><strong>偏见消除</strong>: 识别并抑制与种族、性别等敏感维度相关的不当特征</li>
+<li><strong>行为调试</strong>: 当模型出现异常行为时，用SAE定位是哪些内部特征在作怪</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-能否实现跨层特征追踪？"><a href="#1-能否实现跨层特征追踪？" class="headerlink" title="1. 能否实现跨层特征追踪？"></a>1. 能否实现跨层特征追踪？</h3><p><strong>问题</strong>: 如何将SAE分析扩展到多层，追踪一个概念在不同层之间的演化——从”识别”到”理解”到”使用”？</p>
+<h3 id="2-“暗物质”是什么？"><a href="#2-“暗物质”是什么？" class="headerlink" title="2. “暗物质”是什么？"></a>2. “暗物质”是什么？</h3><p><strong>问题</strong>: SAE无法捕获的计算维度代表了什么？是噪声、冗余还是我们尚未理解的更复杂的计算模式？</p>
+<h3 id="3-特征的因果完备性"><a href="#3-特征的因果完备性" class="headerlink" title="3. 特征的因果完备性"></a>3. 特征的因果完备性</h3><p><strong>问题</strong>: 操控SAE特征是否能完全解释模型的行为变化？还是说存在SAE无法捕获但对行为至关重要的”隐藏变量”？</p>
+<h3 id="4-回路分析"><a href="#4-回路分析" class="headerlink" title="4. 回路分析"></a>4. 回路分析</h3><p><strong>问题</strong>: 不同特征之间如何交互？能否构建特征级别的”计算回路”图，完整描述一个输入如何通过特征激活网络产生输出？</p>
+<h3 id="5-跨模型的特征对应"><a href="#5-跨模型的特征对应" class="headerlink" title="5. 跨模型的特征对应"></a>5. 跨模型的特征对应</h3><p><strong>问题</strong>: Claude的”金门大桥”特征在GPT-4中是否有对应特征？不同模型的概念空间是否同构？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Templeton, A., Conerly, T., Marcus, J., et al. (2024). Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet. Anthropic Transformer Circuits. <a target="_blank" rel="noopener" href="https://transformer-circuits.pub/2024/scaling-monosemanticity">https://transformer-circuits.pub/2024/scaling-monosemanticity</a></li>
+<li>Anthropic. (2023). Towards Monosemanticity: Decomposing Language Models With Dictionary Learning. Transformer Circuits Thread.</li>
+<li>Elhage, N., et al. (2022). Toy Models of Superposition. Transformer Circuits Thread.</li>
+<li>Bricken, T., et al. (2023). Towards Monosemanticity: Decomposing Language Models With Dictionary Learning. Transformer Circuits Thread.</li>
+<li>Olah, C., et al. (2020). Zoom In: An Introduction to Circuits. Distill.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/" class="category-chain-item">规模定律</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-AI-safety/" class="print-no-link">#papers/AI-safety</a>
+      
+        <a href="/tags/papers-interpretability/" class="print-no-link">#papers/interpretability</a>
+      
+        <a href="/tags/papers-mechanistic-interpretability/" class="print-no-link">#papers/mechanistic-interpretability</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet</div>
+      <div>https://w2ongq6.github.io/2024/05/21/llm/note/ScalingMonosemanticity_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年5月21日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/05/23/inference/note/MiniCache_note/" title="MiniCache: KV Cache Compression in Depth Dimension for Large Language Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">MiniCache: KV Cache Compression in Depth Dimension for Large Language Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/05/20/inference/note/LoRAX_note/" title="LoRA Land: 310 Fine-tuned LLMs that Rival GPT-4">
+                        <span class="hidden-mobile">LoRA Land: 310 Fine-tuned LLMs that Rival GPT-4</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

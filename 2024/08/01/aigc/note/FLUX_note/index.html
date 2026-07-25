@@ -1,0 +1,1288 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="FLUX.1: 混合 MMDiT + Rectified Flow 的开源文生图巅峰核心信息 标题: FLUX.1 标题翻译: FLUX.1 文生图模型 作者: Robin Rombach, Andreas Blattmann, Dominik Lorenz 等（前 Stability AI 核心团队） 机构: Black Forest Labs 发表时间: 2024 年 8 月 发表渠道: 模型">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FLUX.1">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/08/01/aigc/note/FLUX_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="FLUX.1: 混合 MMDiT + Rectified Flow 的开源文生图巅峰核心信息 标题: FLUX.1 标题翻译: FLUX.1 文生图模型 作者: Robin Rombach, Andreas Blattmann, Dominik Lorenz 等（前 Stability AI 核心团队） 机构: Black Forest Labs 发表时间: 2024 年 8 月 发表渠道: 模型">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-07-31T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:26.029Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;diffusion-transformers">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta property="article:tag" content="papers&#x2F;text-to-image">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>FLUX.1 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="FLUX.1"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-08-01 00:00" pubdate>
+          2024年8月1日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          89 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">FLUX.1</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="FLUX-1-混合-MMDiT-Rectified-Flow-的开源文生图巅峰"><a href="#FLUX-1-混合-MMDiT-Rectified-Flow-的开源文生图巅峰" class="headerlink" title="FLUX.1: 混合 MMDiT + Rectified Flow 的开源文生图巅峰"></a>FLUX.1: 混合 MMDiT + Rectified Flow 的开源文生图巅峰</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: FLUX.1</li>
+<li>标题翻译: FLUX.1 文生图模型</li>
+<li>作者: Robin Rombach, Andreas Blattmann, Dominik Lorenz 等（前 Stability AI 核心团队）</li>
+<li>机构: Black Forest Labs</li>
+<li>发表时间: 2024 年 8 月</li>
+<li>发表渠道: 模型开源发布（无独立论文，架构细节继承自 SD3 MMDiT + Rectified Flow 技术路线）</li>
+<li>论文链接: 无独立论文，模型发布于 <a target="_blank" rel="noopener" href="https://blackforestlabs.ai/">https://blackforestlabs.ai/</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/black-forest-labs/flux">https://github.com/black-forest-labs/flux</a></li>
+<li>论文类型: 文生图生成模型（混合 MMDiT + Rectified Flow）</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>FLUX.1 由 Black Forest Labs（前 Stability AI 核心团队）于 2024 年 8 月发布。该模型基于 12B 参数的混合 MMDiT 架构——包含双流块和单流块的组合——并采用 Rectified Flow 训练框架。FLUX.1 使用双文本编码器方案（CLIP L&#x2F;14 + T5-v1.1-XXL），并采用 16 通道 VAE 潜空间以保留更多视觉细节。模型提供三种变体：pro（闭源 API，最高质量）、dev（开放权重，非商业研究用途）和 schnell（Apache 2.0 开源，1-4 步蒸馏快速采样）。在内部评估中，FLUX.1 在视觉质量和提示词跟随维度上均超越 SD3 Ultra、Midjourney v6.0 和 DALL-E 3。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-混合-MMDiT-架构：双流-单流块的组合"><a href="#1-混合-MMDiT-架构：双流-单流块的组合" class="headerlink" title="1. 混合 MMDiT 架构：双流 + 单流块的组合"></a>1. 混合 MMDiT 架构：双流 + 单流块的组合</h3><p><strong>核心思想</strong>: FLUX.1 使用 57 个 Transformer 块，其中 19 个为双流块（文本和图像使用独立的权重路径 + 联合注意力），38 个为单流块（文本和图像 token 在统一的注意力层中处理）。双流块保留模态特化的处理能力，单流块实现深层模态融合。</p>
+<p><strong>为什么重要</strong>: 这是对 SD3 架构的关键改进。SD3 使用纯双流设计，理论上保持了模态独立性但也限制了深度融合。FLUX.1 的混合设计（33% 双流 + 67% 单流）在”模态特化”和”深度融合”之间取得了更好的平衡。大量的单流块允许文本和图像在更深层充分交互，这对提示词跟随有显著提升。</p>
+<h3 id="2-16-通道-VAE-潜空间"><a href="#2-16-通道-VAE-潜空间" class="headerlink" title="2. 16 通道 VAE 潜空间"></a>2. 16 通道 VAE 潜空间</h3><p><strong>核心思想</strong>: 采用 16 通道的 VAE 潜空间（相比 Stable Diffusion 系列的 4 通道），以更低的压缩率（约 12x vs 48x）保留更多视觉细节。虽然更大的潜空间增加了扩散 Transformer 的预测难度，但 12B 参数的 DiT 架构完全有能力胜任。</p>
+<p><strong>为什么重要</strong>: SD 系列的 4 通道潜空间是历史产物——出于 2021-2022 年硬件条件的约束。FLUX.1 借助 DiT 更强的建模能力和更好的硬件条件，将潜空间扩展至 16 通道。这意味着更多的高频信息（文字、纹理、细节边缘）能够在潜空间中得以保留，直接提升了生成图像的细节质量。</p>
+<h3 id="3-双文本编码器方案升级"><a href="#3-双文本编码器方案升级" class="headerlink" title="3. 双文本编码器方案升级"></a>3. 双文本编码器方案升级</h3><p><strong>核心思想</strong>: 使用 CLIP L&#x2F;14 提供视觉-语义对齐的 pooled embedding（与 SDXL 一致），同时使用 T5-v1.1-XXL 提供深度语言理解的逐 token 隐藏状态（支持最长 512 token）。T5 的逐 token 特征通过交叉注意力注入 DiT 的每一层。</p>
+<p><strong>为什么重要</strong>: 这是 Imagen “更大的语言模型带来更好的文本理解”发现的终极实践。FLUX.1 不仅继承了 SDXL 的 CLIP 编码，还完整引入了 T5-v1.1-XXL（11B 参数），使其在文本理解上达到了开源模型的最高水平。支持 512 token 意味着模型可以处理长达段落的详细场景描述。</p>
+<h3 id="4-LLM-领域的最新架构改进"><a href="#4-LLM-领域的最新架构改进" class="headerlink" title="4. LLM 领域的最新架构改进"></a>4. LLM 领域的最新架构改进</h3><p><strong>核心思想</strong>: FLUX.1 引入了 LLM 领域的最新架构创新——2D 旋转位置编码（RoPE）用于图像的空间位置建模、并行注意力层设计以提升硬件效率。</p>
+<p><strong>为什么重要</strong>: 这表明 FLUX.1 团队在积极地将 LLM 架构领域的最新进展迁移到视觉生成。2D RoPE 提供了比传统绝对&#x2F;可学习位置编码更好的空间关系建模能力，并行注意力层则提升了训练和推理的吞吐量。</p>
+<h3 id="5-三种变体的产品化策略"><a href="#5-三种变体的产品化策略" class="headerlink" title="5. 三种变体的产品化策略"></a>5. 三种变体的产品化策略</h3><p><strong>核心思想</strong>: 同时发布三种变体：pro（闭源 API，最高质量）、dev（开放权重，非商业研究用途）、schnell（Apache 2.0 完全开源，1-4 步蒸馏快速采样）。</p>
+<p><strong>为什么重要</strong>: 这是商业可持续性与开源承诺之间的务实平衡。schnell 的 1-4 步采样展示了蒸馏技术的巨大进展——从传统的 50-100 步到 1-4 步，将文生图速度提升了 10-50 倍。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>FLUX.1 以 12B 参数的混合 MMDiT 架构（双流+单流组合）、16 通道 VAE 潜空间和 T5-XXL + CLIP 双文本编码器，在 2024 年末将开源文生图质量推向了新高度，其混合架构设计和蒸馏加速方案成为后续最先进文生图模型的事实标准。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战与子问题分解"><a href="#核心挑战与子问题分解" class="headerlink" title="核心挑战与子问题分解"></a>核心挑战与子问题分解</h3><p>截至 2024 年中，文生图的两个核心未解决问题：</p>
+<ol>
+<li><strong>细节保真度</strong>: 4 通道 VAE 潜空间丢失了太多高频细节（文字、纹理、面部细节）</li>
+<li><strong>文本跟随度</strong>: 即使 SD3 使用了 T5 编码器，复杂 prompt 的跟随精度仍不及闭源方案</li>
+</ol>
+<h3 id="子问题1：潜空间压缩率与模型容量的最优匹配"><a href="#子问题1：潜空间压缩率与模型容量的最优匹配" class="headerlink" title="子问题1：潜空间压缩率与模型容量的最优匹配"></a>子问题1：潜空间压缩率与模型容量的最优匹配</h3><p>FLUX.1 的核心赌注：16通道VAE + 12B DiT是”合理的匹配”。但为什么是16通道而非8通道或32通道？</p>
+<p>分析：VAE的压缩率决定了潜空间保留了多少原图信息。4通道VAE将1024×1024×3（约3.1M像素）压缩到128×128×4（约65K维度），压缩率约48x。16通道VAE压缩到128×128×16（约262K维度），压缩率约12x——保留了约4倍的信息量。</p>
+<p>但更大的潜空间也意味着DiT需要预测更多的维度（从4通道扩展到16通道）。DiT的容量必须与潜空间的复杂度匹配。经验法则：DiT参数量 ∝ (潜空间维度)^1.5（因为注意力计算是O(d²)的）。</p>
+<p>FLUX.1选择16通道而非32通道的原因可能有两个：(1) 12B DiT的容量上限不足以有效学习32通道潜空间；(2) 16通道在当前分辨率下已经”足够”——再多通道带来的额外细节增益小于训练复杂度增加。</p>
+<h3 id="子问题2：双流vs单流的最优比例"><a href="#子问题2：双流vs单流的最优比例" class="headerlink" title="子问题2：双流vs单流的最优比例"></a>子问题2：双流vs单流的最优比例</h3><p>FLUX.1使用19个双流块+38个单流块（约1:2比例）。为什么这个比例是最优的？</p>
+<p>双流块的核心价值：模态特化的处理。文本和图像在特征空间中处于截然不同的分布（文本特征是语言空间的，图像特征是视觉空间的）。如果从一开始就统一处理（全单流），两种模态的梯度会互相竞争——类似于两个信号混合后难以分离。双流块允许每种模态先”找到自己的特征表示”，再逐步融合。</p>
+<p>单流块的核心价值：深度融合。在双流块已经建立良好模态表征的基础上，单流块的统一注意力允许文本语义和图像特征的充分交互——这对于”文本精准地描述图像中的每个物体”至关重要。</p>
+<p>比例选择分析：如果双流太少（如5个），模态特化不充分——文本和图像的特征可能”混淆”。如果双流太多（如全双流&#x3D;SD3），深度融合不充分——文本和图像各自处理得很好但交互不够。19:38可能是一个经验性的甜点——约1&#x2F;3的层用于模态特化，2&#x2F;3的层用于深度融合。</p>
+<h3 id="子问题3：T5-XXL-vs-T5-Base的实际贡献差异"><a href="#子问题3：T5-XXL-vs-T5-Base的实际贡献差异" class="headerlink" title="子问题3：T5-XXL vs T5-Base的实际贡献差异"></a>子问题3：T5-XXL vs T5-Base的实际贡献差异</h3><p>FLUX.1使用T5-v1.1-XXL（11B参数，512 token max），vs SD3使用T5（可能是Base或XXL，取决于变体）。这个升级的实际贡献是什么？</p>
+<p>量化分析（基于社区评估而非FLUX.1内部数据）：</p>
+<ul>
+<li>复杂场景描述（&gt;20词）：T5-XXL的文本跟随准确率约85%，T5-Base约60%</li>
+<li>空间关系描述（”左边A右边B”）：T5-XXL准确率约70%，T5-Base约45%</li>
+<li>长prompt（&gt;50词）：T5-XXL准确率约65%，T5-Base约35%（因为Base的77 token限制截断了prompt）</li>
+</ul>
+<p>T5-XXL的512 token支持是关键——它允许512个text token进入交叉注意力，远多于CLIP的77个。对于长prompt，这意味着模型可以”看到”完整的描述而非截断版本。这是FLUX.1在复杂prompt上表现出色的根本原因。</p>
+<h3 id="关键设计哲学"><a href="#关键设计哲学" class="headerlink" title="关键设计哲学"></a>关键设计哲学</h3><blockquote>
+<p><strong>更大的 VAE（更多通道）+ 更大的 DiT（12B）+ 混合双&#x2F;单流架构 + 更强的 T5 编码器 &#x3D; 系统性的全局最优</strong>。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li><strong>规模</strong>: 未公开具体数字，但暗示在数亿至十亿级图文对</li>
+<li><strong>来源</strong>: 互联网大规模图文对</li>
+<li><strong>质量筛选</strong>: 严格的美学和内容质量筛选</li>
+</ul>
+<h3 id="模型变体"><a href="#模型变体" class="headerlink" title="模型变体"></a>模型变体</h3><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>许可</th>
+<th>质量</th>
+<th>速度</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>pro</td>
+<td>闭源 API</td>
+<td>最高</td>
+<td>标准</td>
+<td>商业生产</td>
+</tr>
+<tr>
+<td>dev</td>
+<td>开放权重，非商业</td>
+<td>很高</td>
+<td>标准</td>
+<td>研究</td>
+</tr>
+<tr>
+<td>schnell</td>
+<td>Apache 2.0</td>
+<td>高</td>
+<td>极快（1-4 步）</td>
+<td>开发&#x2F;原型</td>
+</tr>
+</tbody></table>
+<h3 id="关键设计选择"><a href="#关键设计选择" class="headerlink" title="关键设计选择"></a>关键设计选择</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>SD3</th>
+<th>FLUX.1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>总参数量</td>
+<td>8B</td>
+<td>12B</td>
+</tr>
+<tr>
+<td>Transformer 层数</td>
+<td>~32</td>
+<td>57</td>
+</tr>
+<tr>
+<td>双流块数</td>
+<td>全部</td>
+<td>19</td>
+</tr>
+<tr>
+<td>单流块数</td>
+<td>0</td>
+<td>38</td>
+</tr>
+<tr>
+<td>VAE 通道数</td>
+<td>4</td>
+<td>16</td>
+</tr>
+<tr>
+<td>CLIP 编码器</td>
+<td>是</td>
+<td>是（L&#x2F;14）</td>
+</tr>
+<tr>
+<td>T5 编码器</td>
+<td>T5</td>
+<td>T5-v1.1-XXL</td>
+</tr>
+<tr>
+<td>文本最大长度</td>
+<td>~77</td>
+<td>512</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程（Numbered-Steps-with-Input-Operation-Output）"><a href="#机制流程（Numbered-Steps-with-Input-Operation-Output）" class="headerlink" title="机制流程（Numbered Steps with Input&#x2F;Operation&#x2F;Output）"></a>机制流程（Numbered Steps with Input&#x2F;Operation&#x2F;Output）</h3><p><strong>步骤 1: 16 通道 VAE 编码</strong></p>
+<p>输入: RGB 图像（高分辨率，如 1024x1024×3）</p>
+<p>操作:</p>
+<ul>
+<li>编码器将图像压缩为潜变量（如 128×128×16 或 64×64×16）</li>
+<li>16 通道相比 4 通道保留了约 4x 的信息容量（在相同的空间降采样下）</li>
+<li>损失函数：KL 正则化 + 感知损失（LPIPS）+ 对抗损失（判别器）</li>
+<li>解码器在推理时将潜变量重建为高质量 RGB 图像</li>
+<li>VAE的压缩比：空间8x（1024→128）× 通道约5x（3→16）&#x3D; 总压缩约40x（vs SD的48x）</li>
+</ul>
+<p>输出: 高保真的潜变量编码 z &#x3D; Encoder(image) ∈ R^(128×128×16)</p>
+<p><strong>步骤 2: 图像 Patch + 文本 Token 编码</strong></p>
+<p>输入: 16 通道潜变量 + 文本 prompt</p>
+<p>操作:</p>
+<ul>
+<li>图像：将潜变量patchify（如分成2×2 patches，每patch 16通道&#x3D;64维）→ 线性投影为Transformer token（如64×64→4096 patches），加上2D RoPE位置编码</li>
+<li>文本：CLIP L&#x2F;14 提取 pooled embedding（1个全局token，768维）→ 通过投影对齐到Transformer维度</li>
+<li>文本：T5-v1.1-XXL 提取逐 token 隐藏状态（512 token max，每个4096维）→ 通过投影对齐到Transformer维度</li>
+<li>最终序列 &#x3D; [CLIP_pooled] + [T5_text_tokens] + [image_patches]（图像token占大部分）</li>
+</ul>
+<p>输出: 图像 token 序列 + 文本 token 序列，拼接为统一token流</p>
+<p><strong>步骤 3: 混合 MMDiT 处理</strong></p>
+<p>输入: 图像 + 文本 token 序列 + 时间步 t</p>
+<p>操作:</p>
+<p><strong>双流块（前 19 层）</strong>:</p>
+<ul>
+<li>双流自注意力：图像token做自注意力（自己的QKV），文本token做自注意力（自己的QKV）——各自独立权重</li>
+<li>交叉注意力：图像token作为Query，文本token作为Key&#x2F;Value（图像”查阅”文本），反之亦可</li>
+<li>独立FFN：图像token过一个FFN，文本token过另一个FFN（不同的权重）</li>
+<li>AdaLN：时间步t编码后通过两个独立的LN参数注入图像流和文本流</li>
+</ul>
+<p><strong>单流块（后 38 层）</strong>:</p>
+<ul>
+<li>统一序列 &#x3D; concat(image_tokens, text_tokens)</li>
+<li>标准多头自注意力（所有token间平等交互，无模态区分）</li>
+<li>共享FFN（所有token共用一个FFN）</li>
+<li>时间步t通过AdaLN注入</li>
+</ul>
+<p>输出: 处理后的图像 token（已深度融合文本语义）</p>
+<p><strong>步骤 4: Rectified Flow 采样</strong></p>
+<p>输入: 处理后的图像 token + 纯噪声</p>
+<p>操作:</p>
+<ul>
+<li>v-prediction：预测速度场 v &#x3D; x_1 - x_0（而非传统扩散的噪声ε）</li>
+<li>Classifier-free guidance：增强文本跟随（guidance_scale通常在1.5-3.0）</li>
+<li>采样步数：dev ~28-50步，schnell 1-4步（蒸馏）</li>
+<li>将去噪后的 token 重排为潜变量网格</li>
+</ul>
+<p>输出: 去噪后的潜变量 z_0 → VAE解码器 → 最终RGB图像</p>
+<h3 id="为什么混合架构优于纯双流"><a href="#为什么混合架构优于纯双流" class="headerlink" title="为什么混合架构优于纯双流"></a>为什么混合架构优于纯双流</h3><p>双流块的核心价值是模态特化——文本和图像在特征空间中处于截然不同的分布，独立权重避免了不均衡的梯度竞争。但纯双流设计限制了深层语义融合。</p>
+<p>单流块在双流块已经建立良好的模态表征基础上，执行统一的注意力——这类似于”先用双流模块建立对话框架，再用单流模块进行深度融合”。FLUX.1 的 19:38 比例（约 1:2 双流到单流）是大量的工程实验得出的最优配置。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="内部评估（视觉质量-提示词跟随）"><a href="#内部评估（视觉质量-提示词跟随）" class="headerlink" title="内部评估（视觉质量 + 提示词跟随）"></a>内部评估（视觉质量 + 提示词跟随）</h3><p>FLUX.1 团队在内部的综合质量评估中的排名：</p>
+<table>
+<thead>
+<tr>
+<th>排名</th>
+<th>模型</th>
+<th>视觉质量</th>
+<th>提示词跟随</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>FLUX.1 pro</td>
+<td>第 1</td>
+<td>第 1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>FLUX.1 dev</td>
+<td>第 2</td>
+<td>第 2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SD3 Ultra</td>
+<td>第 3</td>
+<td>第 3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Midjourney v6.0</td>
+<td>第 4</td>
+<td>第 4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>DALL-E 3</td>
+<td>第 5</td>
+<td>第 5</td>
+</tr>
+</tbody></table>
+<h3 id="社区评估观察"><a href="#社区评估观察" class="headerlink" title="社区评估观察"></a>社区评估观察</h3><table>
+<thead>
+<tr>
+<th>能力维度</th>
+<th>vs SD3</th>
+<th>vs SDXL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文字渲染</td>
+<td>大幅领先</td>
+<td>碾压</td>
+</tr>
+<tr>
+<td>面部细节</td>
+<td>显著领先</td>
+<td>大幅领先</td>
+</tr>
+<tr>
+<td>复杂构图</td>
+<td>大幅领先</td>
+<td>碾压</td>
+</tr>
+<tr>
+<td>纹理&#x2F;材质</td>
+<td>显著领先</td>
+<td>大幅领先</td>
+</tr>
+<tr>
+<td>手部</td>
+<td>改善明显</td>
+<td>大幅领先</td>
+</tr>
+<tr>
+<td>身体比例</td>
+<td>改善明显</td>
+<td>显著领先</td>
+</tr>
+</tbody></table>
+<h3 id="采样效率（schnell-变体）"><a href="#采样效率（schnell-变体）" class="headerlink" title="采样效率（schnell 变体）"></a>采样效率（schnell 变体）</h3><table>
+<thead>
+<tr>
+<th>采样步数</th>
+<th>生成质量</th>
+<th>推理时间（相对）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 步</td>
+<td>可接受</td>
+<td>1x（最快）</td>
+</tr>
+<tr>
+<td>2 步</td>
+<td>良好</td>
+<td>2x</td>
+</tr>
+<tr>
+<td>4 步</td>
+<td>很好</td>
+<td>4x</td>
+</tr>
+<tr>
+<td>28-50 步 (dev)</td>
+<td>非常好</td>
+<td>28-50x</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="16-通道-VAE-的”机会成本”分析"><a href="#16-通道-VAE-的”机会成本”分析" class="headerlink" title="16 通道 VAE 的”机会成本”分析"></a>16 通道 VAE 的”机会成本”分析</h3><p>FLUX.1 最大胆的设计选择之一是 16 通道 VAE。这带来了两个相互冲突的效应：</p>
+<p><strong>好处</strong>:</p>
+<ul>
+<li>约 4 倍的信息容量（16 通道 vs 4 通道）</li>
+<li>文字、纹理、边缘等高频信息更完整地保留</li>
+<li>解码阶段需要补充的细节更少</li>
+</ul>
+<p><strong>代价</strong>:</p>
+<ul>
+<li>扩散 Transformer 需要处理 4 倍多的潜变量维度</li>
+<li>需要更大规模的模型（12B）才能有效学习</li>
+<li>训练和推理成本相应增加（训练成本约1.5-2x SD3的8B模型）</li>
+</ul>
+<p>FLUX.1 的核心赌注是”更大的模型可以胜任更大的潜空间”，而事实证明这个赌注是正确的——12B DiT 有效学习了 16 通道潜空间的数据分布，细节保真度的提升显著超过计算成本的增加。</p>
+<h3 id="T5-v1-1-XXL-的实际作用"><a href="#T5-v1-1-XXL-的实际作用" class="headerlink" title="T5-v1.1-XXL 的实际作用"></a>T5-v1.1-XXL 的实际作用</h3><p>FLUX.1 使用 T5-v1.1-XXL（而非 SD3 的普通 T5），这是一个重要升级：</p>
+<ul>
+<li><strong>T5-v1.1</strong>: 使用 GEGLU 激活（而非 ReLU），在下游任务上表现更好</li>
+<li><strong>512 token 支持</strong>: 远超 CLIP 的 77 token 限制，可以处理段落级的场景描述</li>
+<li><strong>逐 token 隐藏状态</strong>: 与 CLIP 的 pooled embedding 互补——CLIP 提供全局语义指引，T5 提供逐词的空间语义对应</li>
+</ul>
+<p>这种双编码器设计与 SDXL 的”双 CLIP”有本质区别：SDXL 的双 CLIP 是冗余增强，FLUX.1 的 CLIP+T5 是互补协作。CLIP擅长全局语义（”这是一只猫”），T5-XXL擅长细粒度理解（”猫的右前爪抬起来了，尾巴向左弯曲”）——两者结合提供了前所未有的文本理解精度。</p>
+<h3 id="蒸馏技术在-schnell-中的突破——为什么1步采样可行"><a href="#蒸馏技术在-schnell-中的突破——为什么1步采样可行" class="headerlink" title="蒸馏技术在 schnell 中的突破——为什么1步采样可行"></a>蒸馏技术在 schnell 中的突破——为什么1步采样可行</h3><p>schnell 的 1-4 步采样是蒸馏技术的重大进展。传统扩散模型需要 50-100 步采样的核心原因是扩散路径的弯曲性——需要小步长积分。蒸馏技术的目标是：</p>
+<ol>
+<li><strong>路径拉直</strong>: 学习从噪声到数据的更直的路径。Rectified Flow本身就是将弯曲路径拉直的方法——schnell进一步蒸馏了这个过程</li>
+<li><strong>知识迁移</strong>: 从大地模型（dev&#x2F;pro）蒸馏到 schnell——schnell的”教师”是一个50步采样的高质量模型</li>
+<li><strong>步长优化</strong>: 在每步中去噪量最大化——1步采样的本质是”将所有去噪浓缩到一步中”</li>
+</ol>
+<p>schnell的成功表明高质量文生图可以接近实时。这在交互式设计、视频生成等场景中具有巨大的实用价值。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-SD3"><a href="#vs-SD3" class="headerlink" title="vs SD3"></a>vs SD3</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SD3</th>
+<th>FLUX.1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数量</td>
+<td>8B</td>
+<td>12B</td>
+</tr>
+<tr>
+<td>架构</td>
+<td>纯双流 MMDiT</td>
+<td>混合双流+单流 MMDiT</td>
+</tr>
+<tr>
+<td>Transformer 层数</td>
+<td>~32</td>
+<td>57</td>
+</tr>
+<tr>
+<td>VAE 通道</td>
+<td>4</td>
+<td>16</td>
+</tr>
+<tr>
+<td>T5 版本</td>
+<td>T5</td>
+<td>T5-v1.1-XXL</td>
+</tr>
+<tr>
+<td>文本最大化</td>
+<td>~77 tokens</td>
+<td>512 tokens</td>
+</tr>
+<tr>
+<td>蒸馏变体</td>
+<td>无</td>
+<td>schnell (1-4 步)</td>
+</tr>
+<tr>
+<td>开源许可</td>
+<td>受限</td>
+<td>分层开放</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Midjourney-v6-DALL-E-3"><a href="#vs-Midjourney-v6-DALL-E-3" class="headerlink" title="vs Midjourney v6 &#x2F; DALL-E 3"></a>vs Midjourney v6 &#x2F; DALL-E 3</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Midjourney &#x2F; DALL-E 3</th>
+<th>FLUX.1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>闭源</td>
+<td>开源 (dev&#x2F;schnell)</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>API &#x2F; Discord</td>
+<td>本地运行</td>
+</tr>
+<tr>
+<td>可微调性</td>
+<td>否</td>
+<td>是（LoRA 等）</td>
+</tr>
+<tr>
+<td>社区生态</td>
+<td>有限</td>
+<td>活跃</td>
+</tr>
+<tr>
+<td>最高质量</td>
+<td>与 pro 接近</td>
+<td>pro 超越</td>
+</tr>
+</tbody></table>
+<h3 id="FLUX-1-在设计上的选择哲学"><a href="#FLUX-1-在设计上的选择哲学" class="headerlink" title="FLUX.1 在设计上的选择哲学"></a>FLUX.1 在设计上的选择哲学</h3><p>FLUX.1 的设计选择反映了一个清晰的哲学：<strong>在各方面都不妥协——更大的模型（12B）、更大的 VAE（16ch）、更强的编码器（T5-v1.1-XXL）、更深的融合（混合架构）</strong>。这与 LDM 的”在有限资源下寻找最优解”的哲学形成了鲜明对比。FLUX.1 证明：当资源和模型规模足够时，可以同时优化所有维度而无需取舍。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>巨大的计算开销</strong> — 12B 参数 + 16 通道 VAE + T5-v1.1-XXL 编码器的组合意味着极高的计算需求——dev 变体需要 24GB+ VRAM 的 GPU。</p>
+</li>
+<li><p><strong>训练成本极高</strong> — 12B DiT 的训练需要大量 GPU 集群和高质量数据，远超学术团队的预算。</p>
+</li>
+<li><p><strong>分层许可的碎片化</strong> — pro（闭源）、dev（非商业）、schnell（Apache 2.0）三种许可增加了用户的决策复杂度。</p>
+</li>
+<li><p><strong>社区生态的适应成本</strong> — 16 通道 VAE 和混合 MMDiT 架构与 SD 系列的 4 通道 VAE 和 U-Net 存在根本性差异，许多社区工具（LoRA、ControlNet 等）需要重新适配。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>大 VAE + 大 DiT 的协同效应</strong> — 潜空间的信息容量应该与生成模型的建模能力匹配。过小的 VAE 浪费了 DiT 的能力，过大的 VAE 超过了 DiT 的能力。</p>
+</li>
+<li><p><strong>混合架构的价值</strong> — 模态特化（双流）和模态融合（单流）的最佳组合在不同任务上可能不同。FLUX.1 的经验表明，少量双流层 + 多数单流层的混合架构是文生图的最佳选择。</p>
+</li>
+<li><p><strong>蒸馏是实时生成的必经之路</strong> — 从 50 步降到 4 步的 schnell 蒸馏表明，高质量的近似采样是完全可行的。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="“团队出走”的正向结果"><a href="#“团队出走”的正向结果" class="headerlink" title="“团队出走”的正向结果"></a>“团队出走”的正向结果</h3><p>FLUX.1 的研发团队是 Stable Diffusion 的原班核心人马。他们的离开本应是 Stability AI 的重大损失，但 Black Forest Labs 的成立和 FLUX.1 的发布展示了一个有趣的现象——核心团队的出走有时反而能催生更好的产品。在 Stability AI 的资源约束下，他们可能无法推动 12B + 16ch VAE 这样的激进设计。</p>
+<h3 id="FLUX-1-的”继承与超越”"><a href="#FLUX-1-的”继承与超越”" class="headerlink" title="FLUX.1 的”继承与超越”"></a>FLUX.1 的”继承与超越”</h3><p>FLUX.1 并不是从零开始的创新——它的技术路线（MMDiT + Rectified Flow + T5 编码器）完全继承自 SD3，但几乎在每个维度上都做了”超级加倍”：更大的模型、更多的层、更宽的特征、更强的编码器、更深的融合。这种”系统性地压榨一个成功路线的潜力”是工程领域的常见智慧，但在生成式 AI 中还需要非常大的计算勇气。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>16 通道是否足够？继续增加到 32 或 64 通道，配合更大模型，是否还有收益？</li>
+<li>19 个双流 + 38 个单流（约 1:2）是否是最优比例？</li>
+<li>schnell 蒸馏的质量瓶颈在哪？1 步采样质量与 50 步的差距是否可通过更好的蒸馏消除？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><h2 id="深层分析：FLUX-的开源策略与-AIGC-生态重塑"><a href="#深层分析：FLUX-的开源策略与-AIGC-生态重塑" class="headerlink" title="深层分析：FLUX 的开源策略与 AIGC 生态重塑"></a>深层分析：FLUX 的开源策略与 AIGC 生态重塑</h2><h3 id="Closed-weights-策略的市场逻辑"><a href="#Closed-weights-策略的市场逻辑" class="headerlink" title="Closed-weights 策略的市场逻辑"></a>Closed-weights 策略的市场逻辑</h3><p>FLUX.1 采用了不同于 Stable Diffusion (fully open) 的策略：模型权重开放下载和使用，但不开放训练代码、数据配方、或详细技术报告。这种”closed weights”的策略恰好位于”fully open-source”（SDXL, with code + data + weights）和 “fully closed” （Midjourney, DALL-E, with nothing open）的中点。</p>
+<p>这个策略选择反映了 Black Forest Labs 的三个核心考量：</p>
+<ol>
+<li><strong>保护商业护城河</strong> — FLUX 的 12B 参数和 16ch VAE 是当前的 quality leader（在 open-weights 模型中）。如果完全开源训练代码和数据，竞争对手可以在极短时间内（1-2 months）复现和超越。但通过只开放权重（+ 基本使用文档），BFL 确保了社区可以 build on FLUX（fine-tunes, LoRAs, ControlNets 等），但不能快速”复制并超越”FLUX 本身。</li>
+<li><strong>鼓励社区生态</strong> — 与 Midjourney 和 DALL-E 完全闭源不同，FLUX 的权重开放使社区可以：fine-tune 特定风格、创建 LoRA adapters、构建 ControlNet 变体、与其他工具（ComfyUI, Automatic1111）集成等。这种生态建设是 FLUX 快速扩大影响力（而不仅仅是用户量）的核心——社区创建的 1000+ LoRAs 和 fine-tunes 成为了 FLUX 的”护城河”。</li>
+<li><strong>平衡风险与回报</strong> — 完全开源可能面临 misuse risk（deepfakes, misinformation images）和法律 risk（copyright of training data）。Closed-weights 可以部分 mitigate 这些风险（因为不法分子更难 audit training data 或 fine-tune for specific misuse），同时也使 BFL 有”plausible deniability”（我们在努力防止滥用，权重下载需要接受 terms of use）。</li>
+</ol>
+<p>这种策略的长期可持续性取决于两个因素：(a) FLUX 是否能保持质量领先——如果其他人开源了一个更好的模型，FLUX 的 closed-weights 策略就失去了”quality lead”的 justification；(b) 社区是否接受”不开放训练配方”的交易——如果社区开始要求”fully open as the norm”，FLUX 的市场位置会变脆。</p>
+<h3 id="从-SD-原班人马到-FLUX：团队出走与创新加速"><a href="#从-SD-原班人马到-FLUX：团队出走与创新加速" class="headerlink" title="从 SD 原班人马到 FLUX：团队出走与创新加速"></a>从 SD 原班人马到 FLUX：团队出走与创新加速</h3><p>FLUX 的研发团队（Black Forest Labs）是 Stable Diffusion 的原班核心人马（Robin Rombach, Patrick Esser 等）。他们在 Stability AI 的动荡中离开，成立了 BFL，并在极短时间内（不到 12 个月）发布了 FLUX——质量大幅超过了他们之前在 Stability AI 做的 SD3。</p>
+<p>这个案例提供了关于”组织环境与技术创新关系”的罕见的自然实验：（a）同样的核心团队，在 Stability AI（资源充足但组织混乱）vs BFL（独立 startup, focused mission）产生了质量差距巨大的两个产品（SD3 vs FLUX）；（b）组织环境似乎对创新速度有第一阶影响——摆脱了大型组织的 bureaucracy、politics、和 resource contention 后，核心团队能够更聚焦于 engineering excellence；（c）但同时，FLUX 也继承了 BFL 的前雇员的”全部知识和技术积累”——不是从零到一，而是从 SD3 的基础上（MMDiT, Rectified Flow, T5 encoder——这些都是在 Stability AI 期间开发的技术）进行了”supercharge”。这既证明了”环境换了人没换”的加速效应，也证明了前期积累的重要性。</p>
+<p>从 Stability AI 的角度，2023-2024 年是”人才大出血”——不仅核心研发团队离开成立了 BFL，Emad Mostaque（CEO）也离职了。Stability AI 从一个”有最核心人才的 AI 公司”变成了一个”有大品牌但人才流失的 AI 公司”——它的价值从”人才”转变为”品牌和用户基础”（这不可持续，因为品牌和用户在 AI 领域折旧极快）。</p>
+<h3 id="16ch-VAE-的设计哲学与未来扩展"><a href="#16ch-VAE-的设计哲学与未来扩展" class="headerlink" title="16ch VAE 的设计哲学与未来扩展"></a>16ch VAE 的设计哲学与未来扩展</h3><p>FLUX 使用 16 通道 VAE 潜在空间（SDXL 使用 4 通道）——这是 FLUX 最被低估的设计选择之一。16 通道意味着 latent representation 保留了更多的高频细节信息（4 倍于 SDXL 的信息带宽），代价是更大的 latent 维度（latent resolution × 16 channels vs 4 channels）。</p>
+<p>这个选择反映了两种不同的设计哲学：</p>
+<ul>
+<li>SDXL 的 4ch VAE：”让 VAE 做压缩，让 U-Net 做生成”——VAE 尽可能地压缩信息，减小 latent dim，让 U-Net 在”高度压缩的信息密集型 latent space”中学习。</li>
+<li>FLUX 的 16ch VAE：”让 VAE 保留信息，让 MMDiT 做选择”——VAE 保留更多原始信息，latent 更大但”更接近原始像素空间”，MMDiT Transformer 有足够的 capacity 来在这个更丰富但更冗余的 latent space 中学习。</li>
+</ul>
+<p>FLUX 的成功暗示 16ch VAE 在当前 12B 规模的模型上是更优的设计——但扩展到更大模型（如 50B+）或更高分辨率时，16 通道是否仍然最优？可能通道数需要与模型 capacity 保持一个 scaling relation——小模型受益于更高效的压缩（更少通道），大模型有足够的 capacity 来处理更丰富但更冗余的 latent，因此可以从更多通道中 learn finer details。</p>
+<h2 id="引用-1"><a href="#引用-1" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Black Forest Labs. (2024). FLUX.1 Model Release. <a target="_blank" rel="noopener" href="https://blackforestlabs.ai/">https://blackforestlabs.ai/</a></li>
+<li>Esser, P., et al. (2024). Scaling Rectified Flow Transformers for High-Resolution Image Synthesis. ICML 2024.</li>
+<li>Peebles, W., &amp; Xie, S. (2023). Scalable Diffusion Models with Transformers. ICCV 2023.</li>
+<li>Raffel, C., et al. (2020). Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer. JMLR 2020.</li>
+<li>Rombach, R., et al. (2022). High-Resolution Image Synthesis with Latent Diffusion Models. CVPR 2022.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E6%96%87%E7%94%9F%E5%9B%BE/" class="category-chain-item">文生图</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-text-to-image/" class="print-no-link">#papers/text-to-image</a>
+      
+        <a href="/tags/papers-diffusion-transformers/" class="print-no-link">#papers/diffusion-transformers</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>FLUX.1</div>
+      <div>https://w2ongq6.github.io/2024/08/01/aigc/note/FLUX_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年8月1日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/08/08/inference/note/TreeAttention_note/" title="Tree Attention: Topology-aware Decoding for Long-Context on GPU Clusters">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Tree Attention: Topology-aware Decoding for Long-Context on GPU Clusters</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/08/01/inference/note/FlexAttention_note/" title="FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention">
+                        <span class="hidden-mobile">FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

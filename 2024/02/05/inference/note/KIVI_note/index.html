@@ -1,0 +1,1672 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="KIVI: 免调参非对称2比特KV缓存量化核心信息 标题: KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache 标题翻译: KIVI：免调参的非对称2比特KV缓存量化 作者: Zirui Liu, Jiayi Yuan, Hongye Jin, Shaochen Zhong, Zhaozhuo Xu, Vladimir Bra">
+<meta property="og:type" content="article">
+<meta property="og:title" content="KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/02/05/inference/note/KIVI_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="KIVI: 免调参非对称2比特KV缓存量化核心信息 标题: KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache 标题翻译: KIVI：免调参的非对称2比特KV缓存量化 作者: Zirui Liu, Jiayi Yuan, Hongye Jin, Shaochen Zhong, Zhaozhuo Xu, Vladimir Bra">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-02-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.637Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;quantization">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-02-05 00:00" pubdate>
+          2024年2月5日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          117 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="KIVI-免调参非对称2比特KV缓存量化"><a href="#KIVI-免调参非对称2比特KV缓存量化" class="headerlink" title="KIVI: 免调参非对称2比特KV缓存量化"></a>KIVI: 免调参非对称2比特KV缓存量化</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache</li>
+<li>标题翻译: KIVI：免调参的非对称2比特KV缓存量化</li>
+<li>作者: Zirui Liu, Jiayi Yuan, Hongye Jin, Shaochen Zhong, Zhaozhuo Xu, Vladimir Braverman, Beidi Chen, Xia Hu</li>
+<li>机构: Rice University, Carnegie Mellon University</li>
+<li>发表时间: 2024年2月5日</li>
+<li>发表渠道: ICML 2024</li>
+<li>arXiv: 2402.02750</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.02750">https://arxiv.org/abs/2402.02750</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/jy-yuan/KIVI">https://github.com/jy-yuan/KIVI</a></li>
+<li>论文类型: 大语言模型KV缓存量化与内存优化</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大型语言模型（LLM）中长序列生成的瓶颈是KV缓存的内存消耗。现有KV缓存量化方法通常需要校准数据来减轻异常值的影响，并且大多限于4比特量化。本文提出了KIVI——一种插件式的免调参2比特KV缓存量化算法，无需任何校准即可实现。KIVI的设计基于我们对KV缓存中异常值的系统分析：Key缓存中的异常值主要存在于少量固定通道中，而Value缓存中没有这种持续的通道异常值。据此，我们对Key缓存使用逐通道非对称量化，对Value缓存使用逐token非对称量化。KIVI在LLaMA、Mistral和Falcon等模型上表现出色——使用2比特量化时产生可忽略的困惑度退化，在4比特时甚至优于大多数4比特基线。此外，KIVI将模型权重也采用2比特量化后，峰值内存减少2.6倍，支持高达4倍的更大batch size，在真实工作负载上的吞吐量提升达2.35至3.47倍。源代码可在<a target="_blank" rel="noopener" href="https://github.com/jy-yuan/KIVI%E8%8E%B7%E5%8F%96%E3%80%82">https://github.com/jy-yuan/KIVI获取。</a></p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-Key和Value的非对称量化策略"><a href="#1-Key和Value的非对称量化策略" class="headerlink" title="1. Key和Value的非对称量化策略"></a>1. Key和Value的非对称量化策略</h3><p><strong>核心思想</strong>: 通过系统分析发现Key缓存和Value缓存的异常值分布模式根本不同——Key有逐通道异常值（少量固定通道具有持续的大数值），而Value没有这种持续的结构。因此，对Key应该使用逐通道量化（per-channel），以保护这些关键通道不被压缩失真；对Value应该使用逐token量化（per-token），因为其异常值在token维度上分布更均匀。</p>
+<p><strong>为什么重要</strong>: 这一洞察揭示了Key和Value在注意力机制中的不对称性不仅是计算角色上的（Key用于匹配、Value用于聚合），还体现在数值分布结构上。传统的K和V使用相同量化策略的做法（如统一逐token量化）会严重损害Key中通道异常值通道的质量，而这些通道对注意力分数的精确计算至关重要。KIVI的非对称量化策略使2比特KV缓存量化首次在无校准数据的情况下成为可能。</p>
+<h3 id="2-免调参设计（Zero-Shot适用）"><a href="#2-免调参设计（Zero-Shot适用）" class="headerlink" title="2. 免调参设计（Zero-Shot适用）"></a>2. 免调参设计（Zero-Shot适用）</h3><p><strong>核心贡献</strong>: KIVI不需要任何校准数据、模型微调或逐模型的超参数调优。它能以”即插即用”的方式应用于任何预训练LLM，开箱即在LLaMA、LLaMA-2、Mistral、Falcon等不同架构模型上表现良好。</p>
+<p><strong>为什么重要</strong>: 这是KV缓存量化实用性的巨大进步。传统的KV缓存量化方法（如Int4、GPTQ-4bit）需要准备特定于模型和领域的校准数据集，这在动态多变的实际部署中极为不便。KIVI的免调参设计意味着它可以被部署在HuggingFace Transformers等通用框架中作为默认选项，无需最终用户进行任何额外准备。这种”零配置”特性对于开源生态系统的广泛采用至关重要。</p>
+<h3 id="3-小型FP16残差缓冲区分块量化"><a href="#3-小型FP16残差缓冲区分块量化" class="headerlink" title="3. 小型FP16残差缓冲区分块量化"></a>3. 小型FP16残差缓冲区分块量化</h3><p><strong>核心扩展</strong>: 对于流式生成（token逐个到达），KIVI不会在每步都对整个KV缓存进行重新量化。它维护一个小的FP16残差缓冲区，存储最近到达的未量化token。只有当残差缓冲区填满（如32个token）后，才对这组token执行分块量化并合并到量化缓存中（进行group-wise量化）。这避免了频繁的逐token量化计算开销，同时摊销后的内存使用无限接近2比特目标。</p>
+<p><strong>为什么重要</strong>: 流式推理中的量化需要同时解决两个矛盾的要求：（1）最近token的KV需要高精度以维持生成质量（2）整个缓存的存储需要低精度以控制内存。残差缓冲区设计优雅地解决了这个矛盾：最近token保持FP16精度直至缓冲区满，之前的token被量化为2比特存储。这实现了计算效率和内存效率的帕累托最优。</p>
+<h3 id="4-处理RoPE的Key量化方案"><a href="#4-处理RoPE的Key量化方案" class="headerlink" title="4. 处理RoPE的Key量化方案"></a>4. 处理RoPE的Key量化方案</h3><p><strong>核心发现</strong>: KIVI识别出RoPE（旋转位置嵌入）对Key量化的关键影响。由于RoPE是在Key向量计算后应用的，它混合了不同通道的值。如果在前RoPE阶段量化，通道异常值模式会丢失；如果在后RoPE阶段量化，异常值模式也存在但更分散。</p>
+<p><strong>为什么重要</strong>: KIVI选择了在RoPE之后量化Key缓存（与KVQuant选择前RoPE量化不同），因为KIVI的逐通道量化需要在看到RoPE混合后的通道值的基础上进行异常值识别。这个工程决策的微妙之处在于：正确的量化范式选择取决于具体的量化策略，而非存在唯一的最优选择。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>KIVI通过发现Key缓存存在逐通道异常值而Value缓存没有的分布不对称性，提出了逐通道量化Key、逐token量化Value的2比特KV缓存量化方法，无需任何校准数据即可在多种LLM上实现2.6倍内存减少、4倍更大batch size和最高3.47倍吞吐量提升。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>KV缓存在LLM推理中的内存消耗公式为：</p>
+<p>$$M_{\text{KV}} &#x3D; 2 \times L \times H \times d \times N \times \text{bytes_per_element}$$</p>
+<p>对于LLaMA-2-7B ($L&#x3D;32, H&#x3D;32, d&#x3D;128$)，在16比特精度下每token需要0.5MB KV缓存，处理100K token需要约50GB——超过单个A100 (40GB) 的容量。</p>
+<p>量化可以将$\text{bytes_per_element}$从2 (FP16) 减少到0.25 (2-bit)，理论上实现8倍内存减少。但问题是：如何在2比特极限压缩下保持生成质量？</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>统一量化策略（Uniform Quantization:</strong></p>
+<ul>
+<li>对K和V使用相同的量化方案（如Int4）</li>
+<li>容易忽略K和V的分布差异</li>
+<li>在2比特时质量退化显著</li>
+</ul>
+</li>
+<li><p><strong>基于校准的量化（Calibration-based Quantization:</strong></p>
+<ul>
+<li>需要代表性的校准数据集</li>
+<li>校准数据的选择影响量化效果</li>
+<li>不适用于动态变化的输入领域</li>
+</ul>
+</li>
+<li><p><strong>加权&#x2F;敏感度引导量化</strong>:</p>
+<ul>
+<li>需要计算参数的Fisher信息矩阵</li>
+<li>计算昂贵，特别是对大模型</li>
+<li>通常需要微调恢复精度</li>
+</ul>
+</li>
+<li><p><strong>混合精度量化</strong>:</p>
+<ul>
+<li>对关键层使用高精度、非关键层使用低精度</li>
+<li>在极端比特率下（2比特），所有层都变为关键层</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>KV分布的非对称性</strong>: Key矩阵具有持续的通道方向异常值模式（特定通道索引始终具有大幅值），而Value矩阵没有这种结构。因此，Key适合逐通道量化以保护异常值通道，Value适合逐token量化以保护异常token的表示。</p>
+</blockquote>
+<h3 id="实证基础"><a href="#实证基础" class="headerlink" title="实证基础"></a>实证基础</h3><p>论文对LLaMA-2-7B的KV缓存进行了详细分析：</p>
+<p><strong>Key缓存的异常值特征</strong>:</p>
+<ul>
+<li>某些通道索引（如通道0, 32, 64等）在所有token中都具有比其他通道显著更大的幅度</li>
+<li>异常值通道是持续存在的——同一通道索引在不同token、不同输入序列中都表现出大振幅</li>
+<li>这是由Key投影权重的特定行造成的结构性产物</li>
+</ul>
+<p><strong>Value缓存的异常值特征</strong>:</p>
+<ul>
+<li>没有持续的通道维度异常值模式</li>
+<li>相反，异常值表现为”异常token”——某些特定的token具有比其他token更大的整体Value幅度</li>
+<li>Token级别的异常值模式随输入内容变化</li>
+</ul>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><ol>
+<li><p><strong>语言建模困惑度</strong>:</p>
+<ul>
+<li>数据集: WikiText-2, C4</li>
+<li>序列长度: 2K, 4K, 8K</li>
+<li>评估指标: ppl</li>
+</ul>
+</li>
+<li><p><strong>零样本基准测试</strong>:</p>
+<ul>
+<li>MMLU, HellaSwag, ARC, BoolQ, PIQA, Winogrande</li>
+<li>评估指标: 准确率</li>
+</ul>
+</li>
+<li><p><strong>长序列生成</strong>:</p>
+<ul>
+<li>LMSys Chat 1M (LongBench)</li>
+<li>序列长度: 最高32K</li>
+<li>评估指标: ppl, 准确率</li>
+</ul>
+</li>
+<li><p><strong>真实工作负载吞吐量</strong>:</p>
+<ul>
+<li>ShareGPT、Alpaca数据集</li>
+<li>评估指标: tokens&#x2F;s, latency</li>
+</ul>
+</li>
+</ol>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><ul>
+<li>LLaMA (7B, 13B, 30B, 65B)</li>
+<li>LLaMA-2 (7B, 13B, 70B)</li>
+<li>LLaMA-3 (8B)</li>
+<li>Mistral (7B)</li>
+<li>Falcon (7B, 40B)</li>
+</ul>
+<h3 id="硬件和基线"><a href="#硬件和基线" class="headerlink" title="硬件和基线"></a>硬件和基线</h3><ul>
+<li>GPU: NVIDIA A100 (80GB), A6000 (48GB)</li>
+<li>量化基线: RTN (Round-to-Nearest), Int4, GPTQ-4bit, QLoRA风格</li>
+<li>KV缓存基线: 全量FP16, 全量FP32</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="非对称量化的数学背景"><a href="#非对称量化的数学背景" class="headerlink" title="非对称量化的数学背景"></a>非对称量化的数学背景</h4><p>传统的对称量化仅使用scale（缩放因子）：</p>
+<p>$$x_{\text{quant}} &#x3D; \text{round}\left(\frac{x}{s}\right)$$</p>
+<p>非对称量化同时使用scale和zero-point：</p>
+<p>$$x_{\text{quant}} &#x3D; \text{round}\left(\frac{x - z}{s}\right)$$</p>
+<p>$$\hat{x} &#x3D; s \cdot x_{\text{quant}} + z$$</p>
+<p>其中$s$是缩放因子，$z$是零点偏移。非对称量化能够更好地适应非对称分布（如Key缓存的通道异常值），因为零点可以在不压缩范围的情况下将量化网格中心对准数据分布的中心。</p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: KV缓存异常值分析</strong></p>
+<p>在进行量化策略选择前，KIVI分析Key和Value缓存的分布特性：</p>
+<p><strong>步骤Key缓存分析</strong>:</p>
+<ul>
+<li>计算每个通道（维度）在多个token上的平均幅值：$\mu_c &#x3D; \mathbb{E}<em>t[|K</em>{t,c}|]$</li>
+<li>识别异常值通道：${c : \mu_c &gt; \tau \cdot \text{median}(\mu)}$，通常$\tau &#x3D; 5$</li>
+<li>确认异常值通道的索引在不同输入中保持一致</li>
+</ul>
+<p><strong>步骤Value缓存分析</strong>:</p>
+<ul>
+<li>计算每个token在多个通道上的平均幅值：$\nu_t &#x3D; \mathbb{E}<em>c[|V</em>{t,c}|]$</li>
+<li>确认异常值token的模式随输入内容变化</li>
+<li>验证没有持续的通道异常值模式</li>
+</ul>
+<p><strong>步骤2: 逐通道非对称Key量化</strong></p>
+<p>对于Key矩阵 $K \in \mathbb{R}^{N \times d}$：</p>
+<ul>
+<li><p>沿通道维度 $c &#x3D; 0, \ldots, d-1$ 独立量化：</p>
+<ul>
+<li>对每个通道 $c$，计算：$s_c &#x3D; \frac{\max({K_{t,c}}<em>t) - \min({K</em>{t,c}}_t)}{2^b - 1}$</li>
+<li>计算zero-point：$z_c &#x3D; \min({K_{t,c}}_t)$</li>
+<li>量化：$\hat{K}<em>{t,c} &#x3D; \text{round}\left(\frac{K</em>{t,c} - z_c}{s_c}\right)$</li>
+<li>反量化：$\tilde{K}<em>{t,c} &#x3D; s_c \cdot \hat{K}</em>{t,c} + z_c$</li>
+</ul>
+</li>
+<li><p>每个通道有自己的一套 $(s_c, z_c)$，总共 $2d$ 个FP16元数据</p>
+</li>
+</ul>
+<p><strong>设计理由</strong>: 逐通道量化使得异常值通道和非异常值通道各自获得独立的量化范围，避免了全局范围内异常值”污染”非异常值通道的量化精度。</p>
+<p><strong>步骤3: 逐Token非对称Value量化</strong></p>
+<p>对于Value矩阵 $V \in \mathbb{R}^{N \times d}$：</p>
+<ul>
+<li><p>沿token维度 $t &#x3D; 1, \ldots, N$ 独立量化：</p>
+<ul>
+<li>对每个token $t$，计算：$s_t &#x3D; \frac{\max({V_{t,c}}<em>c) - \min({V</em>{t,c}}_c)}{2^b - 1}$</li>
+<li>计算zero-point：$z_t &#x3D; \min({V_{t,c}}_c)$</li>
+<li>量化：$\hat{V}<em>{t,c} &#x3D; \text{round}\left(\frac{V</em>{t,c} - z_t}{s_t}\right)$</li>
+<li>反量化：$\tilde{V}<em>{t,c} &#x3D; s_t \cdot \hat{V}</em>{t,c} + z_t$</li>
+</ul>
+</li>
+<li><p>每个token有自己的一套 $(s_t, z_t)$，总共 $2N$ 个FP16元数据</p>
+</li>
+</ul>
+<p><strong>设计理由</strong>: 逐token量化使得异常值token拥有自己的量化范围，其内部通道值可以精细地量化，而不会因为单个异常通道导致整个token的量化范围扩大。</p>
+<p><strong>步骤4: 分组量化以控制元数据开销</strong></p>
+<p>对于长序列，$2N$ 个FP16元数据（逐token Value量化）可能成为显著开销。KIVI使用分组量化：</p>
+<ul>
+<li>将每 $G$ 个连续的token分为一组（$G &#x3D; 128$ 是典型值）</li>
+<li>每组共享一套scale和zero-point</li>
+<li>元数据开销：$2d + 2N&#x2F;G$ 个FP16值（而非 $2N$ 个）</li>
+</ul>
+<p>总内存 &#x3D; 量化数据 + 元数据：</p>
+<p>$$M_{\text{total}} &#x3D; \frac{N \times d \times b}{8} + 2d \times 16&#x2F;8 + \frac{2N \times 16}{G \times 8} \text{ bytes}$$</p>
+<p>其中 $b &#x3D; 2$（2比特量化）。</p>
+<p><strong>步骤5: 流式生成的残差缓冲区</strong></p>
+<p>对于自回归生成（token逐个到达）：</p>
+<ul>
+<li>维护一个小的FP16残差缓冲区 $B_K, B_V$，大小为 $B_{\text{size}}$（如32）</li>
+<li>前 $B_{\text{size}}$ 个新token的KV以FP16精度存储在残差缓冲区中</li>
+<li>当缓冲区满时，将整块token一起量化为2比特并添加到量化缓存中</li>
+<li>清空残差缓冲区，准备下一批token</li>
+</ul>
+<p>这种分块量化策略的好处：</p>
+<ul>
+<li>减小频繁量化操作的开销（摊销为每$B_{\text{size}}$步量化一次）</li>
+<li>保持最近token的高精度（局部上下文对生成质量最重要）</li>
+<li>残差缓冲区的额外内存开销（$B_{\text{size}} \times d \times 2$ FP16）相对于总缓存可忽略</li>
+</ul>
+<p><strong>步骤6: 模型权重量化</strong></p>
+<p>可选的追加优化：将模型权重也量化为2比特：</p>
+<ul>
+<li>对权重矩阵执行逐组分组量化（每组128个元素）</li>
+<li>结合KV缓存量化（2-bit Key + 2-bit Value + 2-bit Weights）</li>
+<li>总体内存减少：原始FP16模型的2.6倍</li>
+</ul>
+<h4 id="RoPE集成的工程决策"><a href="#RoPE集成的工程决策" class="headerlink" title="RoPE集成的工程决策"></a>RoPE集成的工程决策</h4><p>LLaMA&#x2F;Mistral&#x2F;Falcon使用RoPE，其对Key向量的影响如下：</p>
+<p>$$K_{\text{rope}} &#x3D; \text{RoPE}(xW_K)$$</p>
+<p>RoPE混合了通道对（$2i$ 和 $2i+1$ 通道通过旋转矩阵耦合）。</p>
+<p>KIVI的量化顺序：先计算RoPE，后将结果量化为2比特。原因：</p>
+<ul>
+<li>RoPE后通道间不再完全独立，但逐通道异常值模式仍然可辨识（混合了但未消失）</li>
+<li>在RoPE后量化确保量化引入的误差不会通过旋转操作扩散</li>
+</ul>
+<p>这与KVQuant（Pre-RoPE量化）形成对比，体现了不同量化策略下的不同最优选择。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="语言建模困惑度"><a href="#语言建模困惑度" class="headerlink" title="语言建模困惑度"></a>语言建模困惑度</h3><h4 id="WikiText-2上LLaMA系列（序列长度2K）"><a href="#WikiText-2上LLaMA系列（序列长度2K）" class="headerlink" title="WikiText-2上LLaMA系列（序列长度2K）"></a>WikiText-2上LLaMA系列（序列长度2K）</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>全量FP16</th>
+<th>KIVI-4bit</th>
+<th>KIVI-2bit</th>
+<th>退化4b</th>
+<th>退化2b</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td>5.68</td>
+<td>5.71</td>
+<td>5.89</td>
+<td>+0.03</td>
+<td>+0.21</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果</strong>: 2比特KIVI在7B到65B模型上的PPL退化仅为+0.21到+0.11。模型越大，退化越小——65B模型的2比特量化PPL退化仅+0.11。</p>
+<h4 id="KIVI-vs-其他量化方法-LLaMA-7B-WikiText-2"><a href="#KIVI-vs-其他量化方法-LLaMA-7B-WikiText-2" class="headerlink" title="KIVI vs 其他量化方法 (LLaMA-7B, WikiText-2)"></a>KIVI vs 其他量化方法 (LLaMA-7B, WikiText-2)</h4><table>
+<thead>
+<tr>
+<th>量化方法</th>
+<th>精度</th>
+<th>PPL (2K)</th>
+<th>PPL (4K)</th>
+<th>需要校准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16 (全量)</td>
+<td>16-bit</td>
+<td>5.68</td>
+<td>5.72</td>
+<td>-</td>
+</tr>
+<tr>
+<td>RTN</td>
+<td>4-bit</td>
+<td>6.43</td>
+<td>6.89</td>
+<td>否</td>
+</tr>
+<tr>
+<td>GPTQ风格</td>
+<td>4-bit</td>
+<td>6.02</td>
+<td>6.34</td>
+<td>是</td>
+</tr>
+<tr>
+<td>Int4 (Uniform)</td>
+<td>4-bit</td>
+<td>5.89</td>
+<td>6.15</td>
+<td>是</td>
+</tr>
+<tr>
+<td>FlexGen (逐token 4-bit)</td>
+<td>4-bit</td>
+<td>5.78</td>
+<td>5.95</td>
+<td>是</td>
+</tr>
+<tr>
+<td>KIVI (逐通道K + 逐token V)</td>
+<td>4-bit</td>
+<td><strong>5.71</strong></td>
+<td><strong>5.75</strong></td>
+<td><strong>否</strong></td>
+</tr>
+<tr>
+<td>KIVI (逐通道K + 逐token V)</td>
+<td>2-bit</td>
+<td><strong>5.89</strong></td>
+<td><strong>5.98</strong></td>
+<td><strong>否</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: KIVI-4bit的PPL（5.71）优于所有其他4-bit方法（包括需要校准的），甚至非常接近FP16（5.68）。KIVI-2bit的PPL优于大多数4-bit基线。</p>
+<h3 id="跨模型泛化"><a href="#跨模型泛化" class="headerlink" title="跨模型泛化"></a>跨模型泛化</h3><h4 id="多个模型系列上的KIVI-2bit性能"><a href="#多个模型系列上的KIVI-2bit性能" class="headerlink" title="多个模型系列上的KIVI-2bit性能"></a>多个模型系列上的KIVI-2bit性能</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>全量FP16 PPL</th>
+<th>KIVI-2bit PPL</th>
+<th>PPL退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2-7B</td>
+<td>5.47</td>
+<td>5.72</td>
+<td>+0.25</td>
+</tr>
+<tr>
+<td>LLaMA-2-13B</td>
+<td>4.88</td>
+<td>5.09</td>
+<td>+0.21</td>
+</tr>
+<tr>
+<td>LLaMA-2-70B</td>
+<td>3.31</td>
+<td>3.46</td>
+<td>+0.15</td>
+</tr>
+<tr>
+<td>LLaMA-3-8B</td>
+<td>6.14</td>
+<td>6.38</td>
+<td>+0.24</td>
+</tr>
+<tr>
+<td>Mistral-7B</td>
+<td>5.25</td>
+<td>5.48</td>
+<td>+0.23</td>
+</tr>
+<tr>
+<td>Falcon-7B</td>
+<td>6.59</td>
+<td>6.92</td>
+<td>+0.33</td>
+</tr>
+<tr>
+<td>Falcon-40B</td>
+<td>5.23</td>
+<td>5.43</td>
+<td>+0.20</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: KIVI在所有架构上均表现出色。Falcon-7B退化略大（+0.33），可能是其Key投影矩阵的异常值分布不同所致，但仍远优于其他2比特方法。</p>
+<h4 id="分块大小（残差缓冲区）的影响"><a href="#分块大小（残差缓冲区）的影响" class="headerlink" title="分块大小（残差缓冲区）的影响"></a>分块大小（残差缓冲区）的影响</h4><table>
+<thead>
+<tr>
+<th>分块大小 $B_{\text{size}}$</th>
+<th>总token数 (2K)</th>
+<th>第512步后PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 (逐token量化)</td>
+<td>2048</td>
+<td>6.12</td>
+</tr>
+<tr>
+<td>8</td>
+<td>2048</td>
+<td>5.95</td>
+</tr>
+<tr>
+<td>16</td>
+<td>2048</td>
+<td>5.91</td>
+</tr>
+<tr>
+<td>32</td>
+<td>2048</td>
+<td>5.89</td>
+</tr>
+<tr>
+<td>64</td>
+<td>2048</td>
+<td>5.89</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 分块32 token的效果已接近最优，更大的分块不再带来显著PPL提升。但分块越大，最新token的精度越低（因为它们在缓冲区中等待量化的时间更长）。</p>
+<h3 id="零样本基准测试"><a href="#零样本基准测试" class="headerlink" title="零样本基准测试"></a>零样本基准测试</h3><h4 id="LLaMA-2-7B在多个基准测试上的KIVI-2bit性能"><a href="#LLaMA-2-7B在多个基准测试上的KIVI-2bit性能" class="headerlink" title="LLaMA-2-7B在多个基准测试上的KIVI-2bit性能"></a>LLaMA-2-7B在多个基准测试上的KIVI-2bit性能</h4><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>FP16</th>
+<th>KIVI-2bit</th>
+<th>差异</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MMLU (avg)</td>
+<td>45.3</td>
+<td>44.8</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td>57.1</td>
+<td>56.4</td>
+<td>-0.7</td>
+</tr>
+<tr>
+<td>ARC-C</td>
+<td>43.5</td>
+<td>42.8</td>
+<td>-0.7</td>
+</tr>
+<tr>
+<td>ARC-E</td>
+<td>76.3</td>
+<td>75.8</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>BoolQ</td>
+<td>77.7</td>
+<td>77.1</td>
+<td>-0.6</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td>79.2</td>
+<td>78.9</td>
+<td>-0.3</td>
+</tr>
+<tr>
+<td>Winogrande</td>
+<td>69.2</td>
+<td>68.7</td>
+<td>-0.5</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 2比特量化在所有零样本基准测试上的平均退化小于1%，证明了KIVI不仅在语言建模（PPL）上表现良好，在语义理解任务上也几乎无损。</p>
+<h3 id="内存和吞吐量"><a href="#内存和吞吐量" class="headerlink" title="内存和吞吐量"></a>内存和吞吐量</h3><h4 id="内存减少"><a href="#内存减少" class="headerlink" title="内存减少"></a>内存减少</h4><p>在LLaMA-2-7B上，处理4K序列：</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>KV缓存内存</th>
+<th>模型权重内存</th>
+<th>总内存</th>
+<th>缩减比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16全量</td>
+<td>2.0 GB</td>
+<td>12.5 GB</td>
+<td>14.5 GB</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>KIVI-2bit (KV only)</td>
+<td>0.25 GB</td>
+<td>12.5 GB</td>
+<td>12.75 GB</td>
+<td>1.14x (总)</td>
+</tr>
+<tr>
+<td>KIVI-2bit (KV + 权重)</td>
+<td>0.25 GB</td>
+<td>3.125 GB</td>
+<td>3.375 GB</td>
+<td>4.3x (总)</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 仅量化KV缓存时总内存减少有限（模型权重仍占主导）。同时量化权重后，总内存在4K序列下减少4.3倍，在更长序列下收益更大。</p>
+<h4 id="最大Batch-Size提升"><a href="#最大Batch-Size提升" class="headerlink" title="最大Batch Size提升"></a>最大Batch Size提升</h4><table>
+<thead>
+<tr>
+<th>GPU</th>
+<th>配置</th>
+<th>最大Batch Size (LLaMA-7B, 2K)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A100-80GB</td>
+<td>FP16全量</td>
+<td>32</td>
+</tr>
+<tr>
+<td>A100-80GB</td>
+<td>KIVI-2bit</td>
+<td><strong>128</strong> (4倍提升)</td>
+</tr>
+<tr>
+<td>A6000-48GB</td>
+<td>FP16全量</td>
+<td>16</td>
+</tr>
+<tr>
+<td>A6000-48GB</td>
+<td>KIVI-2bit</td>
+<td><strong>64</strong> (4倍提升)</td>
+</tr>
+</tbody></table>
+<h4 id="实际吞吐量测试"><a href="#实际吞吐量测试" class="headerlink" title="实际吞吐量测试"></a>实际吞吐量测试</h4><table>
+<thead>
+<tr>
+<th>工作负载</th>
+<th>配置</th>
+<th>Tokens&#x2F;s</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ShareGPT (mean seq ~1K)</td>
+<td>FP16</td>
+<td>843.2</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>ShareGPT</td>
+<td>KIVI-2bit</td>
+<td>1982.6</td>
+<td><strong>2.35x</strong></td>
+</tr>
+<tr>
+<td>Alpaca (mean seq ~2K)</td>
+<td>FP16</td>
+<td>312.7</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>Alpaca</td>
+<td>KIVI-2bit</td>
+<td>1084.9</td>
+<td><strong>3.47x</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 吞吐量提升2.35-3.47倍，在更长序列的工作负载上加速更多（Alpaca平均长度更长，加速比更大）。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么Key和Value有根本不同的分布"><a href="#为什么Key和Value有根本不同的分布" class="headerlink" title="为什么Key和Value有根本不同的分布"></a>为什么Key和Value有根本不同的分布</h3><p>Key和Value在注意力机制中扮演不同的计算角色，这自然地反映在它们的数值分布上：</p>
+<ol>
+<li><p><strong>Key的角色: 匹配与路由</strong>:</p>
+<ul>
+<li>Key投影的目标是产生能够精确区分的相似性分数</li>
+<li>某些通道专门用于存储”显著特征”（如语义类别标记），导致这些通道持续具有大值</li>
+<li>通道间的分工是结构性的，体现在投影矩阵 $W_K$ 的特定行&#x2F;列</li>
+</ul>
+</li>
+<li><p><strong>Value的角色: 信息聚合</strong>:</p>
+<ul>
+<li>Value投影的目标是产生可用于线性组合的语义表示</li>
+<li>Value中的信息更均匀地分布在各个通道中</li>
+<li>Token级别的异常值反映了该token的”语义权重”而非结构性的通道模式</li>
+</ul>
+</li>
+<li><p><strong>RoPE的差异化影响</strong>:</p>
+<ul>
+<li>RoPE应用于Key后混合了相邻通道对，但通道异常值模式仍然可见</li>
+<li>RoPE不应用于Value，因此Value的分布保持原始特征</li>
+</ul>
+</li>
+</ol>
+<h3 id="2比特量化的数值挑战"><a href="#2比特量化的数值挑战" class="headerlink" title="2比特量化的数值挑战"></a>2比特量化的数值挑战</h3><p>将浮点数压缩到仅2比特（对应4个量化级别: 0, 1, 2, 3）带来了极大的约束：</p>
+<ul>
+<li>每个量化值只能表示4种不同的数值</li>
+<li>量化误差（$|\tilde{x} - x|$）在2比特时可能是4比特时的4倍</li>
+<li>对于256个通道，需要800个FP16元数据（scale + zero-point per channel）来支持2比特数据</li>
+</ul>
+<p>然而，KIVI的实验表明，KV缓存对量化噪声的容忍度出乎意料地高：</p>
+<ul>
+<li>注意力计算中的Softmax归一化可以部分抵消Key量化噪声</li>
+<li>Value的加权求和操作可以通过”平均效应”掩盖Value量化噪声</li>
+<li>多层Transformer的残差连接提供了误差恢复机制</li>
+</ul>
+<h3 id="免调参设计的工程价值"><a href="#免调参设计的工程价值" class="headerlink" title="免调参设计的工程价值"></a>免调参设计的工程价值</h3><p>KIVI不需要校准数据的设计在工程实践中意义重大：</p>
+<ol>
+<li><p><strong>跨域泛化</strong>: 校准数据无法覆盖所有可能的输入领域。一个在WikiText上校准的量化器在处理数学论文时可能表现不佳。KIVI通过设计通用的量化范式（而非学习特定的量化参数）来实现跨域泛化。</p>
+</li>
+<li><p><strong>部署简化</strong>: 无需收集、维护和加载校准数据集。这消除了一个关键的运维复杂性。</p>
+</li>
+<li><p><strong>失败模式简化</strong>: 无校准意味着预测量化效果更简单——如果KIVI适用（即模型架构兼容），它在所有输入上都会以相同方式运行，不会有数据依赖的性能波动。</p>
+</li>
+</ol>
+<h3 id="与KVQuant的对比分析"><a href="#与KVQuant的对比分析" class="headerlink" title="与KVQuant的对比分析"></a>与KVQuant的对比分析</h3><p>KIVI和KVQuant代表了两种不同的量化哲学：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>KIVI</th>
+<th>KVQuant</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>量化位置</td>
+<td>Post-RoPE</td>
+<td>Pre-RoPE</td>
+</tr>
+<tr>
+<td>Key策略</td>
+<td>逐通道</td>
+<td>逐向量稠密-稀疏</td>
+</tr>
+<tr>
+<td>Value策略</td>
+<td>逐token</td>
+<td>逐向量</td>
+</tr>
+<tr>
+<td>量化类型</td>
+<td>非均匀（非对称）</td>
+<td>非均匀（k-means + Fisher）</td>
+</tr>
+<tr>
+<td>需要校准</td>
+<td>否</td>
+<td>否（但需要使用Fisher信息）</td>
+</tr>
+<tr>
+<td>目标比特率</td>
+<td>2-bit</td>
+<td>3-4 bit</td>
+</tr>
+<tr>
+<td>额外技术</td>
+<td>残差缓冲区分块</td>
+<td>Q-Norm感知量化</td>
+</tr>
+</tbody></table>
+<p>两者是不矛盾的——KVQuant的Pre-RoPE量化结合KIVI的逐通道策略可能是更强的组合。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-均匀量化方法"><a href="#vs-均匀量化方法" class="headerlink" title="vs 均匀量化方法"></a>vs 均匀量化方法</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Uniform Int4</th>
+<th>KIVI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>K和V策略</td>
+<td>相同</td>
+<td>非对称（K per-channel, V per-token）</td>
+</tr>
+<tr>
+<td>异常值处理</td>
+<td>异常值扩展所有值的量化范围</td>
+<td>异常值仅在自身通道&#x2F;token内影响</td>
+</tr>
+<tr>
+<td>2-bit可行性</td>
+<td>退化严重</td>
+<td>可接受退化</td>
+</tr>
+<tr>
+<td>需要校准</td>
+<td>通常需要</td>
+<td>不需要</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 均匀量化将异常值的影响全局化了。一个幅值为100的异常值会导致整个量化网格的分辨率降低100倍。KIVI的非对称策略将异常值隔离在自己所属的通道&#x2F;token内。</p>
+<h3 id="vs-GPTQ风格量化"><a href="#vs-GPTQ风格量化" class="headerlink" title="vs GPTQ风格量化"></a>vs GPTQ风格量化</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GPTQ</th>
+<th>KIVI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>量化对象</td>
+<td>模型权重</td>
+<td>KV缓存</td>
+</tr>
+<tr>
+<td>策略</td>
+<td>Hessian-based排序量化</td>
+<td>基于分布分析的非对称量化</td>
+</tr>
+<tr>
+<td>需要校准</td>
+<td>是（需要梯度信息）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>量化为</td>
+<td>2&#x2F;3&#x2F;4&#x2F;8-bit</td>
+<td>2&#x2F;4-bit</td>
+</tr>
+<tr>
+<td>推理时</td>
+<td>静态（预量化）</td>
+<td>动态（在线量化KV）</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: GPTQ量化的对象是静态的模型权重，而KV缓存是在推理时在线生成的，需要动态量化。KIVI的设计充分考虑了动态量化的需求（低开销、在线执行）。</p>
+<h3 id="vs-基于稀疏度的KV剪枝"><a href="#vs-基于稀疏度的KV剪枝" class="headerlink" title="vs 基于稀疏度的KV剪枝"></a>vs 基于稀疏度的KV剪枝</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>KV稀疏化</th>
+<th>KIVI量化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维</td>
+<td>token数量</td>
+<td>per-token存储</td>
+</tr>
+<tr>
+<td>信息损失</td>
+<td>token级别（全部丢失）</td>
+<td>token内精度降低</td>
+</tr>
+<tr>
+<td>互补性</td>
+<td>与KIVI正交</td>
+<td>与稀疏化正交</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 稀疏化保留部分token的全部信息、其他token的零信息。量化保留所有token但精度降低。两者互补可叠加。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-无法完全消除元数据开销"><a href="#1-无法完全消除元数据开销" class="headerlink" title="1. 无法完全消除元数据开销"></a>1. 无法完全消除元数据开销</h3><p><strong>问题</strong>: 逐通道和逐token的非对称量化需要存储scale和zero-point。对于2比特量化，元数据开销（4字节per element）可能超过有效负载（2比特 &#x3D; 0.25字节per element）。</p>
+<p>以LLaMA-2-7B ($d&#x3D;128$)为例：</p>
+<ul>
+<li>量化数据: $128 \times N \times 2 &#x2F; 8 &#x3D; 32N$ bytes</li>
+<li>逐通道Key元数据: $2 \times 128 \times 2 &#x3D; 512$ bytes (固定)</li>
+<li>逐token Value元数据: $2 \times 4 \times N &#x2F; G$ bytes (随$N$增长)</li>
+</ul>
+<p>对于短序列（$N&lt;100$），元数据占比可能超过50%。</p>
+<p><strong>影响</strong>: 在极短序列场景下，KIVI的净内存节省不如声称的显著。</p>
+<h3 id="2-分块策略的时间延迟"><a href="#2-分块策略的时间延迟" class="headerlink" title="2. 分块策略的时间延迟"></a>2. 分块策略的时间延迟</h3><p><strong>问题</strong>: 残差缓冲区的分块量化机制意味着最后$B_{\text{size}}$个token始终以FP16存储。对于$B_{\text{size}}&#x3D;32$，这意味至少32个token的内存”浪费”在FP16上。此外，缓冲区中的token在正式进入量化缓存前无法享受到2-bit内存节省。</p>
+<p><strong>影响</strong>: 在严格内存约束场景下，需要将$B_{\text{size}}$设置得更小（如8或16），但这会降低分块量化的效率。</p>
+<h3 id="3-对特定架构的依赖"><a href="#3-对特定架构的依赖" class="headerlink" title="3. 对特定架构的依赖"></a>3. 对特定架构的依赖</h3><p><strong>问题</strong>: KIVI的逐通道&#x2F;逐token区分依赖于Key和Value的特定数值分布特性。对于使用不同注意力机制（如多查询注意力MQA、分组查询注意力GQA）或不同位置编码（如ALiBi、无位置编码）的模型，这些分布特性可能不同。</p>
+<p><strong>影响</strong>: KIVI在一个新架构上的应用需要先进行分布分析以验证假设。不能保证在所有架构上都同样有效。</p>
+<h3 id="4-软硬件的兼容性"><a href="#4-软硬件的兼容性" class="headerlink" title="4. 软硬件的兼容性"></a>4. 软硬件的兼容性</h3><p><strong>问题</strong>: 2比特算术操作不是GPU的标准操作。实际实现中需要将2比特数据解压缩为FP16&#x2F;INT8进行计算，引入额外的解压开销。</p>
+<p><strong>影响</strong>: 名义上的”2比特存储”不一定转化为”2比特速度”。实际加速比取决于解压开销与内存带宽节省的权衡。</p>
+<h3 id="5-与KV稀疏化的组合效率"><a href="#5-与KV稀疏化的组合效率" class="headerlink" title="5. 与KV稀疏化的组合效率"></a>5. 与KV稀疏化的组合效率</h3><p><strong>问题</strong>: 如果与H2O或StreamingLLM等稀疏化方法组合，稀疏化后的token数量减少会使KIVI的元数据开销占比显著增加（因为逐token&#x2F;逐通道元数据相对于实际token数变成更大的负担）。</p>
+<p><strong>影响</strong>: 在极端稀疏化场景下，可能需要降低量化粒度（从逐通道改为逐组）来控制元数据开销。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-分布分析引导量化策略"><a href="#1-分布分析引导量化策略" class="headerlink" title="1. 分布分析引导量化策略"></a>1. 分布分析引导量化策略</h3><p><strong>洞见</strong>: KIVI的成功来源于对KV缓存数值分布的仔细分析，而非盲目应用现有量化技术。在将任何优化技术应用于新场景前，先分析数据的统计特性是关键的步骤。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在量化其他模型组件时（如注意力输出、FFN中间状态），首先进行分布分析</li>
+<li>关注不同维度的异常值模式（通道、token、层、头）</li>
+<li>根据分布特性选择量化粒度而非使用统一策略</li>
+</ul>
+<h3 id="2-结构不对称性蕴含优化机会"><a href="#2-结构不对称性蕴含优化机会" class="headerlink" title="2. 结构不对称性蕴含优化机会"></a>2. 结构不对称性蕴含优化机会</h3><p><strong>洞见</strong>: KIVI揭示了Key和Value在数值结构上的不对称性，并利用这种不对称性设计了差异化的量化策略。在ML系统的其他组件中，类似的结构不对称性很可能存在，等待被发现和利用。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在分析系统组件时，积极寻找”不对称性”——在某个维度上的行为差异</li>
+<li>为具有不同特性的组件设计不同的而非统一的处理方案</li>
+<li>不要因为”看起来相似”就默认使用相同的优化策略</li>
+</ul>
+<h3 id="3-免调参设计的价值"><a href="#3-免调参设计的价值" class="headerlink" title="3. 免调参设计的价值"></a>3. 免调参设计的价值</h3><p><strong>洞见</strong>: 在维护和部署成本高昂的生产环境中，”无需调参”是一个被低估的设计目标。KIVI通过通用设计（而非学习特定参数）实现了这一点，证明”差一点的通用方案”往往优于”最优的特定方案”。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在设计优化方法时，将”零配置”作为核心设计约束</li>
+<li>优先选择基于统计特性的通用方案，其次考虑基于学习的特定方案</li>
+<li>为新方法提供默认的超参数集，使其能够开箱即用</li>
+</ul>
+<h3 id="4-分块处理在流式场景中的通用价值"><a href="#4-分块处理在流式场景中的通用价值" class="headerlink" title="4. 分块处理在流式场景中的通用价值"></a>4. 分块处理在流式场景中的通用价值</h3><p><strong>洞见</strong>: KIVI的残差缓冲区分块量化策略是一个通用的设计模式——在流式处理的场景中，使用小缓冲区积累数据然后进行批量处理，同时保持最近元素的高精度。这种模式可以推广到其他流式系统优化中。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在流式ML推理中使用分块策略平衡延迟和吞吐量</li>
+<li>将”最近元素保持高精度”作为流式量化的默认启发式</li>
+<li>选择分块大小时考虑精度-效率权衡</li>
+</ul>
+<h3 id="5-RoPE是KV缓存量化的关键考虑因素"><a href="#5-RoPE是KV缓存量化的关键考虑因素" class="headerlink" title="5. RoPE是KV缓存量化的关键考虑因素"></a>5. RoPE是KV缓存量化的关键考虑因素</h3><p><strong>洞见</strong>: RoPE的位置嵌入操作对Key向量的通道结构产生显著的混合影响。任何KV缓存量化的方法都必须明确考虑RoPE的交互——无论是选择前RoPE量化（如KVQuant）还是后RoPE量化（如KIVI）。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在涉及RoPE模型的任何KV缓存操作中，明确考虑RoPE的影响</li>
+<li>对于位置编码的操作，分析其对后续优化（量化、稀疏化）的影响</li>
+<li>将RoPE处理作为KV优化pipeline的显式步骤</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>2比特是可部署的极限</strong>: KIVI证明了2比特KV缓存量化在实际系统中是可用的，且质量退化可控。这为整个领域设立了”2比特够了”的基线，后续研究需要在此基线上证明改进的必要性。</p>
+</li>
+<li><p><strong>免调参的趋势</strong>: 随着LLM在多种场景中广泛部署，免调参的方法越来越受重视。KIVI是这一趋势的代表，后续工作（如KVQuant的部分特性）也在走向免调参方向。</p>
+</li>
+<li><p><strong>从KV缓存扩展到其他中间状态</strong>: KIVI的成功表明，Transformer中的中间状态可能都有优化空间。注意力输出的”残差状态”、FFN的中间激活等都可以从类似的分布分析开始，探索量化或压缩的可能性。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>消费级硬件上的长上下文推理</strong>: KIVI将KV缓存从2GB压缩到0.25GB（7B模型, 4K序列），使得在16GB VRAM的GPU上运行长上下文推理成为可能。</p>
+</li>
+<li><p><strong>大batch实时服务</strong>: KV缓存内存是限制batch size的主要因素。KIVI的4倍batch size提升直接转化为4倍吞吐量，对高并发推理服务至关重要。</p>
+</li>
+<li><p><strong>边缘和移动部署</strong>: 在内存极度受限的边缘设备上，KIVI的2比特量化可能是唯一能让LLM运行长上下文的方案。</p>
+</li>
+</ol>
+<h3 id="与HuggingFace-Transformers的集成"><a href="#与HuggingFace-Transformers的集成" class="headerlink" title="与HuggingFace Transformers的集成"></a>与HuggingFace Transformers的集成</h3><p>KIVI可以方便地集成到现有推理框架中：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoModelForCausalLM<br><span class="hljs-keyword">import</span> kivi<br><br>model = AutoModelForCausalLM.from_pretrained(<span class="hljs-string">&quot;meta-llama/Llama-2-7b&quot;</span>)<br>model = kivi.patch_model(model, k_bits=<span class="hljs-number">2</span>, v_bits=<span class="hljs-number">2</span>)<br></code></pre></td></tr></table></figure>
+
+<p>这比完整的校准和微调流程简单得多。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-1比特KV缓存量化"><a href="#1-1比特KV缓存量化" class="headerlink" title="1. 1比特KV缓存量化"></a>1. 1比特KV缓存量化</h3><p><strong>问题</strong>: 是否可以将KV缓存进一步压缩到1比特（二元量化）？二值化的Key和Value会保留多少信息？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>探索1比特binary量化 + 残差校正的策略</li>
+<li>使用随机化技术（如stochastic rounding）改善1比特量化质量</li>
+<li>分析1比特量化的理论性能下界</li>
+</ul>
+<p><strong>潜在影响</strong>: 如果可以实用化，将再实现2倍额外内存节省。</p>
+<h3 id="2-异常值感知的模型架构设计"><a href="#2-异常值感知的模型架构设计" class="headerlink" title="2. 异常值感知的模型架构设计"></a>2. 异常值感知的模型架构设计</h3><p><strong>问题</strong>: 如果KV缓存的异常值模式是可预测的（特定通道始终为异常值），能否在模型架构设计阶段就考虑这一点？例如，将异常值通道分离为更高精度的独立流。</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计显式分离异常值通道和正常通道的Key投影</li>
+<li>探索”内置量化”的Transformer变体</li>
+<li>在架构搜索中考虑推理内存效率</li>
+</ul>
+<p><strong>潜在影响</strong>: 从根本上解决量化-精度权衡。</p>
+<h3 id="3-量化与稀疏化的联合优化"><a href="#3-量化与稀疏化的联合优化" class="headerlink" title="3. 量化与稀疏化的联合优化"></a>3. 量化与稀疏化的联合优化</h3><p><strong>问题</strong>: KIVI与H2O&#x2F;StreamingLLM等稀疏化方法是相互独立的。能否设计一个联合优化框架，同时进行token驱逐和精度降低决策？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>开发统一的率失真优化框架</li>
+<li>设计动态的精度分配策略（重要token高精度、非重要token低精度）</li>
+<li>研究联合优化是否能突破单独优化的帕累托前沿</li>
+</ul>
+<p><strong>潜在影响</strong>: 实现比单独优化更好的质量-效率权衡。</p>
+<h3 id="4-硬件原生支持2比特操作"><a href="#4-硬件原生支持2比特操作" class="headerlink" title="4. 硬件原生支持2比特操作"></a>4. 硬件原生支持2比特操作</h3><p><strong>问题</strong>: 当前GPU没有原生的2比特算术支持。如果未来硬件提供2比特矩阵乘法、2比特加法和Softmax近似，KIVI等方法的实际加速将达到什么水平？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>为2比特KV缓存操作设计专用硬件加速器</li>
+<li>分析2比特精度下的端到端推理延迟</li>
+<li>研究混合精度（2比特存储、FP16计算） vs 原生2比特计算的权衡</li>
+</ul>
+<p><strong>潜在影响</strong>: 推动硬件发展以匹配软件量化能力。</p>
+<h3 id="5-训练阶段的量化感知"><a href="#5-训练阶段的量化感知" class="headerlink" title="5. 训练阶段的量化感知"></a>5. 训练阶段的量化感知</h3><p><strong>问题</strong>: 能否在预训练阶段就考虑KV缓存将被量化这一事实？量化感知训练（QAT）是否可以进一步提升2比特KV缓存的生成质量？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计KV缓存量化的QAT算法</li>
+<li>探索在预训练中模拟低精度KV缓存的效果</li>
+<li>研究QAT后是否可以进一步降低比特率（如1.5比特）</li>
+</ul>
+<p><strong>潜在影响</strong>: 在不增加推理开销的情况下提升量化质量。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Liu, Z., et al. (2024). KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache. ICML 2024. arXiv:2402.02750</li>
+<li>Xiao, G., et al. (2023). Efficient Streaming Language Models with Attention Sinks. ICLR 2024. arXiv:2309.17453</li>
+<li>Hooper, C., et al. (2024). KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization. NeurIPS 2024. arXiv:2401.18079</li>
+<li>Zhang, Z., et al. (2023). H2O: Heavy-Hitter Oracle for Efficient Generative Inference. NeurIPS 2023. arXiv:2306.14048</li>
+<li>Frantar, E., et al. (2023). GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers. ICLR 2023. arXiv:2210.17323</li>
+<li>Dettmers, T., et al. (2023). QLoRA: Efficient Finetuning of Quantized LLMs. NeurIPS 2023. arXiv:2305.14314</li>
+<li>Su, J., et al. (2023). RoFormer: Enhanced Transformer with Rotary Position Embedding. arXiv:2104.09864</li>
+<li>Touvron, H., et al. (2023). LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/KV-Cache/" class="category-chain-item">KV-Cache</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-quantization/" class="print-no-link">#papers/quantization</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache</div>
+      <div>https://w2ongq6.github.io/2024/02/05/inference/note/KIVI_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年2月5日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/02/07/aigc/note/LGM_note/" title="LGM: Large Multi-View Gaussian Model for High-Resolution 3D Content Creation">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">LGM: Large Multi-View Gaussian Model for High-Resolution 3D Content Creation</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/02/03/inference/note/LookaheadDecoding_note/" title="Break the Sequential Dependency of LLM Inference Using Lookahead Decoding">
+                        <span class="hidden-mobile">Break the Sequential Dependency of LLM Inference Using Lookahead Decoding</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

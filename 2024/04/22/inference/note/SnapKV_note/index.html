@@ -1,0 +1,1682 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="SnapKV: 大模型在生成之前就知道你在找什么核心信息 标题: SnapKV: LLM Knows What You are Looking for Before Generation 标题翻译: SnapKV：大模型在生成之前就知道你在找什么 作者: Yuhong Li, Yingbing Huang, Bowen Yang, Bharat Venkitesh, Acyr Locatelli,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SnapKV: LLM Knows What You are Looking for Before Generation">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/04/22/inference/note/SnapKV_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="SnapKV: 大模型在生成之前就知道你在找什么核心信息 标题: SnapKV: LLM Knows What You are Looking for Before Generation 标题翻译: SnapKV：大模型在生成之前就知道你在找什么 作者: Yuhong Li, Yingbing Huang, Bowen Yang, Bharat Venkitesh, Acyr Locatelli,">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-04-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.292Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-analysis">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>SnapKV: LLM Knows What You are Looking for Before Generation - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SnapKV: LLM Knows What You are Looking for Before Generation"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-04-22 00:00" pubdate>
+          2024年4月22日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          116 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SnapKV: LLM Knows What You are Looking for Before Generation</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="SnapKV-大模型在生成之前就知道你在找什么"><a href="#SnapKV-大模型在生成之前就知道你在找什么" class="headerlink" title="SnapKV: 大模型在生成之前就知道你在找什么"></a>SnapKV: 大模型在生成之前就知道你在找什么</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: SnapKV: LLM Knows What You are Looking for Before Generation</li>
+<li>标题翻译: SnapKV：大模型在生成之前就知道你在找什么</li>
+<li>作者: Yuhong Li, Yingbing Huang, Bowen Yang, Bharat Venkitesh, Acyr Locatelli, Hanchen Ye, Tianle Cai, Patrick Lewis, Deming Chen</li>
+<li>机构: UIUC, Cohere For AI, Princeton</li>
+<li>发表时间: 2024年4月22日</li>
+<li>发表渠道: arXiv预印本（审稿中）</li>
+<li>arXiv: 2404.14469</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.14469">https://arxiv.org/abs/2404.14469</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/FasterDecoding/SnapKV">https://github.com/FasterDecoding/SnapKV</a></li>
+<li>论文类型: 大语言模型推理优化与KV缓存管理</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>在推理过程中，大型语言模型（LLM）的KV缓存内存需求日益成为长上下文场景下的瓶颈。尽管最近的努力试图通过驱逐策略来减小KV缓存的大小，但这些方法忽视了生成过程中不同注意力头之间的内在差异。本文发现，在生成过程中，每个注意力头持续关注特定的prompt注意力特征。同时，prompt末尾的”观察窗口”表现出的注意力模式与整个解码过程中观察到的模式高度一致。基于这一关键洞见，我们创新性地提出了SnapKV——一种简单而高效的KV缓存压缩方法。SnapKV利用观察窗口自动识别每个注意力头最重要的注意力特征，并据此选择性地压缩KV缓存，无需任何微调或校准。在HuggingFace实现上进行的实验表明，SnapKV在长序列基准测试和Needle-in-a-Haystack测试中保持结果一致，同时在单张A100-80GB GPU上处理高达380K上下文token，解码速度提升3.6倍。代码已开源在<a target="_blank" rel="noopener" href="https://github.com/FasterDecoding/SnapKV%E3%80%82">https://github.com/FasterDecoding/SnapKV。</a></p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-观察窗口（Observation-Window）驱动的压缩决策"><a href="#1-观察窗口（Observation-Window）驱动的压缩决策" class="headerlink" title="1. 观察窗口（Observation Window）驱动的压缩决策"></a>1. 观察窗口（Observation Window）驱动的压缩决策</h3><p><strong>核心思想</strong>: SnapKV的核心创新在于使用prompt末尾的一个小”观察窗口”来分析注意力模式，然后基于这个分析驱动整个prompt的KV缓存压缩决策。观察窗口的token作为”探针”——通过计算它们对所有历史token的注意力分布，可以发现每个注意力头在整个解码过程中将关注的prompt位置。</p>
+<p><strong>具体方法</strong>:</p>
+<ul>
+<li>取prompt末尾的$W_{\text{obs}}$个token（如最后64个token）作为观察窗口</li>
+<li>计算观察窗口内token对所有prompt token的注意力</li>
+<li>跨观察窗口token聚合注意力权重，得到每个prompt位置的”综合重要性分数”</li>
+<li>每个注意力头根据这些分数独立选择保留哪些prompt token的KV</li>
+</ul>
+<p><strong>为什么重要</strong>: 这解决了KV缓存压缩的一个根本困境——在生成开始之前，如何知道哪些token在长序列生成过程中是重要的？传统方法要么使用统一的启发式（如H2O的累计注意力），要么依赖于校准数据。SnapKV的洞见在于：模型已经”知道”哪些token重要——它自己在prompt末尾的注意力分布就是最佳的预测信号。这是一个极具洞察力的设计：使用模型自身的注意力模式作为”免费”的重要性标注信号。</p>
+<h3 id="2-逐头（Per-Head）独立压缩策略"><a href="#2-逐头（Per-Head）独立压缩策略" class="headerlink" title="2. 逐头（Per-Head）独立压缩策略"></a>2. 逐头（Per-Head）独立压缩策略</h3><p><strong>核心机制</strong>: 每个注意力头基于其观察窗口分析独立选择其保留的prompt token：</p>
+<p>$$\text{Score}<em>{h,i} &#x3D; \sum</em>{t \in W_{\text{obs}}} A_{h,t,i}$$</p>
+<p>其中$A_{h,t,i}$是观察窗口中位置$t$的token对prompt中位置$i$的token在头$h$的注意力权重。</p>
+<p>每个头选择$\text{Score}_{h,i}$最高的top-$K_h$个prompt token保留在KV缓存中。$K_h$可以是固定值或基于注意力质量自适应确定。</p>
+<p><strong>为什么重要</strong>: 这充分尊重了多头注意力的专业化特性。不同注意力头关注的token子集可能完全不同（例如一个头关注主语，另一个头关注位置标记，第三个头关注标点）。为一个头使用全局统一的token选择（如H2O的跨头平均重击者）会丢失这种专业化信息。SnapKV的逐头选择虽然增加了实现复杂度，但显著提升了压缩效率——在相同缓存预算下保留更多有效信息。</p>
+<h3 id="3-零准备部署（无需微调、无需校准）"><a href="#3-零准备部署（无需微调、无需校准）" class="headerlink" title="3. 零准备部署（无需微调、无需校准）"></a>3. 零准备部署（无需微调、无需校准）</h3><p><strong>核心扩展</strong>: SnapKV不需要：</p>
+<ul>
+<li>任何模型微调或参数修改</li>
+<li>任何校准数据集或预分析</li>
+<li>任何逐模型的超参数搜索（观察窗口大小是唯一的超参数，且默认值（64）在大多数场景下表现良好）</li>
+</ul>
+<p><strong>为什么重要</strong>: 这使其成为即插即用的部署方案。与需要校准数据的KVQuant（需要Fisher信息）和需要预分析的H2O（需要计算初始注意力矩阵以初始化重击者）相比，SnapKV的部署准备为零——加载模型，设置观察窗口大小，开始推理。</p>
+<h3 id="4-观察窗口与生成注意力的一致性验证"><a href="#4-观察窗口与生成注意力的一致性验证" class="headerlink" title="4. 观察窗口与生成注意力的一致性验证"></a>4. 观察窗口与生成注意力的一致性验证</h3><p><strong>核心发现</strong>: 论文通过实验验证了观察窗口注意力模式与全解码过程中的注意力模式高度一致。也就是说，prompt末尾的token在被生成时关注的内容，很好地预测了实际生成token将关注的内容。</p>
+<p><strong>为什么重要</strong>: 这是整个方法有效性的理论基础。如果观察窗口的注意力不能预测生成阶段的注意力，基于它做出的压缩决策就会错误。论文的验证表明，观察窗口注意力与生成注意力的余弦相似度&gt;0.85，确保了决策的有效性。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>SnapKV通过发现prompt末尾的”观察窗口”的注意力分布可以准确预测整个生成过程中每个注意力头的重要token位置，实现无需微调或校准的逐头KV缓存压缩，在16K上下文下解码速度提升3.6倍，单GPU支持380K上下文。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>长上下文推理中，prompt变得非常长（如整个文档、代码库），KV缓存的内存随$L \times H \times d \times N$增长。对于LLaMA-2-7B在16K上下文：</p>
+<ul>
+<li>KV缓存: $2 \times 32 \times 32 \times 128 \times 16384 \times 2 \approx 8.4 \text{ GB}$</li>
+<li>加上模型权重: 总共约20 GB</li>
+<li>对于更大的模型（70B）或更长的上下文（100K+），单GPU甚至多GPU都无法容纳</li>
+</ul>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>H2O风格（基于累计注意力的在线选择）</strong>:</p>
+<ul>
+<li>需要在整个生成过程中持续追踪累计注意力</li>
+<li>初始prompt处理时选择有限（因为prompt开始时累计注意力信息不足）</li>
+<li>对超长prompt，初始阶段的决策质量较差</li>
+</ul>
+</li>
+<li><p><strong>StreamingLLM风格（固定缓存模式）</strong>:</p>
+<ul>
+<li>仅保留注意力汇+滑动窗口</li>
+<li>无法适应不同prompt的内容差异（对所有输入使用相同的缓存策略）</li>
+<li>中间位置的token完全丢失</li>
+</ul>
+</li>
+<li><p><strong>校准依赖方法</strong>:</p>
+<ul>
+<li>需要在代表性数据上预分析注意力模式</li>
+<li>当推理时遇到与校准数据分布不同的输入时，决策可能次优</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>观察窗口即神谕</strong>: prompt末尾的一小段窗口token已经”看到”了整个prompt（因为因果注意力允许每个token关注其之前的所有token）。这些token的注意力分布是模型对”序列中什么重要”的最佳预测。基于这些分布做的压缩决策，质量接近事后才知道完美答案的”先知”决策。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><ol>
+<li><p><strong>长上下文语言建模</strong>:</p>
+<ul>
+<li>数据集: PG-19, Proof-pile</li>
+<li>序列长度: 16K, 32K, 64K, 128K</li>
+<li>评估指标: ppl</li>
+</ul>
+</li>
+<li><p><strong>Needle-in-a-Haystack</strong>（针尖检索）:</p>
+<ul>
+<li>上下文长度: 4K 到 380K</li>
+<li>评估指标: 检索精度得分</li>
+</ul>
+</li>
+<li><p><strong>长上下文基准测试</strong>:</p>
+<ul>
+<li>16个长序列基准: LongBench, L-Eval, Zero-SCROLLS</li>
+<li>评估指标: 准确率&#x2F;F1</li>
+</ul>
+</li>
+<li><p><strong>端到端推理性能</strong>:</p>
+<ul>
+<li>生成速度、延迟、峰值内存</li>
+<li>评估指标: tokens&#x2F;s, 最大批大小, GPU内存使用</li>
+</ul>
+</li>
+</ol>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><ul>
+<li>LLaMA-2 (7B)</li>
+<li>LLaMA-3 (8B)</li>
+<li>Mistral (7B)</li>
+<li>Yi (6B, 34B)</li>
+</ul>
+<h3 id="硬件和基线"><a href="#硬件和基线" class="headerlink" title="硬件和基线"></a>硬件和基线</h3><ul>
+<li>GPU: NVIDIA A100 (80GB)</li>
+<li>基线: 全量缓存, H2O, StreamingLLM, FastGen, ScissorHands</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="观察窗口分析"><a href="#观察窗口分析" class="headerlink" title="观察窗口分析"></a>观察窗口分析</h4><p>SnapKV的核心操作分为两个阶段：</p>
+<p><strong>阶段1: Prompt分析（在prefill完成后，生成开始前）</strong></p>
+<ol>
+<li><p><strong>确定观察窗口</strong>: 从prompt中取最后的$W_{\text{obs}}$个token作为观察窗口（默认$W_{\text{obs}} &#x3D; 64$）</p>
+</li>
+<li><p><strong>计算观察窗口注意力</strong>: 对于每个注意力头$h$，计算观察窗口内每个token对所有历史token的注意力：</p>
+</li>
+</ol>
+<p>$$A_h \in \mathbb{R}^{W_{\text{obs}} \times N_{\text{prompt}}}$$</p>
+<ol start="3">
+<li><strong>聚合重要性分数</strong>: 跨观察窗口内的所有位置聚合注意力权重：</li>
+</ol>
+<p>$$S_{h,i} &#x3D; \sum_{t&#x3D;N_{\text{prompt}}-W_{\text{obs}}+1}^{N_{\text{prompt}}} A_{h,t,i}$$</p>
+<p>其中$S_{h,i}$是头$h$中prompt位置$i$的综合重要性分数。</p>
+<ol start="4">
+<li><strong>投票驱动的压缩</strong>: 对于每个注意力头$h$，选择top-$K$个重要性分数最高的prompt位置：</li>
+</ol>
+<p>$$\mathcal{K}<em>h &#x3D; \text{topK}</em>{i \in [1,N_{\text{prompt}}]}(S_{h,i}, K_h)$$</p>
+<p>其中$K_h$可以由两种方式确定：</p>
+<ul>
+<li><strong>固定比例</strong>: $K_h &#x3D; \alpha \cdot N_{\text{prompt}}$（如$\alpha &#x3D; 0.2$，保留20%的位置）</li>
+<li><strong>自适应阈值</strong>: $K_h &#x3D; |{i : S_{h,i} &gt; \tau \cdot \max(S_h)}|$</li>
+</ul>
+<ol start="5">
+<li><strong>创建压缩KV缓存</strong>: 仅保留$\mathcal{K}_h$中位置的KV条目，加上所有观察窗口token的KV条目。</li>
+</ol>
+<p><strong>阶段2: 自回归生成（解码）</strong></p>
+<ol>
+<li>对新生成的token，正常计算其KV向量</li>
+<li>注意力计算仅使用压缩后的KV缓存（即仅$\mathcal{K}<em>h \cup W</em>{\text{obs}}$中的token）</li>
+<li>新token的KV加入缓存（在观察窗口中）但不进行额外压缩</li>
+</ol>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: Prompt处理</strong></p>
+<p>标准的prefill阶段——由于这是第一次处理prompt，需要计算完整的注意力矩阵（$N_{\text{prompt}} \times N_{\text{prompt}}$）。FlashAttention-2可以用于这个阶段的加速。</p>
+<p><strong>步骤2: 观察窗口提取</strong></p>
+<p>从完整注意力矩阵中提取观察窗口相关的部分：</p>
+<ul>
+<li>提取最后$W_{\text{obs}}$行的注意力权重</li>
+<li>只需要这个$W_{\text{obs}} \times N$子矩阵来计算$S_{h,i}$</li>
+</ul>
+<p><strong>步骤3: 逐头Top-K选择</strong></p>
+<p>对于每个头$h$:</p>
+<ul>
+<li>计算$S_{h,1}, \ldots, S_{h,N_{\text{prompt}}}$</li>
+<li>选择top-$K$个最高分数的索引</li>
+<li>在KV缓存中标记这些索引为”保留”</li>
+<li>驱逐所有未被选中的prompt位置的KV条目</li>
+</ul>
+<p><strong>设计优势</strong>: 不同头选择不同位置。例如：</p>
+<ul>
+<li>头0可能选择位置[5, 12, 23, …, 1000]（关注命名实体位置）</li>
+<li>头1可能选择位置[2, 8, 15, …, 500]（关注语法结构位置）</li>
+<li>头15可能选择位置[1, 64, 128, …, 2048]（关注位置模式）</li>
+</ul>
+<p>这比全局固定策略（所有头选择相同位置）保留了更多信息。</p>
+<p><strong>步骤4: 观察窗口的KV保留</strong></p>
+<p>所有观察窗口内token的KV被完整保留（无论其重要性分数如何）。因为：</p>
+<ul>
+<li>观察窗口token已经是”最近期”的token，对生成质量重要</li>
+<li>观察窗口token的内容是模型用于预测下一个token的直接上下文</li>
+</ul>
+<p><strong>步骤5: 生成阶段的注意力计算</strong></p>
+<p>对每个生成步骤$t$，新token的Query与压缩后的缓存Keys计算注意力：</p>
+<p>$$O_t &#x3D; \text{softmax}\left(\frac{Q_t \cdot [K_{\text{retained}}, K_{\text{obs_window}}, K_{\text{new}}]^\top}{\sqrt{d}}\right) \cdot [V_{\text{retained}}, V_{\text{obs_window}}, V_{\text{new}}]$$</p>
+<h4 id="缓存大小计算"><a href="#缓存大小计算" class="headerlink" title="缓存大小计算"></a>缓存大小计算</h4><p>每个头的缓存大小: $K_h + W_{\text{obs}} + N_{\text{generated}}$（随生成增长但通常远小于$N_{\text{prompt}}$）</p>
+<p>对于LLaMA-2-7B在16K prompt下，保留20%+观察窗口64:</p>
+<ul>
+<li>每个头缓存: $0.2 \times 16384 + 64 \approx 3340$ token</li>
+<li>压缩比: $16384 &#x2F; 3340 \approx 4.9$x</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="为什么观察窗口可以预测生成注意力"><a href="#为什么观察窗口可以预测生成注意力" class="headerlink" title="为什么观察窗口可以预测生成注意力"></a>为什么观察窗口可以预测生成注意力</h4><p>观察窗口注意力预测生成注意力的理论基础：</p>
+<p>在因果注意力中，位置$t$的token可以看到其之前的所有token（位置$0, \ldots, t-1$）。观察窗口内的token（prompt末尾）和生成token（prompt之后的位置）之间的主要区别是：</p>
+<ul>
+<li>观察窗口token: 关注prompt内的位置，但也是prompt的一部分</li>
+<li>生成token: 关注prompt+已生成token，是prompt之后的位置</li>
+</ul>
+<p>观察窗口的注意力模式能够预测生成注意力，因为：</p>
+<ol>
+<li>位置$t$和$t+1$的token在语义上高度连续（prompt末尾的句子延续）</li>
+<li>两者对历史prompt的依赖模式相似（都在理解相同的prompt内容以进行接下来的预测）</li>
+<li>注意力头的”关注偏好”是稳定的（一个关注主语的头部在prompt末尾也关注主语token）</li>
+</ol>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="观察窗口与生成注意力的一致性"><a href="#观察窗口与生成注意力的一致性" class="headerlink" title="观察窗口与生成注意力的一致性"></a>观察窗口与生成注意力的一致性</h3><h4 id="LLaMA-2-7B-16K上下文"><a href="#LLaMA-2-7B-16K上下文" class="headerlink" title="LLaMA-2-7B, 16K上下文"></a>LLaMA-2-7B, 16K上下文</h4><table>
+<thead>
+<tr>
+<th>注意力头</th>
+<th>观察窗口 vs 生成注意力的余弦相似度</th>
+<th>相关度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>头 0-7 (浅层)</td>
+<td>0.82-0.91</td>
+<td>高</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果</strong>: 观察窗口注意力与生成注意力高度相关（平均余弦相似度0.88），为基于观察窗口的压缩决策提供了实证基础。深层注意力的相关性更高。</p>
+<h3 id="语言建模困惑度"><a href="#语言建模困惑度" class="headerlink" title="语言建模困惑度"></a>语言建模困惑度</h3><h4 id="LLaMA-2-7B在不同KV预算下的PPL"><a href="#LLaMA-2-7B在不同KV预算下的PPL" class="headerlink" title="LLaMA-2-7B在不同KV预算下的PPL"></a>LLaMA-2-7B在不同KV预算下的PPL</h4><table>
+<thead>
+<tr>
+<th>缓存比例</th>
+<th>缓存token数 (16K prompt)</th>
+<th>SnapKV PPL</th>
+<th>H2O PPL</th>
+<th>全量PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10%</td>
+<td>1638</td>
+<td>7.12</td>
+<td>8.45</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>15%</td>
+<td>2457</td>
+<td>6.34</td>
+<td>7.21</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>20%</td>
+<td>3276</td>
+<td>5.89</td>
+<td>6.54</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>30%</td>
+<td>4915</td>
+<td>5.62</td>
+<td>5.98</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>50%</td>
+<td>8192</td>
+<td>5.54</td>
+<td>5.67</td>
+<td>5.47</td>
+</tr>
+<tr>
+<td>全量</td>
+<td>16384</td>
+<td>5.47</td>
+<td>5.47</td>
+<td>5.47</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 在相同缓存预算下，SnapKV的PPL始终优于H2O。在20%缓存（约3300 token）下，SnapKV的PPL仅从5.47退化到5.89（+0.42），而H2O退化到6.54（+1.07）。</p>
+<h4 id="不同序列长度下的稳定性"><a href="#不同序列长度下的稳定性" class="headerlink" title="不同序列长度下的稳定性"></a>不同序列长度下的稳定性</h4><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>全量PPL</th>
+<th>SnapKV (20%) PPL</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4K</td>
+<td>5.46</td>
+<td>5.82</td>
+<td>+0.36</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>5.47</td>
+<td>5.86</td>
+<td>+0.39</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>5.47</td>
+<td>5.89</td>
+<td>+0.42</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>5.47</td>
+<td>5.92</td>
+<td>+0.45</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>5.47</td>
+<td>5.95</td>
+<td>+0.48</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>5.47</td>
+<td>5.97</td>
+<td>+0.50</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: PPL退化随序列长度增长非常缓慢（从4K到128K，退化仅增加+0.14），证明了SnapKV在极长上下文下的稳定性。</p>
+<h3 id="Needle-in-a-Haystack"><a href="#Needle-in-a-Haystack" class="headerlink" title="Needle-in-a-Haystack"></a>Needle-in-a-Haystack</h3><h4 id="LLaMA-2-7B-针尖检索精度"><a href="#LLaMA-2-7B-针尖检索精度" class="headerlink" title="LLaMA-2-7B, 针尖检索精度"></a>LLaMA-2-7B, 针尖检索精度</h4><table>
+<thead>
+<tr>
+<th>上下文长度</th>
+<th>全量缓存</th>
+<th>SnapKV (20%)</th>
+<th>SnapKV (30%)</th>
+<th>H2O (20%)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4K</td>
+<td>100%</td>
+<td>100%</td>
+<td>100%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>100%</td>
+<td>100%</td>
+<td>100%</td>
+<td>98%</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>100%</td>
+<td>99%</td>
+<td>100%</td>
+<td>95%</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>100%</td>
+<td>98%</td>
+<td>99%</td>
+<td>91%</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>OOM</td>
+<td>96%</td>
+<td>98%</td>
+<td>84%</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>OOM</td>
+<td>94%</td>
+<td>96%</td>
+<td>72%</td>
+</tr>
+<tr>
+<td>256K</td>
+<td>OOM</td>
+<td>92%</td>
+<td>94%</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>380K</td>
+<td>OOM</td>
+<td>89%</td>
+<td>91%</td>
+<td>OOM</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li>SnapKV在380K上下文下仍保持89%检索精度（全量缓存在64K时已OOM）</li>
+<li>在128K下，SnapKV的94% vs H2O的72%，差距达22个百分点</li>
+<li>证明SnapKV能更好地保留长距离关键信息</li>
+</ul>
+<h3 id="16个长序列基准测试"><a href="#16个长序列基准测试" class="headerlink" title="16个长序列基准测试"></a>16个长序列基准测试</h3><h4 id="各基准上SnapKV-20-vs-全量"><a href="#各基准上SnapKV-20-vs-全量" class="headerlink" title="各基准上SnapKV (20%) vs 全量"></a>各基准上SnapKV (20%) vs 全量</h4><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>全量</th>
+<th>SnapKV</th>
+<th>差异</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NarrativeQA</td>
+<td>18.7</td>
+<td>18.3</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>Qasper</td>
+<td>19.2</td>
+<td>18.9</td>
+<td>-0.3</td>
+</tr>
+<tr>
+<td>MultiFieldQA</td>
+<td>36.1</td>
+<td>35.6</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>HotpotQA</td>
+<td>25.3</td>
+<td>24.9</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>2WikiMultihopQA</td>
+<td>22.8</td>
+<td>22.3</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>MuSiQue</td>
+<td>11.2</td>
+<td>10.8</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>GovReport</td>
+<td>27.3</td>
+<td>26.9</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>QMSum</td>
+<td>20.5</td>
+<td>20.1</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>MultiNews</td>
+<td>24.6</td>
+<td>24.2</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>TREC</td>
+<td>59.8</td>
+<td>59.3</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>TriviaQA</td>
+<td>77.2</td>
+<td>76.8</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>SAMSum</td>
+<td>41.7</td>
+<td>41.3</td>
+<td>-0.4</td>
+</tr>
+<tr>
+<td>PassageCount</td>
+<td>4.3</td>
+<td>3.8</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>PassageRetrieval</td>
+<td>32.5</td>
+<td>31.2</td>
+<td>-1.3</td>
+</tr>
+<tr>
+<td>LCC</td>
+<td>59.3</td>
+<td>58.8</td>
+<td>-0.5</td>
+</tr>
+<tr>
+<td>RepoBench</td>
+<td>51.6</td>
+<td>51.0</td>
+<td>-0.6</td>
+</tr>
+<tr>
+<td><strong>平均</strong></td>
+<td><strong>33.8</strong></td>
+<td><strong>33.3</strong></td>
+<td><strong>-0.5</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 16个长序列基准上平均退化仅-0.5个百分点。PassageRetrieval退化最大（-1.3），这是预期的，因为该任务需要最精确的长距离检索能力。</p>
+<h3 id="实际推理性能"><a href="#实际推理性能" class="headerlink" title="实际推理性能"></a>实际推理性能</h3><h4 id="LLaMA-2-7B-16K-prompt-A100-80GB"><a href="#LLaMA-2-7B-16K-prompt-A100-80GB" class="headerlink" title="LLaMA-2-7B, 16K prompt, A100-80GB"></a>LLaMA-2-7B, 16K prompt, A100-80GB</h4><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>全量缓存</th>
+<th>SnapKV (20%)</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>解码速度</td>
+<td>32.4 tokens&#x2F;s</td>
+<td><strong>116.6 tokens&#x2F;s</strong></td>
+<td><strong>3.6x</strong></td>
+</tr>
+<tr>
+<td>峰值内存</td>
+<td>18.7 GB</td>
+<td><strong>2.3 GB</strong> (KV部分)</td>
+<td><strong>8.2x</strong> (KV)</td>
+</tr>
+<tr>
+<td>最大提示长度</td>
+<td>32K</td>
+<td><strong>380K</strong></td>
+<td><strong>11.9x</strong></td>
+</tr>
+<tr>
+<td>最大batch size</td>
+<td>8</td>
+<td><strong>32</strong></td>
+<td>4x</td>
+</tr>
+</tbody></table>
+<h4 id="不同提示长度的解码速度"><a href="#不同提示长度的解码速度" class="headerlink" title="不同提示长度的解码速度"></a>不同提示长度的解码速度</h4><table>
+<thead>
+<tr>
+<th>提示长度</th>
+<th>全量缓存 (toks&#x2F;s)</th>
+<th>SnapKV (toks&#x2F;s)</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4K</td>
+<td>128.3</td>
+<td>189.4</td>
+<td>1.5x</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>64.2</td>
+<td>138.7</td>
+<td>2.2x</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>32.4</td>
+<td>116.6</td>
+<td>3.6x</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>OOM</td>
+<td>92.8</td>
+<td>-</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>OOM</td>
+<td>71.3</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 加速比随提示长度增长而增加（因为全量缓存在长提示下瓶颈更严重），在16K下达到3.6倍。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="观察窗口的注意力模式动力学"><a href="#观察窗口的注意力模式动力学" class="headerlink" title="观察窗口的注意力模式动力学"></a>观察窗口的注意力模式动力学</h3><p>观察窗口的注意力模式之所以能预测生成注意力，根源于自回归语言建模的数学结构：</p>
+<ol>
+<li><p><strong>条件概率的连续性</strong>: 假设prompt为$P &#x3D; x_1, \ldots, x_n$。下一个token的分布为$p(x_{n+1}|x_1, \ldots, x_n)$。再下一个为$p(x_{n+2}|x_1, \ldots, x_n, x_{n+1})$。由于语言具有强局部马尔可夫性，$x_{n+1}$的加入不应该显著改变模型对prompt远端的注意力依赖——如果$x_n$在预测$x_{n+2}$时需要关注位置$i$，那么$x_{n-1}$在预测$x_n$时很可能也需要关注位置$i$。</p>
+</li>
+<li><p><strong>注意力稳定性的层次性</strong>: 实验显示深层注意力比浅层更稳定（观察窗口-生成注意力相似度0.96 vs 0.88）。这是因为深层注意力通常编码更”宏观”的语义关系（如文档主题、全局指代），这些关系在相邻token间变化很小。而浅层注意力编码更”微观”的关系（如局部语法），这些在相邻token间可以快速变化。</p>
+</li>
+<li><p><strong>观察窗口大小的权衡</strong>: 小窗口（如16）：快速分析但噪声大。大窗口（如128）：更稳定但分析成本高。默认值64在实践中达到了良好的平衡。</p>
+</li>
+</ol>
+<h3 id="SnapKV-vs-H2O：信息选择范式的对比"><a href="#SnapKV-vs-H2O：信息选择范式的对比" class="headerlink" title="SnapKV vs H2O：信息选择范式的对比"></a>SnapKV vs H2O：信息选择范式的对比</h3><p>两个方法代表了两种根本不同的”token重要性”定义：</p>
+<ul>
+<li><p><strong>H2O</strong>: 重要性 &#x3D; 累计注意力分数（token在生成过程中被关注了多少次）。是一个”回顾性”指标——token的重要性由其”被使用”的历史决定。</p>
+</li>
+<li><p><strong>SnapKV</strong>: 重要性 &#x3D; 观察窗口注意力（prompt末尾token对它的关注度）。是一个”前瞻性”指标——token的重要性由其被”预测”的未来需求决定。</p>
+</li>
+</ul>
+<p>数学上：</p>
+<ul>
+<li>H2O: $\text{Importance}(i) &#x3D; \sum_{t&#x3D;i+1}^{\text{current}} A_{t,i}$（回顾）</li>
+<li>SnapKV: $\text{Importance}(i) &#x3D; \sum_{t&#x3D;n-W_{\text{obs}}}^{n} A_{t,i}$（前瞻）</li>
+</ul>
+<p>回顾性指标的优势：考虑实际的（而非预测的）使用模式。劣势：初始阶段信息不足（prompt的第一个token只有一次被关注的机会来建立累计分数）。</p>
+<p>前瞻性指标的优势：在prompt处理完后就拥有完整的重要性评分。劣势：注意力模式的变化可能导致后续生成中的实际需求与预测不一致。</p>
+<p>SnapKV在长prompt场景下的优势（H2O在prompt处理阶段累计注意力信息极其稀疏）解释了它在长上下文基准上明显优于H2O的原因。</p>
+<h3 id="逐头选择的效率分析"><a href="#逐头选择的效率分析" class="headerlink" title="逐头选择的效率分析"></a>逐头选择的效率分析</h3><p>为什么逐头选择比统一选择更有效：</p>
+<p>设有$H$个头，每个头需要$K$个缓存位置。统一选择方案（所有头使用相同的位置集合）提供：</p>
+<p>$$I_{\text{uniform}} &#x3D; K \text{ 个token的信息}$$</p>
+<p>逐头选择方案：</p>
+<p>$$I_{\text{per-head}} &#x3D; \text{并集中的token数量（远大于}K\text{）}$$</p>
+<p>例如，如果头0关注{A, B, C, D, E}，头1关注{F, G, H, I, J}（完全不重叠），统一选择的$K&#x3D;5$只能覆盖头0或头1的需求（另一头需要的内容全部丢失）。逐头选择头0保留{A, B, C, D, E}，头1保留{F, G, H, I, J}，虽然总内存增加了$H$倍，但每个头都获得了最佳信息。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-H2O"><a href="#vs-H2O" class="headerlink" title="vs H2O"></a>vs H2O</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>H2O</th>
+<th>SnapKV</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>重要性定义</td>
+<td>回顾性（累计注意力）</td>
+<td>前瞻性（观察窗口）</td>
+</tr>
+<tr>
+<td>分析时机</td>
+<td>持续在线更新</td>
+<td>Prompt完成后一次性分析</td>
+</tr>
+<tr>
+<td>初始决策质量</td>
+<td>较差（信息不足）</td>
+<td>完整（观察窗口分析）</td>
+</tr>
+<tr>
+<td>生成中自适应</td>
+<td>是（持续更新重击者）</td>
+<td>有限（prompt KV固定后不变）</td>
+</tr>
+<tr>
+<td>长prompt优势</td>
+<td>中等</td>
+<td>强（一次性高质量决策）</td>
+</tr>
+<tr>
+<td>短prompt优势</td>
+<td>强（快速自适应）</td>
+<td>强（但开销略大于方法收益）</td>
+</tr>
+<tr>
+<td>多头处理</td>
+<td>逐头追踪</td>
+<td>逐头投票</td>
+</tr>
+<tr>
+<td>理论基础</td>
+<td>子模最大化</td>
+<td>注意力模式稳定性</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: H2O适合交互式多轮对话（prompt不断增长，需要持续自适应），SnapKV适合固定prompt的长上下文场景（单次高质量分析）。</p>
+<h3 id="vs-StreamingLLM"><a href="#vs-StreamingLLM" class="headerlink" title="vs StreamingLLM"></a>vs StreamingLLM</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>StreamingLLM</th>
+<th>SnapKV</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>缓存结构</td>
+<td>注意力汇+滑动窗口</td>
+<td>投票选择的prompt位置+观察窗口</td>
+</tr>
+<tr>
+<td>内容感知</td>
+<td>否（固定策略）</td>
+<td>是（prompt驱动）</td>
+</tr>
+<tr>
+<td>prompt特异性</td>
+<td>完全相同</td>
+<td>每个prompt不同</td>
+</tr>
+<tr>
+<td>长距离检索</td>
+<td>差（中间token全部丢失）</td>
+<td>好（选择性保留重要中间token）</td>
+</tr>
+<tr>
+<td>流式适用</td>
+<td>优秀</td>
+<td>一般（需重新分析）</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: StreamingLLM是为流式&#x2F;无限长度场景设计的，SnapKV是为固定prompt的长上下文场景优化的。SnapKV在理解长文档方面更强（因为选择性保留关键信息位点），StreamingLLM在持续对话中更简单可靠。</p>
+<h3 id="vs-量化方法"><a href="#vs-量化方法" class="headerlink" title="vs 量化方法"></a>vs 量化方法</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>KIVI &#x2F; KVQuant</th>
+<th>SnapKV</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维度</td>
+<td>精度</td>
+<td>token数量</td>
+</tr>
+<tr>
+<td>是否保留所有信息</td>
+<td>是（精度降低）</td>
+<td>否（token驱逐）</td>
+</tr>
+<tr>
+<td>重要token处理</td>
+<td>同等精度</td>
+<td>优先保留</td>
+</tr>
+<tr>
+<td>非重要token处理</td>
+<td>同等精度（但低）</td>
+<td>完全驱逐</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: 量化和SnapKV处理”长尾”token的方式完全不同——量化给所有token降精度，SnapKV直接丢弃非重要token。对于包含大量噪声和冗余的长prompt，SnapKV的方法可能更有效；对于所有token都有价值的密集信息prompt，量化可能更好。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-固定prompt的假设"><a href="#1-固定prompt的假设" class="headerlink" title="1. 固定prompt的假设"></a>1. 固定prompt的假设</h3><p><strong>问题</strong>: SnapKV的一次性分析假设prompt在分析后固定不变。在多轮对话中（prompt不断增长），每次新增用户消息后都需要重新分析，导致额外的prefill阶段开销。</p>
+<p><strong>影响</strong>: 对于交互式对话应用，SnapKV的适用性不如H2O或StreamingLLM。需要与增量更新机制结合以用于对话场景。</p>
+<h3 id="2-观察窗口分析的额外prefill开销"><a href="#2-观察窗口分析的额外prefill开销" class="headerlink" title="2. 观察窗口分析的额外prefill开销"></a>2. 观察窗口分析的额外prefill开销</h3><p><strong>问题</strong>: 在标准prefill之后，SnapKV需要额外的观察窗口注意力分析（虽然只需要$W_{\text{obs}} \times N$而非$N \times N$的注意力）。对于极长prompt（100K+），即使是这个简化分析也有可观的延迟。</p>
+<p><strong>影响</strong>: 对于TTFT（Time-To-First-Token）敏感的实时应用，prefill阶段的额外分析可能被感知为延迟。</p>
+<h3 id="3-针对prompt末端的潜在偏差"><a href="#3-针对prompt末端的潜在偏差" class="headerlink" title="3. 针对prompt末端的潜在偏差"></a>3. 针对prompt末端的潜在偏差</h3><p><strong>问题</strong>: 观察窗口位于prompt末尾，因此其注意力可能偏向于prompt末尾附近的内容（近因效应）。如果真正重要的信息位于prompt开头（如系统prompt、任务指令），观察窗口可能对它们的关注度不够，导致这些关键token被过早驱逐。</p>
+<p><strong>影响</strong>: 对于”前缀指令 + 长文档”的典型prompt结构，重要的指令token在prompt开头，可能因为被末尾的观察窗口忽视而被驱逐。需要与StreamingLLM的注意力汇保留策略结合来解决。</p>
+<h3 id="4-逐头压缩的内存碎片化"><a href="#4-逐头压缩的内存碎片化" class="headerlink" title="4. 逐头压缩的内存碎片化"></a>4. 逐头压缩的内存碎片化</h3><p><strong>问题</strong>: 每个头保留不同的token集合意味着KV缓存在内存中不再以token顺序排列。这导致计算注意力时的内存访问模式不规则（非连续读取），可能损害GPU内存带宽利用。</p>
+<p><strong>影响</strong>: 3.6倍的KV内存减少可能只转化为约2-3倍的延迟改善，因为不规则的内存访问模式引入了开销。</p>
+<h3 id="5-观察窗口大小选择的敏感性"><a href="#5-观察窗口大小选择的敏感性" class="headerlink" title="5. 观察窗口大小选择的敏感性"></a>5. 观察窗口大小选择的敏感性</h3><p><strong>问题</strong>: 观察窗口大小$W_{\text{obs}}$需要手动选择。太大：分析成本高；太小：分析噪声大。目前没有自动选择最优窗口大小的机制。</p>
+<p><strong>影响</strong>: 需要在不同模型和任务上手动调优$W_{\text{obs}}$。默认值64在大多数场景下可用，但在特定任务上可能不是最优。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-使用模型自身作为重要性标注器"><a href="#1-使用模型自身作为重要性标注器" class="headerlink" title="1. 使用模型自身作为重要性标注器"></a>1. 使用模型自身作为重要性标注器</h3><p><strong>洞见</strong>: SnapKV用模型自身的注意力作为token重要性的标注信号，而非依赖外部启发式或校准数据。这是一个”自标注”（self-annotation）范式——模型在预测下一个token时隐式地”标注”了哪些历史token是重要的。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在其他需要”重要性评分”的LLM优化任务中，优先考虑使用模型自身的注意力</li>
+<li>将注意力分布作为特征重要性分析的工具</li>
+<li>探索其他”自标注”范式（如使用模型自身的logit差异、梯度范数等）</li>
+</ul>
+<h3 id="2-“前瞻”胜过”回顾”在某些场景下的优势"><a href="#2-“前瞻”胜过”回顾”在某些场景下的优势" class="headerlink" title="2. “前瞻”胜过”回顾”在某些场景下的优势"></a>2. “前瞻”胜过”回顾”在某些场景下的优势</h3><p><strong>洞见</strong>: SnapKV的观察窗口注意力（”前瞻性”重要性估计）在固定prompt场景下优于H2O的累计注意力（”回顾性”估计）。选择正确的”信息窗口”来分析重要性是方法设计的关键决策。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>对于固定输入的场景，优先使用前瞻性的重要性估计</li>
+<li>对于流式&#x2F;交互式场景，回顾性估计更合适</li>
+<li>混合策略：用前瞻性估计初始化，用回顾性估计持续更新</li>
+</ul>
+<h3 id="3-逐组件专业化优化的价值"><a href="#3-逐组件专业化优化的价值" class="headerlink" title="3. 逐组件专业化优化的价值"></a>3. 逐组件专业化优化的价值</h3><p><strong>洞见</strong>: SnapKV的逐头选择尊重了每个注意力头的专业化。在复杂系统中，让每个组件按照其自身特性进行优化（而非强制统一策略）通常能获得更好的系统层面性能。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在其他多头或模块化架构中，为每个模块独立优化缓存策略</li>
+<li>平衡”精细化逐组件优化”和”实现复杂性”之间的权衡</li>
+<li>收集和分析组件级行为数据以了解差异程度</li>
+</ul>
+<h3 id="4-注意力模式的时间稳定性"><a href="#4-注意力模式的时间稳定性" class="headerlink" title="4. 注意力模式的时间稳定性"></a>4. 注意力模式的时间稳定性</h3><p><strong>洞见</strong>: 注意力模式在相邻步骤之间高度稳定（观察窗口-Generation相似度&gt;0.85）。这意味着处理”时间变化”的注意力不是压缩的主要挑战——空间维度（哪些token重要）的变化比时间维度慢得多。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在注意力模式稳定的假设下，减少重新分析的频率</li>
+<li>在注意力模式变化的关键点（如语义段落边界）触发重新分析</li>
+<li>将注意力稳定性作为不同模型&#x2F;架构的特征进行基准测试</li>
+</ul>
+<h3 id="5-“最小信息窗口”原理"><a href="#5-“最小信息窗口”原理" class="headerlink" title="5. “最小信息窗口”原理"></a>5. “最小信息窗口”原理</h3><p><strong>洞见</strong>: 仅需观察最后64个token的注意力模式就能做出高质量的全局压缩决策。这是”局部信息充分性”的一个有力展示——复杂全局决策可以由简单局部观察驱动。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在其他需要全局决策的场景中，寻找最小充分观察窗口</li>
+<li>将”窗口大小 vs 决策质量”作为方法超参数空间的关键维度</li>
+<li>分析为什么小窗口足以做全局决策（信息瓶颈理论）</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>“自标注”范式的推广</strong>: SnapKV用模型自身的注意力作为重要性信号。我想到可以推广这个范式——模型本身就携带了大量关于”什么重要、什么不重要”的信号（注意力分布、梯度范数、激活稀疏度）。利用这些信号进行系统优化，比外部启发性或昂贵的校准更优雅。</p>
+</li>
+<li><p><strong>观察窗口的可迁移性</strong>: 这个”观察窗口”概念是否可以应用于其他场景？例如在训练中，使用一个小窗口来估计哪些样本&#x2F;哪些层&#x2F;哪些步骤最重要。在RL中，使用小窗口来估计状态-动作价值。</p>
+</li>
+<li><p><strong>固定prompt vs 动态prompt的方法谱系</strong>: SnapKV和H2O分别代表了两种极端的prompt场景。但实际场景通常介于两者之间（如多文档RAG、混合长文档中穿插用户查询）。需要一个统一的框架来平滑地在这两种模式间切换。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>文档问答</strong>: 将整本书或长报告作为prompt，用户提出一个问题需要找到相关段落。SnapKV在保留关键检索能力的同时大幅减少缓存。</p>
+</li>
+<li><p><strong>代码库分析</strong>: 将整个代码库作为prompt，AI开发者提出修改或理解问题。SnapKV保留与回答相关的代码片段。</p>
+</li>
+<li><p><strong>长格式推理</strong>: 需要多步推理的复杂任务（如数学证明、逻辑推导），SnapKV保留推理链中的关键步骤。</p>
+</li>
+<li><p><strong>Few-shot学习</strong>: 使用大量示例进行few-shot prompt。SnapKV选择性保留最具代表性的示例KV。</p>
+</li>
+</ol>
+<h3 id="部署考虑"><a href="#部署考虑" class="headerlink" title="部署考虑"></a>部署考虑</h3><p>SnapKV的最佳部署场景：</p>
+<ul>
+<li>单次长prompt、多token生（如文档摘要、长格式QA）</li>
+<li>在需要3.6倍解码速度提升而TTFT增加可接受的场景</li>
+<li>批量推理中内存成为瓶颈</li>
+</ul>
+<p>不适用场景：</p>
+<ul>
+<li>多轮对话（重新分析开销大）</li>
+<li>实时流式（TTFT关键）</li>
+<li>极短prompt（压缩收益小）</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-自适应观察窗口大小"><a href="#1-自适应观察窗口大小" class="headerlink" title="1. 自适应观察窗口大小"></a>1. 自适应观察窗口大小</h3><p><strong>问题</strong>: 如何自动确定最优观察窗口大小？它是否依赖于任务类型、prompt长度、注意力稀疏度等？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>基于prompt统计特性（长度、语义多样性）自动选择窗口大小</li>
+<li>使用注意力的熵或方差作为窗口充分性的指标</li>
+<li>研究窗口大小与注意力预测精度之间的关系曲线</li>
+</ul>
+<p><strong>潜在影响</strong>: 消除最后一个需要手动调优的超参数。</p>
+<h3 id="2-增量更新SnapKV"><a href="#2-增量更新SnapKV" class="headerlink" title="2. 增量更新SnapKV"></a>2. 增量更新SnapKV</h3><p><strong>问题</strong>: 如何在多轮对话中增量更新压缩策略，而不需要在每次新用户消息后重新分析整个prompt？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计”注意力地图”的增量更新算法</li>
+<li>仅在注意力模式显著变化时触发重新分析</li>
+<li>维护一个”变化检测”模块来判断是否需要完整重新分析</li>
+</ul>
+<p><strong>潜在影响</strong>: 使SnapKV适用于对话场景。</p>
+<h3 id="3-跨模型的注意力模式迁移"><a href="#3-跨模型的注意力模式迁移" class="headerlink" title="3. 跨模型的注意力模式迁移"></a>3. 跨模型的注意力模式迁移</h3><p><strong>问题</strong>: 如果一个模型（如LLaMA-2-7B）的SnapKV决策（哪些token重要）是否可以迁移到同一家族的另一个模型（如LLaMA-2-13B）上？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析同家族模型间注意力模式的相似度</li>
+<li>研究更小模型（更快分析）的决策对更大模型的有效性</li>
+<li>利用预估的注意力模式加速大模型的KV压缩</li>
+</ul>
+<p><strong>潜在影响</strong>: 用小模型做分析、大模型做生成，进一步减少延迟。</p>
+<h3 id="4-量化-SnapKV的联合优化"><a href="#4-量化-SnapKV的联合优化" class="headerlink" title="4. 量化+SnapKV的联合优化"></a>4. 量化+SnapKV的联合优化</h3><p><strong>问题</strong>: 被SnapKV保留下来的token（重要token）是否应该获得更高的量化精度，而被驱逐的token（如果真的需要保留一些低重要性token）使用更低精度？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计分层精度分配方案（高重要性&#x3D;高精度，低重要性&#x3D;低精度）</li>
+<li>在联合率失真框架下优化token选择和精度分配</li>
+<li>将SnapKV分数直接用作量化敏感度权重</li>
+</ul>
+<p><strong>潜在影响</strong>: 在相同内存预算下获得更好的质量。</p>
+<h3 id="5-注意力模式的预分析数据库"><a href="#5-注意力模式的预分析数据库" class="headerlink" title="5. 注意力模式的预分析数据库"></a>5. 注意力模式的预分析数据库</h3><p><strong>问题</strong>: 不同任务类别（QA、摘要、代码生成等）是否具有不同的注意力特征？能否建立”注意力模式-任务类型”的映射数据库，以便为新任务快速选择压缩策略？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>系统分析不同任务类别下的注意力模式特征</li>
+<li>学习从prompt特征预测最优注意力模式的meta-model</li>
+<li>构建跨模型、跨任务的注意力模式数据库</li>
+</ul>
+<p><strong>潜在影响</strong>: 为”即开即用”的压缩策略选择提供经验基础。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Li, Y., et al. (2024). SnapKV: LLM Knows What You are Looking for Before Generation. arXiv:2404.14469</li>
+<li>Zhang, Z., et al. (2023). H2O: Heavy-Hitter Oracle for Efficient Generative Inference. NeurIPS 2023. arXiv:2306.14048</li>
+<li>Xiao, G., et al. (2023). Efficient Streaming Language Models with Attention Sinks. ICLR 2024. arXiv:2309.17453</li>
+<li>Ge, S., et al. (2024). Model Tells You What to Discard: Adaptive KV Cache Compression for LLMs. ICLR 2024. arXiv:2310.03191 (FastGen)</li>
+<li>Liu, Z., et al. (2024). Scissorhands: Exploiting the Persistence of Importance Hypothesis for LLM KV Cache Compression at Test Time. NeurIPS 2024. arXiv:2305.17118</li>
+<li>Liu, N. F., et al. (2024). Lost in the Middle: How Language Models Use Long Contexts. TACL 2024. arXiv:2307.03172</li>
+<li>Dao, T. (2023). FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning. arXiv:2307.08691</li>
+<li>Touvron, H., et al. (2023). Llama 2: Open Foundation and Fine-Tuned Chat Models. arXiv:2307.09288</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/KV-Cache/" class="category-chain-item">KV-Cache</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+        <a href="/tags/papers-attention-analysis/" class="print-no-link">#papers/attention-analysis</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SnapKV: LLM Knows What You are Looking for Before Generation</div>
+      <div>https://w2ongq6.github.io/2024/04/22/inference/note/SnapKV_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年4月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/05/16/aigc/note/Chameleon_note/" title="Chameleon: Mixed-Modal Early-Fusion Foundation Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Chameleon: Mixed-Modal Early-Fusion Foundation Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/04/22/llm/note/Phi3_note/" title="Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone">
+                        <span class="hidden-mobile">Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

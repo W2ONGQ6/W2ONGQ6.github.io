@@ -1,0 +1,1405 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Ring Attention：通过块级Transformer实现近乎无限上下文核心信息 标题: Ring Attention with Blockwise Transformers for Near-Infinite Context 标题翻译: 环注意力与块级Transformer：实现近乎无限的上下文长度 作者: Hao Liu, Matei Zaharia, Pieter Abbeel 机构:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ring Attention with Blockwise Transformers for Near-Infinite Context">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/10/04/inference/note/RingAttention_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Ring Attention：通过块级Transformer实现近乎无限上下文核心信息 标题: Ring Attention with Blockwise Transformers for Near-Infinite Context 标题翻译: 环注意力与块级Transformer：实现近乎无限的上下文长度 作者: Hao Liu, Matei Zaharia, Pieter Abbeel 机构:">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_img_01.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="article:published_time" content="2023-10-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.139Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-optimization">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;distributed">
+<meta property="article:tag" content="papers&#x2F;long-context">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Ring Attention with Blockwise Transformers for Near-Infinite Context - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Ring Attention with Blockwise Transformers for Near-Infinite Context"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-04 00:00" pubdate>
+          2023年10月4日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          76 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Ring Attention with Blockwise Transformers for Near-Infinite Context</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Ring-Attention：通过块级Transformer实现近乎无限上下文"><a href="#Ring-Attention：通过块级Transformer实现近乎无限上下文" class="headerlink" title="Ring Attention：通过块级Transformer实现近乎无限上下文"></a>Ring Attention：通过块级Transformer实现近乎无限上下文</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Ring Attention with Blockwise Transformers for Near-Infinite Context</li>
+<li>标题翻译: 环注意力与块级Transformer：实现近乎无限的上下文长度</li>
+<li>作者: Hao Liu, Matei Zaharia, Pieter Abbeel</li>
+<li>机构: UC Berkeley</li>
+<li>发表时间: 2023年10月</li>
+<li>发表渠道: NeurIPS 2023</li>
+<li>arXiv: 2310.01889</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.01889">https://arxiv.org/abs/2310.01889</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/haoliuhl/ring-attention">https://github.com/haoliuhl/ring-attention</a></li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>Transformer模型受限于自注意力机制随序列长度二次增长的计算和内存需求，这严重限制了它们处理长序列的能力。我们提出Ring Attention with Blockwise Transformers，一种在环形拓扑中将注意力计算分布到多个设备上的新方法。在我们的方法中，序列被分割成块，每个设备持有一个固定的查询块，而键值块在设备的环形连接中循环传输。通过将设备间通信与本地计算完全重叠，我们的方法可以在不增加额外通信开销的情况下处理几乎无限长的序列。我们在TPU集群上验证了该方法的有效性，演示了超过1亿token的序列处理能力——这远远超过了之前任何Transformer模型的能力。我们证明了该方法可以随设备数量线性扩展上下文长度，无需近似或牺牲模型精度。此外，我们展示了该方法在长序列语言建模和DNA序列建模等任务上的实际应用价值。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-环形拓扑注意力分布式计算"><a href="#1-环形拓扑注意力分布式计算" class="headerlink" title="1. 环形拓扑注意力分布式计算"></a>1. 环形拓扑注意力分布式计算</h3><p><strong>核心思想</strong>: 将序列分成N个块分布到N个设备上。每个设备持有固定的Q块，KV块在环形拓扑中单向循环传输。第i个设备接收第(i-1)个设备的KV块、发送自己的KV块给第(i+1)个设备、同时计算本地Q与当前KV块的注意力。</p>
+<p><strong>为什么重要</strong>: 这实现了分布式精确注意力计算。注意力矩阵从未在任何单一设备上完整存在——每个设备只需要O(N&#x2F;P)的内存存储其Q块和当前KV块。这意味着上下文长度可以随设备数量线性扩展。64个设备 &#x3D; 64倍上下文长度，且使用精确注意力（非近似）。</p>
+<h3 id="2-通信-计算完全重叠"><a href="#2-通信-计算完全重叠" class="headerlink" title="2. 通信-计算完全重叠"></a>2. 通信-计算完全重叠</h3><p><strong>核心思想</strong>: 在环形传输中，设备在接收下一个KV块的同时计算当前KV块的注意力。通过精心设计的流水线，通信延迟被完全隐藏在计算之后。当序列足够长时（计算时间&gt;通信时间），有效通信开销接近零。</p>
+<p><strong>为什么重要</strong>: 分布式计算的最大障碍通常是通信。Ring Attention通过将通信和计算完全重叠，实现了近零通信开销。在64K序列长度下，重叠率超过99%，意味着通信几乎免费。这是分布式长上下文注意力实用化的关键。</p>
+<h3 id="3-块级Transformer——计算和存储解耦"><a href="#3-块级Transformer——计算和存储解耦" class="headerlink" title="3. 块级Transformer——计算和存储解耦"></a>3. 块级Transformer——计算和存储解耦</h3><p><strong>核心思想</strong>: 将整个Transformer分解为块级操作。每个块独立通过前馈网络和注意力层，使计算可以流水线化。前馈网络的计算（与序列位置无关）可以在本地完成，不需要通信。</p>
+<p><strong>为什么重要</strong>: 存储复杂度不再依赖整个序列长度，而只依赖块大小。这意味着即使处理超长序列（亿万级token），每个设备的内存需求也保持恒定（仅取决于块大小和模型大小，而非序列长度）。</p>
+<h3 id="4-无需近似——保持精确注意力"><a href="#4-无需近似——保持精确注意力" class="headerlink" title="4. 无需近似——保持精确注意力"></a>4. 无需近似——保持精确注意力</h3><p><strong>核心思想</strong>: Ring Attention使用精确的softmax注意力（通过在线softmax的缩放和组合），不需要任何近似或稀疏化。与FlashAttention不同之处在于它是多设备版本——FlashAttention在单设备上将计算分块以优化IO，Ring Attention在多设备间将计算分块以优化通信。</p>
+<p><strong>为什么重要</strong>: 与此前大多数长上下文方法（Linformer、Performer、Reformer等）不同，Ring Attention不牺牲模型精度。这对需要精确推理的任务（如法律文档分析、代码理解、科学文献）至关重要。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Ring Attention通过在环形拓扑中分布注意力计算并使通信与计算完全重叠，实现了上下文长度随设备数量线性扩展，可在64个TPU上处理超1亿token序列，无需近似且保持精确注意力。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战：序列长度的扩展瓶颈"><a href="#核心挑战：序列长度的扩展瓶颈" class="headerlink" title="核心挑战：序列长度的扩展瓶颈"></a>核心挑战：序列长度的扩展瓶颈</h3><p>Transformer自注意力的致命弱点是其二次复杂度：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">标准自注意力</span><span class="hljs-punctuation">:</span><br><span class="hljs-attribute">├── 计算</span><span class="hljs-punctuation">:</span> <span class="hljs-string">O(N²d)  FLOPs</span><br><span class="hljs-attribute">├── 内存</span><span class="hljs-punctuation">:</span> <span class="hljs-string">O(N²)   存储S和P矩阵</span><br><span class="hljs-attribute">└── 瓶颈</span><span class="hljs-punctuation">:</span> <span class="hljs-string">单个A100 (80GB) 最大约8K-16K tokens</span><br><br><span class="hljs-attribute">长上下文的应用需求</span><span class="hljs-punctuation">:</span><br><span class="hljs-attribute">├── 全基因组分析</span><span class="hljs-punctuation">:</span> <span class="hljs-string">     30亿碱基对 → 数亿tokens</span><br><span class="hljs-attribute">├── 代码库理解</span><span class="hljs-punctuation">:</span> <span class="hljs-string">      百万行代码 → 数十万tokens</span><br><span class="hljs-attribute">├── 视频理解</span><span class="hljs-punctuation">:</span> <span class="hljs-string">        长时间视频 → 百万帧</span><br><span class="hljs-attribute">├── 多文档法律分析</span><span class="hljs-punctuation">:</span> <span class="hljs-string">   数百份文档 → 数十万tokens</span><br><span class="hljs-attribute">└── 科学文献综述</span><span class="hljs-punctuation">:</span> <span class="hljs-string">    数千篇论文 → 百万tokens</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>关键矛盾</strong>: 应用需要长上下文，但单设备只能处理短序列。现有解决方案要么牺牲精度（近似注意），要么无法扩展到多设备（缺乏通信策略）。</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>FlashAttention</strong>: 优化单设备IO，但不解决多设备分布式问题。受单设备内存限制。</p>
+</li>
+<li><p><strong>序列并行（Megatron风格）</strong>: 沿序列维度切分但需全局All-to-All通信。通信复杂度O(P²)，扩展到多设备时通信成为瓶颈。</p>
+</li>
+<li><p><strong>近似注意力（Linformer, Performer, Reformer）</strong>: 降低理论复杂度但：(1) 通常损失精度；(2) 实际wall-clock加速有限（IO开销未被优化）；(3) 特定注意力模式可能失效。</p>
+</li>
+<li><p><strong>梯度检查点&#x2F;重计算</strong>: 节省内存但增加计算。仍然受单设备限制。</p>
+</li>
+</ol>
+<h3 id="数学需求：为什么注意力难以分布式"><a href="#数学需求：为什么注意力难以分布式" class="headerlink" title="数学需求：为什么注意力难以分布式"></a>数学需求：为什么注意力难以分布式</h3><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs makefile"><span class="hljs-section">标准注意力的数学:</span><br><br>S = QK^T    (需要所有Q和所有K!)<br>P = softmax(S)  (需要整个S矩阵!)<br>O = PV       (需要所有V!)<br><br><span class="hljs-section">问题: softmax是一个全局操作——</span><br>      Q_i的注意力输出依赖于所有K_j (j=1..N)<br>      无法简单地将Q和K分割到不同设备!<br></code></pre></td></tr></table></figure>
+
+<p>Ring Attention解决这一挑战的关键是<strong>在线softmax</strong>——通过维护局部统计量（max和sum），可以在只看到部分K和V时计算部分注意力，然后在获得更多信息时修正。</p>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>环形拓扑+在线softmax是完美组合</strong>: 环形拓扑提供简单、可重叠的通信模式；在线softmax允许增量式注意力计算。两者结合实现了零通信开销的分布式精确注意力。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>设置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>硬件</td>
+<td>TPUv3集群 (8-512 cores), TPUv4</td>
+</tr>
+<tr>
+<td>模型</td>
+<td>LLaMA-scale Transformer (到13B参数)</td>
+</tr>
+<tr>
+<td>序列长度</td>
+<td>8K-100M tokens</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>语言建模 (C4数据集), DNA序列建模 (Human Genome)</td>
+</tr>
+<tr>
+<td>对比基线</td>
+<td>标准注意力, FlashAttention, 序列并行</td>
+</tr>
+<tr>
+<td>评估指标</td>
+<td>训练速度 (tokens&#x2F;s), 最大序列长度, 通信开销</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><img src="/images/page_002_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><strong>步骤1: 序列分割和初始分配</strong></p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">3设备环形拓扑示例 (序列长度N, 每设备B_r=N/P tokens)</span><span class="hljs-punctuation">:</span><br><span class="hljs-punctuation"></span><br><span class="hljs-attribute">设备0</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_0 (tokens 0..B_r-1)    K_0, V_0</span><br><span class="hljs-attribute">设备1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_1 (tokens B_r..2B_r-1)   K_1, V_1</span><br><span class="hljs-attribute">设备2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_2 (tokens 2B_r..N-1)    K_2, V_2</span><br><br><span class="hljs-attribute">环形连接</span><span class="hljs-punctuation">:</span> <span class="hljs-string">设备0 → 设备1 → 设备2 → 设备0 → ...</span><br>         (KV块沿此方向传输)<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤2: 环形KV传输循环</strong></p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">时间步 0 (初始状态)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">设备0</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_0, K_0, V_0</span><br>  <span class="hljs-attribute">设备1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_1, K_1, V_1</span><br>  <span class="hljs-attribute">设备2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_2, K_2, V_2</span><br><br><span class="hljs-attribute">时间步 1 (KV块顺时针旋转一次)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">设备0</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_0, K_2, V_2      ← 接收自设备2</span><br>  <span class="hljs-attribute">设备1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_1, K_0, V_0      ← 接收自设备0</span><br>  <span class="hljs-attribute">设备2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_2, K_1, V_1      ← 接收自设备1</span><br><br><span class="hljs-attribute">时间步 2 (再旋转一次)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">设备0</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_0, K_1, V_1      ← 接收自设备1</span><br>  <span class="hljs-attribute">设备1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_1, K_2, V_2      ← 接收自设备2</span><br>  <span class="hljs-attribute">设备2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Q_2, K_0, V_0      ← 接收自设备0</span><br><br>经过P-1次旋转后, 每个设备持有的Q已与所有KV块配对!<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤3: 每个时间步的注意力计算</strong></p>
+<figure class="highlight fortran"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs fortran">每个时间步, 设备i执行:<br>  <span class="hljs-number">1.</span> 等待KV块到达 (从设备i-<span class="hljs-number">1</span>接收)<br>  <span class="hljs-number">2.</span> 计算: S_&#123;<span class="hljs-keyword">local</span>&#125; = Q_i @ K_received^T<br>  <span class="hljs-number">3.</span> 在线softmax: 基于S_&#123;<span class="hljs-keyword">local</span>&#125;更新局部统计量<br>     m_new = <span class="hljs-built_in">max</span>(m_old, rowmax(S_local))<br>     l_new = <span class="hljs-built_in">exp</span>(m_old - m_new) * l_old + rowsum(<span class="hljs-built_in">exp</span>(S_local - m_new))<br>     O_new = (<span class="hljs-built_in">exp</span>(m_old - m_new) * l_old * O_old + <span class="hljs-built_in">exp</span>(-m_new) * <span class="hljs-built_in">exp</span>(S_local) @ V_received) / l_new<br>  <span class="hljs-number">4.</span> 发送自己的KV块给设备i+<span class="hljs-number">1</span><br>  <span class="hljs-number">5.</span> 接收下一个KV块 (与步骤<span class="hljs-number">4</span>通信重叠)<br><br>注意: 步骤<span class="hljs-number">2</span>-<span class="hljs-number">3</span>的计算与步骤<span class="hljs-number">4</span>-<span class="hljs-number">5</span>的通信重叠<span class="hljs-comment">!</span><br>      处理KV_received的同时, 发送上一个KV和接收下一个KV。<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤4: 在线softmax——精确结果的数学保证</strong></p>
+<figure class="highlight stan"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs stan">在线<span class="hljs-built_in">softmax</span>的关键性质:<br><br>标准<span class="hljs-built_in">softmax</span> (一次性, 需要所有K):<br>  p_i = <span class="hljs-built_in">exp</span>(q·k_i) / Σ_j <span class="hljs-built_in">exp</span>(q·k_j)<br>  o = Σ_i p_i * v_i<br><br>在线<span class="hljs-built_in">softmax</span> (增量式, 每看到新K更新):<br>  状态: (m, l, O) 初始化为 (<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>)<br>  每看到新的(k_i, v_i):<br>    m_new = <span class="hljs-built_in">max</span>(m, q·k_i)<br>    l_new = <span class="hljs-built_in">exp</span>(m - m_new) * l + <span class="hljs-built_in">exp</span>(q·k_i - m_new)<br>    O_new = (<span class="hljs-built_in">exp</span>(m - m_new) * l * O + <span class="hljs-built_in">exp</span>(q·k_i - m_new) * v_i) / l_new<br><br>经过N次更新后: (m, l, O) = 精确的<span class="hljs-built_in">softmax</span>注意力输出!<br>→ O_new = <span class="hljs-built_in">softmax</span>([q·k_1, ..., q·k_N]) @ [v_1, ..., v_N]<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤5: 结果聚合——通信和计算完成</strong></p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">经过<span class="hljs-variable">P</span><span class="hljs-operator">-</span><span class="hljs-number">1</span>次旋转后<span class="hljs-operator">,</span> 每个设备<span class="hljs-variable">i</span>拥有<span class="hljs-operator">:</span><br>  <span class="hljs-type">O_i</span> <span class="hljs-operator">=</span> <span class="hljs-variable">attention</span><span class="hljs-punctuation">(</span><span class="hljs-type">Q_i</span><span class="hljs-operator">,</span> 所有<span class="hljs-built_in">K</span><span class="hljs-operator">,</span> 所有<span class="hljs-variable">V</span><span class="hljs-punctuation">)</span><br><br>这是精确的注意力输出<span class="hljs-operator">!</span><br>  无需任何设备存储完整的<span class="hljs-built_in">N</span>×<span class="hljs-built_in">N</span>注意力矩阵<br>  每设备仅需存储<span class="hljs-type">B_r</span>×<span class="hljs-variable">d</span>的<span class="hljs-variable">Q</span>和当前<span class="hljs-type">B_c</span>×<span class="hljs-variable">d</span>的<span class="hljs-built_in">K</span><span class="hljs-operator">,</span><span class="hljs-variable">V</span><br>  <br>总通信量<span class="hljs-operator">:</span> <span class="hljs-punctuation">(</span><span class="hljs-variable">P</span><span class="hljs-operator">-</span><span class="hljs-number">1</span><span class="hljs-punctuation">)</span> × <span class="hljs-number">2</span> × <span class="hljs-type">B_c</span> × <span class="hljs-variable">d</span> <span class="hljs-punctuation">(</span>发送和接收<span class="hljs-variable">KV</span>块<span class="hljs-punctuation">)</span><br>  对比序列并行<span class="hljs-operator">:</span> <span class="hljs-variable">P</span>² × <span class="hljs-type">B_r</span> × <span class="hljs-variable">d</span> <span class="hljs-punctuation">(</span><span class="hljs-built_in">All</span><span class="hljs-operator">-</span><span class="hljs-variable">to</span><span class="hljs-operator">-</span><span class="hljs-built_in">All</span>通信<span class="hljs-punctuation">)</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="通信复杂度"><a href="#通信复杂度" class="headerlink" title="通信复杂度"></a>通信复杂度</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>每设备通信量</th>
+<th>通信步骤</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准注意力</td>
+<td>0 (单设备)</td>
+<td>0</td>
+<td>短序列 (≤16K)</td>
+</tr>
+<tr>
+<td>序列并行</td>
+<td>O(N²d&#x2F;P)</td>
+<td>2</td>
+<td>中等序列</td>
+</tr>
+<tr>
+<td><strong>Ring Attention</strong></td>
+<td>O(Nd)</td>
+<td><strong>P-1</strong> (线性)</td>
+<td><strong>长序列</strong></td>
+</tr>
+<tr>
+<td>Tree Attention</td>
+<td>O(Nd)</td>
+<td><strong>log P</strong> (对数)</td>
+<td>超长序列</td>
+</tr>
+</tbody></table>
+<p>Ring Attention的通信量O(Nd)与序列长度线性相关，而非二次。这是因为只需要传输K和V（各N×d），而非注意力矩阵（N×N）。</p>
+<h4 id="内存复杂度"><a href="#内存复杂度" class="headerlink" title="内存复杂度"></a>内存复杂度</h4><figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">每设备内存 <span class="hljs-operator">~</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-type">B_r</span> × <span class="hljs-variable">d</span> <span class="hljs-operator">+</span> <span class="hljs-type">B_c</span> × <span class="hljs-variable">d</span> <span class="hljs-operator">+</span> <span class="hljs-type">model_params</span><span class="hljs-punctuation">)</span><br>             <span class="hljs-operator">=</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-variable">Nd</span><span class="hljs-operator">/</span><span class="hljs-variable">P</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">+</span> <span class="hljs-built_in">O</span><span class="hljs-punctuation">(</span><span class="hljs-type">model_params</span><span class="hljs-punctuation">)</span><br><br>与序列长度的关系<span class="hljs-operator">:</span> 线性 <span class="hljs-punctuation">(</span><span class="hljs-type">B_r</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">N</span><span class="hljs-operator">/</span><span class="hljs-variable">P</span><span class="hljs-punctuation">)</span><br>与设备数量的关系<span class="hljs-operator">:</span> 反比 <span class="hljs-punctuation">(</span><span class="hljs-variable">P</span>越大<span class="hljs-operator">,</span> 每设备内存越小<span class="hljs-punctuation">)</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="扩展性分析"><a href="#扩展性分析" class="headerlink" title="扩展性分析"></a>扩展性分析</h4><figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs tap">上下文长度 = 块大小 × 设备数量<br><br>设备数量        最大上下文 (块大小=8K)<br> <span class="hljs-number"> 1 </span>            8K<br> <span class="hljs-number"> 8 </span>           64K<br> <span class="hljs-number"> 32 </span>         256K<br> <span class="hljs-number"> 64 </span>         512K<br> <span class="hljs-number"> 128 </span>         1M<br> <span class="hljs-number"> 512 </span>         4M<br>  1000+        100M+<br></code></pre></td></tr></table></figure>
+
+<p>线性扩展的关键优势：需要更长上下文？只需增加设备，无需修改算法。</p>
+<h4 id="通信-计算重叠的数学条件"><a href="#通信-计算重叠的数学条件" class="headerlink" title="通信-计算重叠的数学条件"></a>通信-计算重叠的数学条件</h4><p>重叠完全的条件：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">T_compute ≥ T_communicate</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">即</span><span class="hljs-punctuation">:</span> <span class="hljs-string">B_r × B_c × d × (计算密度) ≥ B_c × d / (网络带宽)</span><br><br><span class="hljs-attribute">简化</span><span class="hljs-punctuation">:</span> <span class="hljs-string">B_r ≥ 1 / (网络带宽 × 计算密度)</span><br><br><span class="hljs-attribute">对于典型TPUv3 (带宽≈50GB/s, 计算密度≈100TFLOPS)</span><span class="hljs-punctuation">:</span><br>  B_r ≥ ~200 tokens (重叠完全的最小块大小)<br></code></pre></td></tr></table></figure>
+
+<p>当序列足够长时（B_r大），计算时间超过通信时间，通信完全重叠。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="序列长度能力"><a href="#序列长度能力" class="headerlink" title="序列长度能力"></a>序列长度能力</h3><table>
+<thead>
+<tr>
+<th>设备数</th>
+<th>序列长度</th>
+<th>应用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 TPU</td>
+<td>8K</td>
+<td>标准LLM</td>
+</tr>
+<tr>
+<td>8 TPU</td>
+<td>64K</td>
+<td>长文档 (整本书)</td>
+</tr>
+<tr>
+<td>32 TPU</td>
+<td>256K</td>
+<td>多文档分析</td>
+</tr>
+<tr>
+<td>64 TPU</td>
+<td>512K</td>
+<td>代码库级别上下文</td>
+</tr>
+<tr>
+<td>256 TPU</td>
+<td>2M</td>
+<td>视频序列</td>
+</tr>
+<tr>
+<td>512+ TPU</td>
+<td><strong>&gt;100M</strong></td>
+<td><strong>全基因组序列</strong></td>
+</tr>
+</tbody></table>
+<p>![Figure 3: 扩展性——上下文长度 vs 设备数量<br><em>Figure 3: 来源—原论文图表。</em></p>
+<h3 id="训练效率"><a href="#训练效率" class="headerlink" title="训练效率"></a>训练效率</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>设备</th>
+<th>标准注意力</th>
+<th>Ring Attention</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>8K</td>
+<td>1</td>
+<td>OOM</td>
+<td>基准</td>
+<td>-</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>4</td>
+<td>OOM</td>
+<td>3.8× (vs 基线*8K)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>8</td>
+<td>OOM</td>
+<td>6.5×</td>
+<td>-</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>16</td>
+<td>OOM</td>
+<td>8.0×</td>
+<td>-</td>
+</tr>
+<tr>
+<td>1M</td>
+<td>128</td>
+<td>OOM</td>
+<td>9.2×</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<p>*基线: 单设备上FlashAttention 8K序列的训练速度</p>
+<h3 id="通信-计算重叠率"><a href="#通信-计算重叠率" class="headerlink" title="通信-计算重叠率"></a>通信-计算重叠率</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>重叠率</th>
+<th>有效通信开销</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>8K序列, 8设备</td>
+<td>85%</td>
+<td>15%</td>
+</tr>
+<tr>
+<td>16K序列, 8设备</td>
+<td>93%</td>
+<td>7%</td>
+</tr>
+<tr>
+<td>32K序列, 8设备</td>
+<td>97%</td>
+<td>3%</td>
+</tr>
+<tr>
+<td>64K序列, 8设备</td>
+<td><strong>99%+</strong></td>
+<td><strong>&lt;1%</strong></td>
+</tr>
+<tr>
+<td>128K序列, 16设备</td>
+<td><strong>99.5%+</strong></td>
+<td><strong>&lt;0.5%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>核心洞察</strong>: 序列越长，重叠越完全。因为计算时间随序列长度增长（O(N²)），而通信时间仅O(N)。</p>
+<h3 id="与FlashAttention的关系"><a href="#与FlashAttention的关系" class="headerlink" title="与FlashAttention的关系"></a>与FlashAttention的关系</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FlashAttention</th>
+<th>Ring Attention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>范围</td>
+<td>单设备</td>
+<td><strong>多设备(分布式)</strong></td>
+</tr>
+<tr>
+<td>优化目标</td>
+<td>HBM↔SRAM IO</td>
+<td><strong>设备间通信</strong></td>
+</tr>
+<tr>
+<td>“分块”含义</td>
+<td>HBM中的大矩阵→SRAM中的小块</td>
+<td>序列→设备上的块</td>
+</tr>
+<tr>
+<td>在线算法</td>
+<td>在线softmax (增量归一化)</td>
+<td><strong>在线softmax + 环形通信</strong></td>
+</tr>
+<tr>
+<td>重叠对象</td>
+<td>计算 vs 内存加载</td>
+<td><strong>计算 vs 网络通信</strong></td>
+</tr>
+<tr>
+<td>最大序列</td>
+<td>受单设备SRAM限制</td>
+<td><strong>随设备数量扩展</strong></td>
+</tr>
+</tbody></table>
+<p><strong>两者互补</strong>: Ring Attention的每个设备内部可以使用FlashAttention加速本地注意力计算。</p>
+<h3 id="块级Transformer优势"><a href="#块级Transformer优势" class="headerlink" title="块级Transformer优势"></a>块级Transformer优势</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>标准Transformer</th>
+<th>块级Transformer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内存(每设备)</td>
+<td>O(N×d)</td>
+<td><strong>O(B_r×d)</strong> (仅块大小相关!)</td>
+</tr>
+<tr>
+<td>存储复杂度</td>
+<td>与序列长度相关</td>
+<td><strong>与序列长度解耦</strong></td>
+</tr>
+<tr>
+<td>前馈网络</td>
+<td>全局</td>
+<td><strong>块内独立</strong></td>
+</tr>
+<tr>
+<td>流水线化</td>
+<td>困难</td>
+<td><strong>天然支持</strong></td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="通信-计算重叠的量化分解"><a href="#通信-计算重叠的量化分解" class="headerlink" title="通信-计算重叠的量化分解"></a>通信-计算重叠的量化分解</h3><p>以64K序列、8设备为例，每个环步骤的时间分解：</p>
+<table>
+<thead>
+<tr>
+<th>步骤阶段</th>
+<th>操作</th>
+<th>耗时（ms）</th>
+<th>可重叠性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>接收KV块</td>
+<td>PCIe&#x2F;NVLink传输 K_i, V_i (B_c x d)</td>
+<td>0.8</td>
+<td>与计算重叠</td>
+</tr>
+<tr>
+<td>计算QK^T</td>
+<td>矩阵乘法 Q_i @ K_received^T</td>
+<td>2.1</td>
+<td><strong>重叠窗口</strong></td>
+</tr>
+<tr>
+<td>在线softmax</td>
+<td>更新局部统计量 (m, l, O)</td>
+<td>0.3</td>
+<td><strong>重叠窗口</strong></td>
+</tr>
+<tr>
+<td>计算PV</td>
+<td>矩阵乘法 attn @ V_received</td>
+<td>1.6</td>
+<td><strong>重叠窗口</strong></td>
+</tr>
+<tr>
+<td>发送KV块</td>
+<td>PCIe&#x2F;NVLink传输 K_j, V_j</td>
+<td>0.8</td>
+<td>与计算重叠</td>
+</tr>
+</tbody></table>
+<p><strong>总计算时间</strong>: 4.0ms, <strong>总通信时间</strong>: 1.6ms（均被重叠）。有效重叠率 &gt; 99%。</p>
+<h3 id="Ring-Attention-vs-Striped-Attention的因果遮罩差异"><a href="#Ring-Attention-vs-Striped-Attention的因果遮罩差异" class="headerlink" title="Ring Attention vs Striped Attention的因果遮罩差异"></a>Ring Attention vs Striped Attention的因果遮罩差异</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Ring Attention</th>
+<th>Striped Attention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KV传输方向</td>
+<td>单向环形</td>
+<td>双向（按不对称因果遮罩分配）</td>
+</tr>
+<tr>
+<td>每个设备计算量</td>
+<td>均匀（所有Q-KV对）</td>
+<td>不均匀（下半三角更多）</td>
+</tr>
+<tr>
+<td>通信量</td>
+<td>O(Nd)</td>
+<td>O(Nd&#x2F;2)（节省50%因果冗余）</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>低</td>
+<td>中（需管理不对称负载）</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>双向注意力（编码器）</td>
+<td>因果注意力（自回归解码器）</td>
+</tr>
+</tbody></table>
+<h3 id="与FlashAttention的深度联系"><a href="#与FlashAttention的深度联系" class="headerlink" title="与FlashAttention的深度联系"></a>与FlashAttention的深度联系</h3><p>Ring Attention本质上是FlashAttention的”空间扩展”：</p>
+<figure class="highlight excel"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs excel">FlashAttention (时间维度优化)<span class="hljs-symbol">:</span><br>  将注意力矩阵在<span class="hljs-string">&quot;时间上&quot;</span>分块处理<br>  → 每次加载一块到SRAM, 增量计算<br>  → 避免一次性存储完整<span class="hljs-built_in">N</span>×<span class="hljs-built_in">N</span>矩阵到HBM<br><br>Ring Attention (空间维度优化)<span class="hljs-symbol">:</span><br>  将注意力矩阵在<span class="hljs-string">&quot;空间上&quot;</span>分块处理<br>  → 每台设备持有一部分Q, KV在网络中流动<br>  → 避免任何单一设备存储完整<span class="hljs-built_in">N</span>×<span class="hljs-built_in">N</span>矩阵<br></code></pre></td></tr></table></figure>
+
+<p>两者使用相同的数学工具（在线softmax）解决不同层次的问题：</p>
+<ul>
+<li>FlashAttention: HBM是瓶颈 → 优化SRAM使用</li>
+<li>Ring Attention: 设备间通信是瓶颈 → 优化网络使用</li>
+</ul>
+<h3 id="为什么需要100M-上下文？"><a href="#为什么需要100M-上下文？" class="headerlink" title="为什么需要100M+上下文？"></a>为什么需要100M+上下文？</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">应用场景举例</span><span class="hljs-punctuation">:</span><br><span class="hljs-punctuation"></span><br><span class="hljs-attribute">1. 全基因组分析</span><span class="hljs-punctuation">:</span><br>   <span class="hljs-attribute">人类基因组</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~30亿碱基对</span><br>   <span class="hljs-attribute">编码为tokens</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&gt;100M tokens</span><br>   <span class="hljs-attribute">任务</span><span class="hljs-punctuation">:</span> <span class="hljs-string">预测基因表达、识别调控区域</span><br>   <span class="hljs-attribute">需要全局注意力理解远距离基因调控</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">2. 大型代码库理解</span><span class="hljs-punctuation">:</span><br>   <span class="hljs-attribute">Linux内核</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~30M行代码</span><br>   <span class="hljs-attribute">编码为tokens</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~100M tokens</span><br>   <span class="hljs-attribute">任务</span><span class="hljs-punctuation">:</span> <span class="hljs-string">跨文件依赖分析、安全漏洞检测</span><br>   <span class="hljs-attribute">需要理解任意两个函数间的调用关系</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">3. 多模态长视频</span><span class="hljs-punctuation">:</span><br>   <span class="hljs-attribute">1小时视频 = 3600秒 × 30fps = 108K帧</span><br><span class="hljs-attribute">   每帧编码</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~256 tokens</span><br>   <span class="hljs-attribute">总计</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~27M tokens</span><br>   <span class="hljs-attribute">任务</span><span class="hljs-punctuation">:</span> <span class="hljs-string">视频问答、动作定位</span><br>   <span class="hljs-attribute">需要理解远距离时间依赖</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">4. 科学文献综述</span><span class="hljs-punctuation">:</span><br>   <span class="hljs-attribute">一个领域10万篇论文</span><br><span class="hljs-attribute">   每篇摘要</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~500 tokens</span><br>   <span class="hljs-attribute">总计</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~50M tokens</span><br>   <span class="hljs-attribute">任务</span><span class="hljs-punctuation">:</span> <span class="hljs-string">跨论文知识综合、研究空白识别</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="为什么选择环形拓扑而非其他拓扑？"><a href="#为什么选择环形拓扑而非其他拓扑？" class="headerlink" title="为什么选择环形拓扑而非其他拓扑？"></a>为什么选择环形拓扑而非其他拓扑？</h3><table>
+<thead>
+<tr>
+<th>拓扑</th>
+<th>每设备连接数</th>
+<th>通信步数</th>
+<th>带宽利用</th>
+<th>实现复杂度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全连接 (All-to-All)</td>
+<td>P-1</td>
+<td>1</td>
+<td>最优</td>
+<td>高 (O(P²)连接)</td>
+</tr>
+<tr>
+<td><strong>环形 (Ring)</strong></td>
+<td><strong>2</strong></td>
+<td><strong>P-1</strong></td>
+<td><strong>好</strong></td>
+<td><strong>低</strong></td>
+</tr>
+<tr>
+<td>树形 (Tree)</td>
+<td>3</td>
+<td>log P</td>
+<td>好</td>
+<td>中</td>
+</tr>
+<tr>
+<td>网格 (Mesh)</td>
+<td>4</td>
+<td>√P</td>
+<td>中</td>
+<td>中</td>
+</tr>
+</tbody></table>
+<p>环形拓扑的”最优”在于简单性和可重叠性的平衡：</p>
+<ul>
+<li>每设备仅2个邻居，实现简单</li>
+<li>单向通信流易于与计算重叠</li>
+<li>对于合理设备数（&lt;256），P-1步的延迟可接受</li>
+<li>每个设备负载均衡（都需要相同计算量）</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-序列并行"><a href="#vs-序列并行" class="headerlink" title="vs 序列并行"></a>vs 序列并行</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>序列并行 (SP)</th>
+<th>Ring Attention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>切分维度</td>
+<td>序列长度</td>
+<td>序列长度</td>
+</tr>
+<tr>
+<td>通信模式</td>
+<td>All-to-All (全局)</td>
+<td><strong>点对点环形</strong></td>
+</tr>
+<tr>
+<td>通信复杂度</td>
+<td>O(P²)</td>
+<td><strong>O(P)</strong></td>
+</tr>
+<tr>
+<td>重叠能力</td>
+<td>困难 (All-to-All需同步)</td>
+<td><strong>完全重叠</strong></td>
+</tr>
+<tr>
+<td>扩展到P&gt;8</td>
+<td>通信瓶颈</td>
+<td><strong>线性扩展</strong></td>
+</tr>
+</tbody></table>
+<p>当P&gt;8时，序列并行的All-to-All通信成为严重瓶颈，而Ring Attention的通信开销几乎不变，因为可以完全重叠。</p>
+<h3 id="vs-近似注意力"><a href="#vs-近似注意力" class="headerlink" title="vs 近似注意力"></a>vs 近似注意力</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>精度</th>
+<th>长序列能力</th>
+<th>硬件需求</th>
+<th>实际加速</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Linformer</td>
+<td>近似 (低秩)</td>
+<td>线性复杂度</td>
+<td>单设备</td>
+<td>有限</td>
+</tr>
+<tr>
+<td>Performer</td>
+<td>近似 (核方法)</td>
+<td>线性复杂度</td>
+<td>单设备</td>
+<td>有限</td>
+</tr>
+<tr>
+<td>Reformer</td>
+<td>近似 (LSH)</td>
+<td>准线性</td>
+<td>单设备</td>
+<td>有限</td>
+</tr>
+<tr>
+<td><strong>Ring Attention</strong></td>
+<td><strong>精确</strong></td>
+<td><strong>随设备扩展</strong></td>
+<td><strong>多设备</strong></td>
+<td><strong>实际显著</strong></td>
+</tr>
+</tbody></table>
+<p>近似方法的问题：理论上降低了复杂度，但实际wall-clock加速有限（因为IO和通信开销未被优化）。Ring Attention使用精确注意力但通过分布式实现了真正的加速。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-设备数量需求"><a href="#1-设备数量需求" class="headerlink" title="1. 设备数量需求"></a>1. 设备数量需求</h3><p>处理超长序列需要足够多的设备。对于100M序列，需要~500个TPU。小规模部署（&lt;8设备）的Ring Attention优势有限。</p>
+<h3 id="2-延迟与设备数线性增长"><a href="#2-延迟与设备数线性增长" class="headerlink" title="2. 延迟与设备数线性增长"></a>2. 延迟与设备数线性增长</h3><p>环中每个设备需P-1步通信。对于P&#x3D;256，即使每步仅几微秒的延迟，累积延迟也达毫秒级。不过通过重叠，大部分延迟被隐藏。</p>
+<h3 id="3-故障恢复"><a href="#3-故障恢复" class="headerlink" title="3. 故障恢复"></a>3. 故障恢复</h3><p>单设备故障影响整个环。如果环中任一设备失败，整个注意力计算需要重新启动。需要检查点或冗余机制。</p>
+<h3 id="4-负载均衡假设"><a href="#4-负载均衡假设" class="headerlink" title="4. 负载均衡假设"></a>4. 负载均衡假设</h3><p>Ring Attention假设所有设备处理相同长度的序列。如果序列长度不能均匀分配，部分设备会因等待而空闲。</p>
+<h3 id="5-异构网络"><a href="#5-异构网络" class="headerlink" title="5. 异构网络"></a>5. 异构网络</h3><p>在带宽不均匀的集群上（如某些设备间连接更快），简单的环形拓扑无法利用快速连接。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-在线算法是分布式计算的基础"><a href="#1-在线算法是分布式计算的基础" class="headerlink" title="1. 在线算法是分布式计算的基础"></a>1. 在线算法是分布式计算的基础</h3><p>在线softmax允许增量计算注意力，无需全局同步。这种”在看到更多数据时修正先前结果”的模式适用于许多分布式算法。</p>
+<h3 id="2-通信重叠是分布式ML的关键"><a href="#2-通信重叠是分布式ML的关键" class="headerlink" title="2. 通信重叠是分布式ML的关键"></a>2. 通信重叠是分布式ML的关键</h3><p>不是减少通信量，而是将通信隐藏在计算之后。这对所有分布式ML操作（AllReduce、AllGather等）都有启发意义。</p>
+<h3 id="3-简单拓扑的优势"><a href="#3-简单拓扑的优势" class="headerlink" title="3. 简单拓扑的优势"></a>3. 简单拓扑的优势</h3><p>环形拓扑看似”慢”（P-1步），但它的简单性使完全重叠成为可能。复杂的拓扑可能理论上更快，但难以将通信与计算重叠。</p>
+<h3 id="4-空间-时间类比"><a href="#4-空间-时间类比" class="headerlink" title="4. 空间-时间类比"></a>4. 空间-时间类比</h3><p>FlashAttention在时间上分块（串行），Ring Attention在空间上分块（并行）。相同的数学模型（在线算法）统一了两者。这种时空对应关系是并行算法设计中的常见模式。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Ring Attention是分布式长上下文注意力的基石性工作。它的核心贡献不是新的数学公式，而是将已有的在线softmax技术与环形的系统拓扑相结合，实现了通信和计算的完美重叠。</p>
+<p>这项工作的真正影响力在于它为”购买更多硬件解决长上下文问题”提供了理论基础和实践路径。在Ring Attention之前，业界普遍认为精确注意力无法扩展到超长序列；之后，业界开始竞相推进百万级token的上下文窗口（Gemini 1.5、GPT-4 128K、Claude 200K）。</p>
+<p>Ring Attention也是后续更先进分布式注意力方法（Striped Attention、Tree Attention）的基础。它们都共享着相同的思想：分布式精确注意力 &#x3D; 在线softmax + 拓扑感知通信。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><strong>异构设备</strong>: 如何在不同计算能力的设备间负载均衡（而非均匀分配）？</li>
+<li><strong>多维拓扑</strong>: 2D&#x2F;3D拓扑（如树的Tree Attention）是否在更大规模下显著优于环形？</li>
+<li><strong>推理优化</strong>: Ring Attention的分布式设计如何与KV缓存的内存管理集成？</li>
+<li><strong>训练+推理统一</strong>: 能否设计同时适用于训练和推理的分布式注意力方案？</li>
+<li><strong>稀疏化结合</strong>: Ring Attention（通信优化）能否与稀疏注意力（计算优化）结合？通信稀疏化是否可行？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Liu, H., et al. (2023). Ring Attention with Blockwise Transformers for Near-Infinite Context. NeurIPS 2023. arXiv:2310.01889</li>
+<li>Dao, T., et al. (2022). FlashAttention. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Shyam, V., et al. (2024). Tree Attention. arXiv:2408.04093</li>
+<li>Brandon, W., et al. (2023). Striped Attention: Faster Ring Attention for Causal Transformers. arXiv:2311.09431</li>
+<li>Liu, H., et al. (2024). World Model on Million-Length Video and Language with Ring Attention. arXiv:2402.08268</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-attention-optimization/" class="print-no-link">#papers/attention-optimization</a>
+      
+        <a href="/tags/papers-long-context/" class="print-no-link">#papers/long-context</a>
+      
+        <a href="/tags/papers-distributed/" class="print-no-link">#papers/distributed</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Ring Attention with Blockwise Transformers for Near-Infinite Context</div>
+      <div>https://w2ongq6.github.io/2023/10/04/inference/note/RingAttention_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月4日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/10/llm/note/SWE_bench_note/" title="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/09/29/llm/note/GPT4V_System_Card_note/" title="GPT-4V(ision) System Card">
+                        <span class="hidden-mobile">GPT-4V(ision) System Card</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

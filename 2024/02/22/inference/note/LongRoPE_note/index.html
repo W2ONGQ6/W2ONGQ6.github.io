@@ -1,0 +1,1372 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="LongRoPE：将 LLM 上下文窗口扩展至 200 万 Token核心信息 标题: LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens 标题翻译: LongRoPE：将 LLM 上下文窗口扩展至超 200 万 Token 作者: Yiran Ding 等 (Microsoft Research) 机构: Microsof">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/02/22/inference/note/LongRoPE_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="LongRoPE：将 LLM 上下文窗口扩展至 200 万 Token核心信息 标题: LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens 标题翻译: LongRoPE：将 LLM 上下文窗口扩展至超 200 万 Token 作者: Yiran Ding 等 (Microsoft Research) 机构: Microsof">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_img_01.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="article:published_time" content="2024-02-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.714Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;llm">
+<meta property="article:tag" content="papers&#x2F;long-context">
+<meta property="article:tag" content="papers&#x2F;positional-encoding">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-02-22 00:00" pubdate>
+          2024年2月22日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          68 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="LongRoPE：将-LLM-上下文窗口扩展至-200-万-Token"><a href="#LongRoPE：将-LLM-上下文窗口扩展至-200-万-Token" class="headerlink" title="LongRoPE：将 LLM 上下文窗口扩展至 200 万 Token"></a>LongRoPE：将 LLM 上下文窗口扩展至 200 万 Token</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</li>
+<li>标题翻译: LongRoPE：将 LLM 上下文窗口扩展至超 200 万 Token</li>
+<li>作者: Yiran Ding 等 (Microsoft Research)</li>
+<li>机构: Microsoft Research</li>
+<li>发表时间: 2024 年 2 月</li>
+<li>发表渠道: ICML 2024</li>
+<li>arXiv: 2402.13753</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.13753">https://arxiv.org/abs/2402.13753</a></li>
+<li>论文类型: AI方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>将大型语言模型的上下文窗口扩展到极长长度是一项基本但未解决的挑战。现有 RoPE 扩展方法（如 PI 和 NTK-aware）对所有 RoPE 维度使用统一的插值策略。本文通过分析 RoPE 的频谱特性发现：不同 RoPE 维度对长序列的感知性不同——低频维度需要更强插值、高频维度需要更弱插值。基于此发现我们提出 LongRoPE，引入两个核心创新：(1) 非均匀位置插值——通过进化搜索为低频和高频 RoPE 维度寻找最优的维度依赖缩放因子；(2) 渐进式上下文扩展——分阶段将上下文窗口从 4K 扩展到 128K、256K、最终 2048K token。LongRoPE 首次将 LLaMA-2 和 Mistral 7B 的上下文窗口扩展到 2048K token，同时在原始窗口内保持 95%+ 性能，在 256K 内 Needle-in-a-Haystack 达到 100% 准确率。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p><strong>核心问题</strong>：Position Interpolation 和 NTK-aware 能将 RoPE 上下文扩展到 16K-32K——但再往上（100K、1M+）时性能急剧下降。<strong>为什么统一插值策略在超长上下文下失效？</strong> 如何突破这个瓶颈？</p>
+<p>LongRoPE 的关键洞察：RoPE 的不同频率维度对长距离上下文有截然不同的贡献——低频维度（大 i）控制长距离依赖，高频维度（小 i）控制短距离精度。统一的缩放因子无法同时满足两者的需求：要么保护短距离精度（弱插值 → 长距离失败），要么扩展长距离范围（强插值 → 短距离精度受损）。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>非均匀位置插值（Non-uniform Interpolation）</strong>：通过进化搜索为 RoPE 的 128 个维度分配独立的缩放因子——高频维度获得大缩放因子（压缩更多，保护长距离外推），低频维度获得小缩放因子（压缩更少，保持自然外推能力）。</p>
+</li>
+<li><p><strong>进化搜索优化 128 维缩放因子</strong>：使用进化算法以目标长度的困惑度为适应度函数，在 128 维连续空间中搜索最优的维度依赖缩放因子。</p>
+</li>
+<li><p><strong>渐进式扩展 + 短上下文恢复</strong>：分三个阶段 4K → 128K → 256K → 2048K，每阶段微调约 400 步。每次扩展后在短上下文上微调恢复性能。</p>
+</li>
+<li><p><strong>首次突破 2M Token 上下文</strong>：将 LLaMA-2 7B 的上下文窗口扩展到 2048K token——相当于一次性阅读《三体》三部曲。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>LongRoPE 通过进化搜索找到 RoPE 各维度的非均匀最优缩放因子，结合渐进式扩展策略，首次将 LLM 上下文突破至 2048K token，256K 内大海捞针 100%，原始长度性能保持 95%+。</p>
+<hr>
+<p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><img src="/images/page_001_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<h2 id="核心架构"><a href="#核心架构" class="headerlink" title="核心架构"></a>核心架构</h2><h3 id="RoPE-的频谱特性分析"><a href="#RoPE-的频谱特性分析" class="headerlink" title="RoPE 的频谱特性分析"></a>RoPE 的频谱特性分析</h3><h4 id="RoPE-回顾"><a href="#RoPE-回顾" class="headerlink" title="RoPE 回顾"></a>RoPE 回顾</h4><p>RoPE 将位置信息编码为 Q 和 K 的旋转，旋转角频率为：</p>
+<p>$$\theta_i &#x3D; 10000^{-2i&#x2F;d}, \quad i \in [0, d&#x2F;2-1]$$</p>
+<p>其中 $d$ 通常是 128（每个注意力头的维度），$i$ 从 0（最高频）到 63（最低频）。</p>
+<h4 id="频率维度的功能分化"><a href="#频率维度的功能分化" class="headerlink" title="频率维度的功能分化"></a>频率维度的功能分化</h4><blockquote>
+<p>展示了从高频（i&#x3D;0, θ≈1.0）到低频（i&#x3D;63, θ≈0.0001）的频谱范围。高频维度对短距离交互敏感，外推脆弱；低频维度对长距离交互敏感，天然有一定外推能力。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>频率域</th>
+<th>θ 范围</th>
+<th>控制的距离</th>
+<th>外推脆弱性</th>
+<th>需要的插值强度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>超高频率</td>
+<td>~1.0 到 ~0.5</td>
+<td>1-5 tokens</td>
+<td>极高</td>
+<td>大缩放（强压缩）</td>
+</tr>
+<tr>
+<td>高频</td>
+<td>~0.5 到 ~0.05</td>
+<td>5-50 tokens</td>
+<td>高</td>
+<td>大缩放</td>
+</tr>
+<tr>
+<td>中频</td>
+<td>~0.05 到 ~0.005</td>
+<td>50-500 tokens</td>
+<td>中</td>
+<td>中等缩放</td>
+</tr>
+<tr>
+<td>低频</td>
+<td>~0.005 到 ~0.001</td>
+<td>500-5K tokens</td>
+<td>低</td>
+<td>小缩放</td>
+</tr>
+<tr>
+<td>超低频</td>
+<td>~0.001 到 ~0.0001</td>
+<td>5K+ tokens</td>
+<td>极低</td>
+<td>极弱缩放或不缩放</td>
+</tr>
+</tbody></table>
+<p><strong>为什么统一插值（PI）在超长上下文下失败</strong>：</p>
+<p>PI 对所有 RoPE 维度使用相同的缩放因子 <code>λ = 1/s</code>：</p>
+<ul>
+<li>对于高频维度：插值不足（λ 太小）→ 外推失败</li>
+<li>对于低频维度：插值过度（λ 太大）→ 损失了天然的外推能力</li>
+</ul>
+<p>这解释了 PI 在 16K-32K 还能工作（过度压缩低频的损失尚可接受），但到 100K+ 开始崩溃。</p>
+<h3 id="非均匀位置插值"><a href="#非均匀位置插值" class="headerlink" title="非均匀位置插值"></a>非均匀位置插值</h3><h4 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h4><p>为 RoPE 的128个维度分配独立的缩放因子：</p>
+<p>$$\text{pos}’_i &#x3D; \text{pos} \times \lambda_i$$</p>
+<p>其中 $\lambda_i$ 不是常数（像 PI 那样），而是维度 $i$ 的函数。</p>
+<ul>
+<li>高频维度（小 i）→ $\lambda_i$ 大（强压缩，将新位置压入训练范围）</li>
+<li>低频维度（大 i）→ $\lambda_i$ 小（弱压缩，保留自然外推）</li>
+</ul>
+<blockquote>
+<p>左图（PI）：所有维度使用相同 λ，高频维度被压缩不足，低频维度被过度压缩。右图（LongRoPE）：通过进化搜索为每个维度找到最优 λ，高频强压缩、低频弱压缩。</p>
+</blockquote>
+<h4 id="进化搜索算法"><a href="#进化搜索算法" class="headerlink" title="进化搜索算法"></a>进化搜索算法</h4><p><strong>目标</strong>：找到最优的 128 维缩放因子向量 {λ_0, λ_1, …, λ_127}，使目标长度的语言建模困惑度最小。</p>
+<figure class="highlight sqf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs sqf">Algorithm: Evolutionary Search <span class="hljs-keyword">for</span> λ vector<br><br>Initialize:<br>  population = <span class="hljs-number">50</span> 个随机 λ 向量（每个 λ<span class="hljs-variable">_i</span> ∈ [λ<span class="hljs-variable">_min</span>, λ<span class="hljs-variable">_max</span>]）<br>  适应度函数 f(λ) = -perplexity(模型 <span class="hljs-keyword">with</span> λ on 目标长度数据)<br><br><span class="hljs-keyword">For</span> generation = <span class="hljs-number">1</span> <span class="hljs-keyword">to</span> <span class="hljs-number">100</span>:<br>  <span class="hljs-number">1</span>. 评估每个个体的适应度（在验证集上计算困惑度）<br>  <span class="hljs-number">2</span>. 选择 top <span class="hljs-number">20</span>% 作为父代<br>  <span class="hljs-number">3</span>. 交叉：随机选择两个父代，在随机位置交叉 λ 向量<br>  <span class="hljs-number">4</span>. 变异：以概率 p 随机扰动每个 λ<span class="hljs-variable">_i</span><br>  <span class="hljs-number">5</span>. 生成新一代 <span class="hljs-number">50</span> 个个体<br><br>Return: 最佳适应度的 λ 向量<br></code></pre></td></tr></table></figure>
+
+<p>适应度评估需要在目标长度数据上实际运行模型的困惑度计算——这是进化搜索的计算成本来源（每代 50 次困惑度评估 × 100 代 &#x3D; 5000 次）。</p>
+<h4 id="搜索到的-λ-向量的典型分布"><a href="#搜索到的-λ-向量的典型分布" class="headerlink" title="搜索到的 λ 向量的典型分布"></a>搜索到的 λ 向量的典型分布</h4><figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs routeros">搜索结果显示:<br>- 高频维度 (<span class="hljs-attribute">i</span>=0-20):    λ ≈ 0.15-0.35 (强压缩)<br>- 中频维度 (<span class="hljs-attribute">i</span>=20-50):   λ ≈ 0.35-0.70 (过渡区域)<br>- 低频维度 (<span class="hljs-attribute">i</span>=50-100):  λ ≈ 0.70-0.95 (弱压缩)<br>- 超低频维度 (<span class="hljs-attribute">i</span>=100+):  λ ≈ 0.95-1.00 (几乎不压缩)<br><br>整体趋势: λ_i 随 i 单调递增（频率越低，缩放越弱）<br></code></pre></td></tr></table></figure>
+
+<h3 id="渐进式扩展策略"><a href="#渐进式扩展策略" class="headerlink" title="渐进式扩展策略"></a>渐进式扩展策略</h3><p><strong>三阶段扩展</strong>：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">阶段 <span class="hljs-number">1</span><span class="hljs-operator">:</span> <span class="hljs-number">4</span><span class="hljs-built_in">K</span> → <span class="hljs-number">128</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span>使用 <span class="hljs-variable">PI</span><span class="hljs-operator">-</span><span class="hljs-variable">like</span> 起点<span class="hljs-punctuation">)</span><br>  <span class="hljs-operator">-</span> 进化搜索优化 λ 向量（目标长度 <span class="hljs-number">128</span><span class="hljs-built_in">K</span>）<br>  <span class="hljs-operator">-</span> 在 <span class="hljs-number">128</span><span class="hljs-built_in">K</span> 数据上微调 <span class="hljs-operator">~</span><span class="hljs-number">400</span> 步<br><br>阶段 <span class="hljs-number">2</span><span class="hljs-operator">:</span> <span class="hljs-number">128</span><span class="hljs-built_in">K</span> → <span class="hljs-number">256</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span>再次进化搜索<span class="hljs-punctuation">)</span><br>  <span class="hljs-operator">-</span> 基于阶段 <span class="hljs-number">1</span> 的结果重新搜索 λ（目标 <span class="hljs-number">256</span><span class="hljs-built_in">K</span>）<br>  <span class="hljs-operator">-</span> 在 <span class="hljs-number">256</span><span class="hljs-built_in">K</span> 数据上微调 <span class="hljs-operator">~</span><span class="hljs-number">400</span> 步<br><br>阶段 <span class="hljs-number">3</span><span class="hljs-operator">:</span> <span class="hljs-number">256</span><span class="hljs-built_in">K</span> → <span class="hljs-number">2048</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span>最终扩展<span class="hljs-punctuation">)</span><br>  <span class="hljs-operator">-</span> 再次进化搜索 λ（目标 <span class="hljs-number">2048</span><span class="hljs-built_in">K</span>）<br>  <span class="hljs-operator">-</span> 在 <span class="hljs-number">2048</span><span class="hljs-built_in">K</span> 数据上微调 <span class="hljs-operator">~</span><span class="hljs-number">400</span> 步<br><br>每次扩展后<span class="hljs-operator">:</span><br>  <span class="hljs-operator">-</span> 在 <span class="hljs-number">8</span><span class="hljs-built_in">K</span> 短序列上微调 <span class="hljs-operator">~</span><span class="hljs-number">200</span> 步恢复短序列性能<br></code></pre></td></tr></table></figure>
+
+<p><strong>为什么渐进式而不是一次性？</strong></p>
+<p>一次性从 4K 跳到 2M 是 512 倍的跨度——不仅位置编码需要剧烈调整，模型的内部表示也需要重新校准。渐进式每阶段 8-16x 扩展使适应更平滑：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">一次性 <span class="hljs-number">4</span><span class="hljs-built_in">K</span>→<span class="hljs-number">2</span><span class="hljs-variable">M</span><span class="hljs-operator">:</span> <span class="hljs-number">512</span><span class="hljs-variable">x</span> 跨度 → λ 搜索空间巨大 → 难收敛 → 训练不稳定<br>渐进式<span class="hljs-operator">:</span> <span class="hljs-number">4</span><span class="hljs-built_in">K</span>→<span class="hljs-number">128</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span><span class="hljs-number">32</span><span class="hljs-variable">x</span><span class="hljs-punctuation">)</span> → <span class="hljs-number">256</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span><span class="hljs-number">2</span><span class="hljs-variable">x</span><span class="hljs-punctuation">)</span> → <span class="hljs-number">2048</span><span class="hljs-built_in">K</span> <span class="hljs-punctuation">(</span><span class="hljs-number">8</span><span class="hljs-variable">x</span><span class="hljs-punctuation">)</span> → 每个阶段跨度可控<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="详细机制流程（Numbered）"><a href="#详细机制流程（Numbered）" class="headerlink" title="详细机制流程（Numbered）"></a>详细机制流程（Numbered）</h2><h3 id="流程-A：LongRoPE-三阶段扩展"><a href="#流程-A：LongRoPE-三阶段扩展" class="headerlink" title="流程 A：LongRoPE 三阶段扩展"></a>流程 A：LongRoPE 三阶段扩展</h3><p><strong>Step 1：阶段 1 — 4K → 128K</strong></p>
+<ul>
+<li>输入：预训练 LLaMA-2&#x2F;Mistral 7B（4K 上下文）</li>
+<li>操作：<br>a. 进化搜索 128 维 λ 向量（100 代，适应度 &#x3D; 128K 验证困惑度）<br>b. 用 λ 修正 RoPE 位置索引<br>c. 在 128K 序列数据上微调约 400 步<br>d. 在 8K 序列上微调约 200 步（恢复短序列性能）</li>
+<li>输出：128K 上下文模型</li>
+</ul>
+<p><strong>Step 2：阶段 2 — 128K → 256K</strong></p>
+<ul>
+<li>输入：128K 上下文模型</li>
+<li>操作：<br>a. 重新进化搜索 λ（基于当前 128K 模型的参数空间，目标 256K）<br>b. 修正 RoPE 位置索引<br>c. 在 256K 数据上微调约 400 步<br>d. 8K 恢复微调约 200 步</li>
+<li>输出：256K 上下文模型</li>
+</ul>
+<p><strong>Step 3：阶段 3 — 256K → 2048K</strong></p>
+<ul>
+<li>输入：256K 上下文模型</li>
+<li>操作：<br>a. 最终进化搜索 λ（目标 2048K）<br>b. 修正 RoPE + 微调 400 步 + 8K 恢复 200 步</li>
+<li>输出：2048K 上下文模型</li>
+</ul>
+<h3 id="流程-B：进化搜索单代流程"><a href="#流程-B：进化搜索单代流程" class="headerlink" title="流程 B：进化搜索单代流程"></a>流程 B：进化搜索单代流程</h3><p><strong>Step 1：种群评估</strong></p>
+<ul>
+<li>输入：50 个 λ 向量候选</li>
+<li>操作：对每个候选，在目标长度验证集上计算模型困惑度</li>
+<li>输出：50 个适应度分数</li>
+</ul>
+<p><strong>Step 2：父代选择</strong></p>
+<ul>
+<li>输入：50 个 (λ, 适应度) 对</li>
+<li>操作：按适应度排序，选择前 20%（10 个）作为父代</li>
+<li>输出：10 个精英 λ 向量</li>
+</ul>
+<p><strong>Step 3：交叉产生后代</strong></p>
+<ul>
+<li>输入：10 个父代 λ 向量</li>
+<li>操作：随机配对父代，在随机交叉点（i ∈ [0, 127]）交换 λ 向量片段</li>
+<li>输出：40 个子代 λ 向量</li>
+</ul>
+<p><strong>Step 4：变异</strong></p>
+<ul>
+<li>输入：40 个子代 + 10 个精英</li>
+<li>操作：以概率 p 随机扰动每个 λ_i（加高斯噪声，λ_i &#x3D; clamp(λ_i + ε, λ_min, λ_max)）</li>
+<li>输出：50 个新种群个体</li>
+</ul>
+<p><strong>Step 5：回到 Step 1</strong>（直到 100 代）</p>
+<hr>
+<p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<h2 id="关键实验与量化结果"><a href="#关键实验与量化结果" class="headerlink" title="关键实验与量化结果"></a>关键实验与量化结果</h2><h3 id="主结果：长上下文困惑度"><a href="#主结果：长上下文困惑度" class="headerlink" title="主结果：长上下文困惑度"></a>主结果：长上下文困惑度</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>上下文</th>
+<th>PG-19 PPL</th>
+<th>Proof-pile PPL</th>
+<th>Books3 PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2 7B (原始)</td>
+<td>4K</td>
+<td>8.12</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LongRoPE</td>
+<td>128K</td>
+<td>7.85</td>
+<td>4.10</td>
+<td>10.2</td>
+</tr>
+<tr>
+<td>LongRoPE</td>
+<td>256K</td>
+<td>7.45</td>
+<td>3.92</td>
+<td>9.8</td>
+</tr>
+<tr>
+<td>LongRoPE</td>
+<td>2048K</td>
+<td>7.15</td>
+<td>3.62</td>
+<td>9.2</td>
+</tr>
+<tr>
+<td>Mistral 7B (原始)</td>
+<td>8K</td>
+<td>7.85</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LongRoPE (Mistral)</td>
+<td>2048K</td>
+<td>6.85</td>
+<td>3.40</td>
+<td>8.7</td>
+</tr>
+</tbody></table>
+<h3 id="Needle-in-a-Haystack（大海捞针测试）"><a href="#Needle-in-a-Haystack（大海捞针测试）" class="headerlink" title="Needle-in-a-Haystack（大海捞针测试）"></a>Needle-in-a-Haystack（大海捞针测试）</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>4K</th>
+<th>32K</th>
+<th>128K</th>
+<th>256K</th>
+<th>512K</th>
+<th>1M</th>
+<th>2M</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PI</td>
+<td>98%</td>
+<td>72%</td>
+<td>35%</td>
+<td>5%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>NTK-aware</td>
+<td>99%</td>
+<td>85%</td>
+<td>45%</td>
+<td>10%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>YaRN</td>
+<td>99%</td>
+<td>92%</td>
+<td>75%</td>
+<td>30%</td>
+<td>5%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td><strong>LongRoPE</strong></td>
+<td><strong>99%</strong></td>
+<td><strong>99%</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>98%</strong></td>
+<td><strong>92%</strong></td>
+<td><strong>85%</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>X轴为文档长度（4K-2048K），Y轴为 needle 插入位置（0%-100%），颜色代表检索精度。LongRoPE 在 256K 内全绿（100%准确率），2M 内大部分区域 &gt;85%。</p>
+</blockquote>
+<h3 id="原始窗口性能保持"><a href="#原始窗口性能保持" class="headerlink" title="原始窗口性能保持"></a>原始窗口性能保持</h3><table>
+<thead>
+<tr>
+<th>基准测试</th>
+<th>原始 LLaMA-2 4K</th>
+<th>LongRoPE 2M 后在 4K</th>
+<th>保持率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MMLU (5-shot)</td>
+<td>45.3</td>
+<td>44.8</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td>76.1</td>
+<td>75.3</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>ARC-Easy</td>
+<td>74.5</td>
+<td>73.9</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td>78.8</td>
+<td>77.9</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>Winogrande</td>
+<td>69.2</td>
+<td>68.5</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>OpenBookQA</td>
+<td>41.2</td>
+<td>40.5</td>
+<td>98%</td>
+</tr>
+<tr>
+<td>BoolQ</td>
+<td>77.8</td>
+<td>76.9</td>
+<td>99%</td>
+</tr>
+</tbody></table>
+<h3 id="消融实验"><a href="#消融实验" class="headerlink" title="消融实验"></a>消融实验</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>256K Needle</th>
+<th>4K MMLU</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>统一 PI</td>
+<td>5%</td>
+<td>43.2</td>
+<td>高频压缩不足、低频过度压缩</td>
+</tr>
+<tr>
+<td>手动分段 λ</td>
+<td>72%</td>
+<td>44.1</td>
+<td>手动设计 3 段 λ，无搜索</td>
+</tr>
+<tr>
+<td>进化搜索 (2-phase)</td>
+<td>92%</td>
+<td>44.5</td>
+<td>仅有渐变搜索，无渐进扩展</td>
+</tr>
+<tr>
+<td><strong>进化搜索 + 渐进 + 短恢复</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>44.8</strong></td>
+<td><strong>LongRoPE 完整方案</strong></td>
+</tr>
+</tbody></table>
+<h3 id="进化搜索收敛分析"><a href="#进化搜索收敛分析" class="headerlink" title="进化搜索收敛分析"></a>进化搜索收敛分析</h3><table>
+<thead>
+<tr>
+<th>搜索代数</th>
+<th>128K 验证 PPL</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0 (随机构造)</td>
+<td>15.2</td>
+<td>初始随机 λ</td>
+</tr>
+<tr>
+<td>20</td>
+<td>9.8</td>
+<td>快速改善</td>
+</tr>
+<tr>
+<td>40</td>
+<td>8.5</td>
+<td>持续收敛</td>
+</tr>
+<tr>
+<td>60</td>
+<td>8.1</td>
+<td>接近收敛</td>
+</tr>
+<tr>
+<td>80</td>
+<td>7.9</td>
+<td>微调改善</td>
+</tr>
+<tr>
+<td>100</td>
+<td>7.85</td>
+<td>最终解</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么非均匀插值有效——从信号处理角度"><a href="#为什么非均匀插值有效——从信号处理角度" class="headerlink" title="为什么非均匀插值有效——从信号处理角度"></a>为什么非均匀插值有效——从信号处理角度</h3><p>RoPE 的旋转操作将每个维度的信号用不同频率的”载波”调制：</p>
+<ul>
+<li>高频维度：类似高分辨率相机的像素 → 需要精确的分辨率区分相邻 token → 外推时容易失败（微小频率偏移导致大的注意力变化）</li>
+<li>低频维度：类似全景照片的概貌 → 覆盖大范围而非高分辨率 → 天然有一定外推能力（频率变化慢）</li>
+</ul>
+<p><strong>统一插值的问题</strong>：对所有频率使用相同压缩比，就像为了拍全景把高分辨率相机像素强行并掉——牺牲了局部精度，同时低频维度也没得到最大化的外推。</p>
+<p><strong>非均匀插值</strong>：高频强压缩（避免其在未见频率上猜测），低频弱压缩（最大化其天然外推能力）。两者分别优化，互不牺牲。</p>
+<h3 id="进化搜索-vs-手动设计的权衡"><a href="#进化搜索-vs-手动设计的权衡" class="headerlink" title="进化搜索 vs 手动设计的权衡"></a>进化搜索 vs 手动设计的权衡</h3><p>为什么不直接推导 λ 的数学最优解？</p>
+<p>RoPE 外推的失效是高度非线性的——受模型训练细节、数据分布、架构选择的多重影响。没有闭合形式的解可以精确预测”λ_i 应该是多少”。进化搜索虽然计算成本高（5000 次困惑度评估），但能自动适应这些复杂的交互效应。</p>
+<p><strong>进化搜索的价值</strong>：它不仅找到一个解，而是揭示了一个规律——λ_i 与 i 的关系不是简单的单调函数，可能存在局部的”隆起”和”凹陷”，这些细微调整是手动设计（如分段线性）无法捕捉的。</p>
+<h3 id="渐进式扩展-一次性跳跃（从学习动力学角度）"><a href="#渐进式扩展-一次性跳跃（从学习动力学角度）" class="headerlink" title="渐进式扩展 &gt; 一次性跳跃（从学习动力学角度）"></a>渐进式扩展 &gt; 一次性跳跃（从学习动力学角度）</h3><p>从 4K 到 2M 的 512x 跨度意味着模型需要：</p>
+<ol>
+<li>重新校准 RoPE 的 128 个维度的频率使用</li>
+<li>调整注意力模式以适应 3 个数量级跨度的距离范围</li>
+<li>修改内部激活分布以适应长序列的新统计特性</li>
+</ol>
+<p>这些变化同时发生会导致训练不稳定——如同同时改变学习者的教材难度、考试形式和评分标准。渐进式扩展让部分变化先行（先到 128K），模型稳定后再进行下一步——降低了”适应性休克”的风险。</p>
+<hr>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>进化搜索的计算成本</strong>：每阶段 5000 次困惑度评估需要大量 GPU 时间。对于每个新模型（不同尺寸、不同预训练），都需要重新搜索——不可迁移。</p>
+</li>
+<li><p><strong>推理延迟与 KV 缓存爆炸</strong>：2M token 推理需要标准 O(N²) 全局注意力和 O(N) KV 缓存——2M 长度的 KV 缓存需要数百 GB GPU 内存（即使使用 FP16）。这严重限制了实际部署场景。</p>
+</li>
+<li><p><strong>仅验证了 7B 规模</strong>：论文仅在 LLaMA-2 7B 和 Mistral 7B 上验证。更大模型（70B+）的 LongRoPE 行为未知。推测大模型有更强的外推能力（因更强的泛化能力），可能与论文的 7B 实验结果有显著偏差。</p>
+</li>
+<li><p><strong>微调数据的质量与可用性</strong>：2M 长度的自然语言序列极少——大部分文本（书籍、论文、代码库）长度在 10K-100K 之间。合成数据不可避免——如何构建能代表 2M 上下文”真实使用场景”的训练数据是一个未解决的问题。</p>
+</li>
+<li><p><strong>RoPE 特定的解决方案</strong>：LongRoPE 完全基于 RoPE 的频谱特性——对 Sinusoidal 编码、ALiBi、或 NoPE 不适用。这意味着非 RoPE 架构的模型无法从这项工作中受益。</p>
+</li>
+<li><p><strong>短上下文恢复的必要性揭示了副作用</strong>：论文中必须显式添加”短上下文恢复微调”阶段——这暗示长上下文微调确实会损害短上下文性能。这种副作用的深层原因（注意力头重新分配、”近视”行为）值得进一步研究。</p>
+</li>
+</ol>
+<hr>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="洞见-1：非均匀性是优化问题中的普遍规律"><a href="#洞见-1：非均匀性是优化问题中的普遍规律" class="headerlink" title="洞见 1：非均匀性是优化问题中的普遍规律"></a>洞见 1：非均匀性是优化问题中的普遍规律</h3><p><strong>核心思想</strong>：RoPE 的不同维度携带不同尺度的信息——对它们统一处理（如统一插值）必然在某些维度上产生副产物。识别并利用系统的”非均匀性”是突破性能瓶颈的关键。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>对任何多尺度系统，首先分解到基础组成，测量每个组成部分的”外推脆弱性”或”扩展需求”</li>
+<li>使用不同策略处理不同组成部分——而非”一刀切”</li>
+<li>通用模式：高频&#x2F;局部组件需要更大压缩（保持稳定性），低频&#x2F;全局组件允许更自由扩展</li>
+</ul>
+<h3 id="洞见-2：进化搜索适合解决”黑箱优化”问题"><a href="#洞见-2：进化搜索适合解决”黑箱优化”问题" class="headerlink" title="洞见 2：进化搜索适合解决”黑箱优化”问题"></a>洞见 2：进化搜索适合解决”黑箱优化”问题</h3><p><strong>核心思想</strong>：当目标函数是非凸的、高维的、且没有解析梯度时，进化搜索是一个实用的优化工具。128 维 λ 的搜索空间太大，无法网格搜索——但进化算法可以高效探索。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>当模型的某个行为不能通过梯度下降优化时（如推理时的困惑度），考虑进化搜索</li>
+<li>关键要素：定义清晰的适应度函数、合理的初始化范围、适当的变异强度</li>
+<li>成本估算：适应度评估次数（5000）× 单次评估成本 &#x3D; 总搜索成本</li>
+</ul>
+<h3 id="洞见-3：渐进式扩展-一次性跳跃"><a href="#洞见-3：渐进式扩展-一次性跳跃" class="headerlink" title="洞见 3：渐进式扩展 &gt; 一次性跳跃"></a>洞见 3：渐进式扩展 &gt; 一次性跳跃</h3><p><strong>核心思想</strong>：大幅度能力扩展（512x）分阶段进行（32x → 2x → 8x）——每个阶段的”增量”在模型适应范围内。减少了”适应性休克”。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>任何需要大幅度改变模型能力的任务，使用渐进式策略</li>
+<li>每阶段目标：当前能力的 2-10x，不要超过 1 个数量级</li>
+<li>每个阶段后评估并决定是否继续</li>
+</ul>
+<h3 id="洞见-4：扩展后必须验证原始能力"><a href="#洞见-4：扩展后必须验证原始能力" class="headerlink" title="洞见 4：扩展后必须验证原始能力"></a>洞见 4：扩展后必须验证原始能力</h3><p><strong>核心思想</strong>：LongRoPE 有显式的”短上下文恢复”阶段——这不是可选优化，而是发现长上下文微调确实会损害短性能后的<strong>必要修复</strong>。</p>
+<p><strong>如何应用</strong>：</p>
+<ul>
+<li>在进行任何模型能力扩展时，将”原始能力保持”作为硬性评估指标（不低于 95%）</li>
+<li>如果发现退化，分析退化的维度（哪些任务受影响）并针对性恢复</li>
+<li>原则：能力扩展不应该以牺牲现有能力为代价</li>
+</ul>
+<hr>
+<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>核心创新</th>
+<th>最大上下文</th>
+<th>插值策略</th>
+<th>需微调</th>
+<th>短序列保持</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PI</td>
+<td>线性位置插值</td>
+<td>~32K</td>
+<td>均匀</td>
+<td>可选</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>NTK-aware</td>
+<td>调整 RoPE 基频</td>
+<td>~64K</td>
+<td>隐式（基频变化）</td>
+<td>否</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>YaRN</td>
+<td>PI + 温度调节</td>
+<td>~128K</td>
+<td>均匀 + 温度</td>
+<td>少量</td>
+<td>良好</td>
+</tr>
+<tr>
+<td><strong>LongRoPE</strong></td>
+<td><strong>非均匀 + 进化搜索</strong></td>
+<td><strong>2M+</strong></td>
+<td><strong>逐维度独立</strong></td>
+<td><strong>少量</strong></td>
+<td><strong>95%+</strong></td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LongLoRA</th>
+<th>LongRoPE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心创新</td>
+<td>S²-Attn 训练加速</td>
+<td>非均匀 RoPE 插值</td>
+</tr>
+<tr>
+<td>最大上下文</td>
+<td>100K</td>
+<td>2M+</td>
+</tr>
+<tr>
+<td>训练成本</td>
+<td>低（单机 8xA100）</td>
+<td>中（渐进式 + 进化搜索）</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>高效扩展到 100K</td>
+<td>极限扩展到 2M+</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>LongRoPE 最深刻的贡献不是”2M 上下文”这个数字——而是”非均匀性”这一概念：系统的不同组成部分对外推&#x2F;扩展的”容忍度”是不同的。这个洞察的适用范围远超 RoPE——任何多尺度系统（图像的 CNN 各层、Transformer 的注意力头、分布式系统的节点）可能都需要非均匀的策略。</p>
+<p>进化搜索在 AI 系统设计中扮演着”终极优化器”的角色——当梯度下降不适用时（因为目标是推理时的行为而非训练时的损失），进化搜索提供了寻找最优配置的实用手段。</p>
+<p>Windows 的可扩展性极限在哪——10M？100M？LongRoPE 在 2M 时检索精度从 100% 下降到 85%，暗示距离真正的”无限上下文”还有显著距离。</p>
+<hr>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@article&#123;ding2024longrope,<br>  title=&#123;LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens&#125;,<br>  author=&#123;Ding, Yiran and Zhang, Li Lyna and Zhang, Chengruidong and Xu, Yuanyuan and Shang, Ning and Xu, Jiahang and Yang, Fan and Yang, Mao&#125;,<br>  journal=&#123;arXiv preprint arXiv:2402.13753&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br><br>@article&#123;chen2023position,<br>  title=&#123;Extending Context Window of Large Language Models via Positional Interpolation&#125;,<br>  author=&#123;Chen, Shouyuan and Wong, Sherman and Chen, Liangjian and Tian, Yuandong&#125;,<br>  journal=&#123;arXiv preprint arXiv:2306.15595&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;su2021roformer,<br>  title=&#123;RoFormer: Enhanced Transformer with Rotary Position Embedding&#125;,<br>  author=&#123;Su, Jianlin and others&#125;,<br>  journal=&#123;arXiv preprint arXiv:2104.09864&#125;,<br>  year=&#123;2021&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87/" class="category-chain-item">长上下文</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-llm/" class="print-no-link">#papers/llm</a>
+      
+        <a href="/tags/papers-long-context/" class="print-no-link">#papers/long-context</a>
+      
+        <a href="/tags/papers-positional-encoding/" class="print-no-link">#papers/positional-encoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</div>
+      <div>https://w2ongq6.github.io/2024/02/22/inference/note/LongRoPE_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年2月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/03/05/aigc/note/StableDiffusion3_note/" title="Scaling Rectified Flow Transformers for High-Resolution Image Synthesis">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Scaling Rectified Flow Transformers for High-Resolution Image Synthesis</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/02/15/aigc/note/Sora_note/" title="Sora: Creating Video from Text">
+                        <span class="hidden-mobile">Sora: Creating Video from Text</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

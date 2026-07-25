@@ -1,0 +1,1414 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="PaLM: 用Pathways系统扩展语言建模核心信息 标题: PaLM: Scaling Language Modeling with Pathways 标题翻译: PaLM：用Pathways系统扩展语言建模 作者: Aakanksha Chowdhery, Sharan Narang, Jacob Devlin 等 67 位作者 机构: Google Research 发表时间: 2022年">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PaLM: Scaling Language Modeling with Pathways">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/04/05/llm/note/PaLM_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="PaLM: 用Pathways系统扩展语言建模核心信息 标题: PaLM: Scaling Language Modeling with Pathways 标题翻译: PaLM：用Pathways系统扩展语言建模 作者: Aakanksha Chowdhery, Sharan Narang, Jacob Devlin 等 67 位作者 机构: Google Research 发表时间: 2022年">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2022-04-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.621Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;chain-of-thought">
+<meta property="article:tag" content="papers&#x2F;distributed-training">
+<meta property="article:tag" content="papers&#x2F;llm">
+<meta property="article:tag" content="papers&#x2F;scaling">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>PaLM: Scaling Language Modeling with Pathways - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="PaLM: Scaling Language Modeling with Pathways"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-04-05 00:00" pubdate>
+          2022年4月5日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          70 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">PaLM: Scaling Language Modeling with Pathways</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="PaLM-用Pathways系统扩展语言建模"><a href="#PaLM-用Pathways系统扩展语言建模" class="headerlink" title="PaLM: 用Pathways系统扩展语言建模"></a>PaLM: 用Pathways系统扩展语言建模</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: PaLM: Scaling Language Modeling with Pathways</li>
+<li>标题翻译: PaLM：用Pathways系统扩展语言建模</li>
+<li>作者: Aakanksha Chowdhery, Sharan Narang, Jacob Devlin 等 67 位作者</li>
+<li>机构: Google Research</li>
+<li>发表时间: 2022年4月5日（arXiv），2023年发表于JMLR</li>
+<li>发表渠道: Journal of Machine Learning Research (JMLR), Volume 24, 2023</li>
+<li>arXiv: 2204.02311</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2204.02311">https://arxiv.org/abs/2204.02311</a></li>
+<li>论文类型: 规模化实验 + 系统工程论文</li>
+<li>模型参数: 540B（5400亿）</li>
+<li>截至2024年引用数: 超过5,000次</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大规模语言模型已被证明在广泛的任务上取得了卓越的性能。虽然关于扩展的一些讨论集中在训练更多数据或更大模型上，但训练最大规模模型的系统能力也同样至关重要。我们介绍了PaLM（Pathways Language Model），一个5400亿参数的、密集解码器仅Transformer模型，使用Google的Pathways系统在6144块TPU v4芯片上训练。通过Pathways系统，我们高效地协调跨两个TPU v4 Pod的模型和数据并行，实现了57.8%的模型FLOPs利用率——这是当时如此大规模语言模型训练的最高训练效率。我们通过大量实验系统性地展示了继续扩展大语言模型的优势。PaLM在数百个自然语言、代码和数学推理任务上实现了突破性的性能。我们观察到群组多语言理解、推理和代码生成能力的显著涌现。PaLM在BIG-Bench基准上展示了令人印象深刻的自然语言理解和生成能力。例如，540B PaLM在一系列推理基准上取得了最先进的结果，包括在GSM8K数学推理基准上使用8样本提示达到了58%的准确率，而无需在数学数据上进行任何微调。它在超过三分之二的BIG-Bench任务上展现了突破性的能力。大量基准测试和BIG-Bench任务显示了模型规模扩大带来的不连续改进，意味着随着模型扩展到最大规模，性能突然大幅跃升。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-Pathways分布式训练系统"><a href="#1-Pathways分布式训练系统" class="headerlink" title="1. Pathways分布式训练系统"></a>1. Pathways分布式训练系统</h3><p><strong>核心思想</strong>: PaLM在Google全新的Pathways分布式计算基础设施上训练，实现了跨两个TPU v4 Pod（共6144块芯片）的高效协同训练，模型FLOPs利用率（MFU）达到惊人的57.8%。</p>
+<p><strong>Pathways系统的关键能力</strong>:</p>
+<ul>
+<li><strong>Pod间通信</strong>: 传统TPU训练限制在单个Pod内（最多2048块芯片）。Pathways首次实现了跨Pod的模型并行+数据并行协同调度，将可用的TPU规模扩展到6144块</li>
+<li><strong>模型与数据并行的灵活组合</strong>: 在3072个TPU芯片上做数据并行，在模型维度上再做2路张量并行，高效协调两种并行策略</li>
+<li><strong>57.8% MFU的含义</strong>: 这意味着在训练中，54.5%的TPU FLOPs被用于实际计算，仅有42.2%的时间&#x2F;算力被通信、同步等开销消耗</li>
+</ul>
+<p><strong>为什么重要</strong>: PaLM证明了万卡级（6000+芯片）高效训练大模型的工程可行性。这一里程碑级成就为后来Gemini系列的更大规模训练奠定了基础。57.8% MFU在当时的同规模模型中是最高的（Megatron-Turing NLG 530B约30%）。</p>
+<h3 id="2-Chain-of-Thought推理能力的涌现"><a href="#2-Chain-of-Thought推理能力的涌现" class="headerlink" title="2. Chain-of-Thought推理能力的涌现"></a>2. Chain-of-Thought推理能力的涌现</h3><p><strong>核心思想</strong>: PaLM最大的技术发现是——540B参数模型在不需要任何专门数学训练数据的情况下，通过Chain-of-Thought（CoT）提示，在GSM8K数学推理任务上达到了58%的准确率，超越了当时使用专门微调的SOTA模型（55%）。</p>
+<p><strong>CoT提示的设计</strong>:</p>
+<ul>
+<li>在问题前提供8个带有详细推导步骤的示例（而非仅提供答案）</li>
+<li>步骤包括: 提取已知信息、设未知数、建立方程、逐步求解</li>
+<li>模型会模仿这种”逐步思考”的模式来回答新问题</li>
+</ul>
+<p><strong>为什么重要</strong>: 这一发现引爆了2022-2023年的LLM推理研究。它证明了”推理能力”不是需要特殊架构或训练方法才能获得的能力，而是纯粹随规模涌现的。这意味着”让模型更大”是获得推理能力的可行路径。PaLM也展示了CoT方法的威力——一个相对简单的prompt策略可以解锁大模型惊人的隐藏能力。</p>
+<h3 id="3-多语言能力的突破"><a href="#3-多语言能力的突破" class="headerlink" title="3. 多语言能力的突破"></a>3. 多语言能力的突破</h3><p><strong>核心思想</strong>: PaLM在780B高质量多语言token上训练，覆盖100+种语言。540B模型展示了超强的跨语言Zero-shot能力——在从未专门训练的翻译任务上，few-shot翻译表现接近甚至超越了专门的微调系统。</p>
+<p><strong>多语言设计</strong>:</p>
+<ul>
+<li>训练数据中英语约占78%，多语言约占22%</li>
+<li>没有使用任何平行语料（所有数据都是单语）</li>
+<li>模型自然学习了跨语言的语义对齐</li>
+</ul>
+<p><strong>为什么重要</strong>: PaLM挑战了”多语言能力需要专门的多语言训练”的观点。它证明了: 即使训练数据中仅有22%是非英语，一个足够大的模型也能涌现出强大的跨语言理解和生成能力。</p>
+<h3 id="4-系统的涌现曲线分析"><a href="#4-系统的涌现曲线分析" class="headerlink" title="4. 系统的涌现曲线分析"></a>4. 系统的涌现曲线分析</h3><p><strong>核心思想</strong>: PaLM在BIG-Bench（150+个多样化任务）上进行了跨8B&#x2F;62B&#x2F;540B模型规模的系统测试，首次捕获了大量任务的”涌现曲线”——性能从接近随机到大幅超越的突然跳跃。</p>
+<p><strong>涌现的现象特征</strong>:</p>
+<ul>
+<li>在模型从62B扩展到540B时，多个任务出现不连续的性能跳跃</li>
+<li>例如，某些逻辑推理任务在62B上约5-10%，在540B上飙升至60-80%</li>
+<li>这类跳跃在小模型（8B→62B）上完全不存在</li>
+</ul>
+<p><strong>为什么重要</strong>: 这为GPT-3提出的”涌现”概念提供了大规模的系统实证。它暗示了持续扩展模型的巨大潜在价值——我们可能只看到了冰山一角。</p>
+<h3 id="5-源代码生成能力的涌现"><a href="#5-源代码生成能力的涌现" class="headerlink" title="5. 源代码生成能力的涌现"></a>5. 源代码生成能力的涌现</h3><p><strong>核心思想</strong>: PaLM虽然在训练数据中包含代码（约5%的GitHub数据），但未进行任何代码特定的微调。540B模型通过few-shot提示，在代码生成和理解任务上展现了强大的能力。</p>
+<p><strong>具体表现</strong>:</p>
+<ul>
+<li>在HumanEval（代码生成基准）上few-shot效果与经过代码微调的模型竞争</li>
+<li>能够理解和修复代码错误（debugging）</li>
+<li>能够将代码从一种语言翻译到另一种</li>
+</ul>
+<p><strong>为什么重要</strong>: 代码能力是理解模型通用智能的重要窗口——代码需要精确的语法、逻辑推理和抽象思维。PaLM在这方面的表现进一步支持了”通用能力随规模涌现”的假设。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>PaLM通过在6144块TPU v4芯片上使用Pathways系统以57.8%的高效利用率训练了540B参数模型，首次系统性地证明了Chain-of-Thought推理、多语言理解和代码生成等高级能力是纯粹随规模涌现的——模型无需任何任务特定微调，仅通过规模扩展和适当的提示策略即可获得突破性的性能，从而直接改变了LLM推理研究的方向。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>到2022年，LLM领域面临三个核心瓶颈:</p>
+<ol>
+<li><p><strong>训练系统的扩展瓶颈</strong>: 训练500B+参数的模型需要远超单台机器或单个Pod的计算能力，但跨Pod的训练面临通信带宽瓶颈和同步挑战</p>
+</li>
+<li><p><strong>推理能力的获取</strong>: GPT-3证明了规模带来上下文学习能力，但复杂推理（如数学、逻辑）仍然是大模型的弱项——需要架构创新还是规模就足够？</p>
+</li>
+<li><p><strong>多语言和代码能力</strong>: 能否通过统一的”数据+规模”方案获得跨语言和跨模态的能力？还是必须为每种能力设计专门的训练策略？</p>
+</li>
+</ol>
+<h3 id="PaLM的回答"><a href="#PaLM的回答" class="headerlink" title="PaLM的回答"></a>PaLM的回答</h3><ol>
+<li><p><strong>系统瓶颈</strong>: Pathways系统证明了跨Pod高效训练的可行性——6144芯片、57.8% MFU是可实现的</p>
+</li>
+<li><p><strong>推理能力</strong>: 不需要专门架构——Chain-of-Thought提示（一个简单的prompt技巧） + 足够大的规模能使数学推理能力自然涌现</p>
+</li>
+<li><p><strong>多语言+代码</strong>: 在训练数据中包含少量目标语言&#x2F;代码（22%多语言，5%代码）就足以让大模型涌现跨领域能力</p>
+</li>
+</ol>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><p>PaLM的训练数据是一个精心构建的高质量多语言混合语料，总计780B token:</p>
+<table>
+<thead>
+<tr>
+<th>数据来源</th>
+<th>比例</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>社交媒体对话</td>
+<td>50%</td>
+<td>多语言对话数据</td>
+</tr>
+<tr>
+<td>过滤网页</td>
+<td>27%</td>
+<td>高质量网页文档</td>
+</tr>
+<tr>
+<td>书籍</td>
+<td>13%</td>
+<td>英文和多语言书籍</td>
+</tr>
+<tr>
+<td>GitHub</td>
+<td>5%</td>
+<td>代码数据</td>
+</tr>
+<tr>
+<td>Wikipedia</td>
+<td>4%</td>
+<td>多语言百科</td>
+</tr>
+<tr>
+<td>新闻</td>
+<td>1%</td>
+<td>多语言新闻</td>
+</tr>
+</tbody></table>
+<p><strong>语言分布</strong>: 英语约78%，其他100+种语言约22%</p>
+<p><strong>数据过滤</strong>:</p>
+<ul>
+<li>移除低质量、重复和有害内容</li>
+<li>使用训练数据的质量分类器进行过滤</li>
+<li>去重（模糊和精确匹配）</li>
+</ul>
+<h3 id="评估任务"><a href="#评估任务" class="headerlink" title="评估任务"></a>评估任务</h3><p><strong>BIG-Bench</strong>: 150+个多样化NLP任务——这是PaLM的核心评估基准</p>
+<ul>
+<li>包含逻辑推理、笑话解释、概念映射、因果判断等非传统NLP任务</li>
+<li>按任务类别分组: NLP、数学、常识推理、逻辑推理等</li>
+</ul>
+<p><strong>推理基准</strong>:</p>
+<ul>
+<li>GSM8K: 小学数学应用题（8K个问题）</li>
+<li>StrategyQA: 需要隐式多步推理的问答</li>
+<li>SVAMP: 数学应用题变体测试</li>
+<li>AQuA: 代数应用题</li>
+</ul>
+<p><strong>翻译</strong>:</p>
+<ul>
+<li>WMT英德、英法翻译</li>
+<li>多语言零样本翻译</li>
+</ul>
+<p><strong>代码生成</strong>:</p>
+<ul>
+<li>HumanEval: 164个Python编程问题</li>
+<li>MBPP: 974个Python编程任务</li>
+</ul>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>8B</th>
+<th>62B</th>
+<th>540B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>层数</td>
+<td>32</td>
+<td>64</td>
+<td>118</td>
+</tr>
+<tr>
+<td>d_model</td>
+<td>4096</td>
+<td>8192</td>
+<td>18432</td>
+</tr>
+<tr>
+<td>头数</td>
+<td>16</td>
+<td>32</td>
+<td>48</td>
+</tr>
+<tr>
+<td>头维度</td>
+<td>256</td>
+<td>256</td>
+<td>384</td>
+</tr>
+<tr>
+<td>FFN维度</td>
+<td>16384</td>
+<td>32768</td>
+<td>73728</td>
+</tr>
+<tr>
+<td>词汇表</td>
+<td>256k</td>
+<td>256k</td>
+<td>256k</td>
+</tr>
+<tr>
+<td>参数量</td>
+<td>8B</td>
+<td>62B</td>
+<td>540B</td>
+</tr>
+</tbody></table>
+<h3 id="训练配置"><a href="#训练配置" class="headerlink" title="训练配置"></a>训练配置</h3><ul>
+<li>优化器: Adafactor</li>
+<li>学习率: 最大1e-2（8B&#x2F;62B），最大1e-3（540B），余弦衰减</li>
+<li>Batch size: 8M token（8B），16M token（62B&#x2F;540B）</li>
+<li>序列长度: 2048</li>
+<li>硬件: 6144 TPU v4芯片（540B），512 TPU v4芯片（8B），1024 TPU v4芯片（62B）</li>
+<li>训练时间: 540B训练约100天（不包括硬件故障和重启）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>PaLM使用纯解码器-仅Transformer（Decoder-only），与GPT-3和LLaMA类似:</p>
+<p><strong>架构细节</strong>:</p>
+<ul>
+<li>并行公式: 注意力投影 $Q$, $K$, $V$ 和FFN输入在同一层中并行计算，提高训练吞吐</li>
+<li>SwiGLU激活函数（替代标准ReLU&#x2F;GELU）</li>
+<li>RoPE（Rotary Position Embedding）位置编码</li>
+<li>无偏置项（bias）——所有线性层只有权重，没有偏置</li>
+<li>共享输入&#x2F;输出嵌入矩阵</li>
+<li>Pre-LayerNorm（RMSNorm）</li>
+</ul>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<h4 id="阶段一-分布式训练（Pathways系统）"><a href="#阶段一-分布式训练（Pathways系统）" class="headerlink" title="阶段一: 分布式训练（Pathways系统）"></a>阶段一: 分布式训练（Pathways系统）</h4><p><strong>关键创新</strong>: Google的Pathways系统通过以下机制实现了跨Pod高效训练:</p>
+<ol>
+<li><strong>Pod间通信调度</strong>: 使用PaLM独特的”2048路数据并行 + 3路模型并行”调度策略，将通信和计算重叠</li>
+<li><strong>SPMD编程模型</strong>: 整个模型使用单程序多数据（SPMD）范式编写，自动编译到不同的硬件拓扑</li>
+<li><strong>激活重计算</strong>: 在前向传播时不存储激活，反向传播时重新计算——以计算换内存，在TPU上特别有效</li>
+</ol>
+<p><strong>57.8% MFU的分解</strong>:</p>
+<ul>
+<li>计算时间: 约57.8%</li>
+<li>通信开销: 约20%（Pod内） + 约15%（Pod间）</li>
+<li>其他开销: 约7.2%（流水线气泡、同步等）</li>
+</ul>
+<h4 id="阶段二-预训练"><a href="#阶段二-预训练" class="headerlink" title="阶段二: 预训练"></a>阶段二: 预训练</h4><p>标准自回归语言建模，与GPT-3&#x2F;LLaMA相同。</p>
+<h4 id="阶段三-Chain-of-Thought推理（评估）"><a href="#阶段三-Chain-of-Thought推理（评估）" class="headerlink" title="阶段三: Chain-of-Thought推理（评估）"></a>阶段三: Chain-of-Thought推理（评估）</h4><p>对于GSM8K等数学推理任务，PaLM使用Chain-of-Thought提示:</p>
+<p><strong>CoT Prompt结构</strong>:</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">Q</span>: Roger有<span class="hljs-number">5</span>个网球。他又买了<span class="hljs-number">2</span>罐网球，每罐<span class="hljs-number">3</span>个。他现在有多少个？<br><span class="hljs-attribute">A</span>: Roger一开始有<span class="hljs-number">5</span>个。<span class="hljs-number">2</span>罐每罐<span class="hljs-number">3</span>个 = <span class="hljs-number">2</span>×<span class="hljs-number">3</span> = <span class="hljs-number">6</span>个。<span class="hljs-number">5</span>+<span class="hljs-number">6</span> = <span class="hljs-number">11</span>。答案是<span class="hljs-number">11</span>。<br><br><span class="hljs-attribute">Q</span>: &#123;新问题&#125;<br><span class="hljs-attribute">A</span>:<br></code></pre></td></tr></table></figure>
+
+<p><strong>为什么CoT有效</strong>: CoT提示强迫模型在回答前先”写出推理过程”，这样:</p>
+<ol>
+<li>将复杂问题分解为简单步骤</li>
+<li>每步的计算量小，模型可以准确处理</li>
+<li>中间结果帮助保持推理的连贯性</li>
+<li>错误可以在后续步骤中检测和纠正</li>
+</ol>
+<h4 id="阶段四-涌现能力评估"><a href="#阶段四-涌现能力评估" class="headerlink" title="阶段四: 涌现能力评估"></a>阶段四: 涌现能力评估</h4><p>在BIG-Bench的150+个任务上，系统比较8B&#x2F;62B&#x2F;540B三个尺度的性能。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="BIG-Bench-涌现性能"><a href="#BIG-Bench-涌现性能" class="headerlink" title="BIG-Bench 涌现性能"></a>BIG-Bench 涌现性能</h3><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>8B</th>
+<th>62B</th>
+<th>540B</th>
+<th>涌现?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>逻辑推理</td>
+<td>~5%</td>
+<td>~10%</td>
+<td><strong>~60%</strong></td>
+<td>是</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>关键模式</strong>: 8B→62B提升很小（通常只有几个百分点），62B→540B出现跳跃式提升。这在许多任务上是一致的模式。</p>
+<h3 id="GSM8K-数学推理"><a href="#GSM8K-数学推理" class="headerlink" title="GSM8K 数学推理"></a>GSM8K 数学推理</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>方法</th>
+<th>GSM8K 准确率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Fine-tuned SOTA (GPT-3 175B)</td>
+<td>微调 + 验证器</td>
+<td>55%</td>
+</tr>
+<tr>
+<td>PaLM 8B</td>
+<td>8-shot CoT</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>PaLM 62B</td>
+<td>8-shot CoT</td>
+<td>29.3%</td>
+</tr>
+<tr>
+<td>PaLM 540B</td>
+<td>8-shot CoT</td>
+<td><strong>58.0%</strong></td>
+</tr>
+<tr>
+<td>PaLM 540B</td>
+<td>8-shot CoT + 自一致性</td>
+<td><strong>74.4%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>540B PaLM 58%，超越所有经过专门微调的SOTA——这是LLM推理能力的里程碑</li>
+<li>使用自一致性（多次采样，取多数投票）进一步提升至74.4%</li>
+<li>8B仅4.1%，62B中等29.3%——这完美展示了涌现现象</li>
+</ul>
+<h3 id="BIG-Bench-Hard-BIG-Bench中超越人类的任务"><a href="#BIG-Bench-Hard-BIG-Bench中超越人类的任务" class="headerlink" title="BIG-Bench Hard (BIG-Bench中超越人类的任务)"></a>BIG-Bench Hard (BIG-Bench中超越人类的任务)</h3><p>PaLM在超过三分之二的BIG-Bench任务上展现了”突破性”能力，在多项任务上达到或超越人类基线:</p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>人类</th>
+<th>PaLM 540B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>逻辑网格谜题</td>
+<td>78.3</td>
+<td><strong>83.8</strong></td>
+</tr>
+<tr>
+<td>逻辑推理</td>
+<td>86.4</td>
+<td><strong>91.1</strong></td>
+</tr>
+<tr>
+<td>概念映射</td>
+<td>85.0</td>
+<td><strong>87.0</strong></td>
+</tr>
+<tr>
+<td>因果判断</td>
+<td>93.6</td>
+<td><strong>96.0</strong></td>
+</tr>
+<tr>
+<td>笑话解释</td>
+<td>79.5</td>
+<td>50.0</td>
+</tr>
+</tbody></table>
+<p><strong>在多项逻辑推理任务上超越人类</strong>——这是PaLM最惊人的结果。</p>
+<h3 id="翻译性能"><a href="#翻译性能" class="headerlink" title="翻译性能"></a>翻译性能</h3><table>
+<thead>
+<tr>
+<th>语言对</th>
+<th>PaLM 540B Zero-Shot</th>
+<th>PaLM 540B Few-Shot</th>
+<th>有监督SOTA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>En→De</td>
+<td>27.3</td>
+<td>30.4</td>
+<td>~42</td>
+</tr>
+<tr>
+<td>De→En</td>
+<td>35.2</td>
+<td>40.3</td>
+<td>~46</td>
+</tr>
+<tr>
+<td>En→Fr</td>
+<td>34.5</td>
+<td>39.2</td>
+<td>~41</td>
+</tr>
+<tr>
+<td>低资源语言</td>
+<td><strong>惊人表现</strong></td>
+<td><strong>更强</strong></td>
+<td>通常无SOTA</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: 翻译进英语的方向表现尤其好，因为训练数据中英语占主导。低资源语言的zero-shot翻译质量尤其令人惊讶。</p>
+<h3 id="代码生成"><a href="#代码生成" class="headerlink" title="代码生成"></a>代码生成</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>HumanEval Pass@1</th>
+<th>HumanEval Pass@100</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Codex 12B (代码微调)</td>
+<td>28.8</td>
+<td>72.3</td>
+</tr>
+<tr>
+<td>PaLM 8B</td>
+<td>3.6</td>
+<td>18.7</td>
+</tr>
+<tr>
+<td>PaLM 62B</td>
+<td>13.1</td>
+<td>43.4</td>
+</tr>
+<tr>
+<td>PaLM 540B</td>
+<td><strong>26.2</strong></td>
+<td><strong>76.2</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: PaLM 540B的代码性能接近Codex 12B（一个专门在代码上微调的模型）。PaLM仅使用了约5%的代码训练数据+规模就达到了这个水平。</p>
+<h3 id="训练效率对比"><a href="#训练效率对比" class="headerlink" title="训练效率对比"></a>训练效率对比</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>芯片数</th>
+<th>MFU</th>
+<th>训练效率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Megatron-Turing NLG 530B</td>
+<td>~4000 A100</td>
+<td>~30%</td>
+<td>低</td>
+</tr>
+<tr>
+<td><strong>PaLM 540B</strong></td>
+<td><strong>6144 TPUv4</strong></td>
+<td><strong>57.8%</strong></td>
+<td><strong>高</strong></td>
+</tr>
+<tr>
+<td>GPT-3 175B</td>
+<td>~10000 V100</td>
+<td>未报告</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="涌现现象的”证据金字塔”"><a href="#涌现现象的”证据金字塔”" class="headerlink" title="涌现现象的”证据金字塔”"></a>涌现现象的”证据金字塔”</h3><p>PaLM为”涌现”提供了迄今最系统的证据:</p>
+<table>
+<thead>
+<tr>
+<th>证据层级</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>顶层</td>
+<td>BIG-Bench 150+任务的大规模曲线</td>
+</tr>
+<tr>
+<td>中层</td>
+<td>数学推理(4.1→29.3→58.0)的三点跳跃</td>
+</tr>
+<tr>
+<td>底层</td>
+<td>代码生成(3.6→13.1→26.2)的两阶段跳跃</td>
+</tr>
+</tbody></table>
+<p>这些曲线的共同特征: 8B→62B的提升是线性的；62B→540B的提升是非线性的（在某些任务上跳跃了10倍以上）。</p>
+<h3 id="CoT推理的”免费午餐”性质"><a href="#CoT推理的”免费午餐”性质" class="headerlink" title="CoT推理的”免费午餐”性质"></a>CoT推理的”免费午餐”性质</h3><p>PaLM最惊人的发现之一是CoT的成本效益比:</p>
+<ul>
+<li>不需要修改模型架构</li>
+<li>不需要专门的训练数据</li>
+<li>不需要微调</li>
+<li>仅需要在prompt中改变格式（从”直接给答案”到”逐步推理”）</li>
+<li>效果: 从”接近随机”到”超越微调SOTA”</li>
+</ul>
+<p>这类似”免费午餐”——几乎零成本获得了推理能力的大幅提升。</p>
+<h3 id="Pathways系统的里程碑意义"><a href="#Pathways系统的里程碑意义" class="headerlink" title="Pathways系统的里程碑意义"></a>Pathways系统的里程碑意义</h3><p>PaLM在系统层面完成了此前被认为是”不可能”的工程挑战:</p>
+<ul>
+<li><strong>跨Pod训练</strong>: 使用超过一个TPU Pod的芯片做同一个模型的训练（此前TPU训练限制在单个Pod）</li>
+<li><strong>57.8% MFU</strong>: 证明了万卡级训练的效率问题是可以解决的</li>
+<li><strong>SPMD可扩展性</strong>: 证明了单程序多数据模型在大规模下的可行性</li>
+</ul>
+<p>这些工程突破对后续Google的Gemini系列的训练至关重要——没有Pathways就没有Gemini。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-GPT-3"><a href="#vs-GPT-3" class="headerlink" title="vs GPT-3"></a>vs GPT-3</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GPT-3</th>
+<th>PaLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数量</td>
+<td>175B</td>
+<td>540B（3倍）</td>
+</tr>
+<tr>
+<td>训练芯片</td>
+<td>~10K V100</td>
+<td>6144 TPUv4</td>
+</tr>
+<tr>
+<td>推理能力</td>
+<td>基本无</td>
+<td>CoT解锁强推理</td>
+</tr>
+<tr>
+<td>多语言</td>
+<td>以英语为主</td>
+<td>100+语言</td>
+</tr>
+<tr>
+<td>代码能力</td>
+<td>有限</td>
+<td>接近专用模型</td>
+</tr>
+<tr>
+<td>系统效率</td>
+<td>-</td>
+<td>57.8% MFU</td>
+</tr>
+<tr>
+<td>评估规模</td>
+<td>~40个任务</td>
+<td>150+个BIG-Bench任务</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Megatron-Turing-NLG-530B"><a href="#vs-Megatron-Turing-NLG-530B" class="headerlink" title="vs Megatron-Turing NLG 530B"></a>vs Megatron-Turing NLG 530B</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MT-NLG 530B</th>
+<th>PaLM 540B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数量</td>
+<td>530B</td>
+<td>540B</td>
+</tr>
+<tr>
+<td>MFU</td>
+<td>~30%</td>
+<td><strong>57.8%</strong></td>
+</tr>
+<tr>
+<td>训练系统</td>
+<td>Megatron + DeepSpeed</td>
+<td>Pathways</td>
+</tr>
+<tr>
+<td>学术贡献</td>
+<td>训练更大模型</td>
+<td>涌现能力系统研究</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-训练成本极高"><a href="#1-训练成本极高" class="headerlink" title="1. 训练成本极高"></a>1. 训练成本极高</h3><p>100天 x 6144 TPU v4芯片 &#x3D; 天文数字的能源和资金成本。</p>
+<h3 id="2-CoT的不可靠性"><a href="#2-CoT的不可靠性" class="headerlink" title="2. CoT的不可靠性"></a>2. CoT的不可靠性</h3><p>即使有CoT，在需要10+步推理的复杂数学问题上，PaLM仍会出错——且错误通常难以检测。</p>
+<h3 id="3-训练数据的质量问题"><a href="#3-训练数据的质量问题" class="headerlink" title="3. 训练数据的质量问题"></a>3. 训练数据的质量问题</h3><p>50%来自”社交媒体对话”——这部分数据的质量和潜在偏见问题。</p>
+<h3 id="4-“涌现”的解释不足"><a href="#4-“涌现”的解释不足" class="headerlink" title="4. “涌现”的解释不足"></a>4. “涌现”的解释不足</h3><p>论文提出了涌现的现象，但未解释涌现机制——只是演示了它。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-CoT提示是解锁推理能力的钥匙"><a href="#1-CoT提示是解锁推理能力的钥匙" class="headerlink" title="1. CoT提示是解锁推理能力的钥匙"></a>1. CoT提示是解锁推理能力的钥匙</h3><p>简单改变prompt格式就能获得质变——在任何LLM应用中都应该首先尝试CoT。</p>
+<h3 id="2-系统效率与模型质量同样重要"><a href="#2-系统效率与模型质量同样重要" class="headerlink" title="2. 系统效率与模型质量同样重要"></a>2. 系统效率与模型质量同样重要</h3><p>57.8% MFU是PaLM成功的关键——没有高效的训练系统，540B无法经济地训练。</p>
+<h3 id="3-少量领域数据的”启发式”效应"><a href="#3-少量领域数据的”启发式”效应" class="headerlink" title="3. 少量领域数据的”启发式”效应"></a>3. 少量领域数据的”启发式”效应</h3><p>仅5%代码数据、22%多语言数据就足以让大模型涌现代码和多语言能力——“撒一点种子就能长成森林”。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="PaLM与Google-AI策略"><a href="#PaLM与Google-AI策略" class="headerlink" title="PaLM与Google AI策略"></a>PaLM与Google AI策略</h3><p>PaLM是Google对OpenAI GPT-3的战略回应。它标志着Google从”研究分散”到”聚焦大模型”的战略转变。Pathsays系统的成功直接支持了后续Gemini的开发——Gemini某种程度上是PaLM的multimodal后继。</p>
+<h3 id="CoT的深远影响"><a href="#CoT的深远影响" class="headerlink" title="CoT的深远影响"></a>CoT的深远影响</h3><p>PaLM引爆的CoT研究直接导致了:</p>
+<ul>
+<li>“Let’s think step by step”（Kojima et al., 2022）——零样本CoT</li>
+<li>Tree-of-Thoughts (Yao et al., 2023) ——扩展CoT到树状搜索</li>
+<li>Self-Consistency (Wang et al., 2023) ——多次采样+投票</li>
+<li>ReAct (Yao et al., 2023) ——推理+行动交织</li>
+</ul>
+<p>这些工作构成了2023年LLM推理研究的核心脉络。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-涌现的预测模型"><a href="#1-涌现的预测模型" class="headerlink" title="1. 涌现的预测模型"></a>1. 涌现的预测模型</h3><p>能否通过分析小模型的内部表征来预测大模型的能力涌现？</p>
+<h3 id="2-CoT-vs-显式推理模块"><a href="#2-CoT-vs-显式推理模块" class="headerlink" title="2. CoT vs 显式推理模块"></a>2. CoT vs 显式推理模块</h3><p>CoT提示在什么情况下足够？什么时候需要真正的符号推理引擎？</p>
+<h3 id="3-更高效的训练系统"><a href="#3-更高效的训练系统" class="headerlink" title="3. 更高效的训练系统"></a>3. 更高效的训练系统</h3><p>Pathways之后，下一代训练系统的方向是什么？如何突破100K芯片的通信瓶颈？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Chowdhery, A., et al. (2023). PaLM: Scaling Language Modeling with Pathways. JMLR 24.</li>
+<li>Brown, T. B., et al. (2020). Language Models are Few-Shot Learners. NeurIPS 2020.</li>
+<li>Wei, J., et al. (2022). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. NeurIPS 2022.</li>
+<li>Kojima, T., et al. (2022). Large Language Models are Zero-Shot Reasoners. NeurIPS 2022.</li>
+<li>Hoffmann, J., et al. (2022). Training Compute-Optimal Large Language Models (Chinchilla). NeurIPS 2022.</li>
+<li>Smith, S., et al. (2022). Using DeepSpeed and Megatron to Train Megatron-Turing NLG 530B. arXiv:2201.11990.</li>
+<li>Chowdhery, A., et al. (2024). Gemini: A Family of Highly Capable Multimodal Models. arXiv:2312.11805.</li>
+<li>Srivastava, A., et al. (2022). Beyond the Imitation Game: Quantifying and extrapolating the capabilities of language models (BIG-Bench). arXiv:2206.04615.</li>
+<li>Wang, X., et al. (2023). Self-Consistency Improves Chain of Thought Reasoning. ICLR 2023.</li>
+<li>Yao, S., et al. (2023). Tree of Thoughts: Deliberate Problem Solving with Large Language Models. NeurIPS 2023.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%9E%B6%E6%9E%84%E5%9F%BA%E7%A1%80/" class="category-chain-item">架构基础</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-llm/" class="print-no-link">#papers/llm</a>
+      
+        <a href="/tags/papers-scaling/" class="print-no-link">#papers/scaling</a>
+      
+        <a href="/tags/papers-distributed-training/" class="print-no-link">#papers/distributed-training</a>
+      
+        <a href="/tags/papers-chain-of-thought/" class="print-no-link">#papers/chain-of-thought</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>PaLM: Scaling Language Modeling with Pathways</div>
+      <div>https://w2ongq6.github.io/2022/04/05/llm/note/PaLM_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年4月5日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/04/07/aigc/note/VideoDiffusionModels_note/" title="Video Diffusion Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Video Diffusion Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/03/29/llm/note/Chinchilla_note/" title="Training Compute-Optimal Large Language Models">
+                        <span class="hidden-mobile">Training Compute-Optimal Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

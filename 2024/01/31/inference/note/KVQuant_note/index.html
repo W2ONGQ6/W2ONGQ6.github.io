@@ -1,0 +1,1646 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="KVQuant: 面向千万级上下文长度的LLM推理KV缓存量化核心信息 标题: KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization 标题翻译: KVQuant：面向千万级上下文长度的LLM推理KV缓存量化 作者: Coleman Hooper, Sehoon Kim, Hiva Mo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/01/31/inference/note/KVQuant_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="KVQuant: 面向千万级上下文长度的LLM推理KV缓存量化核心信息 标题: KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization 标题翻译: KVQuant：面向千万级上下文长度的LLM推理KV缓存量化 作者: Coleman Hooper, Sehoon Kim, Hiva Mo">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-01-30T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.656Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;quantization">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-01-31 00:00" pubdate>
+          2024年1月31日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          15k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          128 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="KVQuant-面向千万级上下文长度的LLM推理KV缓存量化"><a href="#KVQuant-面向千万级上下文长度的LLM推理KV缓存量化" class="headerlink" title="KVQuant: 面向千万级上下文长度的LLM推理KV缓存量化"></a>KVQuant: 面向千万级上下文长度的LLM推理KV缓存量化</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization</li>
+<li>标题翻译: KVQuant：面向千万级上下文长度的LLM推理KV缓存量化</li>
+<li>作者: Coleman Hooper, Sehoon Kim, Hiva Mohammadzadeh, Michael W. Mahoney, Yakun Sophia Shao, Kurt Keutzer, Amir Gholami</li>
+<li>机构: UC Berkeley, ICSI, LBNL</li>
+<li>发表时间: 2024年1月31日</li>
+<li>发表渠道: NeurIPS 2024</li>
+<li>arXiv: 2401.18079</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.18079">https://arxiv.org/abs/2401.18079</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/SqueezeAILab/KVQuant">https://github.com/SqueezeAILab/KVQuant</a></li>
+<li>论文类型: 大语言模型推理系统优化与KV缓存量化</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大型语言模型（LLM）推理中的KV缓存激活是长上下文场景下内存和延迟的主要瓶颈。虽然已有方法试图量化KV缓存以减少内存占用，但它们仍然难以实现准确且高效的超低精度（&lt;4比特）量化。本文提出了KVQuant——一个全面的KV缓存量化方法，包含多项创新技术。通过综合这些技术，KVQuant在4比特精度下实现了小于0.1的困惑度退化（压缩比4.8倍），在3比特精度下仍保持高性能，并首次探索了2比特KV缓存量化的前沿。这使得在单张A100-80GB GPU上以1M上下文长度服务LLaMA-7B成为可能，在8-GPU系统上以10M上下文长度提供服务。此外，KVQuant还能与高效的注意力实现（如FlashAttention-2）无缝集成。我们的方法在多个基准测试上进行了评估，包括真实世界长上下文任务，证明了其实际可用性。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-Pre-RoPE-Key量化"><a href="#1-Pre-RoPE-Key量化" class="headerlink" title="1. Pre-RoPE Key量化"></a>1. Pre-RoPE Key量化</h3><p><strong>核心思想</strong>: 在对Key向量应用RoPE（旋转位置嵌入）之前进行量化，而非之后。这是因为RoPE会混合相邻通道的值，破坏在RoPE之前保持一致的异常值幅度分布。在Pre-RoPE阶段，通道异常值的幅度模式更加清晰和一致，使得量化后的注意力分数更精确。</p>
+<p><strong>为什么重要</strong>: 这个看似微小的顺序调整（”先量化后旋转”vs”先旋转后量化”）产生了巨大的质量差异。在实验上，Pre-RoPE量化的4比特Key缓存产生的PPL退化仅为Post-RoPE量化的约1&#x2F;3。这一发现已成为后续几乎所有KV缓存量化工作的标准最佳实践。它揭示了一个基本工程原则：仔细分析计算图中的操作顺序，可能在某个特定的中间点进行量化带来显著优势。</p>
+<h3 id="2-逐向量稠密-稀疏量化（Per-Vector-Dense-and-Sparse）"><a href="#2-逐向量稠密-稀疏量化（Per-Vector-Dense-and-Sparse）" class="headerlink" title="2. 逐向量稠密-稀疏量化（Per-Vector Dense-and-Sparse）"></a>2. 逐向量稠密-稀疏量化（Per-Vector Dense-and-Sparse）</h3><p><strong>核心机制</strong>: </p>
+<ul>
+<li><strong>稠密分量</strong>: 对每个向量（Key按通道、Value按token）的大部分值（约99%）使用低精度量化</li>
+<li><strong>稀疏分量</strong>: 单独存储少量（约1%）的异常值（outliers），以高精度表示</li>
+<li>这种解耦防止了异常值”污染”整个量化范围</li>
+</ul>
+<p><strong>为什么重要</strong>: 异常值是KV缓存量化的最大障碍。在全局量化中，一个幅值为100的异常值会导致量化范围扩张到[-100, 100]，意味着对于大多数幅值&#x3D;1的值，只有1&#x2F;50的量化精度。逐向量+异常值分离的组合使得大范围的值得到自己的量化范围，而异常值被隔离不再影响正常值的精度。这个技术在1%的额外存储成本下(存储稀疏异常值)带来了显著的量化质量提升。</p>
+<h3 id="3-灵敏度加权的非均匀量化（NUQ-with-Fisher-Information）"><a href="#3-灵敏度加权的非均匀量化（NUQ-with-Fisher-Information）" class="headerlink" title="3. 灵敏度加权的非均匀量化（NUQ with Fisher Information）"></a>3. 灵敏度加权的非均匀量化（NUQ with Fisher Information）</h3><p><strong>核心贡献</strong>: 使用Fisher信息矩阵量化每个KV通道对最终模型输出（困惑度）的敏感度：</p>
+<ul>
+<li>高Fisher信息的通道（对模型输出影响大）获得更多量化级别（更精细的量化）</li>
+<li>低Fisher信息的通道（对模型输出影响小）获得较少量化级别</li>
+<li>量化级别分配由k-means在加权失真度量下进行聚类：$D &#x3D; \sum_i F_i \cdot (x_i - \hat{x}_i)^2$</li>
+</ul>
+<p>其中$F_i$是通道$i$的Fisher信息，$x_i$是原始值，$\hat{x}_i$是量化后的值。</p>
+<p><strong>为什么重要</strong>: 这实现了”好钢用在刀刃上”——量化精度预算被最有效地分配给最重要的通道。Fisher信息度量是任务感知的（optimally capturing the loss landscape），而非仅仅基于数值幅度。这意味着即使某个通道的幅度不一定最大，如果它对最终损失影响大（Fisher信息高），将获得更多量化精度。</p>
+<h3 id="4-Q-Norm（量化中心归一化）"><a href="#4-Q-Norm（量化中心归一化）" class="headerlink" title="4. Q-Norm（量化中心归一化）"></a>4. Q-Norm（量化中心归一化）</h3><p><strong>核心思想</strong>: 在量化后对量化中心（quantization centroids）进行归一化，以缓解量化引入的分布偏移：</p>
+<p>$$\hat{x}_{\text{corrected}} &#x3D; \frac{\hat{x} - \mu(\hat{x})}{\sigma(\hat{x})} \cdot \sigma(x) + \mu(x)$$</p>
+<p>其中$\mu$和$\sigma$分别是原始分布$x$和量化分布$\hat{x}$的均值和标准差。</p>
+<p><strong>为什么重要</strong>: 量化不可避免地改变激活值的分布（均值偏移、方差缩小）。在深层Transformer中，这种微小的分布偏移会通过残差连接层层累积，最终导致显著的输出偏差。Q-Norm作为一个轻量级的后处理步骤（仅需计算全局均值和方差）有效地纠正了这种偏移。这在2比特精度下尤其关键，因为量化引入的分布偏移更大。</p>
+<h3 id="5-全面的量化pipeline集成"><a href="#5-全面的量化pipeline集成" class="headerlink" title="5. 全面的量化pipeline集成"></a>5. 全面的量化pipeline集成</h3><p><strong>系统贡献</strong>: KVQuant不仅是单一技术，而是一个包含上述所有技术的端到端pipeline，能够与FlashAttention-2高效集成，支持实际部署。特别重要的是：</p>
+<ul>
+<li>与FlashAttention-2的CUDA kernel集成</li>
+<li>支持从3比特到4比特的灵活精度配置</li>
+<li>对极长上下文（1M-10M token）的端到端验证</li>
+</ul>
+<p><strong>为什么重要</strong>: 工程集成的质量决定了学术创新能否转化为实际效益。KVQuant的全面pipeline设计（从分析到实时的CUDA kernel）确保了论文中报告的内存和延迟收益在真实部署中可以复现。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>KVQuant通过Pre-RoPE Key量化、逐向量稠密-稀疏量化、基于Fisher信息的非均匀量化和Q-Norm归一化等五项技术，在4.8倍压缩比下实现PPL退化小于0.1的3-4比特KV缓存量化，使单张A100可服务1M上下文LLaMA-7B。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>超长上下文推理（如Gemini 1.5 Pro的10M token上下文窗口）对KV缓存提出了极端的内存要求。对于LLaMA-7B处理10M token：</p>
+<ul>
+<li>KV缓存大小: $2 \times 32 \times 32 \times 128 \times 10^7 \times 2 \text{ bytes} \approx 5.24 \text{ TB}$</li>
+<li>即使是8张A100-80GB（总640GB），也远不能容纳</li>
+</ul>
+<p>量化是唯一的出路。但要实现3-4比特量化，面临的关键挑战是：在极端压缩比下如何保持接近原始FP16的质量？</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>均匀量化（Round-to-Nearest Int4）</strong>:</p>
+<ul>
+<li>对异常值高度敏感</li>
+<li>PPL退化通常在1.0+</li>
+<li>不适合&lt;4比特</li>
+</ul>
+</li>
+<li><p><strong>混合精度量化（部分层4比特、部分层8比特）</strong>:</p>
+<ul>
+<li>需要校准来确定每层的最优精度</li>
+<li>对于长序列，即使是部分层的8比特也会主导内存使用</li>
+</ul>
+</li>
+<li><p><strong>权重量化的经验不能直接迁移</strong>:</p>
+<ul>
+<li>权重是静态的，可以离线性地优化量化参数</li>
+<li>KV缓存是动态生成的（在线），需要运行时高效的量化</li>
+</ul>
+</li>
+<li><p><strong>现有的Post-RoPE量化</strong>:</p>
+<ul>
+<li>RoPE混合了通道值，破坏了清晰的异常值模式</li>
+<li>量化噪声通过旋转操作进一步扩散</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>量化位置的选择与量化方法的选择同等重要</strong>: Pre-RoPE量化 + 异常值分离 + 灵敏度感知的非均匀量化组成了一个强大的pipeline，每个组件解决量化的一个特定失败模式。</p>
+</blockquote>
+<h3 id="问题形式化"><a href="#问题形式化" class="headerlink" title="问题形式化"></a>问题形式化</h3><p><strong>目标</strong>: 设计量化方案 $\mathcal{Q}: \mathbb{R}^P \rightarrow \mathbb{Z}_k^P$，其中$k &#x3D; 2^b$（$b$比特量化），使得：</p>
+<p>$$\min_{\mathcal{Q}} \mathbb{E}<em>{x \sim \mathcal{D}</em>{\text{KV}}}\left[|x - \mathcal{Q}^{-1}(\mathcal{Q}(x))|^2_{\text{Fisher}}\right]$$</p>
+<p>其中$|\cdot|_{\text{Fisher}}$是Fisher加权的失真度量。同时满足：</p>
+<ul>
+<li>量化&#x2F;反量化延迟 &lt; 注意力计算延迟的5%</li>
+<li>支持流式在线量化（token逐个到达）</li>
+<li>与FlashAttention-2兼容</li>
+</ul>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><ol>
+<li><p><strong>语言建模困惑度</strong>:</p>
+<ul>
+<li>WikiText-2, C4验证集</li>
+<li>序列长度: 2K, 4K, 8K, 16K, 32K</li>
+<li>评估指标: ppl</li>
+</ul>
+</li>
+<li><p><strong>长上下文基准测试</strong>:</p>
+<ul>
+<li>LongBench, Zero-SCROLLS, L-Eval</li>
+<li>评估指标: 准确率&#x2F;F1</li>
+</ul>
+</li>
+<li><p><strong>Passkey Retrieval（针尖检索）</strong>:</p>
+<ul>
+<li>上下文长度: 32K, 128K, 512K, 1M</li>
+<li>评估指标: 检索准确率</li>
+</ul>
+</li>
+<li><p><strong>端到端吞吐量和延迟</strong>:</p>
+<ul>
+<li>与FlashAttention-2集成</li>
+<li>评估指标: tokens&#x2F;s, memory usage</li>
+</ul>
+</li>
+</ol>
+<h3 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h3><ul>
+<li>LLaMA (7B, 13B, 30B, 65B)</li>
+<li>LLaMA-2 (7B, 13B, 70B)</li>
+<li>LLaMA-3 (8B)</li>
+<li>Mistral (7B)</li>
+</ul>
+<h3 id="硬件和基线"><a href="#硬件和基线" class="headerlink" title="硬件和基线"></a>硬件和基线</h3><ul>
+<li>GPU: A100 (80GB), A100 (40GB)</li>
+<li>基线: FP16全量, Int4 (RTN), Int4 (per-channel), 逐组量化</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="方法概览"><a href="#方法概览" class="headerlink" title="方法概览"></a>方法概览</h4><p>KVQuant由以下几个按顺序应用的组件组成：</p>
+<ol>
+<li><strong>Pre-RoPE Key量化</strong>: 在RoPE之前量化Key</li>
+<li><strong>逐向量稠密-稀疏量化</strong>: 分离每个向量的正常值和异常值</li>
+<li><strong>灵敏度感知非均匀量化</strong>: 基于Fisher信息分配量化分辨率</li>
+<li><strong>Q-Norm归一化</strong>: 纠正量化后的分布偏移</li>
+<li><strong>CUDA Kernel集成</strong>: 与FlashAttention-2的高效集成</li>
+</ol>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>技术1: Pre-RoPE Key量化</strong></p>
+<p>在标准Transformer计算图中，KV投影和RoPE的顺序为：</p>
+<p>$$K_{\text{raw}} &#x3D; xW_K$$<br>$$K_{\text{rope}} &#x3D; \text{RoPE}(K_{\text{raw}})$$</p>
+<p>传统量化在$K_{\text{rope}}$后进行：<br>$$K_{\text{quant}} &#x3D; \mathcal{Q}(\text{RoPE}(xW_K))$$</p>
+<p>KVQuant在$K_{\text{raw}}$后进行量化，然后应用RoPE：<br>$$K_{\text{quant}} &#x3D; \text{RoPE}(\mathcal{Q}(xW_K))$$</p>
+<p><strong>动机</strong>: RoPE操作混合相邻通道对。以通道$2i$和$2i+1$为例：</p>
+<p>$$\begin{bmatrix} K’<em>{2i} \ K’</em>{2i+1} \end{bmatrix} &#x3D; \begin{bmatrix} \cos\theta_t &amp; -\sin\theta_t \ \sin\theta_t &amp; \cos\theta_t \end{bmatrix} \begin{bmatrix} K_{2i} \ K_{2i+1} \end{bmatrix}$$</p>
+<p>如果通道$2i$是异常值（大值）而$2i+1$是正常值，RoPE将两者的值混合，导致两个通道都包含异常值分量。这破坏了通道级别异常值模式的清晰性。如果在RoPE之前量化，异常值仅在其自己的通道内被精细处理，RoPE的旋转不引入额外的量化噪声。</p>
+<p><strong>实验验证</strong>: Pre-RoPE量化的4比特PPL退化为+0.05，Post-RoPE为+0.15（LLaMA-7B上的WikiText-2）。</p>
+<p><strong>技术2: 逐向量稠密-稀疏量化</strong></p>
+<p>对于Key缓存（per-channel）或Value缓存（per-token）中的每个向量 $\mathbf{v} \in \mathbb{R}^d$：</p>
+<ol>
+<li><strong>异常值检测</strong>: 计算阈值 $\tau &#x3D; \mu + \alpha \cdot \sigma$，标记值幅值超过$\tau$的元素为异常值</li>
+<li><strong>稠密量化</strong>: 使用窄量化范围 $[-\tau, \tau]$ 量化99%+的元素</li>
+<li><strong>稀疏存储</strong>: 以FP16精度单独存储1%的异常值（索引 + 值）</li>
+<li><strong>总存储</strong>: 稠密部分（低精度）+ 稀疏异常值（FP16）</li>
+</ol>
+<p>对于2比特量化：</p>
+<ul>
+<li>稠密部分: $d \times 2&#x2F;8$ bytes</li>
+<li>稀疏异常值: $0.01 \times d \times (2 + 2)$ bytes（索引2字节 + 值2字节）</li>
+<li>总计: $0.25d + 0.04d &#x3D; 0.29d$ bytes vs 原始 $2d$ bytes</li>
+<li>压缩比: $2&#x2F;0.29 \approx 6.9$x</li>
+</ul>
+<p><strong>技术3: 灵敏度加权的非均匀量化</strong></p>
+<p>基于Fisher信息的非均匀量化（Fisher-NUQ）：</p>
+<ol>
+<li><strong>Fisher信息估计</strong>: 对每个KV通道&#x2F;元素计算Fisher信息$F_c$，衡量其对模型损失log-likelihood的二阶敏感度：</li>
+</ol>
+<p>$$F_c &#x3D; \mathbb{E}_{x \sim \mathcal{D}}\left[\left(\frac{\partial \log p(y|x)}{\partial z_c}\right)^2\right]$$</p>
+<p>其中$z_c$是通道$c$的激活值。</p>
+<ol start="2">
+<li><strong>加权k-means聚类</strong>: 使用加权失真度量的k-means算法确定$2^b$个量化中心：</li>
+</ol>
+<p>$$\mathcal{L} &#x3D; \sum_{c} F_c \cdot \left|x_c - \hat{x}_{q(c)}\right|^2$$</p>
+<p>其中$q(c)$是通道$c$的量化索引，$\hat{x}_q$是第$q$个量化中心。</p>
+<ol start="3">
+<li><strong>非均匀中心</strong>: 与均匀量化（等间距中心）不同，k-means学习到的中心可以根据数据分布和敏感度非均匀地分布在数值空间中。</li>
+</ol>
+<p><strong>实现细节</strong>: </p>
+<ul>
+<li>Fisher信息通过对少量校准数据（128个样本）的一次前向传播计算</li>
+<li>k-means聚类的计算成本在向量维度$d&#x3D;128$下可以忽略</li>
+<li>聚类结果（中心 + 索引）需要存储为元数据，但每层每头共享相同中心</li>
+</ul>
+<p><strong>技术4: Q-Norm（量化感知归一化）</strong></p>
+<p>量化后的值 $\hat{x}$ 的分布可能与原始分布不同（均值偏移、方差缩小）。Q-Norm进行校正：</p>
+<p>$$\hat{x}<em>{\text{corrected}} &#x3D; \frac{\hat{x} - \mu</em>{\hat{x}}}{\sigma_{\hat{x}}} \cdot \sigma_x + \mu_x$$</p>
+<p>其中$\mu_x, \sigma_x$是原始分布的统计量，$\mu_{\hat{x}}, \sigma_{\hat{x}}$是量化后分布的统计量。</p>
+<p><strong>为什么在2比特时特别重要</strong>: 2比特量化只有4个量化级别，导致的分布偏移更严重。Q-Norm在没有增加存储成本的前提下显著降低了偏移。</p>
+<p><strong>技术5: CUDA Kernel集成</strong></p>
+<p>KVQuant的量化&#x2F;反量化操作通过自定义CUDA kernel与FlashAttention-2集成：</p>
+<ol>
+<li><strong>分块量化</strong>: KV缓存的量化沿FlashAttention的分块进行，利用FlashAttention已经加载了相关数据块到SRAM的事实</li>
+<li><strong>延迟隐藏</strong>: 量化操作与注意力计算在时间上重叠，减少延迟开销</li>
+<li><strong>内存布局优化</strong>: 量化后的数据使用紧凑的内存布局以最大化内存带宽利用</li>
+</ol>
+<h4 id="整体Pipeline"><a href="#整体Pipeline" class="headerlink" title="整体Pipeline"></a>整体Pipeline</h4><p><strong>Prefill阶段</strong>:</p>
+<ol>
+<li>计算$Q, K, V$</li>
+<li>Pre-RoPE量化: 对$K_{\text{raw}}$应用逐向量稠密-稀疏+NUQ量化</li>
+<li>应用RoPE到量化后的Key</li>
+<li>对$V$应用逐向量稠密-稀疏+NUQ量化</li>
+<li>对所有量化的KV应用Q-Norm</li>
+<li>使用FlashAttention-2计算注意力（在反量化后进行）</li>
+</ol>
+<p><strong>Decode阶段</strong>:</p>
+<ol>
+<li>新token的KV以FP16计算</li>
+<li>对新的KV向量应用相同的量化流程</li>
+<li>反量化缓存中的KV用于注意力计算（与FlashAttention-2融合）</li>
+</ol>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="语言建模困惑度"><a href="#语言建模困惑度" class="headerlink" title="语言建模困惑度"></a>语言建模困惑度</h3><h4 id="LLaMA-7B在WikiText-2上的量化性能"><a href="#LLaMA-7B在WikiText-2上的量化性能" class="headerlink" title="LLaMA-7B在WikiText-2上的量化性能"></a>LLaMA-7B在WikiText-2上的量化性能</h4><table>
+<thead>
+<tr>
+<th>量化方法</th>
+<th>精度</th>
+<th>PPL (2K)</th>
+<th>PPL (4K)</th>
+<th>PPL退化 (vs FP16)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16基线</td>
+<td>16-bit</td>
+<td>5.68</td>
+<td>5.72</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果</strong>: KVQuant-4bit的PPL退化仅为+0.05（4K上下文），几乎与FP16无差异。3比特的退化（+0.34）远优于其他4比特方法。2比特虽然退化较大但仍远优于RTN Int4（29.41 -&gt; 8.79）。</p>
+<h4 id="不同序列长度下的稳定性（LLaMA-7B-KVQuant-4bit）"><a href="#不同序列长度下的稳定性（LLaMA-7B-KVQuant-4bit）" class="headerlink" title="不同序列长度下的稳定性（LLaMA-7B, KVQuant-4bit）"></a>不同序列长度下的稳定性（LLaMA-7B, KVQuant-4bit）</h4><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>FP16 PPL</th>
+<th>KVQuant-4bit PPL</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K</td>
+<td>5.66</td>
+<td>5.69</td>
+<td>+0.03</td>
+</tr>
+<tr>
+<td>2K</td>
+<td>5.68</td>
+<td>5.73</td>
+<td>+0.05</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>5.72</td>
+<td>5.78</td>
+<td>+0.06</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>5.78</td>
+<td>5.84</td>
+<td>+0.06</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>5.82</td>
+<td>5.88</td>
+<td>+0.06</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>5.91</td>
+<td>5.97</td>
+<td>+0.06</td>
+</tr>
+</tbody></table>
+<p><strong>核心发现</strong>: 退化不随序列长度增长而累积——这是长上下文推理稳定性的关键保证。</p>
+<h3 id="各技术组件的消融实验"><a href="#各技术组件的消融实验" class="headerlink" title="各技术组件的消融实验"></a>各技术组件的消融实验</h3><h4 id="LLaMA-7B-WikiText-2-4-bit量化"><a href="#LLaMA-7B-WikiText-2-4-bit量化" class="headerlink" title="LLaMA-7B, WikiText-2, 4-bit量化"></a>LLaMA-7B, WikiText-2, 4-bit量化</h4><table>
+<thead>
+<tr>
+<th>技术组合</th>
+<th>PPL (4K)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>基线（Int4 per-channel）</td>
+<td>6.59</td>
+</tr>
+<tr>
+<td>+ Pre-RoPE</td>
+<td>6.12</td>
+</tr>
+<tr>
+<td>+ 逐向量稠密-稀疏</td>
+<td>5.98</td>
+</tr>
+<tr>
+<td>+ Fisher-NUQ</td>
+<td>5.86</td>
+</tr>
+<tr>
+<td>+ Q-Norm</td>
+<td><strong>5.78</strong></td>
+</tr>
+<tr>
+<td>全量 FP16</td>
+<td>5.72</td>
+</tr>
+</tbody></table>
+<p><strong>逐项增益分析</strong>:</p>
+<ul>
+<li>Pre-RoPE贡献最大: -0.47 PPL</li>
+<li>逐向量稠密-稀疏: -0.14 PPL</li>
+<li>Fisher-NUQ: -0.12 PPL</li>
+<li>Q-Norm: -0.08 PPL</li>
+</ul>
+<p>结果验证了五项技术都有独立的、可叠加的贡献。</p>
+<h3 id="长上下文基准测试"><a href="#长上下文基准测试" class="headerlink" title="长上下文基准测试"></a>长上下文基准测试</h3><h4 id="Passkey-Retrieval（针尖检索）"><a href="#Passkey-Retrieval（针尖检索）" class="headerlink" title="Passkey Retrieval（针尖检索）"></a>Passkey Retrieval（针尖检索）</h4><table>
+<thead>
+<tr>
+<th>模型&#x2F;方法</th>
+<th>32K</th>
+<th>128K</th>
+<th>512K</th>
+<th>1M</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B FP16</td>
+<td>100%</td>
+<td>100%</td>
+<td>OOM</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>LLaMA-7B + KVQuant-4bit</td>
+<td>100%</td>
+<td>100%</td>
+<td>98%</td>
+<td>94%</td>
+</tr>
+<tr>
+<td>LLaMA-7B + KVQuant-3bit</td>
+<td>100%</td>
+<td>98%</td>
+<td>92%</td>
+<td>88%</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: KVQuant-4bit在1M上下文下仍保持94%的passkey检索准确率。3-bit在512K以下表现良好。</p>
+<h4 id="LongBench性能"><a href="#LongBench性能" class="headerlink" title="LongBench性能"></a>LongBench性能</h4><table>
+<thead>
+<tr>
+<th>任务类别</th>
+<th>FP16 (4K ctx)</th>
+<th>KVQuant-4bit (16K ctx)</th>
+<th>KVQuant-4bit (32K ctx)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单文档QA</td>
+<td>28.3</td>
+<td>28.1</td>
+<td>27.8</td>
+</tr>
+<tr>
+<td>多文档QA</td>
+<td>22.6</td>
+<td>22.4</td>
+<td>22.1</td>
+</tr>
+<tr>
+<td>摘要</td>
+<td>24.7</td>
+<td>24.5</td>
+<td>24.2</td>
+</tr>
+<tr>
+<td>代码</td>
+<td>48.2</td>
+<td>47.9</td>
+<td>47.6</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 扩展到4x-8x的上下文窗口后，LongBench任务准确率下降均在1%以内。</p>
+<h3 id="内存使用与服务能力"><a href="#内存使用与服务能力" class="headerlink" title="内存使用与服务能力"></a>内存使用与服务能力</h3><h4 id="单GPU服务能力（A100-80GB）"><a href="#单GPU服务能力（A100-80GB）" class="headerlink" title="单GPU服务能力（A100-80GB）"></a>单GPU服务能力（A100-80GB）</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>方法</th>
+<th>最大上下文长度</th>
+<th>内存使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td>FP16</td>
+<td>32K</td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>KVQuant-4bit</td>
+<td>256K</td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>KVQuant-3bit</td>
+<td><strong>1M</strong></td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>KVQuant-2bit</td>
+<td>2.5M</td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>FP16</td>
+<td>16K</td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>KVQuant-4bit</td>
+<td>128K</td>
+<td>80 GB</td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>KVQuant-3bit</td>
+<td>512K</td>
+<td>80 GB</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: KVQuant-3bit使LLaMA-7B的单GPU上下文窗口从32K扩展到1M（31倍扩展）。</p>
+<h4 id="多GPU扩展（8x-A100-80GB）"><a href="#多GPU扩展（8x-A100-80GB）" class="headerlink" title="多GPU扩展（8x A100-80GB）"></a>多GPU扩展（8x A100-80GB）</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>方法</th>
+<th>最大上下文长度</th>
+<th>总内存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-7B</td>
+<td>KVQuant-3bit</td>
+<td><strong>5M</strong></td>
+<td>640 GB</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>KVQuant-2bit</td>
+<td><strong>10M</strong></td>
+<td>640 GB</td>
+</tr>
+<tr>
+<td>LLaMA-65B</td>
+<td>KVQuant-4bit</td>
+<td>500K</td>
+<td>640 GB</td>
+</tr>
+</tbody></table>
+<p><strong>核心里程碑</strong>: 在8-GPU系统上用KVQuant-2bit可以服务LLaMA-7B的10M上下文推理，这直接对应了Gemini 1.5 Pro规模的能力。</p>
+<h3 id="跨模型泛化"><a href="#跨模型泛化" class="headerlink" title="跨模型泛化"></a>跨模型泛化</h3><h4 id="KVQuant-4bit在多模型上的PPL退化"><a href="#KVQuant-4bit在多模型上的PPL退化" class="headerlink" title="KVQuant-4bit在多模型上的PPL退化"></a>KVQuant-4bit在多模型上的PPL退化</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FP16 PPL</th>
+<th>KVQuant-4bit PPL</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA-2-7B</td>
+<td>5.47</td>
+<td>5.52</td>
+<td>+0.05</td>
+</tr>
+<tr>
+<td>LLaMA-2-13B</td>
+<td>4.88</td>
+<td>4.92</td>
+<td>+0.04</td>
+</tr>
+<tr>
+<td>LLaMA-2-70B</td>
+<td>3.31</td>
+<td>3.34</td>
+<td>+0.03</td>
+</tr>
+<tr>
+<td>LLaMA-3-8B</td>
+<td>6.14</td>
+<td>6.19</td>
+<td>+0.05</td>
+</tr>
+<tr>
+<td>Mistral-7B</td>
+<td>5.25</td>
+<td>5.29</td>
+<td>+0.04</td>
+</tr>
+<tr>
+<td>LLaMA-7B</td>
+<td>5.68</td>
+<td>5.73</td>
+<td>+0.05</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 退化在所有模型上均&lt;0.05，且大模型退化更小（70B: +0.03）。</p>
+<h3 id="延迟开销"><a href="#延迟开销" class="headerlink" title="延迟开销"></a>延迟开销</h3><h4 id="FlashAttention-2集成后的量化-反量化延迟"><a href="#FlashAttention-2集成后的量化-反量化延迟" class="headerlink" title="FlashAttention-2集成后的量化&#x2F;反量化延迟"></a>FlashAttention-2集成后的量化&#x2F;反量化延迟</h4><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>FP16延迟</th>
+<th>KVQuant-4bit延迟</th>
+<th>开销</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>注意力计算 (4K seq)</td>
+<td>1.2 ms</td>
+<td>1.35 ms</td>
+<td>+12.5%</td>
+</tr>
+<tr>
+<td>注意力计算 (32K seq)</td>
+<td>9.6 ms</td>
+<td>10.1 ms</td>
+<td>+5.2%</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 量化&#x2F;反量化的延迟开销随序列长度增长而占比减小（32K时仅5.2%），因为注意力计算本身随$O(N^2)$增长而量化开销为$O(N)$。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="Pre-RoPE量化的深层原理"><a href="#Pre-RoPE量化的深层原理" class="headerlink" title="Pre-RoPE量化的深层原理"></a>Pre-RoPE量化的深层原理</h3><p>Pre-RoPE量化有效的原因可以从信号处理的角度理解：</p>
+<ol>
+<li><strong>RoPE作为通道混合器</strong>: RoPE可以被看作是一个线性的通道混合操作。将量化噪声$\epsilon$引入通道空间，然后通过RoPE混合（乘以旋转矩阵$R$），结果是：</li>
+</ol>
+<p>$$R(K + \epsilon) &#x3D; RK + R\epsilon$$</p>
+<p>噪声$R\epsilon$被”扩散”到多个通道中。而模型训练时学会的是在特定通道寻找特定模式——分散的噪声更难被模型”过滤”。</p>
+<ol start="2">
+<li><strong>反之</strong>: 先量化再旋转：</li>
+</ol>
+<p>$$R(\mathcal{Q}(K)) &#x3D; R(K + \epsilon_{\text{quant}})$$</p>
+<p>$$\text{Attention} &#x3D; \text{softmax}(Q \cdot (R(K + \epsilon_{\text{quant}}))^\top &#x2F; \sqrt{d})$$</p>
+<p>由于$R$是酉矩阵（正交 + 行列式为1），它对向量范数和内积的关系是等距的（isometric）。因此Pre-RoPE量化噪声对注意力分数的影响与Post-RoPE相比更为可控。</p>
+<h3 id="异常值分离的量化效率分析"><a href="#异常值分离的量化效率分析" class="headerlink" title="异常值分离的量化效率分析"></a>异常值分离的量化效率分析</h3><p>异常值分离的数学直观：</p>
+<p>对于向量 $\mathbf{v} \in \mathbb{R}^d$，均匀量化范围为 $[-\alpha, \alpha]$（$\alpha &#x3D; \max(|v_i|)$）。量化误差的均方为：</p>
+<p>$$\text{MSE}_{\text{uniform}} &#x3D; \frac{1}{d} \sum_i \left(\frac{2\alpha}{2^b}\right)^2 &#x3D; \frac{4\alpha^2}{d \cdot 2^{2b}}$$</p>
+<p>如果$\alpha$被异常值主导（如$\alpha &#x3D; 100$而大多数值$\approx 1$），量化误差被放大了10,000倍。</p>
+<p>逐向量+异常值分离将有效范围缩小到 $\tau \ll \alpha$：</p>
+<p>$$\text{MSE}_{\text{dense-sparse}} &#x3D; \frac{4\tau^2}{d \cdot 2^{2b}} \cdot (1-p) + 0 \cdot p$$</p>
+<p>其中$p \approx 0.01$是异常值比例。$\tau&#x2F;\alpha \approx 0.1$意味着MSE减小了100倍——远超增加1比特精度的效果（4倍MSE改善）。</p>
+<h3 id="Fisher-NUQ-vs-灵敏度无关量化"><a href="#Fisher-NUQ-vs-灵敏度无关量化" class="headerlink" title="Fisher-NUQ vs 灵敏度无关量化"></a>Fisher-NUQ vs 灵敏度无关量化</h3><p>传统量化将量化分辨率均匀分配给所有通道。但并非所有通道对模型输出同等重要：</p>
+<ul>
+<li>某些通道可能是”门控”通道，控制信息流</li>
+<li>某些通道可能是”噪声”通道，对输出几乎没有贡献</li>
+<li>某些通道的误差可能通过后续层的非线性被放大</li>
+</ul>
+<p>Fisher信息抓住了这种异质性：</p>
+<p>$$F_c &#x3D; \mathbb{E}\left[\left(\frac{\partial \mathcal{L}}{\partial z_c}\right)^2\right]$$</p>
+<p>高$F_c$的通道在损失景观中更陡峭——小扰动导致大损失变化。加权失真度量确保了这些关键通道获得更精细的量化，将有限的量化”预算”最有效地分配。</p>
+<h3 id="Q-Norm与训练中的LayerNorm的类比"><a href="#Q-Norm与训练中的LayerNorm的类比" class="headerlink" title="Q-Norm与训练中的LayerNorm的类比"></a>Q-Norm与训练中的LayerNorm的类比</h3><p>Q-Norm与Transformer中的LayerNorm有有趣的相似性：</p>
+<ul>
+<li>LayerNorm归一化中间激活：$\text{LN}(x) &#x3D; \gamma \cdot \frac{x - \mu}{\sigma} + \beta$</li>
+<li>Q-Norm归一化量化输出：$\text{QN}(\hat{x}) &#x3D; \hat{\sigma} \cdot \frac{\hat{x} - \hat{\mu}}{\hat{\sigma}} + \mu$</li>
+</ul>
+<p>两者都通过保持统计量的一致性来稳定深层网络的信号传播。Q-Norm可以被看作是在量化操作和后续网络层之间插入一个”统计量匹配”层。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-KIVI"><a href="#vs-KIVI" class="headerlink" title="vs KIVI"></a>vs KIVI</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>KVQuant</th>
+<th>KIVI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>量化位置</td>
+<td>Pre-RoPE</td>
+<td>Post-RoPE</td>
+</tr>
+<tr>
+<td>Key量化策略</td>
+<td>逐向量（per-channel）稠密-稀疏</td>
+<td>逐通道对称量化</td>
+</tr>
+<tr>
+<td>Value量化策略</td>
+<td>逐向量（per-token）</td>
+<td>逐token对称量化</td>
+</tr>
+<tr>
+<td>量化类型</td>
+<td>非均匀（k-means + Fisher）</td>
+<td>非对称（uniform with zero-point）</td>
+</tr>
+<tr>
+<td>额外技术</td>
+<td>Q-Norm, Fisher敏感度</td>
+<td>残差缓冲区, 分块量化</td>
+</tr>
+<tr>
+<td>目标比特率</td>
+<td>3-4 bit（2-bit探索）</td>
+<td>2-bit</td>
+</tr>
+<tr>
+<td>对2-bit的处理</td>
+<td>使用稠密-稀疏 + Q-Norm</td>
+<td>使用残差缓冲区</td>
+</tr>
+<tr>
+<td>校准数据需求</td>
+<td>是（Fisher信息需要校准）</td>
+<td>否（零样本）</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: KVQuant在3-4比特范围内最优（PPL退化&lt;0.1），而KIVI专注于将KV缓存推向2比特极限。两者的Pre-RoPE vs Post-RoPE选择反映了各自的侧重点——KVQuant选择精度最优的位置（Pre-RoPE），KIVI选择更工程化的位置（Post-RoPE, 不需要额外的RoPE重新应用）。</p>
+<h3 id="vs-基于校准的权重量化方法（GPTQ、AWQ）"><a href="#vs-基于校准的权重量化方法（GPTQ、AWQ）" class="headerlink" title="vs 基于校准的权重量化方法（GPTQ、AWQ）"></a>vs 基于校准的权重量化方法（GPTQ、AWQ）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GPTQ&#x2F;AWQ</th>
+<th>KVQuant</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>量化对象</td>
+<td>静态模型权重</td>
+<td>动态生成的KV缓存</td>
+</tr>
+<tr>
+<td>量化执行</td>
+<td>离线（一次）</td>
+<td>在线（每次推理）</td>
+</tr>
+<tr>
+<td>需要梯度</td>
+<td>是（Hessian&#x2F;激活分布）</td>
+<td>仅需Jacobian（Fisher信息）</td>
+</tr>
+<tr>
+<td>计算开销</td>
+<td>较大但离线</td>
+<td>必须极低（在线）</td>
+</tr>
+<tr>
+<td>量化类型</td>
+<td>逐组均匀</td>
+<td>逐向量非均匀稠密-稀疏</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: KV缓存需要在推理时在线量化，不能承受GPTQ级别的离线优化计算量。但Fisher信息可以在校准阶段（离线）预计算并存储，运行时仅需查表，这实现了离线分析的收益和在线执行的轻量级之间的平衡。</p>
+<h3 id="vs-稀疏化方法（H2O、StreamingLLM）"><a href="#vs-稀疏化方法（H2O、StreamingLLM）" class="headerlink" title="vs 稀疏化方法（H2O、StreamingLLM）"></a>vs 稀疏化方法（H2O、StreamingLLM）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>H2O &#x2F; StreamingLLM</th>
+<th>KVQuant</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>压缩维度</td>
+<td>token数量</td>
+<td>per-token存储精度</td>
+</tr>
+<tr>
+<td>是否保留所有信息</td>
+<td>否（信息永久丢失）</td>
+<td>是（信息降精度保留）</td>
+</tr>
+<tr>
+<td>关键洞察</td>
+<td>选择性注意模式</td>
+<td>数值分布结构</td>
+</tr>
+<tr>
+<td>互补组合</td>
+<td>相乘效果</td>
+<td>相乘效果</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-Fisher信息的校准数据依赖"><a href="#1-Fisher信息的校准数据依赖" class="headerlink" title="1. Fisher信息的校准数据依赖"></a>1. Fisher信息的校准数据依赖</h3><p><strong>问题</strong>: 虽然Fisher信息只需少量校准样本（128），但Fisher信息的质量和代表性依赖于校准数据集。如果校准时使用的文本域与实际推理时的输入域差异大，Fisher信息（因此量化质量）可能次优。</p>
+<p><strong>影响</strong>: 对于跨域部署（如在医学和法律文本上使用在通用文本上校准的Fisher信息），可能需要领域特定的校准。</p>
+<h3 id="2-低比特下的Q-Norm局限性"><a href="#2-低比特下的Q-Norm局限性" class="headerlink" title="2. 低比特下的Q-Norm局限性"></a>2. 低比特下的Q-Norm局限性</h3><p><strong>问题</strong>: Q-Norm是一个全局的均值和方差校正，无法纠正更高阶的分布偏移（如偏度、峰度）。在2比特下，分布偏移可能更加复杂，简单的均值&#x2F;方差匹配不足以完全恢复。</p>
+<p><strong>影响</strong>: 这也是KVQuant在2比特下退化（+3.11 PPL）显著大于4比特下（+0.05）的部分原因。更复杂的分布匹配技术可能进一步提升2比特性能。</p>
+<h3 id="3-异常值处理的工程复杂性"><a href="#3-异常值处理的工程复杂性" class="headerlink" title="3. 异常值处理的工程复杂性"></a>3. 异常值处理的工程复杂性</h3><p><strong>问题</strong>: 逐向量异常值分离引入了稀疏存储格式，这在标准GPU内存布局和CUDA kernel中处理起来比较复杂。对稀疏异常值的索引和值进行解码在硬件上不是高效的连续读取。</p>
+<p><strong>影响</strong>: 在GPU上，稀疏内存访问可能导致带宽利用率降低。实际的2倍内存节省可能转化为1.5倍的延迟改善（而非2倍）。</p>
+<h3 id="4-自定义CUDA-kernel的可移植性"><a href="#4-自定义CUDA-kernel的可移植性" class="headerlink" title="4. 自定义CUDA kernel的可移植性"></a>4. 自定义CUDA kernel的可移植性</h3><p><strong>问题</strong>: 与FlashAttention-2的集成需要使用自定义CUDA kernel。这限制了KVQuant在不同GPU架构和推理框架中的可移植性。</p>
+<p><strong>影响</strong>: 对新GPU架构（如H100、B200）或非NVIDIA硬件（AMD、Apple Silicon、TPU）的移植需要重新实现kernel。</p>
+<h3 id="5-非均匀量化的硬件不支持"><a href="#5-非均匀量化的硬件不支持" class="headerlink" title="5. 非均匀量化的硬件不支持"></a>5. 非均匀量化的硬件不支持</h3><p><strong>问题</strong>: 非均匀量化中心需要查找表（LUT）将量化索引映射回数值。这个查表操作在当前的GPU上没有专门的硬件支持，比均匀量化的简单缩放操作慢。</p>
+<p><strong>影响</strong>: 在延迟敏感的推理场景中，均匀量化可能提供更好的延迟-精度权衡（即使精度略低）。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-计算图中的”最优量化点”概念"><a href="#1-计算图中的”最优量化点”概念" class="headerlink" title="1. 计算图中的”最优量化点”概念"></a>1. 计算图中的”最优量化点”概念</h3><p><strong>洞见</strong>: Pre-RoPE vs Post-RoPE量化的发现揭示了计算图中存在”最优量化点”——在操作链中的某个特定位置进行量化产生的误差传播最小。这可以推广到其他计算图。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在量化其他pipeline时，分析每个可能量化点的误差传播特性</li>
+<li>特别关注那些会”混合”不同通道&#x2F;维度的操作（RoPE、LayerNorm、激活函数）</li>
+<li>将量化点选择作为自动架构搜索的问题</li>
+</ul>
+<h3 id="2-异常值是量化的最大公敌，但分离是通用解决方案"><a href="#2-异常值是量化的最大公敌，但分离是通用解决方案" class="headerlink" title="2. 异常值是量化的最大公敌，但分离是通用解决方案"></a>2. 异常值是量化的最大公敌，但分离是通用解决方案</h3><p><strong>洞见</strong>: 异常值分离（dense-sparse）是处理异常值对量化质量影响的通用技术——不仅适用于KV缓存，也适用于权重、激活、中间状态等其他量化目标。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在任何遇到异常值导致的量化困难时，尝试分离异常值</li>
+<li>稀疏存储格式的选择（列表、位图、块稀疏）应根据异常值的空间分布模式决定</li>
+<li>在分离的异常值比例和额外元数据开销之间寻找最优平衡</li>
+</ul>
+<h3 id="3-灵敏度感知的量化分辨率分配"><a href="#3-灵敏度感知的量化分辨率分配" class="headerlink" title="3. 灵敏度感知的量化分辨率分配"></a>3. 灵敏度感知的量化分辨率分配</h3><p><strong>洞见</strong>: 并非所有维度对模型输出同等重要。使用二阶敏感度（Fisher信息或Hessian逼近）来引导量化分辨率分配，比基于一阶幅度的方法更准确地保护关键信息。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在量化新组件时，计算Fisher信息（或Hessian对角线）进行敏感度分析</li>
+<li>对于无法承受精确二阶信息成本的场景，使用激活值的梯度范数作为代理</li>
+<li>将灵敏度图可视化以理解模型的关键路径</li>
+</ul>
+<h3 id="4-量化归一化作为通用后处理"><a href="#4-量化归一化作为通用后处理" class="headerlink" title="4. 量化归一化作为通用后处理"></a>4. 量化归一化作为通用后处理</h3><p><strong>洞见</strong>: Q-Norm纠正量化引入的分布偏移，是一种轻量级的后处理技术，可以应用于任何量化方案。它的价值在于认识到量化不仅是”舍入误差”，也是”分布变换”。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在任何量化pipeline的末尾添加统计量匹配步骤</li>
+<li>对于多层量化，考虑逐层计算并应用Q-Norm</li>
+<li>探索更高阶的分布匹配技术（如功率归一化、分位数匹配）作为Q-Norm的扩展</li>
+</ul>
+<h3 id="5-从系统目标反推技术设计"><a href="#5-从系统目标反推技术设计" class="headerlink" title="5. 从系统目标反推技术设计"></a>5. 从系统目标反推技术设计</h3><p><strong>洞见</strong>: KVQuant的成功不仅仅是技术堆叠，更在于明确了系统目标（单GPU服务1M上下文，8GPU服务10M上下文）并从目标反推所需的技术组件。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在设计优化系统时，先明确量化的端到端目标（如”1M上下文在单张GPU上”）</li>
+<li>反推每个组件需要的压缩比和精度权衡</li>
+<li>根据目标场景的约束选择技术（如在线量化需要低延迟，离线量化可以更复杂）</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>工程精度的积累效应</strong>: KVQuant的每项技术单独贡献都不算巨大（最大-0.47 PPL来自Pre-RoPE），但五项技术的叠加产生了质变（从+0.59退化到+0.05）。这证明了系统优化中”积小胜为大胜”的方法论——不要期望一个魔法技术解决所有问题。</p>
+</li>
+<li><p><strong>量化位置选择的学术价值</strong>: Pre-RoPE量化的发现不仅是一个工程技巧——它具有深层的理论意义。它提醒我们在设计优化方案时，不仅考虑”如何量化”，更要考虑”在哪里量化”。计算图中的每个中间点可能有完全不同的量化特性。</p>
+</li>
+<li><p><strong>“10M上下文”作为心理锚点</strong>: KVQuant将”10M上下文长度”设置为明确的研究目标，这产生了很大的心理影响。论文展示的在8-GPU系统上实际服务10M上下文推理的能力，直接回应了行业对Gemini 1.5 Pro级别能力的关注。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>超长文档处理</strong>: 完整的书籍、代码库、法律文档的处理现在可以在单张GPU上实现。</p>
+</li>
+<li><p><strong>多模态推理中的长上下文</strong>: 图像和视频token极快地增加序列长度。KVQuant可以使多模态LLM处理更长的视觉上下文。</p>
+</li>
+<li><p><strong>知识库检索替代</strong>: 在KVQuant的支持下，”将整个知识库塞入上下文”开始替代传统的RAG pipeline（至少在上下文长度允许范围内）。</p>
+</li>
+<li><p><strong>持续推理</strong>: 类似StreamingLLM的目标——持续运行的agent需要访问越来越长的历史——KVQuant通过压缩而非驱逐来处理这个问题。</p>
+</li>
+</ol>
+<h3 id="与其他技术的组合潜力"><a href="#与其他技术的组合潜力" class="headerlink" title="与其他技术的组合潜力"></a>与其他技术的组合潜力</h3><p>KVQuant可以与以下技术组合使用：</p>
+<ul>
+<li><strong>StreamingLLM</strong>: 保留注意力汇 + 量化KV缓存 &#x3D; 内存和token数的双重节省</li>
+<li><strong>H2O</strong>: 重击者选择哪些token保留 + KVQuant压缩这些token &#x3D; 精选+压缩</li>
+<li><strong>MiniCache</strong>: 跨层压缩 + KVQuant量化 &#x3D; 深度维度和精度维度的双重压缩</li>
+<li><strong>FlashAttention-2</strong>: 已经集成！共同实现IO优化 + 存储优化</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-Pre-RoPE量化的理论基础是否可扩展"><a href="#1-Pre-RoPE量化的理论基础是否可扩展" class="headerlink" title="1. Pre-RoPE量化的理论基础是否可扩展"></a>1. Pre-RoPE量化的理论基础是否可扩展</h3><p><strong>问题</strong>: Pre-RoPE量化的优势源于RoPE作为等距变换的性质。这个原则是否可推广到其他类型的位置编码（如ALiBi、xPos、NoPE）？是否在操作链中存在类似的”等距变换点”可以在量化中利用？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析ALiBi和xPos作为变换的性质，寻找Pre&#x2F;Post量化的最优顺序</li>
+<li>形式化”量化不变性”的概念——寻找计算图中对量化噪声不敏感的等距变换</li>
+<li>自动发现最优量化插入点</li>
+</ul>
+<p><strong>潜在影响</strong>: 构建一个通用的”量化位置选择”理论，适用于任意Transformer变体。</p>
+<h3 id="2-硬件加速非均匀量化"><a href="#2-硬件加速非均匀量化" class="headerlink" title="2. 硬件加速非均匀量化"></a>2. 硬件加速非均匀量化</h3><p><strong>问题</strong>: 如果GPU支持原生的非均匀量化（通过硬件LUT），KVQuant的推理延迟可以减少多少？是否有足够的需求推动硬件厂商增加这种支持？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在模拟器上测量原生非均匀量化的加速</li>
+<li>设计硬件友好的非均匀量化方案</li>
+<li>推动将非均匀量化纳入GPU指令集</li>
+</ul>
+<p><strong>潜在影响</strong>: 消除非均匀量化的性能劣势，使其成为默认选择。</p>
+<h3 id="3-10M上下文的质量评估"><a href="#3-10M上下文的质量评估" class="headerlink" title="3. 10M上下文的质量评估"></a>3. 10M上下文的质量评估</h3><p><strong>问题</strong>: 在10M上下文长度下，如何系统地评估模型质量？传统的困惑度和基准测试无法覆盖这种极端长度。</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计10M+级别的长上下文评估基准</li>
+<li>开发”长距离一致性”和”信息检索精度”的自动评估度量</li>
+<li>研究10M上下文下的注意力分布和失效模式</li>
+</ul>
+<p><strong>潜在影响</strong>: 量化和系统优化没有意义，如果模型在这些长度下无法正确理解内容。评估工具的开发是系统优化的前提。</p>
+<h3 id="4-动态精度适应"><a href="#4-动态精度适应" class="headerlink" title="4. 动态精度适应"></a>4. 动态精度适应</h3><p><strong>问题</strong>: 是否可以根据token的”年龄”或”重要性”动态分配量化精度？例如，最近期的token使用4比特，较旧的token使用2比特，注意力汇token使用8比特？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>设计基于token年龄的精度衰减策略</li>
+<li>与H2O的重击者概念结合——重击者高精度、非重击者低精度</li>
+<li>在量化”预算”固定的约束下自动分配精度</li>
+</ul>
+<p><strong>潜在影响</strong>: 在相同平均比特率下实现更好的质量。</p>
+<h3 id="5-量化感知的预训练"><a href="#5-量化感知的预训练" class="headerlink" title="5. 量化感知的预训练"></a>5. 量化感知的预训练</h3><p><strong>问题</strong>: 如果在预训练阶段就模拟KV缓存的量化过程，模型是否可以学会对量化噪声更加鲁棒？这与标准的知识蒸馏有何不同？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>在预训练中注入模拟量化噪声</li>
+<li>训练模型使其KV缓存天然适合量化</li>
+<li>研究量化感知训练对模型学习到的表示的影响</li>
+</ul>
+<p><strong>潜在影响</strong>: 如果在预训练阶段解决量化问题，推理时的量化质量可能接近无损。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Hooper, C., et al. (2024). KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization. NeurIPS 2024. arXiv:2401.18079</li>
+<li>Liu, Z., et al. (2024). KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache. ICML 2024. arXiv:2402.02750</li>
+<li>Xiao, G., et al. (2023). Efficient Streaming Language Models with Attention Sinks. ICLR 2024. arXiv:2309.17453</li>
+<li>Zhang, Z., et al. (2023). H2O: Heavy-Hitter Oracle for Efficient Generative Inference. NeurIPS 2023. arXiv:2306.14048</li>
+<li>Dao, T. (2023). FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning. arXiv:2307.08691</li>
+<li>Frantar, E., et al. (2023). GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers. ICLR 2023. arXiv:2210.17323</li>
+<li>Lin, J., et al. (2024). AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration. MLSys 2024. arXiv:2306.00978</li>
+<li>Su, J., et al. (2023). RoFormer: Enhanced Transformer with Rotary Position Embedding. arXiv:2104.09864</li>
+<li>Touvron, H., et al. (2023). LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/KV-Cache/" class="category-chain-item">KV-Cache</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-quantization/" class="print-no-link">#papers/quantization</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization</div>
+      <div>https://w2ongq6.github.io/2024/01/31/inference/note/KVQuant_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年1月31日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/02/01/llm/note/BitNetb158_note/" title="The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/01/29/inference/note/EAGLE_note/" title="EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty">
+                        <span class="hidden-mobile">EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

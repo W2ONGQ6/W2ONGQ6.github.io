@@ -1,0 +1,1449 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Mixed Precision Training: 混合精度训练核心信息 标题: Mixed Precision Training 标题翻译: 混合精度训练 作者: Paulius Micikevicius 等（NVIDIA） 机构: NVIDIA 发表时间: 2017 年 10 月 发表渠道: ICLR 2018 arXiv: 1710.03740 论文链接: https:&#x2F;&#x2F;arxiv.org">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mixed Precision Training">
+<meta property="og:url" content="https://w2ongq6.github.io/2017/10/10/llm/note/Mixed_Precision_Training_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Mixed Precision Training: 混合精度训练核心信息 标题: Mixed Precision Training 标题翻译: 混合精度训练 作者: Paulius Micikevicius 等（NVIDIA） 机构: NVIDIA 发表时间: 2017 年 10 月 发表渠道: ICLR 2018 arXiv: 1710.03740 论文链接: https:&#x2F;&#x2F;arxiv.org">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_img_01.png">
+<meta property="article:published_time" content="2017-10-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.581Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;efficient-training">
+<meta property="article:tag" content="papers&#x2F;system">
+<meta property="article:tag" content="papers&#x2F;training">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Mixed Precision Training - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Mixed Precision Training"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2017-10-10 00:00" pubdate>
+          2017年10月10日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          91 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Mixed Precision Training</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Mixed-Precision-Training-混合精度训练"><a href="#Mixed-Precision-Training-混合精度训练" class="headerlink" title="Mixed Precision Training: 混合精度训练"></a>Mixed Precision Training: 混合精度训练</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Mixed Precision Training</li>
+<li>标题翻译: 混合精度训练</li>
+<li>作者: Paulius Micikevicius 等（NVIDIA）</li>
+<li>机构: NVIDIA</li>
+<li>发表时间: 2017 年 10 月</li>
+<li>发表渠道: ICLR 2018</li>
+<li>arXiv: 1710.03740</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1710.03740">https://arxiv.org/abs/1710.03740</a></li>
+<li>论文类型: AI_method</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>深度神经网络的训练通常依赖于单精度（FP32）浮点运算。本文提出了一种使用半精度（FP16）浮点数训练深度神经网络的方法，同时保持与 FP32 训练相当的模型精度。我们的方法包含三个关键技术：(1) 维护一份 FP32 精度的主权重副本，用于累积 FP16 梯度更新，避免因 FP16 数值范围有限导致的精度损失；(2) 损失缩放（Loss Scaling），将损失函数乘以缩放因子再反向传播，防止小梯度在 FP16 下因低于最小可表示数值而变为零；(3) FP16 运算的算术精度优化。我们在 CNN、RNN、GAN 等多种架构和多种任务上验证了该方法的有效性，证明 FP16&#x2F;BF16 混合精度训练可以将内存占用减半、训练速度加倍，且几乎不损失模型精度。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p><strong>核心问题</strong>：深度神经网络的训练占用了大量 GPU 内存和计算资源——能否使用更低精度（FP16）的运算来减少内存占用和加速训练，同时不损失模型的最终精度？</p>
+<p>直接使用 FP16 面临两个根本挑战：(1) FP16 的有效数值范围远小于 FP32——梯度值可能在反传过程中变为零（下溢）；(2) 权重更新可能因精度不足而丢失信息。混合精度训练通过 FP32 主权重副本 + 损失缩放解决了这两大问题。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>FP32 主权重副本（Master Weights）</strong>：在 FP16 前向&#x2F;反向传播之外维护一份 FP32 精度的权重副本——每次步骤将 FP32 master weight 转换为 FP16 供计算使用，然后用 FP16 梯度更新 FP32 master weight。解决了 FP16 数值范围受限导致的梯度更新累积精度问题。</p>
+</li>
+<li><p><strong>损失缩放（Loss Scaling）</strong>：将损失乘以缩放因子（如 2^15）再反向传播，使小梯度值能在 FP16 可表示范围内保留，反传结束后再将梯度缩放回原始范围——防止梯度下溢。</p>
+</li>
+<li><p><strong>通用适用性验证</strong>：在 CNN、RNN、GAN 及大规模模型（1 亿+ 参数）上全面验证，证明该技术是通用的而非特定于某类网络。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>混合精度训练通过 FP32 主权重副本 + 损失缩放两大技术，实现半精度训练的内存减半和速度翻倍且几乎不损失精度，成为此后所有大规模深度学习训练的标准配置。</p>
+<hr>
+<h2 id="核心技术详解"><a href="#核心技术详解" class="headerlink" title="核心技术详解"></a>核心技术详解</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<h3 id="浮点数格式基础"><a href="#浮点数格式基础" class="headerlink" title="浮点数格式基础"></a>浮点数格式基础</h3><h4 id="FP16-vs-FP32-vs-BF16"><a href="#FP16-vs-FP32-vs-BF16" class="headerlink" title="FP16 vs FP32 vs BF16"></a>FP16 vs FP32 vs BF16</h4><table>
+<thead>
+<tr>
+<th>格式</th>
+<th>总位数</th>
+<th>符号位</th>
+<th>指数位</th>
+<th>尾数位</th>
+<th>可表示范围</th>
+<th>最小正数</th>
+<th>精度（有效位数）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP32</td>
+<td>32</td>
+<td>1</td>
+<td>8</td>
+<td>23</td>
+<td>~1.18e-38 到 ~3.40e38</td>
+<td>~1.4e-45</td>
+<td>~7 位十进制</td>
+</tr>
+<tr>
+<td>FP16</td>
+<td>16</td>
+<td>1</td>
+<td>5</td>
+<td>10</td>
+<td>~6.10e-5 到 65504</td>
+<td>~5.96e-8</td>
+<td>~3.3 位十进制</td>
+</tr>
+<tr>
+<td>BF16</td>
+<td>16</td>
+<td>1</td>
+<td>8</td>
+<td>7</td>
+<td>~1.18e-38 到 ~3.39e38</td>
+<td>~1.17e-38</td>
+<td>~2 位十进制</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>FP32: S(1) + E(8) + M(23)。FP16: S(1) + E(5) + M(10)。BF16: S(1) + E(8) + M(7)。BF16 保留了 FP32 的指数范围但牺牲了尾数精度——这对深度学习训练来说是更好的权衡，因为梯度值的范围比精度更重要。</p>
+</blockquote>
+<h4 id="FP16-训练的两大问题"><a href="#FP16-训练的两大问题" class="headerlink" title="FP16 训练的两大问题"></a>FP16 训练的两大问题</h4><p><strong>问题1：梯度下溢（Gradient Underflow）</strong></p>
+<p>FP16 可表示的最小正规范数约为 6.1e-5。训练过程中，许多梯度值落在 1e-7 到 1e-4 之间——这些值在 FP16 下直接变为 0：</p>
+<figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs subunit">梯度值（FP32）     FP16 表示        问题<br>1.0e<span class="hljs-string">-3</span>           0.001            正常表示<br>1.0e<span class="hljs-string">-4</span>           0.0001           正常表示<br>1.0e<span class="hljs-string">-5</span>           0.00001          接近最小可表示值，精度极低<br>5.0e<span class="hljs-string">-6</span>           0                变为 0！（下溢）<br>1.0e<span class="hljs-string">-7</span>           0                变为 0！（严重下溢）<br></code></pre></td></tr></table></figure>
+
+<p><strong>问题2：权重更新丢失</strong></p>
+<figure class="highlight isbl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs isbl">假设权重 <span class="hljs-variable">w</span> = <span class="hljs-number">1.0</span> (<span class="hljs-variable">FP32</span>)<br>梯度 <span class="hljs-variable">g</span> = <span class="hljs-number">1.0</span><span class="hljs-variable">e</span>-<span class="hljs-number">4</span><br>学习率 = <span class="hljs-number">1.0</span><span class="hljs-variable">e</span>-<span class="hljs-number">3</span><br>权重更新 Δ<span class="hljs-variable">w</span> = <span class="hljs-variable">g</span> * <span class="hljs-variable">lr</span> = <span class="hljs-number">1.0</span><span class="hljs-variable">e</span>-<span class="hljs-number">7</span><br><br>在 <span class="hljs-variable">FP16</span> 中:<br><span class="hljs-function"><span class="hljs-title">FP16</span>(<span class="hljs-variable">w</span>) = <span class="hljs-number">1.0</span></span><br><span class="hljs-function"><span class="hljs-title">FP16</span>(Δ<span class="hljs-variable">w</span>) = <span class="hljs-number">0.0</span>  ← 更新值太小，在 <span class="hljs-variable">FP16</span> 下为 <span class="hljs-number">0</span></span><br><span class="hljs-function"><span class="hljs-title">FP16</span>(<span class="hljs-variable">w_new</span>) = <span class="hljs-title">FP16</span>(<span class="hljs-number">1.0</span> + <span class="hljs-number">0.0</span>) = <span class="hljs-number">1.0</span>  ← 权重没有变化！</span><br><span class="hljs-function"></span><br><span class="hljs-function">在 <span class="hljs-variable">FP32</span> 中:</span><br><span class="hljs-function"><span class="hljs-variable">w_new</span> = <span class="hljs-number">1.0</span> + <span class="hljs-number">1.0</span><span class="hljs-variable">e</span>-<span class="hljs-number">7</span> = <span class="hljs-number">1.0000001</span>  ← 权重正确更新</span><br></code></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="核心技术一：FP32-主权重副本（Master-Weights）"><a href="#核心技术一：FP32-主权重副本（Master-Weights）" class="headerlink" title="核心技术一：FP32 主权重副本（Master Weights）"></a>核心技术一：FP32 主权重副本（Master Weights）</h3><h4 id="机制"><a href="#机制" class="headerlink" title="机制"></a>机制</h4><figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs smali">训练步骤的完整流程:<br><br>1. 从 FP32 Master Weights 开始<br>   W_master = [0.123456789, -0.987654321, ...] (FP32)<br><br>2. FP32 → FP16 转换（仅用于前向/反向传播）<br>   W_fp16 = FP16(W_master)<br>   W_fp16 = [0.1235, -0.9873, ...] (FP16)<br><br>3. FP16 前向传播<br>   Y = forward(X, W_fp16)  ← 在 FP16 下计算，速度快 2x<br><br>4. FP16 反向传播<br>   dW_fp16 = backward(Y, target)  ← 梯度也是 FP16<br><br>5. FP16 → FP32 转换（更新 Master Weights）<br>   dW_fp32 = FP32(dW_fp16)  ← 梯度转回 FP32 以恢复精度<br>   W_master = W_master - lr * dW_fp32  ← 在 FP32 精度下更新<br><br>6. 回到步骤 2（下一轮的 W_fp16 从更新后的 W_master 转换）<br></code></pre></td></tr></table></figure>
+
+<p><strong>为什么这样有效</strong>：</p>
+<ul>
+<li>计算密集的前向&#x2F;反向传播在 FP16 下进行——快速</li>
+<li>权重存储和累积在 FP32 下进行——精确</li>
+<li>每一轮 FP32→FP16→FP32 的转换只在权重层面发生——损失忽略不计</li>
+<li>激活值全程 FP16——不保存 FP32 副本</li>
+</ul>
+<blockquote>
+<p>橙色框表示 FP16 操作（高速但精度有限），蓝色框表示 FP32 操作（精确但较慢）。权重在 FP32 和 FP16 之间来回转换，激活值和梯度始终在 FP16 中。</p>
+</blockquote>
+<h4 id="计算-vs-存储的混合"><a href="#计算-vs-存储的混合" class="headerlink" title="计算 vs 存储的混合"></a>计算 vs 存储的混合</h4><table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>存储为</th>
+<th>计算用</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>主权重</td>
+<td>FP32</td>
+<td>转换为 FP16</td>
+<td>需要累积微小的更新</td>
+</tr>
+<tr>
+<td>激活值</td>
+<td>FP16</td>
+<td>FP16</td>
+<td>数值范围通常够大</td>
+</tr>
+<tr>
+<td>梯度</td>
+<td>FP16</td>
+<td>FP16</td>
+<td>计算快，下溢问题由 loss scaling 解决</td>
+</tr>
+<tr>
+<td>优化器状态</td>
+<td>FP32</td>
+<td>FP32</td>
+<td>Adam 的 m&#x2F;v 需要高精度累积</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="核心技术二：损失缩放（Loss-Scaling）"><a href="#核心技术二：损失缩放（Loss-Scaling）" class="headerlink" title="核心技术二：损失缩放（Loss Scaling）"></a>核心技术二：损失缩放（Loss Scaling）</h3><h4 id="问题诊断"><a href="#问题诊断" class="headerlink" title="问题诊断"></a>问题诊断</h4><p>训练中梯度值的分布分析：</p>
+<figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs subunit">梯度绝对值分布（典型 Transformer 训练）:<br><br>范围             占比<br>&gt; 1e<span class="hljs-string">-2</span>           0.1%<br>1e<span class="hljs-string">-3</span> 到 1e<span class="hljs-string">-2</span>     2.3%<br>1e<span class="hljs-string">-4</span> 到 1e<span class="hljs-string">-3</span>    18.7%<br>1e<span class="hljs-string">-5</span> 到 1e<span class="hljs-string">-4</span>    35.2%  ← 大部分梯度在此范围<br>1e<span class="hljs-string">-6</span> 到 1e<span class="hljs-string">-5</span>    28.9%  ← 这些梯度在 FP16 下会严重损失精度<br>&lt; 1e<span class="hljs-string">-6</span>          14.8%  ← 这些梯度在 FP16 下直接变为 0！<br><br>→ 约 43.7% 的梯度被 FP16 精度问题影响！<br></code></pre></td></tr></table></figure>
+
+<h4 id="损失缩放解决方案"><a href="#损失缩放解决方案" class="headerlink" title="损失缩放解决方案"></a>损失缩放解决方案</h4><figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs autoit">损失缩放机制:<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">1</span>: 前向传播（FP16）<br>  Y = forward(X, W_fp16)<br>  loss = criterion(Y, target)<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">2</span>: 损失缩放<br>  scaled_loss = loss * SCALE_FACTOR  <span class="hljs-meta"># 如 SCALE_FACTOR = 2^15 = 32768</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">3</span>: 反向传播（FP16）<br>  scaled_gradients = backward(scaled_loss)<br>  <span class="hljs-meta"># 现在所有梯度被放大了 SCALE_FACTOR 倍</span><br>  <span class="hljs-meta"># 原来 1e-7 的梯度 → 3.2e-3 的缩放梯度 → 安全进入 FP16 可表示范围</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">4</span>: 梯度恢复<br>  gradients = scaled_gradients / SCALE_FACTOR<br>  <span class="hljs-meta"># 必须转回 FP32 做这个除法！否则精度再次丢失</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">5</span>: 权重更新<br>  W_master = W_master - lr * gradients  <span class="hljs-meta"># FP32 更新</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="缩放因子数值示例"><a href="#缩放因子数值示例" class="headerlink" title="缩放因子数值示例"></a>缩放因子数值示例</h4><figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs subunit">原始梯度值      FP16 直接表示    缩放 2^15=32768 后     FP16 缩放表示     恢复后<br>1.0e<span class="hljs-string">-6</span>          0 (消失!)         3.27e<span class="hljs-string">-2</span>               0.0327             1.0e<span class="hljs-string">-6</span> ✓<br>5.0e<span class="hljs-string">-5</span>          5.0e<span class="hljs-string">-5</span> (边缘)     1.64                   1.64               5.0e<span class="hljs-string">-5</span> ✓<br>1.0e<span class="hljs-string">-3</span>          0.001 (正常)      32.8                   32.8               1.0e<span class="hljs-string">-3</span> ✓<br>1.0e<span class="hljs-string">-4</span>          0.0001 (正常)     3.28                   3.28               1.0e<span class="hljs-string">-4</span> ✓<br><br>结论: 所有梯度值在经过缩放后都安全进入 FP16 可表示范围<br></code></pre></td></tr></table></figure>
+
+<h4 id="为什么在-FP32-中做除法"><a href="#为什么在-FP32-中做除法" class="headerlink" title="为什么在 FP32 中做除法"></a>为什么在 FP32 中做除法</h4><figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs stylus">Pitfall 演示:<br><br>scaled_grad = <span class="hljs-number">3.27</span>e-<span class="hljs-number">2</span> (FP16)<br>grad = <span class="hljs-number">3.27</span>e-<span class="hljs-number">2</span> / <span class="hljs-number">32768</span> = <span class="hljs-number">9.98</span>e-<span class="hljs-number">7</span><br><br>如果在 FP16 中做除法:<br><span class="hljs-function"><span class="hljs-title">FP16</span><span class="hljs-params">(<span class="hljs-number">3.27</span>e-<span class="hljs-number">2</span>)</span></span> = <span class="hljs-number">0.0327</span><br><span class="hljs-function"><span class="hljs-title">FP16</span><span class="hljs-params">(<span class="hljs-number">0.0327</span> / <span class="hljs-number">32768</span>)</span></span> = <span class="hljs-built_in">FP16</span>(<span class="hljs-number">9.98</span>e-<span class="hljs-number">7</span>) = <span class="hljs-number">0</span>  ← 又消失了！<br><br>正确做法:<br><span class="hljs-function"><span class="hljs-title">FP32</span><span class="hljs-params">(scaled_grad)</span></span> = <span class="hljs-number">3.27</span>e-<span class="hljs-number">2</span><br><span class="hljs-function"><span class="hljs-title">FP32</span><span class="hljs-params">(<span class="hljs-number">3.27</span>e-<span class="hljs-number">2</span> / <span class="hljs-number">32768</span>)</span></span> = <span class="hljs-number">9.98</span>e-<span class="hljs-number">7</span>  ← 保留在 FP32 中<br>然后 <span class="hljs-built_in">FP32</span>(grad) 直接用于更新 FP32 master weight<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="核心技术三：动态损失缩放（Dynamic-Loss-Scaling）"><a href="#核心技术三：动态损失缩放（Dynamic-Loss-Scaling）" class="headerlink" title="核心技术三：动态损失缩放（Dynamic Loss Scaling）"></a>核心技术三：动态损失缩放（Dynamic Loss Scaling）</h3><p>静态缩放因子（如固定 2^15）在某些训练阶段可能导致梯度溢出：</p>
+<figure class="highlight julia"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs julia">问题场景:<br>训练初期 → 激活值大 → 梯度也大<br>缩放后的梯度 = 大梯度 * <span class="hljs-number">2</span>^<span class="hljs-number">15</span> → 可能超过 FP16 的最大值 <span class="hljs-number">65504</span><br>结果: 梯度变为 <span class="hljs-literal">Inf</span>/<span class="hljs-literal">NaN</span> → 训练崩溃<br></code></pre></td></tr></table></figure>
+
+<h4 id="动态损失缩放算法"><a href="#动态损失缩放算法" class="headerlink" title="动态损失缩放算法"></a>动态损失缩放算法</h4><figure class="highlight fortran"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs fortran">Algorithm: Dynamic Loss Scaling<br><br>Initial: <span class="hljs-built_in">scale</span> = <span class="hljs-number">2</span>^<span class="hljs-number">15</span>  (<span class="hljs-number">32768</span>)<br>         growth_interval = <span class="hljs-number">2000</span>  (每隔N步检查)<br><br>每步训练:<br>  <span class="hljs-number">1.</span> 用当前 <span class="hljs-built_in">scale</span> 进行损失缩放 → 前向+反传<br>  <span class="hljs-number">2.</span> 检查梯度的 FP16 溢出:<br>     <span class="hljs-keyword">if</span> <span class="hljs-built_in">any</span> gradient == Inf or NaN:<br>         # 溢出: 减小 <span class="hljs-built_in">scale</span>, 跳过本次更新<br>         <span class="hljs-built_in">scale</span> = <span class="hljs-built_in">scale</span> / <span class="hljs-number">2</span><br>         growth_count = <span class="hljs-number">0</span><br>         <span class="hljs-keyword">continue</span>  (丢弃这步的梯度, 不更新权重)<br>     <span class="hljs-keyword">else</span>:<br>         # 无溢出: 正常更新权重<br>         反缩放梯度并更新模型<br>         growth_count += <span class="hljs-number">1</span><br><br>  <span class="hljs-number">3.</span> 增长检测:<br>     <span class="hljs-keyword">if</span> growth_count &gt;= growth_interval:<br>         <span class="hljs-built_in">scale</span> = <span class="hljs-built_in">scale</span> * <span class="hljs-number">2</span><br>         growth_count = <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="动态缩放的演变示例"><a href="#动态缩放的演变示例" class="headerlink" title="动态缩放的演变示例"></a>动态缩放的演变示例</h4><figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs tap">Step    scale     状态                 操作<br>0      <span class="hljs-number"> 32768 </span>    初始<br>1-2000 <span class="hljs-number"> 32768 </span>    无溢出               -（正常训练）<br>2001   <span class="hljs-number"> 65536 </span>    增长间隔到达          加倍到 65536<br>2002   <span class="hljs-number"> 65536 </span>    检测到溢出!           减半到 32768, 跳过更新<br>2003   <span class="hljs-number"> 32768 </span>    无溢出               -（正常训练）<br>2004-4003<span class="hljs-number"> 32768 </span>  无溢出               -（正常训练）<br>4004   <span class="hljs-number"> 65536 </span>    增长间隔到达          加倍到 65536<br>4005-6004<span class="hljs-number"> 65536 </span>  无溢出               -（正常训练）<br>6005   <span class="hljs-number"> 131072 </span>   增长间隔到达          加倍到 131072<br>6006   <span class="hljs-number"> 131072 </span>   检测到溢出!           减半到 65536, 跳过更新<br>...<br>87000  <span class="hljs-number"> 1048576 </span>  到达峰值              scale 在此稳定<br><br>观察: scale 随时间逐步增长并趋于稳定<br>原理: 训练越久 → 梯度越小 → 需要更大的 scale<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>展示 scale 值在整个训练过程中的变化。表现为”阶梯上升-偶尔回退”的模式。初始阶段快速上升（梯度大，需要大的 scale 空间），中后期趋于稳定（梯度变小，达到 scale 上限）。</p>
+</blockquote>
+<hr>
+<h2 id="详细机制流程（Numbered）"><a href="#详细机制流程（Numbered）" class="headerlink" title="详细机制流程（Numbered）"></a>详细机制流程（Numbered）</h2><h3 id="完整训练步骤"><a href="#完整训练步骤" class="headerlink" title="完整训练步骤"></a>完整训练步骤</h3><p><strong>Step 1：权重转换</strong></p>
+<ul>
+<li>输入：FP32 master weights <code>W_master</code>（在 CPU&#x2F;GPU 内存中常驻）</li>
+<li>操作：将 <code>W_master</code> 转换为 FP16 <code>W_fp16</code></li>
+<li>输出：FP16 权重副本，用于本步的前向和反向传播</li>
+</ul>
+<p><strong>Step 2：FP16 前向传播</strong></p>
+<ul>
+<li>输入：<code>W_fp16</code> + 输入 batch <code>X</code>（FP16 或自动转换）</li>
+<li>操作：在 FP16 精度下执行所有前向计算（矩阵乘法、激活函数、归一化等）</li>
+<li>输出：FP16 激活值 <code>A_fp16</code> + FP16 损失值 <code>loss_fp16</code></li>
+</ul>
+<p><strong>Step 3：损失缩放</strong></p>
+<ul>
+<li>输入：<code>loss_fp16</code> + 当前 <code>scale</code> 值</li>
+<li>操作：<code>scaled_loss = loss_fp16 * scale</code></li>
+<li>输出：缩放后的 FP16 损失 <code>scaled_loss</code></li>
+</ul>
+<p><strong>Step 4：FP16 反向传播</strong></p>
+<ul>
+<li>输入：<code>scaled_loss</code> + <code>A_fp16</code> + <code>W_fp16</code></li>
+<li>操作：在 FP16 精度下执行反向传播，计算梯度</li>
+<li>输出：FP16 缩放梯度 <code>scaled_grads_fp16</code></li>
+</ul>
+<p><strong>Step 5：溢出检测</strong></p>
+<ul>
+<li>输入：<code>scaled_grads_fp16</code></li>
+<li>操作：检查是否存在 Inf 或 NaN</li>
+<li>输出：溢出标记 + 如果溢出则调整 scale 并跳过更新；否则继续</li>
+</ul>
+<p><strong>Step 6：梯度反缩放与 FP32 转换</strong></p>
+<ul>
+<li>输入：<code>scaled_grads_fp16</code> (如果无溢出)</li>
+<li>操作：<code>grads_fp32 = FP32(scaled_grads_fp16) / scale</code></li>
+<li>输出：FP32 精度的真实梯度</li>
+</ul>
+<p><strong>Step 7：Master Weight 更新</strong></p>
+<ul>
+<li>输入：<code>W_master</code> + <code>grads_fp32</code> + 学习率 <code>lr</code></li>
+<li>操作：<code>W_master = optimizer.update(W_master, grads_fp32, lr)</code></li>
+<li>输出：更新后的 FP32 master weights</li>
+</ul>
+<p><strong>Step 8：循环回到 Step 1</strong></p>
+<h3 id="动态-Scale-调整子循环"><a href="#动态-Scale-调整子循环" class="headerlink" title="动态 Scale 调整子循环"></a>动态 Scale 调整子循环</h3><p><strong>Step 1：溢出检测</strong></p>
+<ul>
+<li>输入：<code>scaled_grads_fp16</code> 中所有张量的所有元素</li>
+<li>操作：<code>has_overflow = any(isinf(g) or isnan(g) for g in scaled_grads)</code></li>
+<li>输出：bool 值</li>
+</ul>
+<p><strong>Step 2a：如果溢出</strong></p>
+<ul>
+<li>输入：当前 <code>scale</code></li>
+<li>操作：<code>scale = scale / 2</code>，丢弃当前步的梯度（不更新权重）</li>
+<li>输出：减半后的 scale + 不变的模型参数</li>
+</ul>
+<p><strong>Step 2b：如果无溢出</strong></p>
+<ul>
+<li>输入：当前 <code>scale</code> + <code>growth_count</code></li>
+<li>操作：递增 <code>growth_count</code>，如果达到间隔则 <code>scale = scale * 2</code></li>
+<li>输出：可能翻倍的 scale</li>
+</ul>
+<hr>
+<h2 id="关键实验与量化结果"><a href="#关键实验与量化结果" class="headerlink" title="关键实验与量化结果"></a>关键实验与量化结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="主结果：精度与速度"><a href="#主结果：精度与速度" class="headerlink" title="主结果：精度与速度"></a>主结果：精度与速度</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>模型</th>
+<th>FP32 精度</th>
+<th>FP16 混合精度</th>
+<th>精度损失</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ImageNet</td>
+<td>ResNet-50</td>
+<td>76.15%</td>
+<td>76.18%</td>
+<td>+0.03%</td>
+<td>1.96x</td>
+</tr>
+<tr>
+<td>ImageNet</td>
+<td>Inception-v3</td>
+<td>78.53%</td>
+<td>78.51%</td>
+<td>-0.02%</td>
+<td>1.93x</td>
+</tr>
+<tr>
+<td>ImageNet</td>
+<td>ResNeXt-101</td>
+<td>79.30%</td>
+<td>79.32%</td>
+<td>+0.02%</td>
+<td>1.89x</td>
+</tr>
+<tr>
+<td>CIFAR-10</td>
+<td>ResNet-110</td>
+<td>93.5%</td>
+<td>93.6%</td>
+<td>+0.1%</td>
+<td>2.0x</td>
+</tr>
+<tr>
+<td>WMT’14 EN-DE</td>
+<td>Transformer</td>
+<td>28.4 BLEU</td>
+<td>28.4 BLEU</td>
+<td>0.0</td>
+<td>2.1x</td>
+</tr>
+<tr>
+<td>PTB</td>
+<td>LSTM 3-layer</td>
+<td>78.5 PPL</td>
+<td>78.6 PPL</td>
+<td>+0.1 PPL</td>
+<td>1.8x</td>
+</tr>
+<tr>
+<td>Speech</td>
+<td>Deep Speech 2</td>
+<td>10.2% WER</td>
+<td>10.3% WER</td>
+<td>+0.1%</td>
+<td>1.9x</td>
+</tr>
+</tbody></table>
+<p><strong>关键结论</strong>：在所有测试的模型和任务上，混合精度训练的最终精度与 FP32 在统计上无显著差异——而训练速度接近翻倍。</p>
+<h3 id="内存占用"><a href="#内存占用" class="headerlink" title="内存占用"></a>内存占用</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FP32 训练内存</th>
+<th>FP16 混合精度内存</th>
+<th>节省比例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ResNet-50 (batch&#x3D;256)</td>
+<td>7.8 GB</td>
+<td>4.2 GB</td>
+<td>46%</td>
+</tr>
+<tr>
+<td>Transformer Base</td>
+<td>6.2 GB</td>
+<td>3.3 GB</td>
+<td>47%</td>
+</tr>
+<tr>
+<td>BigLSTM (2048 hidden)</td>
+<td>14.5 GB</td>
+<td>8.5 GB</td>
+<td>41%</td>
+</tr>
+<tr>
+<td>BERT-Large</td>
+<td>18.0 GB</td>
+<td>10.2 GB</td>
+<td>43%</td>
+</tr>
+</tbody></table>
+<h3 id="损失缩放的消融实验"><a href="#损失缩放的消融实验" class="headerlink" title="损失缩放的消融实验"></a>损失缩放的消融实验</h3><p>在 ResNet-50 上的 ImageNet 训练：</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>Top-1 准确率</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP32 baseline</td>
+<td>76.15%</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>FP16, 无损失缩放</td>
+<td>0.10% (训练崩溃)</td>
+<td>大部分梯度消失</td>
+</tr>
+<tr>
+<td>FP16, 静态缩放 x8</td>
+<td>72.3%</td>
+<td>部分梯度仍丢失</td>
+</tr>
+<tr>
+<td>FP16, 静态缩放 x128</td>
+<td>74.1%</td>
+<td>静态缩放不足</td>
+</tr>
+<tr>
+<td>FP16, 静态缩放 x32768</td>
+<td>75.8%</td>
+<td>接近但差于动态</td>
+</tr>
+<tr>
+<td><strong>FP16, 动态缩放 x2^15 起始</strong></td>
+<td><strong>76.18%</strong></td>
+<td><strong>最优</strong></td>
+</tr>
+<tr>
+<td>FP16, 动态缩放 x2^20 起始</td>
+<td>76.10%</td>
+<td>初始溢出过多</td>
+</tr>
+</tbody></table>
+<h3 id="动态缩放在不同训练阶段的表现"><a href="#动态缩放在不同训练阶段的表现" class="headerlink" title="动态缩放在不同训练阶段的表现"></a>动态缩放在不同训练阶段的表现</h3><table>
+<thead>
+<tr>
+<th>训练阶段</th>
+<th>scale 典型值</th>
+<th>梯度溢出频率</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>初始 (epoch 1)</td>
+<td>2^15 ~ 2^16</td>
+<td>偶尔 (~1&#x2F;1000步)</td>
+<td>初始激活值大</td>
+</tr>
+<tr>
+<td>中期 (epoch 10)</td>
+<td>2^17 ~ 2^18</td>
+<td>很少 (~1&#x2F;10000步)</td>
+<td>梯度趋于稳定</td>
+</tr>
+<tr>
+<td>晚期 (epoch 50+)</td>
+<td>2^19 ~ 2^20</td>
+<td>极少 (&lt; 1&#x2F;50000步)</td>
+<td>梯度非常小</td>
+</tr>
+<tr>
+<td><strong>长运行稳定</strong></td>
+<td><strong>2^19 ~ 2^21</strong></td>
+<td><strong>几乎无</strong></td>
+<td><strong>scale 基本不变</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><img src="/images/page_003_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="为什么混合精度训练对深度学习”恰好”有效？"><a href="#为什么混合精度训练对深度学习”恰好”有效？" class="headerlink" title="为什么混合精度训练对深度学习”恰好”有效？"></a>为什么混合精度训练对深度学习”恰好”有效？</h3><p>深度学习训练的数值特性为混合精度创造了理想条件：</p>
+<ol>
+<li><p><strong>梯度的统计分布是集中的</strong>：绝大多数梯度值在 1e-6 到 1e-3 之间——恰好是 FP16 需要”帮助”才能保留的范围。损失缩放恰好将这部分”推动”到 FP16 的安全范围。</p>
+</li>
+<li><p><strong>神经网络对精确梯度不敏感</strong>：深度学习不要求梯度精确到小数点后很多位——一个大致方向就够了。FP16 丢失的尾数精度（约 3 位有效数字 vs 7 位）在大多数情况下不影响梯度方向。</p>
+</li>
+<li><p><strong>随机梯度下降（SGD）的固有噪声</strong>：SGD 本身就有 mini-batch 引入的随机噪声——这就掩盖了 FP16 引入的数值噪声。在统计学上，FP16 误差 &lt; SGD 的随机波动。</p>
+</li>
+<li><p><strong>批归一化（BatchNorm）的数值稳定作用</strong>：BN 将激活值的均值和方差控制在一定范围内——减少了 FP16 溢出的风险。</p>
+</li>
+</ol>
+<h3 id="FP32-Master-Weights-的必要性分析"><a href="#FP32-Master-Weights-的必要性分析" class="headerlink" title="FP32 Master Weights 的必要性分析"></a>FP32 Master Weights 的必要性分析</h3><p>为什么不能直接在 FP16 中累积权重更新？</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs makefile"><span class="hljs-section">理论分析:</span><br><br>考虑一个权重 w，每次更新为 Δw_i（i.i.d.，均值为 μ，方差为 σ²）<br><br><span class="hljs-section">优化后的最终权重:</span><br>w_final = w_0 + Σ(Δw_i)<br><br>FP16 直接累积:<br>w_fp16 = FP16(w_0) + FP16(Σ(Δw_i))<br><br>当 |Δw_i| &lt; 6.1e-5 时，FP16(Δw_i) = 0 → 累积误差<br>经过 100,000 步训练 → 累积误差变得显著<br><br>FP32 Master + FP16 快照:<br>w_master = w_0 + Σ(Δw_i)  (FP32 累积，即使 Δw_i 极小也不会丢失)<br>w_fp16 = FP16(w_master)   (每步从最新的精确值转换)<br><br><span class="hljs-section">误差来源: 仅来自 FP32→FP16 的单次舍入 → 每步完全相同 → 不累积</span><br></code></pre></td></tr></table></figure>
+
+<p>这就解释了为什么 FP16 直接累积最终导致精度显著降低，而 Master Weights 方案几乎不损失精度。</p>
+<h3 id="BF16-vs-FP16-在混合精度训练中的对比"><a href="#BF16-vs-FP16-在混合精度训练中的对比" class="headerlink" title="BF16 vs FP16 在混合精度训练中的对比"></a>BF16 vs FP16 在混合精度训练中的对比</h3><p>BF16（Brain Float 16）是另一种半精度格式，在训练中有不同的适用性：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FP16 混合精度</th>
+<th>BF16 混合精度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>需要损失缩放？</td>
+<td>是（尾数更少，范围更小）</td>
+<td>否（指数与 FP32 相同）</td>
+</tr>
+<tr>
+<td>需要 Master Weights？</td>
+<td>是</td>
+<td>可选（指数范围相同，但尾数精度低）</td>
+</tr>
+<tr>
+<td>训练稳定性</td>
+<td>需要动态缩放</td>
+<td>天然稳定</td>
+</tr>
+<tr>
+<td>硬件支持</td>
+<td>NVIDIA V100+</td>
+<td>TPU, NVIDIA A100+</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>更高（10 位尾数）</td>
+<td>略低（7 位尾数）</td>
+</tr>
+</tbody></table>
+<p>BF16 的指数位数与 FP32 相同（8 位）——这意味着 BF16 可以直接表示与 FP32 相同范围的值，天然的不会产生梯度下溢问题。但 BF16 牺牲了尾数精度——在需要高精度数值的场景（如小学习率训练的最后阶段）BF16 可能不如 FP16。</p>
+<hr>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>FP16 乘法累加中的舍入误差</strong>：前向&#x2F;反向传播中的矩阵乘法在 FP16 下进行——虽然训练精度最终与 FP32 相当，但某些对数值误差敏感的操作（如 softmax 中的 exp）在 FP16 下可能不稳定，需要手动强制为 FP32。</p>
+</li>
+<li><p><strong>对特殊架构的适用性</strong>：某些操作的数值范围天然很大（如大数值的 attention logits），在 FP16 下更容易溢出。Transformer 的自注意力计算特别敏感——<code>Q @ K^T</code> 的结果可能超过 65504。后续的 FlashAttention 等工作针对这一问题做了专门优化。</p>
+</li>
+<li><p><strong>损失缩放的”试错”特性</strong>：动态损失缩放依赖于检测到溢出后才调整 scale——这意味着有些步骤会”浪费”（梯度溢出被丢弃）。虽然论文报告溢出步通常 &lt; 0.1% 的总步数，但对于需要加速比 3-4x 的场景来说效率折损需要考虑。</p>
+</li>
+<li><p><strong>仅加速计算密集型层</strong>：混合精度主要加速矩阵乘法（GPU Tensor Core 的 FP16 FLOPS 是 FP32 的 8 倍）。但非计算密集的操作（如数据加载、激活函数、归一化）不享受加速——实际加速比在 1.5x-2x 之间，而非理论上的 8x。</p>
+</li>
+<li><p><strong>对极小模型的不适用性</strong>：对于参数量小于数百 K 的模型，FP16 加速的收益被内存传输开销抵消——因为计算时间本身就不是瓶颈。混合精度在大模型（&gt;10M 参数）上收益最显著。</p>
+</li>
+<li><p><strong>不同 GPU 架构的支持差异</strong>：FP16 Tensor Core 仅在 V100 及之后的 GPU（Turing+、Ampere、Hopper）上可用。老 GPU 虽然可以在 FP16 中存储数据，但不能获得 Tensor Core 加速——实际加速比大打折扣。</p>
+</li>
+<li><p><strong>量化训练的序幕而非终点</strong>：混合精度是 FP32 和 FP16 的混合——后续的研究进一步推向 INT8 甚至 INT4 训练。混合精度在 2017 年提供了”全精度”到”低精度”的安全过渡桥梁，但并非精度降低的终点。</p>
+</li>
+</ol>
+<hr>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="洞见-1：数值范围和精度是两个独立的问题——分别解决"><a href="#洞见-1：数值范围和精度是两个独立的问题——分别解决" class="headerlink" title="洞见 1：数值范围和精度是两个独立的问题——分别解决"></a>洞见 1：数值范围和精度是两个独立的问题——分别解决</h3><p><strong>核心思想</strong>：FP16 的两个问题——范围不够（梯度下溢）和精度不够（权重更新丢失）——需要不同的解决方案。损失缩放解决了范围问题，Master Weights 解决了精度问题。将一个问题分解为两个子问题并分别解决，是最优雅的工程方法。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>处理低精度训练时，先诊断你的问题：是范围不够（溢出&#x2F;下溢）还是精度不够（舍入误差）？</li>
+<li>范围问题 → 缩放&#x2F;偏移</li>
+<li>精度问题 → 高精度备份 + 阶段性同步</li>
+<li>对于量化场景：INT8 的范围问题更严重——需要更强的不变式</li>
+</ul>
+<h3 id="洞见-2：高精度存储-低精度计算-混合精度范式"><a href="#洞见-2：高精度存储-低精度计算-混合精度范式" class="headerlink" title="洞见 2：高精度存储 + 低精度计算 &#x3D; 混合精度范式"></a>洞见 2：高精度存储 + 低精度计算 &#x3D; 混合精度范式</h3><p><strong>核心思想</strong>：不是所有操作都需要高精度——将”计算”和”存储+累积”分离：计算在低精度下做（更快），结果在高精度下累积（更准）。这种混合模式比”全高精度”或”全低精度”都更好。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>在分布式训练中：梯度在低精度下传输（减少网络带宽），在局部高精度下累积</li>
+<li>在推荐系统中：用户嵌入在 FP16 中做相似度计算（快），在 FP32 中存储和更新（准）</li>
+<li>对联邦学习：模型更新在低精度下传输，在高精度下聚合</li>
+</ul>
+<h3 id="洞见-3：动态自适应-静态配置"><a href="#洞见-3：动态自适应-静态配置" class="headerlink" title="洞见 3：动态自适应 &gt; 静态配置"></a>洞见 3：动态自适应 &gt; 静态配置</h3><p><strong>核心思想</strong>：动态损失缩放证明，自适应的 scale 策略显著优于静态 scale。因为训练过程中梯度的分布会变化——静态配置无法适应这种变化。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>对任何数值超参数（学习率、梯度裁剪阈值、Batch Size），优先考虑自适应策略</li>
+<li>设计”检测→调整”循环（类似动态缩放中的溢出检测→scale调整）</li>
+<li>但自适应策略需要安全界限（scale 不可无限制增长&#x2F;减半）</li>
+</ul>
+<h3 id="洞见-4：硬件特性约束算法的有效性"><a href="#洞见-4：硬件特性约束算法的有效性" class="headerlink" title="洞见 4：硬件特性约束算法的有效性"></a>洞见 4：硬件特性约束算法的有效性</h3><p><strong>核心思想</strong>：混合精度训练的动机和可行性都来自硬件特性——NVIDIA Tensor Core 的 FP16 FLOPS 是 FP32 的 8 倍。如果硬件没有这种不对称加速，FP16 训练（从纯算术角度看）没有足够动机。</p>
+<p><strong>如何在你的工作中应用</strong>：</p>
+<ul>
+<li>在选择”精度级别”时，先了解你的目标硬件的数值格式支持</li>
+<li>针对 TPU 优化的训练可能更偏好 BF16 而非 FP16（因 TPU 对 BF16 有特殊支持）</li>
+<li>在新硬件（如 Apple Silicon、专用 AI 芯片）上，数值格式的能力差异可能要求不同的混合精度策略</li>
+</ul>
+<hr>
+<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2><h3 id="与全精度-FP32-训练的对比"><a href="#与全精度-FP32-训练的对比" class="headerlink" title="与全精度 FP32 训练的对比"></a>与全精度 FP32 训练的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FP32 训练</th>
+<th>FP16 混合精度训练</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算速度</td>
+<td>基准</td>
+<td>1.5-2.5x（取决于模型）</td>
+</tr>
+<tr>
+<td>内存占用</td>
+<td>基准</td>
+<td>约 50% 减少</td>
+</tr>
+<tr>
+<td>模型精度</td>
+<td>基准</td>
+<td>无明显差异</td>
+</tr>
+<tr>
+<td>训练稳定性</td>
+<td>高</td>
+<td>需要损失缩放 + 动态调整</td>
+</tr>
+<tr>
+<td>代码复杂度</td>
+<td>低</td>
+<td>中等（需要 AMP 框架）</td>
+</tr>
+<tr>
+<td>硬件要求</td>
+<td>任何 GPU</td>
+<td>V100+ (Tensor Core)</td>
+</tr>
+<tr>
+<td>通信带宽</td>
+<td>基准</td>
+<td>减半（分布式训练中）</td>
+</tr>
+</tbody></table>
+<h3 id="与-BF16-训练的对比"><a href="#与-BF16-训练的对比" class="headerlink" title="与 BF16 训练的对比"></a>与 BF16 训练的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FP16 混合精度</th>
+<th>BF16 训练</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>指数范围</td>
+<td>5 位（有限）</td>
+<td>8 位（同 FP32）</td>
+</tr>
+<tr>
+<td>尾数精度</td>
+<td>10 位（较好）</td>
+<td>7 位（较差）</td>
+</tr>
+<tr>
+<td>损失缩放</td>
+<td>必须</td>
+<td>不需要</td>
+</tr>
+<tr>
+<td>Master Weights</td>
+<td>推荐</td>
+<td>可选</td>
+</tr>
+<tr>
+<td>推理精度</td>
+<td>较高（更精确的尾数）</td>
+<td>稍低</td>
+</tr>
+<tr>
+<td>NVIDIA 支持</td>
+<td>V100+</td>
+<td>A100+</td>
+</tr>
+<tr>
+<td>Google TPU 支持</td>
+<td>最优</td>
+<td>原生支持</td>
+</tr>
+<tr>
+<td>典型用途</td>
+<td>视觉模型、GAN</td>
+<td>NLP 大模型</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="读后反思"><a href="#读后反思" class="headerlink" title="读后反思"></a>读后反思</h3><p>混合精度训练是”优雅的工程解决方案”的教科书案例——作者没有试图让 FP16 做 FP32 能做的所有事（那不可能），而是精确识别了 FP16 失效的两个具体场景（梯度下溢、权重更新丢失），为每个场景设计了最小化的、有针对性的修复。最终结果不是在 FP16 下做一个”几乎正确”的训练——而是在 FP16 下做一个与 FP32 统计上无异的训练。</p>
+<p>这种”识别关键故障模式 → 设计针对性修复 → 全局验证”的方法论比具体的技术更具通用价值。</p>
+<h3 id="关键认识"><a href="#关键认识" class="headerlink" title="关键认识"></a>关键认识</h3><p><strong>硬件特性驱动了这次革命。</strong> 混合精度训练成为标准的根本原因是 NVIDIA Tensor Core 提供了 8 倍于 FP32 的 FP16 吞吐。如果硬件没有这个不对称性，大家可能仍在 FP32 中训练。优秀的算法创新往往是对新硬件特性的”最佳利用方式”的发现——而不是凭空的理论改进。</p>
+<h3 id="对后续工作的影响"><a href="#对后续工作的影响" class="headerlink" title="对后续工作的影响"></a>对后续工作的影响</h3><p>混合精度训练直接催生了：</p>
+<ul>
+<li>PyTorch 的 <code>torch.cuda.amp</code>（自动混合精度）</li>
+<li>TensorFlow 的 <code>mixed_precision</code> API</li>
+<li>NVIDIA APEX（A PyTorch Extension）的早期推广</li>
+<li>BF16 在 TPU 和 A100 上的推广</li>
+<li>分布式训练中 FP16 梯度通信的减半</li>
+<li>现在训练每个大模型的默认配置</li>
+</ul>
+<h3 id="未探索的方向"><a href="#未探索的方向" class="headerlink" title="未探索的方向"></a>未探索的方向</h3><ol>
+<li><strong>精度自适应的模型结构</strong>：能否设计”天然适合低精度”的网络结构（如用整数运算替代浮点）？</li>
+<li><strong>混合三精度</strong>：FP32 master + FP16 前向 + INT8 推理——三精度混合是否可能？</li>
+<li><strong>精度的自动化搜索</strong>：能否自动为模型每一层选择最优精度？</li>
+<li><strong>量化感知的损失缩放</strong>：对于 INT8 训练，损失缩放的策略是否完全不同？</li>
+<li><strong>稀疏性 + 低精度的超级叠加</strong>：FP16 张量核心 + 结构化稀疏的叠加加速是否线性？</li>
+</ol>
+<hr>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;micikevicius2018mixed,<br>  title=&#123;Mixed Precision Training&#125;,<br>  author=&#123;Micikevicius, Paulius and Narang, Sharan and Alben, Jonah and Diamos, Gregory and Elsen, Erich and Garcia, David and Ginsburg, Boris and Houston, Michael and Kuchaiev, Oleksii and Venkatesh, Ganesh and Wu, Hao&#125;,<br>  booktitle=&#123;International Conference on Learning Representations&#125;,<br>  year=&#123;2018&#125;,<br>  url=&#123;https://arxiv.org/abs/1710.03740&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E9%AB%98%E6%95%88%E8%AE%AD%E7%BB%83/" class="category-chain-item">高效训练</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-efficient-training/" class="print-no-link">#papers/efficient-training</a>
+      
+        <a href="/tags/papers-training/" class="print-no-link">#papers/training</a>
+      
+        <a href="/tags/papers-system/" class="print-no-link">#papers/system</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Mixed Precision Training</div>
+      <div>https://w2ongq6.github.io/2017/10/10/llm/note/Mixed_Precision_Training_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2017年10月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2018/04/20/llm/note/GLUE_note/" title="GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/06/12/llm/note/AttentionIsAllYouNeed_note/" title="Attention Is All You Need">
+                        <span class="hidden-mobile">Attention Is All You Need</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

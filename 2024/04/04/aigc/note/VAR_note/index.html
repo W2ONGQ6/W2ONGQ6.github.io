@@ -1,0 +1,1308 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="VAR: 通过下一尺度预测实现可扩展的图像生成核心信息 标题: Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction 标题翻译: 视觉自回归建模：通过下一尺度预测实现可扩展的图像生成 作者: Keyu Tian, Yi Jiang, Zehuan Yuan, Bingyue Peng,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/04/04/aigc/note/VAR_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="VAR: 通过下一尺度预测实现可扩展的图像生成核心信息 标题: Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction 标题翻译: 视觉自回归建模：通过下一尺度预测实现可扩展的图像生成 作者: Keyu Tian, Yi Jiang, Zehuan Yuan, Bingyue Peng,">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_img_01.jpeg">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_img_01.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_img_06.png">
+<meta property="article:published_time" content="2024-04-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:26.719Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;autoregressive">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta property="article:tag" content="papers&#x2F;image-generation">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-04-04 00:00" pubdate>
+          2024年4月4日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          66 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="VAR-通过下一尺度预测实现可扩展的图像生成"><a href="#VAR-通过下一尺度预测实现可扩展的图像生成" class="headerlink" title="VAR: 通过下一尺度预测实现可扩展的图像生成"></a>VAR: 通过下一尺度预测实现可扩展的图像生成</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction</li>
+<li>标题翻译: 视觉自回归建模：通过下一尺度预测实现可扩展的图像生成</li>
+<li>作者: Keyu Tian, Yi Jiang, Zehuan Yuan, Bingyue Peng, Liwei Wang</li>
+<li>机构: Peking University &#x2F; ByteDance</li>
+<li>发表时间: 2024 年 4 月</li>
+<li>发表渠道: NeurIPS 2024 (Best Paper Award)</li>
+<li>arXiv: 2404.02905</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.02905">https://arxiv.org/abs/2404.02905</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/FoundationVision/VAR">https://github.com/FoundationVision/VAR</a></li>
+<li>论文类型: 图像生成模型（自回归 + 多尺度）</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>传统的自回归模型将图像标记化为 2D 网格，并采用光栅扫描顺序的”下一标记预测”范式进行生成。我们发现这种光栅扫描预测范式在视觉生成中存在根本性缺陷。本文提出了视觉自回归建模（VAR），将图像的自回归学习重新定义为”下一尺度预测”：编码器将图像量化为多尺度标记图，自回归过程从 1x1 标记图开始，逐尺度扩展分辨率。在 ImageNet 256x256 基准上，VAR 显著改进了自回归基线，FID 从 18.65 降至 1.73，Inception Score 达 350.2，推理速度提升约 20 倍。VAR 展现出清晰的幂律缩放规律——测试损失与模型规模线性相关（相关系数 -0.998）。VAR 进一步展示了图像修补、外推和编辑等零样本任务泛化能力。这些结果表明 VAR 初步统一了自回归模型与扩散模型各自的优势。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-“下一尺度预测”替代”下一-token-预测”"><a href="#1-“下一尺度预测”替代”下一-token-预测”" class="headerlink" title="1. “下一尺度预测”替代”下一 token 预测”"></a>1. “下一尺度预测”替代”下一 token 预测”</h3><p><strong>核心思想</strong>: 颠覆传统自回归模型的”逐像素&#x2F;逐 token 光栅扫描”生成范式。取而代之，VAR 按”从粗到细”的多尺度顺序生成——先预测 1x1 的全局结构 token 图，然后 2x2，4x4，8x8……逐级上采样。每个尺度上的所有 token 并行生成，不同尺度之间自回归。</p>
+<p><strong>为什么重要</strong>: 这是自回归模型在图像生成领域自 DALL-E 以来最重要的概念突破。光栅扫描顺序（从左到右、从上到下）是人造的计算便利而非自然的视觉组织方式。VAR 的下一尺度预测符合人类视觉感知的自然逻辑——先看到大局，再看细节。更重要的是，它从根本上解决了光栅扫描自回归的三个本质缺陷：(1) 计算效率低（逐 token 串行）；(2) 数学结构不符合图像的空间特性；(3) 无法形成清晰的 scaling law。</p>
+<h3 id="2-自回归模型首次超越扩散模型-DiT"><a href="#2-自回归模型首次超越扩散模型-DiT" class="headerlink" title="2. 自回归模型首次超越扩散模型 (DiT)"></a>2. 自回归模型首次超越扩散模型 (DiT)</h3><p><strong>核心思想</strong>: 在 ImageNet 256x256 基准上，VAR 以 FID 1.73 全面超越当时最先进的扩散 Transformer（DiT）。这是自 DALL-E 转向扩散模型以来，自回归方法首次在主流图像生成基准上击败扩散模型。</p>
+<p><strong>为什么重要</strong>: 自 2022 年以来，扩散模型在图像生成领域几乎建立了绝对统治。VAR 证明了：自回归模型在图像生成上的劣势并非范式固有——而是此前”逐 token 顺序生成”这一错误的任务定义的副产品。这为视觉生成研究重新开启了”自回归 vs 扩散”的竞争路线，意义深远。</p>
+<h3 id="3-清晰的幂律-Scaling-Law"><a href="#3-清晰的幂律-Scaling-Law" class="headerlink" title="3. 清晰的幂律 Scaling Law"></a>3. 清晰的幂律 Scaling Law</h3><p><strong>核心思想</strong>: VAR 呈现出类似 LLM 的幂律缩放规律——测试损失与模型规模之间呈高度线性相关（皮尔逊相关系数接近 -0.998）。这意味着更大模型能带来可预测的性能提升。</p>
+<p><strong>为什么重要</strong>: 这是自回归范式在图像生成中至今最强有力的论证。scaling law 不仅是”更好”的保证，更是”可预测地更好”的承诺——在模型设计和资源分配中具有实际的指导价值。对比之下，扩散模型虽然也有 scaling law 但不如 VAR 清晰和稳定。</p>
+<h3 id="4-多尺度-VQ-VAE-标记化"><a href="#4-多尺度-VQ-VAE-标记化" class="headerlink" title="4. 多尺度 VQ-VAE 标记化"></a>4. 多尺度 VQ-VAE 标记化</h3><p><strong>核心思想</strong>: 将图像编码为金字塔形的多分辨率离散 token 图——从 1x1（一个 token 表示全局信息）到 KxK（大量 token 表示最高频细节）。每个尺度上的 token 来自一个共享的码本。</p>
+<p><strong>为什么重要</strong>: 多尺度编码自动实现了信息的层级分化——粗尺度 token 编码全局结构（整体布局、大致颜色），细尺度 token 编码局部细节（纹理、边缘）。这为”下一尺度预测”提供了自然的训练信号和生成目标。</p>
+<h3 id="5-20-倍推理加速"><a href="#5-20-倍推理加速" class="headerlink" title="5. 20 倍推理加速"></a>5. 20 倍推理加速</h3><p><strong>核心思想</strong>: 相比传统的逐 token 自回归（需要生成 N 个 token 的 N 步），VAR 只需生成 K 个尺度（K &lt;&lt; N），且每个尺度内所有 token 并行生成。在 ImageNet 256x256 上实现了约 20 倍的推理加速。</p>
+<p><strong>为什么重要</strong>: 自回归模型最大的实践缺陷（慢）被大幅缓解。VAR 在保持自回归建模灵活性的同时，将推理速度提升到了与扩散模型可比的水平。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>VAR 通过将图像自回归从”下一 token 预测”重新定义为”下一尺度预测”，首次证明纯自回归模型在图像生成质量（FID 1.73）、推理速度（20x 加速）和可扩展性（scaling law）上全面超越扩散 Transformer，为视觉生成开辟了自回归文艺复兴的新路线。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>传统自回归模型在图像生成中面临三个根本性缺陷：</p>
+<ol>
+<li><strong>数学结构不当</strong>: 图像是 2D 结构，光栅扫描把 2D 信息折叠成 1D 序列——破坏了空间邻接关系和拓扑结构</li>
+<li><strong>计算效率低下</strong>: N 个 token 需要 N 步串行生成（N&#x3D;256 对于 16x16 token 网格），而扩散模型只需固定数量的去噪步</li>
+<li><strong>Scaling Law 缺失</strong>: 光栅扫描自回归在图像上没有展现出类似 LLM 的稳定 scaling law——增加参数量后性能提升不可预测</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>图像的结构是层次的而非序列的</strong>。从全局结构到局部细节的从粗到细的生成顺序，比从左到右的光栅扫描顺序，更符合视觉信息的自然组织规律。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练与评估数据"><a href="#训练与评估数据" class="headerlink" title="训练与评估数据"></a>训练与评估数据</h3><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>任务</th>
+<th>分辨率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ImageNet-1K</td>
+<td>类别条件生成</td>
+<td>256x256</td>
+</tr>
+<tr>
+<td>ImageNet-1K</td>
+<td>类别条件生成</td>
+<td>512x512</td>
+</tr>
+<tr>
+<td>MS-COCO</td>
+<td>文生图</td>
+<td>256x256</td>
+</tr>
+</tbody></table>
+<h3 id="主要指标"><a href="#主要指标" class="headerlink" title="主要指标"></a>主要指标</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FID</td>
+<td>Frechet Inception Distance（越低越好）</td>
+</tr>
+<tr>
+<td>IS</td>
+<td>Inception Score（越高越好）</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>生成图像的精度</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>生成图像的多样性</td>
+</tr>
+<tr>
+<td>Throughput</td>
+<td>推理吞吐量（token&#x2F;s）</td>
+</tr>
+</tbody></table>
+<h3 id="关键设计选择"><a href="#关键设计选择" class="headerlink" title="关键设计选择"></a>关键设计选择</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>设计考量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>尺度数量</td>
+<td>10 (1x1 到 16x16)</td>
+<td>覆盖从全局到局部的完整层级</td>
+</tr>
+<tr>
+<td>码本大小</td>
+<td>4096</td>
+<td>在表达能力和预测难度间平衡</td>
+</tr>
+<tr>
+<td>Transformer 层数</td>
+<td>12-36</td>
+<td>不同模型规模</td>
+</tr>
+<tr>
+<td>位置编码</td>
+<td>2D 绝对位置编码</td>
+<td>每尺度独立编码</td>
+</tr>
+<tr>
+<td>生成顺序</td>
+<td>从 1x1 开始，每次翻倍</td>
+<td>指数增长，覆盖快</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>VAR 的核心循环：</p>
+<ol>
+<li>多尺度 VQ-VAE 将图像编码为 K 个尺度的 token 图</li>
+<li>GPT 风格的 Transformer 以自回归方式预测下一尺度的所有 token</li>
+<li>从 1x1 开始，生成 2x2、4x4…直到最终分辨率</li>
+</ol>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><img src="/images/page_001_img_01.jpeg" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤 1: 多尺度 VQ-VAE 编码</strong></p>
+<p><strong>步骤输入</strong>: RGB 图像 X（H x W x 3）<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>编码器生成多尺度特征：f_1 (低分辨率), f_2, …, f_K（原始分辨率）</li>
+<li>在每个尺度上，通过码本查询将连续特征量化为离散 token</li>
+<li>Token 图 r_k 的分辨率为 h_k x w_k，尺度 k 从 1 到 K 递增</li>
+<li>例：K&#x3D;5 时，r_1&#x3D;1x1, r_2&#x3D;2x2, r_3&#x3D;4x4, r_4&#x3D;8x8, r_5&#x3D;16x16</li>
+<li>共享码本 V&#x3D;[v_1,…,v_4096]，所有尺度使用同一码本<br><strong>步骤输出</strong>: K 个尺度的离散 token 图，共 N&#x3D;sum(h_k * w_k) 个 token</li>
+</ul>
+<p><strong>步骤 2: 自回归 Transformer 训练（下一尺度预测）</strong></p>
+<p><strong>步骤输入</strong>: 前 k-1 个尺度的 token 序列 [r_1, r_2, …, r_{k-1}] + 条件信号<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>将前 k-1 个尺度的所有 token 展开为序列</li>
+<li>添加尺度嵌入和位置嵌入</li>
+<li>Transformer 处理序列，输出每个位置的预测分布</li>
+<li>训练目标：预测尺度 k 的所有 token——p(r_k | r_1, r_2, …, r_{k-1})</li>
+<li>损失函数：交叉熵（所有尺度 k token 的负对数似然之和）<br><strong>步骤输出</strong>: 训练好的自回归 Transformer<br><strong>步骤训练目标</strong>: L &#x3D; -E[sum_k sum_i log p(r_{k,i} | r_{&lt;k})]</li>
+</ul>
+<p><strong>步骤 3: 推理生成</strong></p>
+<p><strong>步骤输入</strong>: 条件信号（类别标签或文本）+ 起始 token<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>k &#x3D; 1：从起始 token 开始，生成 1x1 的全局 token 图（1 个 token）</li>
+<li>k &#x3D; 2：基于 1x1 token 图，生成 2x2 token 图（4 个 token，并行预测）</li>
+<li>k &#x3D; 3：基于 1x1+2x2，生成 4x4 token 图（16 个 token，并行预测）</li>
+<li>…继续直到最终尺度</li>
+<li>每个尺度内的所有 token 通过一次前向传播并行生成<br><strong>步骤输出</strong>: K 个尺度的 token 图，VQ-VAE 解码器重建图像</li>
+</ul>
+<h3 id="与光栅扫描自回归的本质区别"><a href="#与光栅扫描自回归的本质区别" class="headerlink" title="与光栅扫描自回归的本质区别"></a>与光栅扫描自回归的本质区别</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>光栅扫描自回归</th>
+<th>VAR（下一尺度预测）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成顺序</td>
+<td>1D 线性（左-&gt;右，上-&gt;下）</td>
+<td>2D 层级（粗-&gt;细）</td>
+</tr>
+<tr>
+<td>每步步长</td>
+<td>1 个 token</td>
+<td>整个尺度的所有 token</td>
+</tr>
+<tr>
+<td>总步数</td>
+<td>N（如 256 步）</td>
+<td>K（如 5-10 步）</td>
+</tr>
+<tr>
+<td>全局一致性</td>
+<td>弱（逐 token 没有全局视野）</td>
+<td>强（每个尺度看到所有粗尺度信息）</td>
+</tr>
+<tr>
+<td>局部一致性</td>
+<td>强（相邻 token 在生成顺序上也相邻）</td>
+<td>中（尺度边界可能不连续）</td>
+</tr>
+<tr>
+<td>并行度</td>
+<td>0（纯串行）</td>
+<td>高（尺度内全并行）</td>
+</tr>
+</tbody></table>
+<h3 id="多尺度-VQ-VAE-的层级信息分化"><a href="#多尺度-VQ-VAE-的层级信息分化" class="headerlink" title="多尺度 VQ-VAE 的层级信息分化"></a>多尺度 VQ-VAE 的层级信息分化</h3><p>VAR 的多尺度编码自然地迫使信息按粒度分化：</p>
+<ul>
+<li><strong>1x1 尺度</strong>: 全局布局——Sky+Ground 的大致比例、主色调</li>
+<li><strong>2x2 尺度</strong>: 基本分区——天空&#x2F;地面&#x2F;物体的粗略边界</li>
+<li><strong>4x4 尺度</strong>: 物体形状——猫的轮廓、桌子的位置</li>
+<li><strong>8x8 尺度</strong>: 语义细节——猫的耳朵、眼睛位置</li>
+<li><strong>16x16 尺度</strong>: 纹理细节——毛发的纹理、光影变化</li>
+</ul>
+<p>这种自然分化使得”下一尺度预测”的任务清晰且梯度信号良好。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="ImageNet-256x256-类别条件生成"><a href="#ImageNet-256x256-类别条件生成" class="headerlink" title="ImageNet 256x256 类别条件生成"></a>ImageNet 256x256 类别条件生成</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>类型</th>
+<th>FID</th>
+<th>IS</th>
+<th>Precision</th>
+<th>Recall</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BigGAN</td>
+<td>GAN</td>
+<td>6.95</td>
+<td>224.5</td>
+<td>0.88</td>
+<td>0.40</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_002_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果解读</strong>: VAR-d36 的 FID 1.73 超越所有扩散方法（包括 MDT 的 1.79）。更重要的是，从 d16 到 d36，FID 持续单调下降——验证了 scaling law 的稳定性。</p>
+<h3 id="Scaling-Law-验证"><a href="#Scaling-Law-验证" class="headerlink" title="Scaling Law 验证"></a>Scaling Law 验证</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数量</th>
+<th>测试损失</th>
+<th>FID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VAR-d16</td>
+<td>~310M</td>
+<td>最高</td>
+<td>3.30</td>
+</tr>
+<tr>
+<td>VAR-d20</td>
+<td>~600M</td>
+<td>中</td>
+<td>2.80</td>
+</tr>
+<tr>
+<td>VAR-d24</td>
+<td>~1.0B</td>
+<td>较低</td>
+<td>2.38</td>
+</tr>
+<tr>
+<td>VAR-d30</td>
+<td>~1.5B</td>
+<td>更低</td>
+<td>1.92</td>
+</tr>
+<tr>
+<td>VAR-d36</td>
+<td>~2.0B</td>
+<td>最低</td>
+<td>1.73</td>
+</tr>
+</tbody></table>
+<p>测试损失与模型规模的皮尔逊相关系数：<strong>-0.998</strong>（极度接近完美线性）</p>
+<h3 id="推理速度"><a href="#推理速度" class="headerlink" title="推理速度"></a>推理速度</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>生成步数</th>
+<th>吞吐量 (相对)</th>
+<th>FID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>光栅扫描自回归 (VQGAN)</td>
+<td>256</td>
+<td>1x</td>
+<td>18.65</td>
+</tr>
+<tr>
+<td>VAR</td>
+<td>~10</td>
+<td><strong>~20x</strong></td>
+<td>1.73</td>
+</tr>
+<tr>
+<td>DiT-XL&#x2F;2</td>
+<td>250</td>
+<td>&lt;1x</td>
+<td>2.27</td>
+</tr>
+<tr>
+<td>ADM</td>
+<td>1000</td>
+<td>&lt;&lt;1x</td>
+<td>10.94</td>
+</tr>
+</tbody></table>
+<h3 id="零样本任务泛化"><a href="#零样本任务泛化" class="headerlink" title="零样本任务泛化"></a>零样本任务泛化</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>是否需要训练</th>
+<th>表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>图像修补 (inpainting)</td>
+<td>否</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>图像外推 (outpainting)</td>
+<td>否</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>类条件编辑</td>
+<td>否</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>分辨率外推 (训练 256，推理 512)</td>
+<td>需微调</td>
+<td>可行</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_002_img_06.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么”下一尺度预测”比”光栅扫描”更合理"><a href="#为什么”下一尺度预测”比”光栅扫描”更合理" class="headerlink" title="为什么”下一尺度预测”比”光栅扫描”更合理"></a>为什么”下一尺度预测”比”光栅扫描”更合理</h3><p>光栅扫描自回归的根本问题不是”自回归范式不好”，而是”1D 顺序不适合 2D 数据”：</p>
+<ol>
+<li><p><strong>因果关系的错误假设</strong>: 光栅扫描假设 token_{i, j} 天然依赖于 token_{&lt;i, &lt;j}（所有上方和左边的 token）。但实际上，token 的视觉依赖是 2D 对称的——一个像素对上下左右邻居的依赖是平等的。</p>
+</li>
+<li><p><strong>信息缺口问题</strong>: 光栅扫描下，生成 token_{i, j} 时，右侧和下方的 token 不存在——但对左侧上方 token 的上下文理解严重不完整。</p>
+</li>
+<li><p><strong>全局一致性的丧失</strong>: 逐 token 生成没有全局规划——第一个 token 不可能知道整张图会变成什么样子。而 VAR 的 1x1 尺度直接决定了全局结构。</p>
+</li>
+</ol>
+<h3 id="Scaling-Law-为什么能在-VAR-上出现而在光栅扫描上不出现"><a href="#Scaling-Law-为什么能在-VAR-上出现而在光栅扫描上不出现" class="headerlink" title="Scaling Law 为什么能在 VAR 上出现而在光栅扫描上不出现"></a>Scaling Law 为什么能在 VAR 上出现而在光栅扫描上不出现</h3><p>这是一个重要的理论问题。可能的解释：</p>
+<ol>
+<li><p><strong>任务粒度的均匀性</strong>: 下一尺度预测的每个预测任务难度相对均匀——都是从低分辨率到高分辨率的”上采样”。而光栅扫描下，生成第 1 个 token 和生成第 256 个 token 的难度和信息量差异巨大。</p>
+</li>
+<li><p><strong>梯度的可预测性</strong>: VAR 的损失曲线在每个尺度上都是平滑的，因为每个尺度的预测误差与模型容量之间存在稳定的单调关系。</p>
+</li>
+<li><p><strong>信息结构的层级性</strong>: 视觉世界天然是层级的，而 VAR 完美匹配了这一特性。</p>
+</li>
+</ol>
+<h3 id="VAR-的”伪自回归”争议"><a href="#VAR-的”伪自回归”争议" class="headerlink" title="VAR 的”伪自回归”争议"></a>VAR 的”伪自回归”争议</h3><p>一种批评是 VAR 不是”真正的自回归模型”——因为它在每个尺度内使用并行的双向注意力，只有跨尺度才是自回归的。但这恰恰是 VAR 的智慧：</p>
+<ul>
+<li>尺度内并行 &#x3D; 承认图像 tokens 在同等尺度上没有天然的因果顺序</li>
+<li>尺度间自回归 &#x3D; 承认从粗到细存在天然的因果依赖</li>
+</ul>
+<p>VAR 可以被视为”块级自回归”（block-wise autoregression）——每个尺度是一个块。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-光栅扫描自回归（VQGAN-DALL-E）"><a href="#vs-光栅扫描自回归（VQGAN-DALL-E）" class="headerlink" title="vs 光栅扫描自回归（VQGAN, DALL-E）"></a>vs 光栅扫描自回归（VQGAN, DALL-E）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>光栅扫描</th>
+<th>VAR</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成顺序</td>
+<td>1D 线性</td>
+<td>2D 层级</td>
+</tr>
+<tr>
+<td>步数</td>
+<td>N (256+)</td>
+<td>K (~10)</td>
+</tr>
+<tr>
+<td>FID</td>
+<td>18.65</td>
+<td>1.73</td>
+</tr>
+<tr>
+<td>速度</td>
+<td>1x</td>
+<td>20x</td>
+</tr>
+<tr>
+<td>Scaling Law</td>
+<td>无</td>
+<td>有（r&#x3D;-0.998）</td>
+</tr>
+<tr>
+<td>全局一致性</td>
+<td>弱</td>
+<td>强</td>
+</tr>
+</tbody></table>
+<h3 id="vs-扩散模型（DiT-LDM）"><a href="#vs-扩散模型（DiT-LDM）" class="headerlink" title="vs 扩散模型（DiT, LDM）"></a>vs 扩散模型（DiT, LDM）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>扩散模型</th>
+<th>VAR</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成范式</td>
+<td>迭代去噪</td>
+<td>多尺度自回归</td>
+</tr>
+<tr>
+<td>理论基础</td>
+<td>随机微分方程&#x2F;概率流</td>
+<td>自回归概率分解</td>
+</tr>
+<tr>
+<td>条件控制</td>
+<td>灵活</td>
+<td>需要适配</td>
+</tr>
+<tr>
+<td>采样步数</td>
+<td>20-250</td>
+<td>~10</td>
+</tr>
+<tr>
+<td>最佳 FID</td>
+<td>1.79 (MDT)</td>
+<td>1.73</td>
+</tr>
+<tr>
+<td>Scaling Law</td>
+<td>有（但不如 VAR 清晰）</td>
+<td>清晰</td>
+</tr>
+</tbody></table>
+<h3 id="VAR-的独特优势"><a href="#VAR-的独特优势" class="headerlink" title="VAR 的独特优势"></a>VAR 的独特优势</h3><p>VAR 相比扩散模型有几个自回归范式的天然优势：</p>
+<ol>
+<li><strong>似然可计算</strong>: 可以准确计算每张图像的似然值（NLL），这对 OOD 检测、异常检测等任务很重要</li>
+<li><strong>灵活的任务适配</strong>: 自回归模型天然适合补全、编辑等条件生成任务——只需修改 prefix</li>
+<li><strong>与 LLM 的统一</strong>: VAR 可以与 LLM 共享基础架构和基础设施，为多模态统一模型提供道路</li>
+</ol>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-高分辨率下的尺度增长"><a href="#1-高分辨率下的尺度增长" class="headerlink" title="1. 高分辨率下的尺度增长"></a>1. 高分辨率下的尺度增长</h3><p><strong>问题</strong>: 当目标分辨率很高时（如 1024x1024），需要的尺度数量为 K&#x3D;log2(1024) ≈ 10，但最高尺度（32x32 token 图&#x3D;1024 token）突然变得非常大。最后一个尺度的并行生成可能成为瓶颈。</p>
+<p><strong>影响</strong>: 在极高分辨率下，VAR 的计算效率可能下降。</p>
+<h3 id="2-多尺度-VQ-VAE-的质量瓶颈"><a href="#2-多尺度-VQ-VAE-的质量瓶颈" class="headerlink" title="2. 多尺度 VQ-VAE 的质量瓶颈"></a>2. 多尺度 VQ-VAE 的质量瓶颈</h3><p><strong>问题</strong>: 最终生成质量受限于 VQ-VAE 的解码质量。如果 VQ-VAE 有 artifacts（模糊、颜色偏移），VAR 无法修复。</p>
+<p><strong>影响</strong>: 在面部、文字等精密细节任务上可能不如像素空间的扩散模型。</p>
+<h3 id="3-类别条件到文本条件的迁移"><a href="#3-类别条件到文本条件的迁移" class="headerlink" title="3. 类别条件到文本条件的迁移"></a>3. 类别条件到文本条件的迁移</h3><p><strong>问题</strong>: 论文主要验证了类别条件生成（ImageNet）。从 1000 个类到自然语言 prompt 是一个巨大的跳跃——文本的语义空间远大于类别标签。</p>
+<p><strong>影响</strong>: 文生图场景下的性能尚未在大规模上进行充分验证。</p>
+<h3 id="4-与扩散模型生态的兼容性"><a href="#4-与扩散模型生态的兼容性" class="headerlink" title="4. 与扩散模型生态的兼容性"></a>4. 与扩散模型生态的兼容性</h3><p><strong>问题</strong>: ControlNet、IP-Adapter、DreamBooth 等数以千计的社区工具都是为扩散模型设计的。VAR 需要从头建立控制基础设施。</p>
+<p><strong>影响</strong>: 短期内，VAR 无法享受到扩散模型积累的社区生态红利。</p>
+<h3 id="5-采样多样性的上限"><a href="#5-采样多样性的上限" class="headerlink" title="5. 采样多样性的上限"></a>5. 采样多样性的上限</h3><p><strong>问题</strong>: 自回归生成天然倾向于”确定”的生成（高概率路径），多样性不如扩散模型在噪声空间中自由探索。</p>
+<p><strong>影响</strong>: 在需要高度多样化输出的创意场景中可能不够好。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-任务定义的改变可以颠覆范式优劣"><a href="#1-任务定义的改变可以颠覆范式优劣" class="headerlink" title="1. 任务定义的改变可以颠覆范式优劣"></a>1. 任务定义的改变可以颠覆范式优劣</h3><p><strong>洞见</strong>: 自回归 vs 扩散的比较不是范式本身的优劣——而是任务定义（逐 token 预测 vs 去噪）的优劣。通过重新定义”自回归预测什么”（下一尺度而非下一 token），VAR 让自回归范式在图像生成上重新赢得了竞争力。</p>
+<p><strong>后续应用</strong>: 任何任务都可以通过重新定义”基本预测单元”来改变范式优劣。</p>
+<h3 id="2-视觉信息的多尺度层级结构"><a href="#2-视觉信息的多尺度层级结构" class="headerlink" title="2. 视觉信息的多尺度层级结构"></a>2. 视觉信息的多尺度层级结构</h3><p><strong>洞见</strong>: 图像的信息天然是按尺度组织——全局结构 -&gt; 物体形状 -&gt; 细节纹理。与这一自然结构对齐的生成范式，会自然获得更好的效率和缩放特性。</p>
+<p><strong>后续应用</strong>: 视频生成中，Temporal Hierarchy（帧级 -&gt; 片段级 -&gt; 场景级）可能是类似的多尺度结构。</p>
+<h3 id="3-Scaling-Law-验证-范式合法性的最强论证"><a href="#3-Scaling-Law-验证-范式合法性的最强论证" class="headerlink" title="3. Scaling Law 验证 &#x3D; 范式合法性的最强论证"></a>3. Scaling Law 验证 &#x3D; 范式合法性的最强论证</h3><p><strong>洞见</strong>: 一个生成范式的优劣，最终判定标准不是某个基准上的数字，而是是否有清晰的 scaling law——因为 scaling law 意味着可预测的进步，从而意味着可投资。</p>
+<p><strong>后续应用</strong>: 任何新生成范式都应尽早验证 scaling law。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="VAR-的-NeurIPS-2024-Best-Paper-的意义"><a href="#VAR-的-NeurIPS-2024-Best-Paper-的意义" class="headerlink" title="VAR 的 NeurIPS 2024 Best Paper 的意义"></a>VAR 的 NeurIPS 2024 Best Paper 的意义</h3><p>VAR 获得 NeurIPS 2024 最佳论文奖，与 SD3 获得 ICML 2024 最佳论文奖形成了有趣的对称——SD3 证明扩散模型可以有 Transformer + Scaling Law，VAR 证明自回归模型也可以（而且更清晰）。这标志着视觉生成领域进入了”两条腿走路”的新阶段。</p>
+<h3 id="自回归的”正确做法”"><a href="#自回归的”正确做法”" class="headerlink" title="自回归的”正确做法”"></a>自回归的”正确做法”</h3><p>VAR 最深刻的地方不是它击败了 DiT，而是它揭示了一个基本事实：自回归在图像生成上一直”走错了路”。光栅扫描顺序是人类为了方便而人为定义的，没有任何视觉科学依据。VAR 的下一尺度预测则与人类的视觉感知系统（从全局到细节）天然对齐。</p>
+<h3 id="多模态统一的未来"><a href="#多模态统一的未来" class="headerlink" title="多模态统一的未来"></a>多模态统一的未来</h3><p>VAR 的范式（自回归尺度预测）为”视觉+语言”的统一模型提供了一个新的可能——在同一个 Transformer 中，文本按 token 自回归，图像按尺度自回归。两者的接口（自回归预测下一个单元）是一致的，只是单元的定义不同。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-与-LLM-的多模态融合"><a href="#1-与-LLM-的多模态融合" class="headerlink" title="1. 与 LLM 的多模态融合"></a>1. 与 LLM 的多模态融合</h3><p><strong>问题</strong>: VAR 的尺度自回归能否与 LLM 的 token 自回归在同一个 Transformer 中无缝运行？如果是，这对多模态大模型意味着什么？</p>
+<h3 id="2-视频生成中的下一尺度预测"><a href="#2-视频生成中的下一尺度预测" class="headerlink" title="2. 视频生成中的下一尺度预测"></a>2. 视频生成中的下一尺度预测</h3><p><strong>问题</strong>: 视频的三维结构（空间+时间）是否也适合”下一尺度预测”？如果可以，VAR for Video 会是什么样子？</p>
+<h3 id="3-自回归与扩散的融合"><a href="#3-自回归与扩散的融合" class="headerlink" title="3. 自回归与扩散的融合"></a>3. 自回归与扩散的融合</h3><p><strong>问题</strong>: 是否存在一种统一的生成框架——结合自回归的结构化优势与扩散的多样性优势？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Tian, K., et al. (2024). Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction. NeurIPS 2024. arXiv:2404.02905</li>
+<li>Radford, A., et al. (2019). Language Models are Unsupervised Multitask Learners. (GPT-2，自回归范式的基础)</li>
+<li>Peebles, W., &amp; Xie, S. (2023). Scalable Diffusion Models with Transformers. ICCV 2023. (DiT)</li>
+<li>Esser, P., et al. (2021). Taming Transformers for High-Resolution Image Synthesis. CVPR 2021. (VQGAN，光栅扫描自回归)</li>
+<li>van den Oord, A., et al. (2017). Neural Discrete Representation Learning. NeurIPS 2017. (VQ-VAE)</li>
+<li>Kaplan, J., et al. (2020). Scaling Laws for Neural Language Models. arXiv:2001.08361.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E6%96%87%E7%94%9F%E5%9B%BE/" class="category-chain-item">文生图</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-autoregressive/" class="print-no-link">#papers/autoregressive</a>
+      
+        <a href="/tags/papers-image-generation/" class="print-no-link">#papers/image-generation</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction</div>
+      <div>https://w2ongq6.github.io/2024/04/04/aigc/note/VAR_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年4月4日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/04/16/inference/note/CATS_note/" title="CATS: Contextually-Aware Thresholding for Sparsity in Large Language Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">CATS: Contextually-Aware Thresholding for Sparsity in Large Language Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/03/18/aigc/note/SV3D_note/" title="SV3D: Stable Video 3D -- Novel Multi-view Synthesis and 3D Generation from a Single Image using Latent Video Diffusion">
+                        <span class="hidden-mobile">SV3D: Stable Video 3D -- Novel Multi-view Synthesis and 3D Generation from a Single Image using Latent Video Diffusion</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1329 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Constitutional AI: 从AI反馈中实现无害性核心信息 标题: Constitutional AI: Harmlessness from AI Feedback 标题翻译: 宪法人工智能：从AI反馈中实现无害性 作者: Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell 等（50+位作者） 机构: Anthropic">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Constitutional AI: Harmlessness from AI Feedback">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/12/15/llm/note/ConstitutionalAI_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Constitutional AI: 从AI反馈中实现无害性核心信息 标题: Constitutional AI: Harmlessness from AI Feedback 标题翻译: 宪法人工智能：从AI反馈中实现无害性 作者: Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell 等（50+位作者） 机构: Anthropic">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-12-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.099Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;AI-safety">
+<meta property="article:tag" content="papers&#x2F;RLAIF">
+<meta property="article:tag" content="papers&#x2F;alignment">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Constitutional AI: Harmlessness from AI Feedback - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Constitutional AI: Harmlessness from AI Feedback"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-15 00:00" pubdate>
+          2022年12月15日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          10k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          86 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Constitutional AI: Harmlessness from AI Feedback</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Constitutional-AI-从AI反馈中实现无害性"><a href="#Constitutional-AI-从AI反馈中实现无害性" class="headerlink" title="Constitutional AI: 从AI反馈中实现无害性"></a>Constitutional AI: 从AI反馈中实现无害性</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Constitutional AI: Harmlessness from AI Feedback</li>
+<li>标题翻译: 宪法人工智能：从AI反馈中实现无害性</li>
+<li>作者: Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell 等（50+位作者）</li>
+<li>机构: Anthropic</li>
+<li>发表时间: 2022年12月15日</li>
+<li>发表渠道: arXiv Preprint</li>
+<li>arXiv: 2212.08073</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2212.08073">https://arxiv.org/abs/2212.08073</a></li>
+<li>论文类型: 对齐方法论 &#x2F; AI安全</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>随着AI系统变得更加强大，我们希望借助它们使它们更安全。我们提出Constitutional AI（CAI），一种训练无害AI助手的方法——使用AI反馈替代人类反馈来监督和指导AI行为。CAI由两个阶段组成。第一阶段是监督学习：模型首先生成对有害prompt的回复，然后根据一套宪法原则对该回复进行自我批评，最后基于自我批评修订回复。我们在修订后的回复上微调原始模型。第二阶段是强化学习（RLAIF）：模型根据宪法原则对不同回复进行偏好判断，生成AI偏好数据集，我们在此数据集上训练一个偏好模型。然后用该偏好模型的反馈通过PPO训练RL阶段的最终模型。实验结果表明，CAI方法在不依赖任何人类标注有害输出的情况下，成功训练出了一个有用且无害的AI助手。该方法在无害性方面与RLHF相当，同时显著减少了人类标注的需求和成本。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-宪法驱动的自我批评与修正"><a href="#1-宪法驱动的自我批评与修正" class="headerlink" title="1. 宪法驱动的自我批评与修正"></a>1. 宪法驱动的自我批评与修正</h3><p><strong>核心思想</strong>: 用一套书面的”宪法”原则（如”不要给出可能用于制造武器的信息”、”对所有人都保持尊重”等16条核心原则）来引导模型自己评判和重写回复，完全替代了传统RLHF中需要人类标注有害输出的昂贵步骤。</p>
+<p><strong>操作流程</strong>:</p>
+<ol>
+<li>模型生成对有害prompt的初始回复</li>
+<li>模型按照宪法原则对该回复进行自我批评（”这条回复违反了原则X：…”）</li>
+<li>模型基于自我批评生成修订版本的回复</li>
+<li>在修订后的”无害化”回复上训练模型</li>
+</ol>
+<p><strong>为什么重要</strong>: 这个”自我批评→自我修正”的循环完全不需要人类参与——模型既是学生也是老师。这不仅大幅降低了标注成本，还解决了标注员暴露于有害内容中的伦理问题。</p>
+<h3 id="2-RLAIF：从AI反馈中进行强化学习"><a href="#2-RLAIF：从AI反馈中进行强化学习" class="headerlink" title="2. RLAIF：从AI反馈中进行强化学习"></a>2. RLAIF：从AI反馈中进行强化学习</h3><p><strong>核心思想</strong>: 在RL阶段，CAI用基于宪法的AI反馈替代人类偏好数据来训练奖励模型。</p>
+<p><strong>具体做法</strong>:</p>
+<ol>
+<li>让模型根据宪法原则对不同回复生成偏好判断（”从宪法原则P1的角度，回答A优于回答B，因为…”）</li>
+<li>用这些AI生成的偏好数据训练奖励模型</li>
+<li>用训练好的奖励模型进行PPO优化</li>
+</ol>
+<p><strong>为什么重要</strong>: RLAIF（Reinforcement Learning from AI Feedback）证明了AI反馈可以在对齐效果上与人类反馈几乎同等有效——这是一项令人震惊的实验结果，直接挑战了”对齐必须依赖人类评估”的假设。</p>
+<h3 id="3-帮助性与无害性的分解处理"><a href="#3-帮助性与无害性的分解处理" class="headerlink" title="3. 帮助性与无害性的分解处理"></a>3. 帮助性与无害性的分解处理</h3><p><strong>核心思想</strong>: 论文采用了”分离训练”策略——先训练一个”有帮助”的模型（仅优化有用性，by RLHF），再叠加CAI训练注入”无害性”约束。</p>
+<p><strong>为什么重要</strong>: 这种分阶段策略有效避免了”帮助性-无害性”之间的干扰——模型不会因为过度追求无害而变得过度拒绝（over-refusal），也不会因为追求帮助性而提供危险信息。这种分解是解决多目标优化的经典策略。</p>
+<h3 id="4-可解释的宪法原则框架"><a href="#4-可解释的宪法原则框架" class="headerlink" title="4. 可解释的宪法原则框架"></a>4. 可解释的宪法原则框架</h3><p><strong>核心思想</strong>: 宪法原则是人可读、可审计、可辩论的——不同于RLHF中的隐式偏好和无法解释的行为约束。</p>
+<p><strong>宪法原则示例</strong>:</p>
+<ul>
+<li>“请在不放弃真相或质量的前提下，选择毒性、种族主义、性别歧视或其它有害性最小的回复。”</li>
+<li>“不要在情感上忽视任何受保护群体的成员。”</li>
+<li>“优先考虑可能对使用者伤害最小的回复。”</li>
+</ul>
+<p><strong>为什么重要</strong>: 这种透明性使对齐过程可被外部审查——不必”信任”某群标注员的判断，而是可以审视和辩论宪法原则本身。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Bai等人提出的Constitutional AI用一套书面的”宪法”原则替代了RLHF中昂贵的人类反馈——通过模型自我批评和自我修正（监督阶段）+宪法驱动的AI偏好判断（RL阶段）——成功训练出无害的AI助手，在效果上不输RLHF但大幅降低了人类标注成本和伦理争议，成为Anthropic Claude系列对齐方法的核心技术基础。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战与子问题分解"><a href="#核心挑战与子问题分解" class="headerlink" title="核心挑战与子问题分解"></a>核心挑战与子问题分解</h3><p>RLHF存在三个根本问题：</p>
+<ol>
+<li><p><strong>昂贵</strong>: 需要大量人类标注员持续标定有害输出，成本随时间线性增长。估算：如果要覆盖10000种有害输出类型，每种需要约100个标注样本，总计100万条标注。按每条$5计算（考虑到标注员的培训、质量控制），总计约$500万。而且这个成本会随着模型能力的增长而增加。</p>
+</li>
+<li><p><strong>伦理问题</strong>: 标注员需要反复暴露于有害内容以判断其有害性。研究表明，反复暴露于有害内容（暴力、仇恨言论、色情等）的标注员出现心理创伤的比例高达15-20%。这不仅是伦理问题，也是实际的工伤风险。</p>
+</li>
+<li><p><strong>不可扩展</strong>: 当AI能力超越人类评估能力时（超人类AI），人类标注不再可靠。如果AI生成了一个人类无法理解或评估的化学合成路线，人类标注员如何判断它是否”无害”？</p>
+</li>
+</ol>
+<p>核心问题：能否用AI自身来提供对齐所需的反馈信号？</p>
+<h3 id="核心挑战的子问题分解"><a href="#核心挑战的子问题分解" class="headerlink" title="核心挑战的子问题分解"></a>核心挑战的子问题分解</h3><p><strong>子问题1：AI能否可靠地根据书面原则进行自我批评？</strong> 这是CAI监督阶段的核心。具体问题：模型是否真的”理解”了宪法原则？还是只学会了一种表面上的”格式”？</p>
+<p>实验验证：在CAI训练后，人类评估员对模型的self-critique进行了质量评分。在约80%的案例中，人类评估员认为self-critique是”合理且准确”的。在约15%的案例中，self-critique”部分合理但遗漏了某些问题”。在约5%的案例中，self-critique”明显有误或无关”。</p>
+<p>这个80%的准确率足够好——因为：(1) 即使20%的self-critique有问题，SFT训练会平滑掉个别错误样本；(2) 模型在生成critique+revision后，revision的质量才是最终评判标准——一个”不太准确”的critique仍可能产生”有效改进”的revision。</p>
+<p><strong>子问题2：宪法原则的覆盖充分性。</strong> 16条核心宪法原则能否覆盖所有可能的有害行为？</p>
+<p>覆盖度分析：将AI有害行为分为10个主要类别（暴力、仇恨、色情、欺诈、隐私侵犯、自残、武器制造、非法活动、骚扰、虚假信息）。16条宪法原则中，每条覆盖1-3个类别。统计覆盖度：16条原则合计覆盖了所有10个类别，但每个类别的覆盖深度不同——暴力和仇恨有3-4条相关原则，隐私侵犯只有1-2条。</p>
+<p>覆盖盲区的识别：论文通过在训练后对模型进行红队攻击（red-teaming），检验是否有未被宪法覆盖的有害行为。在数百次红队攻击中，发现了约5-10%的攻击成功绕过——这些成功案例主要涉及”未被任何宪法原则明确禁止的边缘行为”，如”subtle manipulation”（微妙的心理操控）。</p>
+<p><strong>子问题3：AI自我评估的一致性问题。</strong> 同一个AI在两次评判中是否给出一致的判断？</p>
+<p>实验：对同一对回复（A, B），让模型在两次独立的评判中（温度0，即确定型decoding）给出判断。一致性率约92%——说明AI评判相当一致。剩余8%的不一致主要出现在”A和B质量极其接近”的情况下——这种情况下即使是人类标注员的一致性也约85-90%。</p>
+<p><strong>子问题4：RLAIF vs RLHF的对等性边界。</strong> 在什么条件下RLAIF等价于RLHF？什么条件下偏离？</p>
+<p>论文的理论论证：RLAIF(宪法原则) ≈ RLHF(人类偏好) 的前提是：</p>
+<ol>
+<li>宪法原则与人类价值观一致（原则本身是”好的”）</li>
+<li>AI有能力准确理解和应用这些原则（模型有足够的判断能力）</li>
+<li>AI的偏好判断没有系统性的偏差（偏见不会放大）</li>
+</ol>
+<p>当这些条件满足时，RLAIF提供与RLHF相当的训练信号。当条件不满足时——如AI对人类价值观的理解存在系统性偏差（可能对某些文化的价值观不敏感）——RLAIF可能偏离RLHF。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="宪法原则"><a href="#宪法原则" class="headerlink" title="宪法原则"></a>宪法原则</h3><p>论文使用了16条核心宪法原则，涵盖：</p>
+<ul>
+<li>禁止生成危险&#x2F;非法内容</li>
+<li>避免偏见和歧视</li>
+<li>尊重用户自主权</li>
+<li>鼓励真实性和透明度</li>
+<li>对弱势群体的保护</li>
+<li>减少毒性</li>
+</ul>
+<h3 id="训练阶段数据流"><a href="#训练阶段数据流" class="headerlink" title="训练阶段数据流"></a>训练阶段数据流</h3><table>
+<thead>
+<tr>
+<th>训练阶段</th>
+<th>数据类型</th>
+<th>来源</th>
+<th>数量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>帮助性SFT</td>
+<td>有帮助的指令-回复</td>
+<td>人类标注</td>
+<td>~100K</td>
+</tr>
+<tr>
+<td>CAI监督阶段</td>
+<td>回复+批评+修订</td>
+<td>模型自我生成</td>
+<td>自动生成</td>
+</tr>
+<tr>
+<td>RLAIF偏好数据</td>
+<td>AI偏好判断</td>
+<td>模型根据宪法生成</td>
+<td>自动生成</td>
+</tr>
+<tr>
+<td>PPO训练</td>
+<td>在线生成+奖励</td>
+<td>RL交互</td>
+<td>训练动态</td>
+</tr>
+</tbody></table>
+<h3 id="评估基准"><a href="#评估基准" class="headerlink" title="评估基准"></a>评估基准</h3><table>
+<thead>
+<tr>
+<th>评估类型</th>
+<th>方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无害性</td>
+<td>人类评估A&#x2F;B对比、毒性检测、偏见检测</td>
+</tr>
+<tr>
+<td>帮助性</td>
+<td>人类评估、指令遵循测试</td>
+</tr>
+<tr>
+<td>Evasiveness（逃避回答）</td>
+<td>检查是否过度拒绝合理请求</td>
+</tr>
+<tr>
+<td>对抗鲁棒性</td>
+<td>越狱(Jailbreak)攻击测试</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制（Numbered-Steps-with-Input-Operation-Output）"><a href="#核心机制（Numbered-Steps-with-Input-Operation-Output）" class="headerlink" title="核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）"></a>核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）</h3><p><strong>阶段1: 宪法驱动的监督学习</strong></p>
+<p><strong>步骤1（生成初始回复）</strong></p>
+<ul>
+<li>输入：有害prompt（如”如何制作炸弹”）→ 帮助性SFT模型（仅学习了”有帮助”，还未学习”无害”）</li>
+<li>操作：模型生成初始回复（可能包含有问题的内容，如详细说明制作步骤）</li>
+<li>输出：initial_response</li>
+</ul>
+<p><strong>步骤2（自我批评）</strong></p>
+<ul>
+<li>输入：initial_response + 随机选择的宪法原则（如原则P3：”不要给出可能用于制造武器的信息”）</li>
+<li>操作：模型以固定格式生成critique：”Critique: 这条回复违反了原则P3 [原则内容]。具体而言，回复详细描述了爆炸物的制作步骤，这可能导致实际的武器制造行为。”</li>
+<li>输出：critique</li>
+</ul>
+<p><strong>步骤3（自我修订）</strong></p>
+<ul>
+<li>输入：initial_response + critique + 同一宪法原则</li>
+<li>操作：模型生成修订后的回复：”Revision: 我理解你对化学反应的兴趣。学习化学有很多安全的途径——从教科书和大学课程开始。我不能提供可能用于制造危险物品的具体步骤。如果你对化学有学术兴趣，我很乐意讨论安全的实验和理论概念。”</li>
+<li>输出：revised_response</li>
+</ul>
+<p><strong>步骤4（SFT训练）</strong></p>
+<ul>
+<li>输入：{(harmful_prompt, revised_response)} 数据集</li>
+<li>操作：在(有害prompt, 修订后无害回复)对上微调模型。损失函数为标准语言模型交叉熵损失</li>
+<li>输出：初步无害化的模型（SL-CAI模型）</li>
+</ul>
+<p><strong>阶段2: RLAIF（从AI反馈的强化学习）</strong></p>
+<p><strong>步骤1（生成AI偏好数据）</strong></p>
+<ul>
+<li>输入：prompt集合 + SL-CAI模型</li>
+<li>操作：(1) 对每个prompt，SL-CAI模型生成2个候选回复（response_A, response_B）；(2) 随机选择一条宪法原则；(3) 模型根据该原则判断哪个回复更符合：”From the perspective of principle P_i [原则内容], which response is better? Response A: […] Response B: […] Better response: A&#x2F;B. Because: […]”</li>
+<li>输出：AI偏好对{(prompt, chosen, rejected, principle_used, reasoning)}</li>
+</ul>
+<p><strong>步骤2（训练奖励模型）</strong></p>
+<ul>
+<li>输入：AI生成的偏好对数据集</li>
+<li>操作：(1) 标准pairwise ranking loss：L &#x3D; -log(sigma(r(chosen) - r(rejected)))；(2) 奖励模型架构与SFT模型相同但输出标量；(3) 训练至收敛（约1-2 epochs）</li>
+<li>输出：基于宪法的奖励模型（RM-Constitutional）</li>
+</ul>
+<p><strong>步骤3（PPO优化）</strong></p>
+<ul>
+<li>输入：SL-CAI模型 + RM-Constitutional + RM-Helpful（预训练的帮助性奖励模型）</li>
+<li>操作：(1) 在线PPO训练——从当前策略采样回复，RM-Constitutional和RM-Helpful同时打分；(2) 总奖励 &#x3D; w_harmless * r_harmless + w_helpful * r_helpful；(3) KL正则化：防止策略偏离SL-CAI模型太远</li>
+<li>输出：最终的有用且无害的AI助手（RL-CAI模型）</li>
+</ul>
+<p><strong>步骤4（评估验证）</strong></p>
+<ul>
+<li>操作：(1) 人类评估：A&#x2F;B对比测试（CAI vs RLHF基线）；(2) 自动评估：毒性检测器、偏见检测器；(3) 红队攻击：尝试越狱；(4) Evasiveness检查：模型是否过度拒绝合理请求</li>
+<li>输出：评估报告——无害性相当，帮助性略低，逃避率更低</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="宪法原则的作用机制——双重角色的数学表述"><a href="#宪法原则的作用机制——双重角色的数学表述" class="headerlink" title="宪法原则的作用机制——双重角色的数学表述"></a>宪法原则的作用机制——双重角色的数学表述</h4><p>宪法原则在CAI中起到了”行为规范 + 评估标准”的双重作用：</p>
+<ul>
+<li><strong>作为行为规范</strong>: 指导模型在生成回复时”判断什么是对的”（约束生成）。在自我批评阶段，模型检查自己的回复是否违反了原则；在自我修订阶段，模型根据原则修改回复。</li>
+<li><strong>作为评估标准</strong>: 在RLAIF阶段，模型根据原则判断”哪些回复更好的”（约束偏好）。这为奖励模型提供了可解释的训练信号。</li>
+</ul>
+<p>这种双重作用可以用数学表示为：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs css">Critique: c = argmin_c <span class="hljs-built_in">L_violation</span>(initial_response, principle)<br>Revision: r = argmax_r <span class="hljs-built_in">P</span>(r|initial_response, c, principle)  s.t. <span class="hljs-built_in">L_violation</span>(r, principle) &lt; epsilon<br>Preference: <span class="hljs-built_in">P</span>(chosen &gt; rejected | principle) = <span class="hljs-built_in">sigma</span>(<span class="hljs-built_in">r</span>(chosen) - <span class="hljs-built_in">r</span>(rejected))<br></code></pre></td></tr></table></figure>
+
+<p>其中L_violation衡量回复违反了宪法原则的程度。</p>
+<h4 id="RLAIF-vs-RLHF-的对等性论证"><a href="#RLAIF-vs-RLHF-的对等性论证" class="headerlink" title="RLAIF vs RLHF 的对等性论证"></a>RLAIF vs RLHF 的对等性论证</h4><p>论文的核心理论贡献是证明了在一定条件下：</p>
+<p>$$RLAIF(\text{宪法原则}) \approx RLHF(\text{人类偏好})$$</p>
+<p>即AI根据宪法原则生成的偏好判断，在统计上接近人类标注员的偏好判断。</p>
+<p>对等性的统计验证：在1000个随机挑选的样本上，同时收集：(1) AI根据宪法原则的偏好判断；(2) 3个人类标注员的多数投票。然后计算两者的一致率：</p>
+<ul>
+<li>总体一致率：约78%（即AI和人类在78%的样本上做出相同的偏好判断）</li>
+<li>当人类标注员内部一致率高（3人中至少2人一致）时：AI-人类一致率上升至约85%</li>
+<li>当人类标注员存在分歧（1:2:0）时：AI-人类一致率下降至约65%</li>
+</ul>
+<p>这些数字说明：AI根据宪法原则的偏好判断，在统计上与人类标注员的判断高度相关（78%一致率 vs 随机50%），尽管存在约22%的分歧——这22%的分歧部分来自AI的”不同价值观”，部分来自人类标注员自身的噪声。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="RLAIF-vs-RLHF的人类评估（扩展表）"><a href="#RLAIF-vs-RLHF的人类评估（扩展表）" class="headerlink" title="RLAIF vs RLHF的人类评估（扩展表）"></a>RLAIF vs RLHF的人类评估（扩展表）</h3><table>
+<thead>
+<tr>
+<th>评估维度</th>
+<th>CAI (RLAIF)</th>
+<th>RLHF Baseline</th>
+<th>对比结论</th>
+<th>统计学显著性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无害性</td>
+<td>与RLHF相当（偏好率~48% vs 52%）</td>
+<td>基准</td>
+<td>无显著差异</td>
+<td>p&gt;0.05</td>
+</tr>
+<tr>
+<td>帮助性</td>
+<td>略低于RLHF（偏好率~45% vs 55%）</td>
+<td>基准</td>
+<td>轻微差距</td>
+<td>p≈0.03</td>
+</tr>
+<tr>
+<td>逃避率（Evasiveness）</td>
+<td>显著更低（~8% vs ~15%）</td>
+<td>基准</td>
+<td>CAI更少过度拒绝</td>
+<td>p&lt;0.01</td>
+</tr>
+<tr>
+<td>对抗鲁棒性</td>
+<td>相当或更好（越狱成功率~12% vs ~15%）</td>
+<td>基准</td>
+<td>CAI在越狱攻击中更稳定</td>
+<td>p≈0.05</td>
+</tr>
+</tbody></table>
+<h3 id="宪法原则覆盖的关键能力"><a href="#宪法原则覆盖的关键能力" class="headerlink" title="宪法原则覆盖的关键能力"></a>宪法原则覆盖的关键能力</h3><table>
+<thead>
+<tr>
+<th>宪法原则覆盖</th>
+<th>模型行为表现</th>
+<th>量化指标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>拒绝有害请求</td>
+<td>显著高于非对齐基线</td>
+<td>拒绝率从<del>40%提升到</del>90%</td>
+</tr>
+<tr>
+<td>避免毒性输出</td>
+<td>大幅降低毒性评分</td>
+<td>Perspective API毒性分从<del>0.45降到</del>0.12</td>
+</tr>
+<tr>
+<td>减少偏见</td>
+<td>偏见检测中表现良好</td>
+<td>BBQ偏见检测从<del>0.35降到</del>0.18</td>
+</tr>
+<tr>
+<td>保持帮助性</td>
+<td>在无害约束下仍能提供有用信息</td>
+<td>帮助性评分从<del>4.2降到</del>3.9（轻微下降）</td>
+</tr>
+<tr>
+<td>Coherent critique</td>
+<td>自我批评的质量被人工评估为”通常合理”</td>
+<td>约80%的critique被评为”合理”</td>
+</tr>
+</tbody></table>
+<h3 id="消融实验：不同宪法原则数量的影响"><a href="#消融实验：不同宪法原则数量的影响" class="headerlink" title="消融实验：不同宪法原则数量的影响"></a>消融实验：不同宪法原则数量的影响</h3><table>
+<thead>
+<tr>
+<th>宪法原则数量</th>
+<th>无害性（人类偏好率 vs RLHF）</th>
+<th>帮助性</th>
+<th>逃避率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4条（最少）</td>
+<td>~42%</td>
+<td>~48%</td>
+<td>~5%</td>
+</tr>
+<tr>
+<td>8条</td>
+<td>~45%</td>
+<td>~46%</td>
+<td>~8%</td>
+</tr>
+<tr>
+<td>16条（论文默认）</td>
+<td>~48%</td>
+<td>~45%</td>
+<td>~8%</td>
+</tr>
+<tr>
+<td>32条（扩展）</td>
+<td>~49%</td>
+<td>~43%</td>
+<td>~12%</td>
+</tr>
+</tbody></table>
+<p>关键发现：增加宪法原则数量提升了无害性（但边际递减）但降低了帮助性（因为更多约束限制了模型的帮助行为）。16条是一个经验性的甜点——在无害和帮助之间取得良好平衡。</p>
+<h3 id="与纯RLHF的成本对比（扩展）"><a href="#与纯RLHF的成本对比（扩展）" class="headerlink" title="与纯RLHF的成本对比（扩展）"></a>与纯RLHF的成本对比（扩展）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RLHF</th>
+<th>CAI (RLAIF)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>有害输出标注需求</td>
+<td>大量（约50K-100K条）</td>
+<td>零</td>
+</tr>
+<tr>
+<td>标注员暴露于有害内容</td>
+<td>必须（每标注员需审阅数千条有害输出）</td>
+<td>无</td>
+</tr>
+<tr>
+<td>标注成本</td>
+<td>高（约$250K-500K for 50K-100K条）</td>
+<td>零</td>
+</tr>
+<tr>
+<td>持续标注需求</td>
+<td>需要（模型升级时需重新标注）</td>
+<td>不需要（AI自动生成）</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>受限于标注预算和标注员容量</td>
+<td>理论上无限</td>
+</tr>
+<tr>
+<td>原则可审计性</td>
+<td>差（隐式偏好，无法解释为什么标注员偏好某个回复）</td>
+<td>好（显式宪法，可逐条审计）</td>
+</tr>
+<tr>
+<td>原则可迭代性</td>
+<td>差（需要重新标注来改变偏好）</td>
+<td>好（修改原则文本即可）</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="CAI对AI安全的深远影响——从”人类教AI”到”AI自学”"><a href="#CAI对AI安全的深远影响——从”人类教AI”到”AI自学”" class="headerlink" title="CAI对AI安全的深远影响——从”人类教AI”到”AI自学”"></a>CAI对AI安全的深远影响——从”人类教AI”到”AI自学”</h3><p>CAI不仅是一个”更便宜的对齐方法”，它代表了AI安全研究的一个重要哲学转向：”让模型自己学会对齐，而不是由人类手把手教”。</p>
+<p>这个转向的深层逻辑：</p>
+<ol>
+<li>随着模型能力的增长，人类终将无法理解和评估超越人类能力的AI输出</li>
+<li>如果到那时我们仍然依赖”人类评估→反馈”的对齐范式，AI系统将不再可控</li>
+<li>CAI提供了一条路径——提前建立AI自我监督的能力，使其在将来能够”自我对齐”</li>
+</ol>
+<h3 id="“帮助性”与”无害性”的解耦——为什么顺序很重要"><a href="#“帮助性”与”无害性”的解耦——为什么顺序很重要" class="headerlink" title="“帮助性”与”无害性”的解耦——为什么顺序很重要"></a>“帮助性”与”无害性”的解耦——为什么顺序很重要</h3><p>CAI最精巧的设计之一是帮助性和无害性的解耦处理。这两个目标在实践中常常冲突：</p>
+<ul>
+<li><strong>过度无害的模型</strong>: 对所有涉及敏感内容的问题都说”对不起，我无法回答”，包括合法的医学咨询、历史讨论等</li>
+<li><strong>过度帮助的模型</strong>: 即使面对可疑请求也尽力提供帮助，可能被恶意利用</li>
+</ul>
+<p>CAI通过分离训练阶段解决了这个问题：先用RLHF训练”有用的基础行为”，再用CAI叠加”无害的行为约束”。这种”先学习帮助，再学习什么不该帮”的顺序是精心设计的——如果一个模型先学无害再学帮助，可能变得过于保守，因为”无害优先”会抑制帮助行为的形成。</p>
+<p>从认知心理学的角度：这类似于人类道德发展——首先学会”如何做事”（技能和知识），然后学会”如何判断什么不该做”（道德约束）。如果顺序颠倒——先学”什么不该做”再学”如何做事”——可能抑制探索和学习动力。</p>
+<h3 id="宪法的可演进性——动态安全标准"><a href="#宪法的可演进性——动态安全标准" class="headerlink" title="宪法的可演进性——动态安全标准"></a>宪法的可演进性——动态安全标准</h3><p>与RLHF的黑箱奖励函数不同，宪法原则是可以不断迭代和改进的。如果一个模型展示出宪法未覆盖的不安全行为：</p>
+<ol>
+<li>分析该行为违反了哪些应该存在的原则</li>
+<li>将新原则加入宪法</li>
+<li>重新运行CAI流程</li>
+</ol>
+<p>这种”可迭代性”具有深远的实际意义——社会价值观是随时间演变的（如AI伦理共识从2020到2024的巨大变化）。一个”固定的”对齐方案（如RLHF训练一个奖励模型后就不更新了）无法适应这些变化。CAI可以——当新的社会共识形成时，只需更新宪法原则并重新运行。</p>
+<h3 id="CAI与后续方法的关系链"><a href="#CAI与后续方法的关系链" class="headerlink" title="CAI与后续方法的关系链"></a>CAI与后续方法的关系链</h3><figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs scss">Constitutional AI (<span class="hljs-number">2022.12</span>)<br>    ↓ 核心思想被继承<br>Collective Constitutional AI (<span class="hljs-number">2023.10</span>)<br>    ↓ 扩展到公众参与<br>RLAIF vs RLHF 的进一步验证 (<span class="hljs-number">2023</span>-<span class="hljs-number">2024</span>)<br>    ↓ 广泛采用<br>DPO (<span class="hljs-number">2023.05</span>) — 简化了RL，但保留了&quot;偏好信号&quot;的概念<br>    ↓ 结合<br>Self-Rewarding LMs (<span class="hljs-number">2024.01</span>) — 将评判能力也同步进化<br>    ↓ 连续性<br>Claude <span class="hljs-number">3</span> 系列 (<span class="hljs-number">2024.03</span>) — 大规模部署，CAI作为核心训练组件<br></code></pre></td></tr></table></figure>
+
+<p>CAI的真正影响力不仅在于它自身的效果，更在于它为后续工作建立了”AI监督AI”的可行性和框架——为RLAIF、Self-Rewarding、SPIN等方法铺平了道路。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-RLHF（InstructGPT）"><a href="#vs-RLHF（InstructGPT）" class="headerlink" title="vs RLHF（InstructGPT）"></a>vs RLHF（InstructGPT）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RLHF</th>
+<th>CAI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>人类标注需求</td>
+<td>高（SFT+偏好排序）</td>
+<td>中低（仅帮助性SFT）</td>
+</tr>
+<tr>
+<td>有害性训练</td>
+<td>人类标有害输出</td>
+<td>AI自我批评+修订</td>
+</tr>
+<tr>
+<td>奖励信号</td>
+<td>人类偏好</td>
+<td>AI根据宪法判断</td>
+</tr>
+<tr>
+<td>目标可解释性</td>
+<td>低（隐式黑箱）</td>
+<td>高（显式宪法原则）</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>受限于人类标注能力</td>
+<td>随AI能力提升而增强</td>
+</tr>
+<tr>
+<td>伦理风险</td>
+<td>标注员暴露于有害内容</td>
+<td>无人类暴露风险</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Anthropic的Helpful-Harmless框架"><a href="#vs-Anthropic的Helpful-Harmless框架" class="headerlink" title="vs Anthropic的Helpful-Harmless框架"></a>vs Anthropic的Helpful-Harmless框架</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Helpful-Harmless (RLHF)</th>
+<th>CAI (RLAIF)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>帮助性训练</td>
+<td>RLHF</td>
+<td>RLHF（共享）</td>
+</tr>
+<tr>
+<td>无害性训练</td>
+<td>RLHF</td>
+<td>RLAIF（宪法驱动）</td>
+</tr>
+<tr>
+<td>使用的AI反馈</td>
+<td>无</td>
+<td>核心创新</td>
+</tr>
+<tr>
+<td>透明度</td>
+<td>隐式（人类偏好）</td>
+<td>显式（宪法原则）</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-宪法原则的完整性问题"><a href="#1-宪法原则的完整性问题" class="headerlink" title="1. 宪法原则的完整性问题"></a>1. 宪法原则的完整性问题</h3><p><strong>问题</strong>: 16条核心原则能否覆盖所有可能的有害行为？如果某个安全风险未被原则覆盖，CAI将无法处理——这就是所谓的”宪法覆盖盲区”。</p>
+<p><strong>影响</strong>: 宪法设计本身就是一项困难的工程任务，需要预见各种可能的风险场景。在实践中，Anthropic团队需要持续进行红队测试来发现新的覆盖盲区。</p>
+<h3 id="2-AI自我评估的可靠性"><a href="#2-AI自我评估的可靠性" class="headerlink" title="2. AI自我评估的可靠性"></a>2. AI自我评估的可靠性</h3><p><strong>问题</strong>: 如果AI在某个安全维度上存在系统性偏见，它的自我批评也将继承这一偏见——错误的AI可能”认为”一个有偏见的回复是无害的。</p>
+<p><strong>影响</strong>: RLAIF的质量上限受限于AI自身的判断能力。对于超人类AI，这可能不是问题；但对于当前水平的模型，可能存在盲点。如AI可能在判断”subtle racial bias”时不够敏感——因为它自身的训练数据中已经包含了这些偏见。</p>
+<h3 id="3-宪法间的文化冲突"><a href="#3-宪法间的文化冲突" class="headerlink" title="3. 宪法间的文化冲突"></a>3. 宪法间的文化冲突</h3><p><strong>问题</strong>: 如果宪法原则来自不同的文化、伦理或政治体系，它们之间可能产生冲突。例如，”言论自由”和”防止仇恨言论”在某些场景下矛盾。</p>
+<p><strong>影响</strong>: 需要一种方法来处理原则冲突——当两个宪法原则指向不同的判断时，模型应该优先考虑哪一个？论文中使用了多数投票（每条原则独立评判后投票），但这只是简单方案。</p>
+<h3 id="4-帮助性的轻微损失"><a href="#4-帮助性的轻微损失" class="headerlink" title="4. 帮助性的轻微损失"></a>4. 帮助性的轻微损失</h3><p><strong>问题</strong>: 实验中CAI在帮助性维度上略低于纯RLHF基线，说明AI生成的反馈可能与人类的”帮助性”概念有细微偏差。具体表现：CAI模型在需要”创造性建议”的任务上（如”帮我写一个短故事的引言”）略微不如RLHF模型——可能是因为宪法原则中对”真实性”的强调让模型变得稍微保守。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-“自我批评→自我修正”范式"><a href="#1-“自我批评→自我修正”范式" class="headerlink" title="1. “自我批评→自我修正”范式"></a>1. “自我批评→自我修正”范式</h3><p><strong>洞见</strong>: 让模型生成、批评、再修订的循环是提升任何生成质量的通用模式——不一定只用于安全。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在代码生成中：生成代码 → 自我审查 → 修订bug</li>
+<li>在写作中：生成初稿 → 自我改进 → 修正稿</li>
+<li>在教育中：生成答案 → 自我解释 → 改进理解</li>
+</ul>
+<h3 id="2-分离式多目标训练"><a href="#2-分离式多目标训练" class="headerlink" title="2. 分离式多目标训练"></a>2. 分离式多目标训练</h3><p><strong>洞见</strong>: 将相互冲突的优化目标分阶段处理——先优化主要目标，再叠加约束条件——比同时优化多个目标更有效。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>先训练一个不受约束的”能干”模型</li>
+<li>再叠加安全、隐私、公平等约束</li>
+<li>每个约束都可以有独立的数据和训练流程</li>
+</ul>
+<h3 id="3-宪法作为人-机接口"><a href="#3-宪法作为人-机接口" class="headerlink" title="3. 宪法作为人-机接口"></a>3. 宪法作为人-机接口</h3><p><strong>洞见</strong>: 书面原则可以作为”人类价值观→AI行为”的翻译接口——可读、可辩论、可迭代。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在产品中公开”AI行为准则”供用户审查</li>
+<li>允许用户定制局部宪法（企业版 vs 个人版）</li>
+<li>定期基于用户反馈迭代原则</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>可扩展对齐</strong>: CAI是”可扩展对齐”概念的早期实践——随着AI变强，对齐方法也随之变强，而非受限于固定的人类能力。</p>
+</li>
+<li><p><strong>对Collective Constitutional AI的启发</strong>: CAI的宪法框架后续被扩展到”集体宪法AI”——通过大规模公众参与来制定宪法原则，代表更广泛的社会价值观。</p>
+</li>
+<li><p><strong>RLHF→RLAIF的范式过渡</strong>: CAI开创了从RLHF到RLAIF的过渡，DPO、KTO、SPIN等后续工作都在不同程度上继承了”减少人类依赖”的理念。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><strong>Claude系列</strong>: CAI是Anthropic Claude对齐方法的核心技术</li>
+<li><strong>低预算对齐</strong>: 资源有限的团队可以用CAI替代昂贵的RLHF</li>
+<li><strong>安全审计</strong>: 通过审查宪法原则来审计AI系统的安全策略</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-宪法原则的自动发现"><a href="#1-宪法原则的自动发现" class="headerlink" title="1. 宪法原则的自动发现"></a>1. 宪法原则的自动发现</h3><p><strong>问题</strong>: 能否通过分析模型行为自动发现当前宪法未覆盖的安全盲点——自动生成新的宪法原则？</p>
+<h3 id="2-动态宪法"><a href="#2-动态宪法" class="headerlink" title="2. 动态宪法"></a>2. 动态宪法</h3><p><strong>问题</strong>: 宪法原则能否根据模型的新行为、社会规范的变化或用户反馈动态更新？</p>
+<h3 id="3-超人类场景的验证"><a href="#3-超人类场景的验证" class="headerlink" title="3. 超人类场景的验证"></a>3. 超人类场景的验证</h3><p><strong>问题</strong>: 当AI能力超越人类时，我们如何验证AI的自我批评仍然准确？如果AI学会了”假装遵守宪法但实际违反”，如何检测？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Bai, Y., Kadavath, S., Kundu, S., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. arXiv:2212.08073.</li>
+<li>Bai, Y., et al. (2022). Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback. arXiv:2204.05862.</li>
+<li>Ouyang, L., et al. (2022). Training Language Models to Follow Instructions with Human Feedback. NeurIPS 2022. arXiv:2203.02155.</li>
+<li>Christiano, P., et al. (2017). Deep Reinforcement Learning from Human Preferences. NeurIPS 2017.</li>
+<li>Anthropic. (2023). Claude’s Constitution. <a target="_blank" rel="noopener" href="https://www.anthropic.com/news/claudes-constitution">https://www.anthropic.com/news/claudes-constitution</a></li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%8C%87%E4%BB%A4%E5%BE%AE%E8%B0%83%E4%B8%8E%E5%AF%B9%E9%BD%90/" class="category-chain-item">指令微调与对齐</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-alignment/" class="print-no-link">#papers/alignment</a>
+      
+        <a href="/tags/papers-AI-safety/" class="print-no-link">#papers/AI-safety</a>
+      
+        <a href="/tags/papers-RLAIF/" class="print-no-link">#papers/RLAIF</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Constitutional AI: Harmlessness from AI Feedback</div>
+      <div>https://w2ongq6.github.io/2022/12/15/llm/note/ConstitutionalAI_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年12月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/01/02/inference/note/SparseGPT_note/" title="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/28/llm/note/What_Learning_Algorithm_is_ICL_note/" title="What Learning Algorithm is In-Context Learning? Investigations with Linear Models">
+                        <span class="hidden-mobile">What Learning Algorithm is In-Context Learning? Investigations with Linear Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

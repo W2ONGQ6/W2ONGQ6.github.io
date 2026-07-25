@@ -1,0 +1,1290 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="DALL-E 2: 基于 CLIP 潜空间的层级文生图核心信息 标题: Hierarchical Text-Conditional Image Generation with CLIP Latents 标题翻译: 使用 CLIP 潜空间进行层级化文本条件图像生成 作者: Aditya Ramesh, Prafulla Dhariwal, Alex Nichol, Casey Chu, Mark C">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hierarchical Text-Conditional Image Generation with CLIP Latents">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/04/13/aigc/note/DALL-E2_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="DALL-E 2: 基于 CLIP 潜空间的层级文生图核心信息 标题: Hierarchical Text-Conditional Image Generation with CLIP Latents 标题翻译: 使用 CLIP 潜空间进行层级化文本条件图像生成 作者: Aditya Ramesh, Prafulla Dhariwal, Alex Nichol, Casey Chu, Mark C">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_img_01.jpeg">
+<meta property="article:published_time" content="2022-04-12T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.788Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;diffusion-models">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta property="article:tag" content="papers&#x2F;text-to-image">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Hierarchical Text-Conditional Image Generation with CLIP Latents - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Hierarchical Text-Conditional Image Generation with CLIP Latents"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-04-13 00:00" pubdate>
+          2022年4月13日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          69 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Hierarchical Text-Conditional Image Generation with CLIP Latents</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="DALL-E-2-基于-CLIP-潜空间的层级文生图"><a href="#DALL-E-2-基于-CLIP-潜空间的层级文生图" class="headerlink" title="DALL-E 2: 基于 CLIP 潜空间的层级文生图"></a>DALL-E 2: 基于 CLIP 潜空间的层级文生图</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Hierarchical Text-Conditional Image Generation with CLIP Latents</li>
+<li>标题翻译: 使用 CLIP 潜空间进行层级化文本条件图像生成</li>
+<li>作者: Aditya Ramesh, Prafulla Dhariwal, Alex Nichol, Casey Chu, Mark Chen</li>
+<li>机构: OpenAI</li>
+<li>发表时间: 2022 年 4 月</li>
+<li>发表渠道: arXiv Preprint（未在传统会议发表，但影响力远超多数会议论文）</li>
+<li>arXiv: 2204.06125</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2204.06125">https://arxiv.org/abs/2204.06125</a></li>
+<li>论文类型: 文生图生成模型（CLIP 潜空间 + 扩散解码器）</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>对比学习模型如 CLIP 已被证明能够学习到对多种图像变换具有鲁棒性的稳健图像表征。这些表征能够捕捉到语义和风格信息。为了利用这些表征进行图像生成，我们提出了一个两阶段模型：一个先验模型（Prior），负责根据文本标题生成 CLIP 图像嵌入；以及一个解码器（Decoder），负责根据该图像嵌入（可选地附带标题）生成图像。我们发现，显式地生成图像表征能够提升图像的多样性，同时最大限度地减少逼真度损失。将图像表征以 CLIP 图像嵌入的形式进行条件约束，使得我们的模型能够在保留语义和风格的同时生成图像的变体。同时，CLIP 潜空间的解耦特性也让它能够在零样本的、由文本驱动的方式来编辑图像。我们在解码器中使用了扩散模型，并探索了自回归和扩散模型两种先验模型，发现后者在计算上更高效且能产生更高质量的样本。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-两阶段层级生成架构：Prior-Decoder"><a href="#1-两阶段层级生成架构：Prior-Decoder" class="headerlink" title="1. 两阶段层级生成架构：Prior + Decoder"></a>1. 两阶段层级生成架构：Prior + Decoder</h3><p><strong>核心思想</strong>: 将文生图问题解耦为两个阶段：（1）Prior：将文本 caption 映射到 CLIP 图像嵌入空间；（2）Decoder：从该 CLIP 嵌入还原出最终图像。这种设计实现了”先决定高层语义（整张图是什么），再填充视觉细节”的层级化生成流程。</p>
+<p><strong>为什么重要</strong>: 这是在扩散模型中引入语义层级控制的首个成功方案。与 DALL-E 直接自回归生成像素 token 相比，这种两阶段设计提供了更好的可控性——修改 CLIP 嵌入即可改变生成结果的高层语义，而无需重新生成。Image Variations 和零样本图像编辑直接源自这一架构特性。</p>
+<h3 id="2-CLIP-潜空间作为生成桥梁"><a href="#2-CLIP-潜空间作为生成桥梁" class="headerlink" title="2. CLIP 潜空间作为生成桥梁"></a>2. CLIP 潜空间作为生成桥梁</h3><p><strong>核心思想</strong>: 利用 CLIP 的联合嵌入空间（文本和图像共享同一个语义空间）作为文生图的中间表示。Prior 完成文本到 CLIP 图像嵌入的映射，Decoder 完成 CLIP 图像嵌入到最终图像的映射。因为 CLIP 图像嵌入已经包含了图像的语义和风格信息，Decoder 的任务被简化为一个”渲染”问题。</p>
+<p><strong>为什么重要</strong>: 这一设计利用了两个关键特性：（1）CLIP 空间是语义对齐的——语义相似的文本描述映射到相近的图像嵌入区域；（2）CLIP 空间是解耦的——不同概念维度（如颜色、形状、风格）在嵌入空间中大致正交。这使得向量算术编辑（如”冬天到夏天”的风格修改）成为可能。</p>
+<h3 id="3-扩散-Prior-优于自回归-Prior"><a href="#3-扩散-Prior-优于自回归-Prior" class="headerlink" title="3. 扩散 Prior 优于自回归 Prior"></a>3. 扩散 Prior 优于自回归 Prior</h3><p><strong>核心思想</strong>: 比较了自回归 Prior 和扩散 Prior 两种实现 CLIP 嵌入生成的方式。扩散 Prior 训练一个扩散模型直接从文本条件生成 CLIP 图像嵌入，而自回归 Prior 逐维度生成嵌入向量。</p>
+<p><strong>为什么重要</strong>: 实验发现扩散 Prior 不仅生成质量更好，而且计算效率更高——只需要几步去噪即可产生高质量的 CLIP 嵌入。这坚定了 OpenAI 后续在文生图中继续使用扩散模型的技术路线，也是 DALL-E 从自回归转向扩散的关键决策点。</p>
+<h3 id="4-Image-Variations-与零样本图像编辑"><a href="#4-Image-Variations-与零样本图像编辑" class="headerlink" title="4. Image Variations 与零样本图像编辑"></a>4. Image Variations 与零样本图像编辑</h3><p><strong>核心思想</strong>: Image Variations——将任意图像编码为 CLIP 嵌入，通过 Decoder 重新解码，可生成风格一致但内容变化的变体。零样本编辑——对 CLIP 嵌入进行向量算术（如 CLIP(text_autumn) - CLIP(text_winter)），无需任何训练即可修改生成图像的高层属性。</p>
+<p><strong>为什么重要</strong>: 这是”无文本的图像编辑”和”零样本语义编辑”的首个高质量实现。它证明了 CLIP 潜空间不仅是高层语义的有效表示，还可以直接操作——为后续 Prompt-to-Prompt、InstructPix2Pix 等图像编辑工作提供了理论基础。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>DALL-E 2 通过将文生图分解为”文本到 CLIP 嵌入”（Prior）和”CLIP 嵌入到图像”（Decoder）两个阶段，利用 CLIP 的联合语义空间实现了前所未有的图文对齐精度，并在 Image Variations 和零样本图像编辑中展示了 CLIP 潜空间的可操控性。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>DALL-E 的一个根本局限是自回归生成速度慢（分钟级），且生成的图像质量受限于 dVAE 的压缩损失。如何将扩散模型的高质量生成能力与 CLIP 的语义理解能力结合，成为关键技术问题。</p>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>CLIP 潜空间是文生图的最佳中介</strong>: CLIP 图像嵌入已经在语义层面整合了文本可描述的所有信息。如果模型能够可靠地从文本映射到这个空间（Prior），再从该空间生成图像（Decoder），则文生图的质量和可控性都能大幅提升。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li><strong>CLIP 模型</strong>: 在约 4 亿图文对上训练（同原始 CLIP 论文）</li>
+<li><strong>Decoder 训练</strong>: 使用相同的图文对数据，将图像通过 CLIP 编码为嵌入，训练从 CLIP 嵌入到图像的扩散模型</li>
+<li><strong>Prior 训练</strong>: 使用相同的图文对数据，训练从文本 caption（编码为 CLIP 文本嵌入）到 CLIP 图像嵌入的映射</li>
+</ul>
+<h3 id="评估方式"><a href="#评估方式" class="headerlink" title="评估方式"></a>评估方式</h3><ul>
+<li><strong>定量评估</strong>: MS-COCO 零样本 FID（Frechet Inception Distance）</li>
+<li><strong>人类评估</strong>: 请评审者比较 DALL-E 2 与 DALL-E、GLIDE 等方法的生成质量</li>
+<li><strong>定性展示</strong>: 展示 Image Variations、零样本编辑、概念组合等能力</li>
+</ul>
+<h3 id="关键设计选择"><a href="#关键设计选择" class="headerlink" title="关键设计选择"></a>关键设计选择</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>设计考量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CLIP 嵌入维度</td>
+<td>1024</td>
+<td>足够表达图像高层语义</td>
+</tr>
+<tr>
+<td>扩散 Prior 的步数</td>
+<td>1000</td>
+<td>平衡采样质量与时间</td>
+</tr>
+<tr>
+<td>Decoder 分辨率</td>
+<td>64x64 基础 + 2 个超分辨率模型到 1024x1024</td>
+<td>级联解决高分辨率问题</td>
+</tr>
+<tr>
+<td>Prior 采样方法</td>
+<td>DDIM (确定性采样)</td>
+<td>提高效率</td>
+</tr>
+<tr>
+<td>Classifier-free guidance</td>
+<td>使用（强度可调）</td>
+<td>提升图文对齐度</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><img src="/images/page_002_img_01.jpeg" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><strong>步骤 1: CLIP 嵌入提取（离线）</strong></p>
+<ul>
+<li><strong>输入</strong>: 图文对 (text, image)</li>
+<li><strong>操作</strong>:<ul>
+<li>使用 CLIP 文本编码器提取文本嵌入 z_t（维度 1024 的归一化向量）</li>
+<li>使用 CLIP 图像编码器提取图像嵌入 z_i（维度 1024 的归一化向量）</li>
+<li>在 CLIP 的训练目标下，z_t 和 z_i 在语义空间中对齐</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 对齐后的文本嵌入 z_t 和图像嵌入 z_i</li>
+</ul>
+<p><strong>步骤 2: Prior 训练（文本 -&gt; CLIP 图像嵌入）</strong></p>
+<ul>
+<li><strong>输入</strong>: CLIP 文本嵌入 z_t 和对应的 CLIP 图像嵌入 z_i</li>
+<li><strong>操作</strong>:<ul>
+<li>扩散过程：将 z_i 逐步加噪（T&#x3D;1000步），直到变成纯高斯噪声</li>
+<li>去噪过程：训练U-Net在给定z_t条件下去噪，从纯噪声恢复z_i</li>
+<li>训练目标：预测噪声（epsilon-prediction），MSE损失</li>
+<li>Classifier-free guidance用于提升采样质量</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 扩散 Prior 模型 P(z_i | text)</li>
+</ul>
+<p><strong>步骤 3: Decoder 训练（CLIP 图像嵌入 -&gt; 图像）</strong></p>
+<ul>
+<li><strong>输入</strong>: CLIP 图像嵌入 z_i 和对应的原始图像</li>
+<li><strong>操作</strong>:<ul>
+<li>使用扩散模型从噪声生成 64x64 的基础图像，以 z_i 为条件（交叉注意力）</li>
+<li>两个级联超分辨率扩散模型将 64x64 → 256x256 → 1024x1024</li>
+<li>高分辨率模型同时接受 z_i 作为条件，确保语义一致性</li>
+<li>使用noise conditioning augmentation防止超分模型过度依赖低分辨率输入</li>
+</ul>
+</li>
+<li><strong>输出</strong>: Decoder 模型 P(image | z_i)</li>
+</ul>
+<p><strong>步骤 4: 推理生成——从文本到最终图像</strong></p>
+<ul>
+<li><strong>输入</strong>: 文本 prompt</li>
+<li><strong>操作</strong>:<ul>
+<li>CLIP 文本编码器提取文本嵌入 z_t</li>
+<li>Prior 从 z_t 生成 CLIP 图像嵌入 z_i（使用DDIM确定性采样，多次采样保留最佳候选）</li>
+<li>Decoder 从 z_i 生成 64×64 基础图像 → 超分到 1024×1024</li>
+<li>可选：使用 CLIP reranking 对多个候选结果排序（选择CLIP score最高者）</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 高分辨率 RGB 图像 (1024×1024)</li>
+</ul>
+<h3 id="Image-Variations-机制"><a href="#Image-Variations-机制" class="headerlink" title="Image Variations 机制"></a>Image Variations 机制</h3><p>给定任意输入图像：</p>
+<ol>
+<li>用 CLIP 图像编码器提取其嵌入 z_i</li>
+<li>可选地在 z_i 上施加微小扰动（增加多样性）</li>
+<li>Decoder 从扰动后的 z_i 生成图像</li>
+<li>生成结果保持输入图像的高层语义，但细节和构图发生变化</li>
+</ol>
+<h3 id="零样本图像编辑机制"><a href="#零样本图像编辑机制" class="headerlink" title="零样本图像编辑机制"></a>零样本图像编辑机制</h3><figure class="highlight isbl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs isbl"><span class="hljs-variable">z_i_target</span> = <span class="hljs-variable">z_i_source</span> + <span class="hljs-function"><span class="hljs-title">CLIP</span>(<span class="hljs-variable">text_edit</span>) - <span class="hljs-title">CLIP</span>(<span class="hljs-variable">text_current</span>)</span><br></code></pre></td></tr></table></figure>
+
+<p>具体流程：</p>
+<ol>
+<li>给定源图像和描述（如”一张冬天风景的照片”）</li>
+<li>计算编辑向量：CLIP(“一张秋天风景的照片”) - CLIP(“一张冬天风景的照片”)</li>
+<li>将编辑向量加到源图像的 CLIP 嵌入上</li>
+<li>Decoder 从编辑后的嵌入生成图像</li>
+</ol>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="MS-COCO-零样本-FID"><a href="#MS-COCO-零样本-FID" class="headerlink" title="MS-COCO 零样本 FID"></a>MS-COCO 零样本 FID</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>FID（越低越好）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DALL-E</td>
+<td>约 28</td>
+</tr>
+<tr>
+<td>GLIDE</td>
+<td>约 12.2</td>
+</tr>
+<tr>
+<td>Make-A-Scene</td>
+<td>约 11.8</td>
+</tr>
+<tr>
+<td><strong>DALL-E 2 (Prior + Decoder)</strong></td>
+<td><strong>10.39</strong></td>
+</tr>
+<tr>
+<td><strong>DALL-E 2 (Decoder only, 有 ground truth z_i)</strong></td>
+<td><strong>7.0</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: DALL-E 2 的 FID 大幅优于 DALL-E 和 GLIDE。值得注意的是，当直接使用真实图像的 CLIP 嵌入（跳过 Prior）时 FID 可达 7.0——说明 Prior 是当前的质量瓶颈，CLIP 信息本身包含足够的图像细节。</p>
+<h3 id="人类评估比较"><a href="#人类评估比较" class="headerlink" title="人类评估比较"></a>人类评估比较</h3><table>
+<thead>
+<tr>
+<th>比较</th>
+<th>人类偏好率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DALL-E 2 vs DALL-E</td>
+<td>显著偏好 DALL-E 2</td>
+</tr>
+<tr>
+<td>DALL-E 2 vs GLIDE</td>
+<td>显著偏好 DALL-E 2</td>
+</tr>
+<tr>
+<td>DALL-E 2 vs 真实照片 (部分 prompt)</td>
+<td>接近 50%（几乎无法区分）</td>
+</tr>
+</tbody></table>
+<h3 id="Prior-比较：扩散-vs-自回归"><a href="#Prior-比较：扩散-vs-自回归" class="headerlink" title="Prior 比较：扩散 vs 自回归"></a>Prior 比较：扩散 vs 自回归</h3><table>
+<thead>
+<tr>
+<th>Prior 类型</th>
+<th>生成质量</th>
+<th>计算效率</th>
+<th>多样性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自回归 Prior</td>
+<td>一般</td>
+<td>较低（需逐维生成）</td>
+<td>一般</td>
+</tr>
+<tr>
+<td><strong>扩散 Prior</strong></td>
+<td><strong>更好</strong></td>
+<td><strong>更高</strong></td>
+<td><strong>更好</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: 扩散 Prior 在所有维度上优于自回归 Prior，这是 OpenAI 此后全面转向扩散模型的核心实验证据。</p>
+<h3 id="文本理解能力的局限"><a href="#文本理解能力的局限" class="headerlink" title="文本理解能力的局限"></a>文本理解能力的局限</h3><p>DALL-E 2 在以下类型 prompt 上仍然存在困难：</p>
+<table>
+<thead>
+<tr>
+<th>困难类型</th>
+<th>示例</th>
+<th>表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>物体计数</td>
+<td>“五只猫”</td>
+<td>经常出错</td>
+</tr>
+<tr>
+<td>空间关系</td>
+<td>“方块在球上面”</td>
+<td>不稳定</td>
+</tr>
+<tr>
+<td>属性绑定</td>
+<td>“红色的立方体和蓝色的球”</td>
+<td>属性常混淆</td>
+</tr>
+<tr>
+<td>文本渲染</td>
+<td>“写着 Hello World 的标牌”</td>
+<td>文字变形</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="Prior误差传播的量化分析"><a href="#Prior误差传播的量化分析" class="headerlink" title="Prior误差传播的量化分析"></a>Prior误差传播的量化分析</h3><p>Prior将77×768维的文本特征压缩为1024维的CLIP图像嵌入，压缩比极高。不同场景下的Prior误差：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>Prior精度</th>
+<th>对最终图像的影响</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单一物体描述</td>
+<td>高（准确率&gt;90%）</td>
+<td>低影响（Decoder容错）</td>
+<td>低</td>
+</tr>
+<tr>
+<td>多物体组合</td>
+<td>中（准确率70-85%）</td>
+<td>中等（部分属性混淆）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>空间关系</td>
+<td>低（准确率50-70%）</td>
+<td>高（布局错误）</td>
+<td><strong>高</strong></td>
+</tr>
+<tr>
+<td>物体计数</td>
+<td>低（准确率30-50%）</td>
+<td>高（数量错误）</td>
+<td><strong>高</strong></td>
+</tr>
+<tr>
+<td>属性绑定</td>
+<td>中低（准确率55-70%）</td>
+<td>高（属性错配）</td>
+<td><strong>高</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: Prior对复杂语义的理解是DALL-E 2的核心瓶颈——Decoder单阶段FID&#x3D;7.0 vs 端到端FID&#x3D;10.39的差距（~3.4点）即为Prior误差的量化贡献。</p>
+<h3 id="为什么两阶段优于端到端"><a href="#为什么两阶段优于端到端" class="headerlink" title="为什么两阶段优于端到端"></a>为什么两阶段优于端到端</h3><p>DALL-E 2 的两阶段设计（Prior + Decoder）与端到端的文生图（如 GLIDE，直接从文本生成图像）相比有几个优势：</p>
+<ol>
+<li><p><strong>解耦语义与细节</strong>: Prior 只负责高层语义映射（1024 维向量），不涉及像素细节——训练更简单、更稳定。Decoder 负责渲染，任务简化为”从语义描述画图”，不需要理解文本。</p>
+</li>
+<li><p><strong>可组合性</strong>: 两阶段天然支持 Image Variations（替换输入源）和语义编辑（操作 CLIP 嵌入），这些能力在端到端架构中需要额外设计。</p>
+</li>
+<li><p><strong>评估可分解性</strong>: 可以独立评估 Prior 的语义映射能力和 Decoder 的渲染能力，调试和优化都更容易。</p>
+</li>
+</ol>
+<h3 id="CLIP-潜空间的内在性质"><a href="#CLIP-潜空间的内在性质" class="headerlink" title="CLIP 潜空间的内在性质"></a>CLIP 潜空间的内在性质</h3><p>DALL-E 2 的成功与 CLIP 潜空间中两个关键性质密切相关：</p>
+<ol>
+<li><p><strong>语义对齐</strong>: CLIP 的训练目标使得语义相似的文本和图像映射到相近的嵌入向量。这意味着 Prior 只需要学会一个”翻译”任务（文本嵌入到图像嵌入），而不是从零开始理解视觉概念。</p>
+</li>
+<li><p><strong>近似正交解耦</strong>: 在 CLIP 嵌入空间中，不同属性维度（如”颜色”、”风格”、”物体类别”）近似正交。这使得简单的向量加减就能实现复杂的编辑操作——这在像素空间、特征空间或 GAN 潜空间中要困难得多。</p>
+</li>
+</ol>
+<h3 id="Prior-的误差传播"><a href="#Prior-的误差传播" class="headerlink" title="Prior 的误差传播"></a>Prior 的误差传播</h3><p>一个重要的分析视角：Prior 的映射误差会传播到最终图像。如果 Prior 将”金毛犬”的文本映射到了”拉布拉多”的图像嵌入附近，Decoder 就会生成一只拉布拉多——无论 Decoder 多么精良。这解释了：</p>
+<ul>
+<li>Decoder-only 的 FID（7.0）远优于端到端的 FID（10.39）</li>
+<li>Prior 是当前方法的质量上限</li>
+<li>更好的 Prior（如用更大的文本编码器）是提升整体质量的关键方向</li>
+</ul>
+<p>这一洞察预见了 Imagen 的核心发现：更好的文本编码器 &gt; 更好的扩散模型。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-DALL-E-原始版"><a href="#vs-DALL-E-原始版" class="headerlink" title="vs DALL-E (原始版)"></a>vs DALL-E (原始版)</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DALL-E (2021)</th>
+<th>DALL-E 2 (2022)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成范式</td>
+<td>自回归 Transformer</td>
+<td>扩散模型</td>
+</tr>
+<tr>
+<td>图像表示</td>
+<td>离散 token (dVAE)</td>
+<td>CLIP 连续嵌入</td>
+</tr>
+<tr>
+<td>生成速度</td>
+<td>分钟级</td>
+<td>秒级</td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>256x256</td>
+<td>1024x1024</td>
+</tr>
+<tr>
+<td>图像编辑</td>
+<td>不支持</td>
+<td>零样本编辑</td>
+</tr>
+<tr>
+<td>FID (COCO)</td>
+<td>~28</td>
+<td>10.39</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>否</td>
+<td>否</td>
+</tr>
+</tbody></table>
+<h3 id="vs-GLIDE"><a href="#vs-GLIDE" class="headerlink" title="vs GLIDE"></a>vs GLIDE</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GLIDE</th>
+<th>DALL-E 2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>端到端扩散</td>
+<td>两阶段 (Prior + Decoder)</td>
+</tr>
+<tr>
+<td>条件机制</td>
+<td>文本嵌入 + 分类器引导</td>
+<td>CLIP 图像嵌入</td>
+</tr>
+<tr>
+<td>编辑能力</td>
+<td>文本驱动 inpainting</td>
+<td>CLIP 向量算术编辑</td>
+</tr>
+<tr>
+<td>FID</td>
+<td>12.2</td>
+<td>10.39</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Stable-Diffusion"><a href="#vs-Stable-Diffusion" class="headerlink" title="vs Stable Diffusion"></a>vs Stable Diffusion</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DALL-E 2</th>
+<th>Stable Diffusion</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>潜空间</td>
+<td>CLIP 图像嵌入 (1024D)</td>
+<td>VAE 潜空间 (64x64x4)</td>
+</tr>
+<tr>
+<td>文本编码器</td>
+<td>CLIP</td>
+<td>CLIP ViT-L&#x2F;14</td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>1024x1024</td>
+<td>512x512（可升级）</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>否</td>
+<td>是（全面开源）</td>
+</tr>
+<tr>
+<td>社区生态</td>
+<td>API 封闭访问</td>
+<td>庞大的开源生态</td>
+</tr>
+<tr>
+<td>灵活性</td>
+<td>依赖 CLIP 嵌入</td>
+<td>支持多种条件控制</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-Prior-是质量瓶颈"><a href="#1-Prior-是质量瓶颈" class="headerlink" title="1. Prior 是质量瓶颈"></a>1. Prior 是质量瓶颈</h3><p><strong>问题</strong>: Decoder 可以直接从 ground truth CLIP 嵌入生成高质量的图像，但 Prior 的映射不够精确，导致端到端性能下降（FID 从 7.0 到 10.39）。</p>
+<p><strong>影响</strong>: 提升 Prior 的精度是改进空间最大的方向——但论文未深入探索如何改进 Prior。</p>
+<h3 id="2-文本理解的深层缺陷"><a href="#2-文本理解的深层缺陷" class="headerlink" title="2. 文本理解的深层缺陷"></a>2. 文本理解的深层缺陷</h3><p><strong>问题</strong>: DALL-E 2 在计数、空间关系、属性绑定等需要精确语义理解的场景中表现不佳。这源于 CLIP 本身的局限——CLIP 擅长识物体类别，但不擅长理解物体之间的精细关系。</p>
+<p><strong>影响</strong>: 限制了在需要精确空间控制的专业场景中的使用。</p>
+<h3 id="3-CLIP-嵌入的信息瓶颈"><a href="#3-CLIP-嵌入的信息瓶颈" class="headerlink" title="3. CLIP 嵌入的信息瓶颈"></a>3. CLIP 嵌入的信息瓶颈</h3><p><strong>问题</strong>: 1024 维的 CLIP 嵌入到底能保留多少图像的细节信息存在理论限制。对于高分辨率、多物体的复杂场景，信息压缩率过高（3 x 256 x 256 -&gt; 1024 维），必然有信息损失。</p>
+<p><strong>影响</strong>: Decoder 从嵌入中恢复的细节本质上不能超过嵌入所保留的信息量。</p>
+<h3 id="4-封闭生态"><a href="#4-封闭生态" class="headerlink" title="4. 封闭生态"></a>4. 封闭生态</h3><p><strong>问题</strong>: 模型未开源，只有通过 OpenAI API 访问。</p>
+<p><strong>影响</strong>: 限制了学术研究和社区创新。</p>
+<h3 id="5-安全与偏见"><a href="#5-安全与偏见" class="headerlink" title="5. 安全与偏见"></a>5. 安全与偏见</h3><p><strong>问题</strong>: 大规模网络数据训练带来的偏见和安全风险（生成不当内容）未得到充分解决。</p>
+<p><strong>影响</strong>: OpenAI 采取了限制性 API 策略来缓解安全问题，但也限制了用户自由度。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-潜空间解耦-可控性"><a href="#1-潜空间解耦-可控性" class="headerlink" title="1. 潜空间解耦 &#x3D; 可控性"></a>1. 潜空间解耦 &#x3D; 可控性</h3><p><strong>洞见</strong>: 当一个表示空间具有良好的语义解耦特性时，简单的向量操作（加法、减法、插值）就可以实现复杂的高级控制。</p>
+<p><strong>后续应用</strong>: 这一原则被广泛应用于 StyleGAN 的编辑、扩散模型的 Prompt-to-Prompt 编辑等。任何生成模型的好坏，在很大程度上取决于其潜空间的质量和解耦程度。</p>
+<h3 id="2-层级生成的自然优势"><a href="#2-层级生成的自然优势" class="headerlink" title="2. 层级生成的自然优势"></a>2. 层级生成的自然优势</h3><p><strong>洞见</strong>: “先决定整体语义，再填充细节”的层级生成策略符合人类视觉认知的自然流程，比端到端的”从文本直接到像素”具有更好的可控性和可解释性。</p>
+<p><strong>后续应用</strong>: SD3 和 Flux 的多尺度 DiT 设计、VAR 的”下一尺度预测”都隐含地实现了类似的层级生成思想。</p>
+<h3 id="3-扩散模型内部架构选择的影响"><a href="#3-扩散模型内部架构选择的影响" class="headerlink" title="3. 扩散模型内部架构选择的影响"></a>3. 扩散模型内部架构选择的影响</h3><p><strong>洞见</strong>: 扩散 Prior 优于自回归 Prior 的证据，直接指导了 OpenAI 后续的技术路线选择，也影响了整个生成式 AI 社区的方向。</p>
+<p><strong>后续应用</strong>: 2022-2023 年文生图领域几乎被扩散模型垄断，自回归方法直到 2024 年的 VAR 才重新获得关注。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="DALL-E-2-的历史意义"><a href="#DALL-E-2-的历史意义" class="headerlink" title="DALL-E 2 的历史意义"></a>DALL-E 2 的历史意义</h3><p>DALL-E 2 是文生图技术从”技术验证”进入”公众认知”的关键转折点。2022 年 4 月那张”宇航员骑马”的演示图片在全球社交媒体上引发了轰动效应——对于许多非 AI 从业者来说，这是他们第一次意识到”AI 可以画画”。</p>
+<p>有趣的是，DALL-E 2 从未在传统学术会议发表（只有 arXiv 预印本），但其影响力大于绝大多数 NeurIPS&#x2F;ICML&#x2F;CVPR 最佳论文。这说明在生成式 AI 领域，<strong>演示效果</strong>有时比<strong>理论贡献</strong>更能推动领域发展。</p>
+<h3 id="与后续工作的关系"><a href="#与后续工作的关系" class="headerlink" title="与后续工作的关系"></a>与后续工作的关系</h3><p>DALL-E 2 的两阶段设计深刻影响了后续研究：</p>
+<ul>
+<li><strong>SD3&#x2F;Flux 的双编码器</strong>: 印证了”更好的文本理解 &gt; 更好的图像解码”的原则，两者都同时使用 CLIP 和 T5-XXL 编码器</li>
+<li><strong>Image Variations -&gt; IP-Adapter</strong>: 将图像作为条件输入的思路在 IP-Adapter (2023) 中得到更优雅的实现——使用解耦交叉注意力同时接受图像和文本条件</li>
+<li><strong>CLIP 向量编辑 -&gt; Prompt-to-Prompt</strong>: 基于注意力操控的编辑方法 (2022) 提供了比 CLIP 向量编辑更精确的像素级控制</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-Prior-的改进空间"><a href="#1-Prior-的改进空间" class="headerlink" title="1. Prior 的改进空间"></a>1. Prior 的改进空间</h3><p><strong>问题</strong>: Prior 将 77x768 的文本特征压缩为 1024 维的 CLIP 嵌入，信息压缩率极高。如何设计更好的 Prior 以保留更多文本语义信息？</p>
+<p><strong>后续工作</strong>: Imagen 的发现——使用更大的纯文本语言模型（T5-XXL）可以显著提升生成质量——可以理解为对 Prior 改进的间接探索。</p>
+<h3 id="2-CLIP-潜空间的理论极限"><a href="#2-CLIP-潜空间的理论极限" class="headerlink" title="2. CLIP 潜空间的理论极限"></a>2. CLIP 潜空间的理论极限</h3><p><strong>问题</strong>: 1024 维 CLIP 嵌入的信息容量有理论上限。对于包含大量物体的复杂场景，这个压缩比是否足够？</p>
+<p><strong>研究方向</strong>: 信息瓶颈分析——CLIP 嵌入在不同复杂度场景下的信息保留率如何衰减？</p>
+<h3 id="3-端到端-vs-两阶段"><a href="#3-端到端-vs-两阶段" class="headerlink" title="3. 端到端 vs 两阶段"></a>3. 端到端 vs 两阶段</h3><p><strong>问题</strong>: 在 SD3&#x2F;Flux 等端到端方法已经达到极高质量的今天，两阶段的 DALL-E 2 式架构还有优势吗？</p>
+<p><strong>研究方向</strong>: 在可控性和可解释性等维度上比较端到端和两阶段架构。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Ramesh, A., et al. (2022). Hierarchical Text-Conditional Image Generation with CLIP Latents. arXiv:2204.06125</li>
+<li>Radford, A., et al. (2021). Learning Transferable Visual Models From Natural Language Supervision. ICML 2021. (CLIP)</li>
+<li>Dhariwal, P., &amp; Nichol, A. (2021). Diffusion Models Beat GANs on Image Synthesis. NeurIPS 2021. (扩散模型图像生成的基础)</li>
+<li>Nichol, A., et al. (2022). GLIDE: Towards Photorealistic Image Generation and Editing with Text-Guided Diffusion Models. ICML 2022.</li>
+<li>Sohl-Dickstein, J., et al. (2015). Deep Unsupervised Learning using Nonequilibrium Thermodynamics. ICML 2015. (扩散模型理论基础)</li>
+<li>Ho, J., et al. (2020). Denoising Diffusion Probabilistic Models. NeurIPS 2020. (DDPM)</li>
+<li>Ramesh, A., et al. (2021). Zero-Shot Text-to-Image Generation. ICML 2021. (DALL-E 原始版本)</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E6%96%87%E7%94%9F%E5%9B%BE/" class="category-chain-item">文生图</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-diffusion-models/" class="print-no-link">#papers/diffusion-models</a>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-text-to-image/" class="print-no-link">#papers/text-to-image</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Hierarchical Text-Conditional Image Generation with CLIP Latents</div>
+      <div>https://w2ongq6.github.io/2022/04/13/aigc/note/DALL-E2_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年4月13日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/04/29/llm/note/Flamingo_note/" title="Flamingo: a Visual Language Model for Few-Shot Learning">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Flamingo: a Visual Language Model for Few-Shot Learning</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/04/07/aigc/note/VideoDiffusionModels_note/" title="Video Diffusion Models">
+                        <span class="hidden-mobile">Video Diffusion Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

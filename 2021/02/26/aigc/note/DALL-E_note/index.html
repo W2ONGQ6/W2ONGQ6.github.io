@@ -1,0 +1,1273 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="DALL-E: 零样本文生图核心信息 标题: Zero-Shot Text-to-Image Generation 标题翻译: 零样本文本到图像生成 作者: Aditya Ramesh, Mikhail Pavlov, Gabriel Goh, Scott Gray, Chelsea Voss, Alec Radford, Mark Chen, Ilya Sutskever 机构: OpenAI">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Zero-Shot Text-to-Image Generation">
+<meta property="og:url" content="https://w2ongq6.github.io/2021/02/26/aigc/note/DALL-E_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="DALL-E: 零样本文生图核心信息 标题: Zero-Shot Text-to-Image Generation 标题翻译: 零样本文本到图像生成 作者: Aditya Ramesh, Mikhail Pavlov, Gabriel Goh, Scott Gray, Chelsea Voss, Alec Radford, Mark Chen, Ilya Sutskever 机构: OpenAI">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-02-25T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.771Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;autoregressive">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta property="article:tag" content="papers&#x2F;text-to-image">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Zero-Shot Text-to-Image Generation - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Zero-Shot Text-to-Image Generation"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-02-26 00:00" pubdate>
+          2021年2月26日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          73 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Zero-Shot Text-to-Image Generation</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="DALL-E-零样本文生图"><a href="#DALL-E-零样本文生图" class="headerlink" title="DALL-E: 零样本文生图"></a>DALL-E: 零样本文生图</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Zero-Shot Text-to-Image Generation</li>
+<li>标题翻译: 零样本文本到图像生成</li>
+<li>作者: Aditya Ramesh, Mikhail Pavlov, Gabriel Goh, Scott Gray, Chelsea Voss, Alec Radford, Mark Chen, Ilya Sutskever</li>
+<li>机构: OpenAI</li>
+<li>发表时间: 2021 年 2 月</li>
+<li>发表渠道: ICML 2021</li>
+<li>arXiv: 2102.12092</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2102.12092">https://arxiv.org/abs/2102.12092</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/openai/DALL-E">https://github.com/openai/DALL-E</a></li>
+<li>论文类型: 文生图生成模型（自回归 Transformer）</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>文本到图像的生成传统上聚焦于在固定的小规模数据集上寻找更好的建模假设。这种假设可能涉及复杂的工程结构、辅助损失函数或训练阶段中包含的辅助信息（如目标部件标签或分割掩码）。本文描述了一个简单的方法，基于一个自回归 Transformer，在大规模文本-图像对数据上进行训练。给定文本和一组图像标记序列后，我们只需以自回归方式对标记进行建模。数据充足时，该方法在零样本条件下即可完成多种任务，包括概念组合、风格迁移、地理事实知识等。在 MS-COCO 数据集上的人类评审中，我们的 120 亿参数模型生成的样本优于此前任务特定模型，如 DF-GAN 和 DM-GAN。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-将图像离散化为-Token-序列，统一文图模态"><a href="#1-将图像离散化为-Token-序列，统一文图模态" class="headerlink" title="1. 将图像离散化为 Token 序列，统一文图模态"></a>1. 将图像离散化为 Token 序列，统一文图模态</h3><p><strong>核心思想</strong>: 训练一个离散变分自编码器（dVAE），将 256x256 的 RGB 图像压缩为 32x32 的离散 token 网格，每个 token 来自 8192 个码本条目。这使得连续图像被转化为与文本完全相同的离散符号序列，文图生成问题变成了标准的序列到序列（seq2seq）建模问题。</p>
+<p><strong>为什么重要</strong>: 在 DALL-E 之前，文生图的主流方法是 GAN 配合文本编码器，需要针对图像模态设计专门的生成架构。DALL-E 的做法——把图像当作”另一种语言”——消除了模态差异，使得为语言模型开发的所有基础设施（大规模训练、稀疏注意力、分布式训练等）可以直接应用于图像生成。这条”万物皆 token”的技术路线最终演化为 GPT-4V&#x2F;4o 等多模态大模型的基础范式。</p>
+<h3 id="2-12B-参数的稀疏-Transformer-架构"><a href="#2-12B-参数的稀疏-Transformer-架构" class="headerlink" title="2. 12B 参数的稀疏 Transformer 架构"></a>2. 12B 参数的稀疏 Transformer 架构</h3><p><strong>核心思想</strong>: 使用 64 层、每层 62 个注意力头的稀疏 Transformer，总参数量 120 亿。稀疏注意力模式在文本 token 和图像 token 之间使用了不同的连接策略——文本 token 可以关注所有之前的文本 token，图像 token 可以关注所有文本 token 和图像的局部区域。这种设计大幅降低了自回归生成的计算复杂度（从完全的 O(N^2) 降到近似 O(N*√N)）。</p>
+<p><strong>为什么重要</strong>: 12B 参数在当时是图像生成领域前所未有的规模（此前最大的图像生成模型参数量通常在百万到亿级别）。稀疏注意力的使用使得模型能够处理文本（最长 256 token）和图像（1024 token）拼接而成的长序列，同时保持训练效率。这证明了”规模越大，能力越强”的定律在文生图领域同样成立。</p>
+<h3 id="3-大规模数据驱动的零样本泛化"><a href="#3-大规模数据驱动的零样本泛化" class="headerlink" title="3. 大规模数据驱动的零样本泛化"></a>3. 大规模数据驱动的零样本泛化</h3><p><strong>核心思想</strong>: 使用约 2.5 亿图文对进行训练（远超此前学术数据集的规模，如 MS-COCO 仅 10 万级），不做任何任务特定的微调。模型在训练中从未见过明确的”风格迁移”或”图像类比”训练样本，但这些能力从数据中涌现出来。</p>
+<p><strong>为什么重要</strong>: 这标志着文生图研究从”在特定数据集上精心设计任务专属方案”转向了”大规模预训练 + 零样本泛化”的范式。这一范式是 GPT-3 在 NLP 领域成功经验向视觉生成的直接迁移，为后续 DALL-E 2、Stable Diffusion 等模型的训练哲学奠定了思想基础。</p>
+<h3 id="4-涌现的多种生成能力"><a href="#4-涌现的多种生成能力" class="headerlink" title="4. 涌现的多种生成能力"></a>4. 涌现的多种生成能力</h3><p><strong>核心思想</strong>: DALL-E 展示了此前需要专门模型才能实现的能力：概念组合（”鳄梨形状的扶手椅”）、风格迁移（”以梵高风格画的猫”）、图像类比推理、地理事实知识（”旧金山金门大桥的照片”）、时序推理（”一天中不同时刻的同一场景”）等。</p>
+<p><strong>为什么重要</strong>: 这些能力不是显式设计的产物，而是模型在大规模数据上训练后自然涌现的。这证明了 Transformer 的灵活表征能力足以学习到视觉概念的语义组合规则，使得”用语言指挥图像生成”这一理想变得切实可行。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>DALL-E 通过训练 120 亿参数的稀疏 Transformer 对 2.5 亿图文对进行自回归建模，首次证明足够大的模型在大规模数据上训练后可以在零样本条件下从文本描述直接生成多样化、语义合理的图像，开创了”大规模预训练 + 零样本文生图”的新范式。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>在 DALL-E 之前，文生图面临两个根本性困难：</p>
+<ol>
+<li><p><strong>模态鸿沟</strong>: 文本是离散的、结构化的符号序列，图像是连续的、高维的像素矩阵。如何将两者映射到统一的建模空间？</p>
+</li>
+<li><p><strong>数据与泛化</strong>: 传统文生图模型（如 StackGAN、DF-GAN）在 MS-COCO 等特定数据集上训练，严重受限于标注数据的规模和多样性，泛化到新概念组合的能力极弱。</p>
+</li>
+</ol>
+<h3 id="DALL-E-的关键洞察"><a href="#DALL-E-的关键洞察" class="headerlink" title="DALL-E 的关键洞察"></a>DALL-E 的关键洞察</h3><blockquote>
+<p><strong>把图像当作另一种语言</strong>: 如果能把图像转换为离散 token 序列，就可以用处理文本完全相同的方式处理图像——用 Transformer 做自回归建模。这从根本上消除了模态差异。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li><strong>规模</strong>: 约 2.5 亿对图文对（来自互联网抓取，未公开具体数据源）</li>
+<li><strong>预处理</strong>: 文本截断至 256 token（BPE 编码），图像缩放至 256x256 分辨率</li>
+<li><strong>dVAE 训练数据</strong>: 来自 ImageNet 的图像（用于训练图像离散化编码器）</li>
+</ul>
+<h3 id="评估方式"><a href="#评估方式" class="headerlink" title="评估方式"></a>评估方式</h3><ul>
+<li><strong>零样本人类评估</strong>: 在 MS-COCO 上，请人类评审者比较 DALL-E 和此前最先进的专用模型生成的图像质量</li>
+<li><strong>定性展示</strong>: 通过精心设计的 prompt 展示概念组合、风格迁移、类比推理等能力</li>
+<li><strong>可控生成</strong>: 通过消融实验评估不同温度、不同 reranking 策略对生成质量的影响</li>
+</ul>
+<h3 id="关键设计选择"><a href="#关键设计选择" class="headerlink" title="关键设计选择"></a>关键设计选择</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>图像分辨率</td>
+<td>256x256</td>
+<td>dVAE 编码后的 token 网格为 32x32，共 1024 token</td>
+</tr>
+<tr>
+<td>dVAE 码本大小</td>
+<td>8192</td>
+<td>在重建质量与序列长度之间平衡</td>
+</tr>
+<tr>
+<td>文本编码</td>
+<td>BPE (16384 词汇表)</td>
+<td>与语言模型一致，降低 token 序列长度</td>
+</tr>
+<tr>
+<td>稀疏注意力模式</td>
+<td>行+列+头卷积</td>
+<td>使 1024 图像 token 的复杂度从 O(N^2) 降至 O(N*√N)</td>
+</tr>
+<tr>
+<td>推理后处理</td>
+<td>CLIP + DALL-E reranking</td>
+<td>用 CLIP 对 512 个候选排序，选出最佳图像</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>DALL-E 是一个两阶段系统：</p>
+<ol>
+<li><strong>阶段一（dVAE）</strong>: 训练一个离散 VAE，用于图像的编码（连续 RGB -&gt; 离散 token 网格）和解码（离散 token 网格 -&gt; 连续 RGB）</li>
+<li><strong>阶段二（Transformer）</strong>: 训练一个 120 亿参数的自回归 Transformer，对拼接的文本 token 和图像 token 序列进行联合建模</li>
+</ol>
+<p>![Figure 1: DALL-E 整体架构<br><em>Figure 1: 来源—原论文图表。</em></p>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><strong>步骤 1: 图像离散化（dVAE 训练）</strong></p>
+<ul>
+<li><strong>输入</strong>: RGB 图像 X（256x256x3）</li>
+<li><strong>操作</strong>:<ul>
+<li>编码器将图像编码为 32x32 的连续特征图</li>
+<li>通过查找 8192 大小的码本将每个位置的特征向量量化为最近的码本向量索引</li>
+<li>输出 32x32&#x3D;1024 个离散 token（每个 token 是 0~8191 的整数）</li>
+<li>解码器从量化后的特征图重建原始图像</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 一个能可靠编码&#x2F;解码图像的 dVAE 模型，以及每张训练图像对应的 1024 个 token</li>
+<li><strong>训练目标</strong>: 最小化 ELBO（证据下界），包括重建误差和码本学习损失</li>
+</ul>
+<p><strong>步骤 2: 文本-图像序列构建</strong></p>
+<ul>
+<li><strong>输入</strong>: 文本描述 T 和图像的 1024 个 token</li>
+<li><strong>操作</strong>:<ul>
+<li>用 BPE 分词器将文本编码为最长 256 个 token</li>
+<li>将文本 token 和图像 token 拼接为一个长序列：[text_1, …, text_m, image_1, …, image_1024]</li>
+<li>序列总长度最多为 256 + 1024 &#x3D; 1280 token</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 拼接后的统一 token 序列</li>
+</ul>
+<p><strong>步骤 3: 自回归 Transformer 训练</strong></p>
+<ul>
+<li><strong>输入</strong>: 拼接后的文本-图像 token 序列</li>
+<li><strong>操作</strong>:<ul>
+<li>对于文本区域：使用标准因果注意力（每个文本 token 关注所有之前的文本 token）</li>
+<li>对于图像区域：使用稀疏注意力（每个图像 token 关注所有文本 token + 图像 token 中特定位置的子集）</li>
+<li>稀疏注意力模式：行注意力（关注同一行的所有图像 token）+ 列注意力（关注同一列的所有图像 token）+ 头卷积注意力</li>
+<li>逐 token 预测下一个 token 的概率分布</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 训练好的 12B 参数 Transformer</li>
+<li><strong>训练目标</strong>: 交叉熵损失，最大化正确 token 的对数概率</li>
+</ul>
+<p><strong>步骤 4: 推理生成</strong></p>
+<ul>
+<li><strong>输入</strong>: 文本 prompt（训练时未见过的描述）</li>
+<li><strong>操作</strong>:<ul>
+<li>将文本编码为 token 序列</li>
+<li>从起始 token 开始，逐 token 自回归生成 1024 个图像 token</li>
+<li>在每一步从模型输出的概率分布中采样下一个 token</li>
+<li>生成 512 个候选图像（使用不同温度或采样策略）</li>
+<li>用 CLIP 对 512 个候选图像进行 reranking（按 CLIP 计算的图文相似度排序）</li>
+<li>选出 CLIP 得分最高的图像</li>
+</ul>
+</li>
+<li><strong>输出</strong>: dVAE 解码后的 RGB 图像</li>
+</ul>
+<h3 id="稀疏注意力细节"><a href="#稀疏注意力细节" class="headerlink" title="稀疏注意力细节"></a>稀疏注意力细节</h3><p>DALL-E 的 Transformer 使用了三种注意力模式的组合：</p>
+<ul>
+<li><strong>行注意力</strong>: 每个图像 token 关注所有文本 token + 同一行（row）的所有图像 token</li>
+<li><strong>列注意力</strong>: 每个图像 token 关注所有文本 token + 同一列（column）的所有图像 token</li>
+<li><strong>头卷积注意力</strong>: 在注意力头的维度上使用一维卷积来模拟更灵活的注意力模式</li>
+</ul>
+<p>这种设计使得 1024 个图像 token 的注意力复杂度从 O(1024²) ≈ 1M 降至 O(1024 × (1024^(1&#x2F;2) + 1024^(1&#x2F;2))) ≈ 65K，大幅降低了内存和计算需求。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="零样本-MS-COCO-人类评估"><a href="#零样本-MS-COCO-人类评估" class="headerlink" title="零样本 MS-COCO 人类评估"></a>零样本 MS-COCO 人类评估</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>人类偏好率 (%)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DALL-E vs DF-GAN</td>
+<td>90.0% 偏好 DALL-E</td>
+</tr>
+<tr>
+<td>DALL-E vs DM-GAN</td>
+<td>93.3% 偏好 DALL-E</td>
+</tr>
+<tr>
+<td>DALL-E vs AttnGAN</td>
+<td>接近 100% 偏好 DALL-E</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: DALL-E 在零样本条件下（从未在 COCO 上微调）生成的图像在人类评审中显著优于所有在 COCO 上专门训练的 GAN 方法。这验证了大规模预训练带来的泛化能力远超任务特定训练。</p>
+<h3 id="CLIP-Reranking-的效果"><a href="#CLIP-Reranking-的效果" class="headerlink" title="CLIP Reranking 的效果"></a>CLIP Reranking 的效果</h3><table>
+<thead>
+<tr>
+<th>Reranking 策略</th>
+<th>MS-COCO FID（越低越好）</th>
+<th>Inception Score（越高越好）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>不 rerank（第 1 个样本）</td>
+<td>约 32</td>
+<td>约 17</td>
+</tr>
+<tr>
+<td>CLIP rerank top-1 &#x2F; 512</td>
+<td>约 28</td>
+<td>约 18.5</td>
+</tr>
+<tr>
+<td>CLIP rerank top-4 &#x2F; 512</td>
+<td>约 27</td>
+<td>约 17.5</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: CLIP reranking 显著提升生成质量。DALL-E 的原始采样具有较大的方差，但 CLIP 提供了一个廉价且有效的方式从候选池中选出最佳结果。这种”生成+筛选”的范式后来被广泛采用。</p>
+<h3 id="涌现能力定性展示"><a href="#涌现能力定性展示" class="headerlink" title="涌现能力定性展示"></a>涌现能力定性展示</h3><p>DALL-E 展示了多种零样本能力：</p>
+<table>
+<thead>
+<tr>
+<th>能力类型</th>
+<th>示例 Prompt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>概念组合</td>
+<td>“一个鳄梨形状的扶手椅”</td>
+</tr>
+<tr>
+<td>风格迁移</td>
+<td>“一幅毕加索风格的猫的画”</td>
+</tr>
+<tr>
+<td>类比推理</td>
+<td>“a 之于 b，如同 c 之于 ___”（视觉类比填充）</td>
+</tr>
+<tr>
+<td>地理事实</td>
+<td>“旧金山金门大桥在日落时的照片”</td>
+</tr>
+<tr>
+<td>时序推理</td>
+<td>“同一个街区在黎明、正午和黄昏时的照片”</td>
+</tr>
+<tr>
+<td>多物体控制</td>
+<td>“一个红方块在蓝球上面，绿三角在右边”</td>
+</tr>
+</tbody></table>
+<p>这些能力没有一个是显式训练的——大规模数据 + 足够大的模型自发涌现了组合性推理能力。</p>
+<h3 id="可控性（温度参数的影响）"><a href="#可控性（温度参数的影响）" class="headerlink" title="可控性（温度参数的影响）"></a>可控性（温度参数的影响）</h3><table>
+<thead>
+<tr>
+<th>温度</th>
+<th>生成效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0.1</td>
+<td>高度确定性的样本，多样性低</td>
+</tr>
+<tr>
+<td>0.5</td>
+<td>质量与多样性的平衡点</td>
+</tr>
+<tr>
+<td>1.0</td>
+<td>多样性强，但容易出现瑕疵</td>
+</tr>
+<tr>
+<td>1.5+</td>
+<td>样本出现明显失真</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: 温度参数提供了对生成结果多样性-质量折中的控制，这是自回归生成模型的天然优势。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么选择自回归而非-GAN"><a href="#为什么选择自回归而非-GAN" class="headerlink" title="为什么选择自回归而非 GAN"></a>为什么选择自回归而非 GAN</h3><p>DALL-E 选择自回归 Transformer 而非当时更主流的 GAN 有以下深层原因：</p>
+<ol>
+<li><strong>训练稳定性</strong>: GAN 面临模式坍塌、训练不收敛等根本性问题，尤其在处理多样化输出时。自回归 Transformer 的极大似然训练天然稳定。</li>
+<li><strong>规模化能力</strong>: Transformer 的可扩展性已被 GPT 系列充分验证。将模型从 1B 扩大到 12B，性能持续提升——而 GAN 在此规模上的训练极为困难。</li>
+<li><strong>与文本的统一</strong>: 自回归生成与 GPT 等语言模型的范式完全一致，文本和图像可以采用完全相同的建模方式。</li>
+</ol>
+<h3 id="dVAE-设计的权衡"><a href="#dVAE-设计的权衡" class="headerlink" title="dVAE 设计的权衡"></a>dVAE 设计的权衡</h3><p>dVAE 的码本大小（8192）是一个关键设计参数：</p>
+<ul>
+<li><strong>太小</strong>: 码本表达能力不足，重建质量差，信息损失大</li>
+<li><strong>太大</strong>: 每个 token 有太多可能取值，自回归预测的搜索空间过大</li>
+<li><strong>8192</strong>: 对 256x256 图像，32x32 的 token 网格配合 8192 码本可实现较好的重建质量（PSNR 约 28-30），同时保持每个 token 的预测分布足够集中</li>
+</ul>
+<p>码本大小还直接影响后续 Transformer 的”词汇表”大小——8192 加上文本的 16384 个 BPE token，总词汇量约 24000，仍然可控。</p>
+<h3 id="自回归速度瓶颈"><a href="#自回归速度瓶颈" class="headerlink" title="自回归速度瓶颈"></a>自回归速度瓶颈</h3><p>DALL-E 的推理需要自回归生成 1024 个图像 token，每个 token 需要一次完整的前向传播——即使使用 KV 缓存，单张图生成仍需约 1024 次前向传播。这导致：</p>
+<ul>
+<li>单张图像生成时间：约 2-5 分钟（取决于硬件）</li>
+<li>512 张候选 + CLIP reranking：总时间可能超过 1 小时</li>
+<li>这一速度瓶颈直接决定了 DALL-E 不适合交互式应用</li>
+</ul>
+<p>这也是后续 DALL-E 2、Stable Diffusion 转向扩散模型的核心原因之一——扩散模型可通过单次前向传播（或少数几步去噪）完成生成。</p>
+<h3 id="稀疏注意力的真正作用"><a href="#稀疏注意力的真正作用" class="headerlink" title="稀疏注意力的真正作用"></a>稀疏注意力的真正作用</h3><p>DALL-E 的稀疏注意力不仅是工程优化——它还引入了有益的归纳偏置。行&#x2F;列注意力模式隐式地编码了图像的二维结构，使模型天然理解”相邻像素更相关”这一空间规律。这类似于 CNN 的平移等变归纳偏置，但以更灵活的方式嵌入 Transformer 架构中。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-此前文生图方法"><a href="#vs-此前文生图方法" class="headerlink" title="vs 此前文生图方法"></a>vs 此前文生图方法</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GAN-based (DF-GAN, AttnGAN)</th>
+<th>DALL-E</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成范式</td>
+<td>GAN 对抗训练</td>
+<td>自回归极大似然</td>
+</tr>
+<tr>
+<td>参数规模</td>
+<td>百万级</td>
+<td>120 亿</td>
+</tr>
+<tr>
+<td>训练数据</td>
+<td>MS-COCO (~10 万)</td>
+<td>~2.5 亿</td>
+</tr>
+<tr>
+<td>图像编码</td>
+<td>连续特征</td>
+<td>离散 token (dVAE)</td>
+</tr>
+<tr>
+<td>泛化方式</td>
+<td>在固定数据集上训练</td>
+<td>零样本泛化</td>
+</tr>
+<tr>
+<td>训练稳定性</td>
+<td>困难（模式坍塌）</td>
+<td>稳定（极大似然）</td>
+</tr>
+<tr>
+<td>推理速度</td>
+<td>快（单次前向传播）</td>
+<td>慢（逐 token 生成）</td>
+</tr>
+</tbody></table>
+<h3 id="vs-后续方法"><a href="#vs-后续方法" class="headerlink" title="vs 后续方法"></a>vs 后续方法</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DALL-E (2021)</th>
+<th>DALL-E 2 (2022)</th>
+<th>Stable Diffusion (2022)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>自回归 Transformer</td>
+<td>扩散模型 + CLIP</td>
+<td>潜空间扩散模型</td>
+</tr>
+<tr>
+<td>生成方式</td>
+<td>逐 token 自回归</td>
+<td>一步去噪</td>
+<td>多步去噪</td>
+</tr>
+<tr>
+<td>速度</td>
+<td>分钟级</td>
+<td>秒级</td>
+<td>秒级</td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>256x256</td>
+<td>1024x1024</td>
+<td>512x512 (可升级)</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>否</td>
+<td>否</td>
+<td>是</td>
+</tr>
+</tbody></table>
+<p>DALL-E 的核心贡献是”概念验证”——证明了大规模的 Transformer + 大规模数据可以解决文生图问题。它开辟的道路比它自身的结果更重要。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-推理速度极慢"><a href="#1-推理速度极慢" class="headerlink" title="1. 推理速度极慢"></a>1. 推理速度极慢</h3><p><strong>问题</strong>: 自回归生成 1024 个 token 需要 1024 次前向传播，单张图生成分钟级。这是 DALL-E 无法产品化的根本原因。</p>
+<p><strong>影响</strong>: 限制了交互式应用场景，也使得大规模用户服务不可行。</p>
+<h3 id="2-图像保真度有限"><a href="#2-图像保真度有限" class="headerlink" title="2. 图像保真度有限"></a>2. 图像保真度有限</h3><p><strong>问题</strong>: 256x256 的分辨率在 2021 年就已经不够用，dVAE 的压缩-重建过程会损失细节。生成的图像常有模糊、块状伪影等问题。</p>
+<p><strong>影响</strong>: 无法满足高分辨率、高质量图像需求。</p>
+<h3 id="3-缺乏精确的空间控制"><a href="#3-缺乏精确的空间控制" class="headerlink" title="3. 缺乏精确的空间控制"></a>3. 缺乏精确的空间控制</h3><p><strong>问题</strong>: DALL-E 通过自然语言描述来指定图像内容，但无法进行精确的空间定位（如”把树放在左上角”）。文本描述的模糊性导致生成结果的随机性。</p>
+<p><strong>影响</strong>: 限制了在专业设计等领域的使用。</p>
+<h3 id="4-封闭生态"><a href="#4-封闭生态" class="headerlink" title="4. 封闭生态"></a>4. 封闭生态</h3><p><strong>问题</strong>: OpenAI 未开源 DALL-E 的模型权重、训练代码和数据集，外部研究者无法复现或改进。</p>
+<p><strong>影响</strong>: 虽然论文发表后学术社区广泛讨论了其方法，但无法基于 DALL-E 进行二次开发。</p>
+<h3 id="5-文本理解深度不足"><a href="#5-文本理解深度不足" class="headerlink" title="5. 文本理解深度不足"></a>5. 文本理解深度不足</h3><p><strong>问题</strong>: DALL-E 使用简单的 BPE 文本编码，缺乏对复杂语义关系（否定、计数、空间关系）的深层理解。复杂的 prompt 常常产生不准确的结果。</p>
+<p><strong>影响</strong>: “把三只猫放在两只狗旁边”这类涉及计数的 prompt 经常失败。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-“万物皆-Token”的统一范式"><a href="#1-“万物皆-Token”的统一范式" class="headerlink" title="1. “万物皆 Token”的统一范式"></a>1. “万物皆 Token”的统一范式</h3><p><strong>洞见</strong>: 将不同模态（文本、图像、音频等）统一表示为离散 token 序列，可以用同一套自回归 Transformer 架构处理所有模态。</p>
+<p><strong>后续应用</strong>:</p>
+<ul>
+<li>Make-A-Scene: 用 token 表示语义分割图</li>
+<li>VideoPoet: 用统一的 token 空间处理视频、音频、图像、文本</li>
+<li>多模态 LLM (GPT-4V, Gemini): 图像 token + 文本 token 统一处理</li>
+</ul>
+<h3 id="2-大规模数据-大模型-涌现能力"><a href="#2-大规模数据-大模型-涌现能力" class="headerlink" title="2. 大规模数据 + 大模型 &#x3D; 涌现能力"></a>2. 大规模数据 + 大模型 &#x3D; 涌现能力</h3><p><strong>洞见</strong>: 当模型和数据规模足够大时，不需要专门的任务设计，Transformer 就可以涌现出概念组合、风格迁移、类比推理等复杂能力。</p>
+<p><strong>后续应用</strong>: 这一原则贯穿了整个生成式 AI 的发展——从 DALL-E 到 GPT-4 到 Sora，每次能力突破都伴随着规模的跨越。</p>
+<h3 id="3-CLIP-Reranking-的实用价值"><a href="#3-CLIP-Reranking-的实用价值" class="headerlink" title="3. CLIP Reranking 的实用价值"></a>3. CLIP Reranking 的实用价值</h3><p><strong>洞见</strong>: 对于有高方差输出的生成模型，用另一个评价模型（CLIP）对候选结果排序是廉价且有效的质量提升手段。</p>
+<p><strong>后续应用</strong>:</p>
+<ul>
+<li>DALL-E 2 继承了这一策略</li>
+<li>扩散模型的 classifier-free guidance 可以视为在采样过程中隐式地实现类似目标</li>
+<li>在线服务中，生成多个候选再进行审美筛选是标准操作</li>
+</ul>
+<h3 id="4-稀疏注意力中的结构化归纳偏置"><a href="#4-稀疏注意力中的结构化归纳偏置" class="headerlink" title="4. 稀疏注意力中的结构化归纳偏置"></a>4. 稀疏注意力中的结构化归纳偏置</h3><p><strong>洞见</strong>: 在 Transformer 中使用结构化的稀疏注意力模式（如行+列+卷积）既能降低计算复杂度，又能引入对数据结构的先验知识。</p>
+<p><strong>后续应用</strong>:</p>
+<ul>
+<li>Axial Attention（轴注意力）在图像和视频 Transformer 中被广泛采用</li>
+<li>Video Diffusion Models 的空间-时间因式分解注意力继承了类似思想</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="历史地位的再审视"><a href="#历史地位的再审视" class="headerlink" title="历史地位的再审视"></a>历史地位的再审视</h3><p>DALL-E 经常因为后续工作的光芒而被低估。但回顾来看，它是文生图领域最关键的”0 到 1”突破：</p>
+<ul>
+<li><strong>之前</strong>: 人们普遍认为高质量文生图需要复杂的多阶段架构、辅助损失函数和专门的数据标注</li>
+<li><strong>之后</strong>: 人们意识到大规模 Transformer + 大规模数据就够了</li>
+</ul>
+<p>这一认知转换的影响远超 DALL-E 自身——它直接催生了 2021-2022 年整个生成式 AI 赛道的爆发。</p>
+<h3 id="对研究范式的启示"><a href="#对研究范式的启示" class="headerlink" title="对研究范式的启示"></a>对研究范式的启示</h3><p>DALL-E 的成功本质上是科研思路的重大转变：</p>
+<ol>
+<li><strong>从”巧妙的架构”到”足够大的规模”</strong>: 类似 NLP 领域的 BERT&#x2F;GPT 经验——当规模足够大时，架构细节的重要性下降</li>
+<li><strong>从”任务专属”到”通用预训练”</strong>: 不再为每个能力设计专门的模块，而是相信大规模预训练可以覆盖各种下游任务</li>
+<li><strong>从”小数据精调”到”大数据涌现”</strong>: 2.5 亿图文对 &gt; 10 万 COCO 标注——数据的量级差异改变了模型的行为模式</li>
+</ol>
+<h3 id="与-GPT-系列的类比"><a href="#与-GPT-系列的类比" class="headerlink" title="与 GPT 系列的类比"></a>与 GPT 系列的类比</h3><p>DALL-E 之于图像生成，如同 GPT-1&#x2F;GPT-2 之于 NLP：</p>
+<table>
+<thead>
+<tr>
+<th>类比维度</th>
+<th>NLP</th>
+<th>视觉生成</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>范式开创者</td>
+<td>GPT-1&#x2F;GPT-2</td>
+<td>DALL-E</td>
+</tr>
+<tr>
+<td>证明规模可行</td>
+<td>GPT-3</td>
+<td>DALL-E 2 &#x2F; Imagen</td>
+</tr>
+<tr>
+<td>开源民主化</td>
+<td>LLaMA</td>
+<td>Stable Diffusion</td>
+</tr>
+<tr>
+<td>多模态统一</td>
+<td>GPT-4V</td>
+<td>仍在发展中</td>
+</tr>
+</tbody></table>
+<p>这种跨领域的对称性暗示着：文生图的发展轨迹可能继续跟随 NLP 的脚步——从规模到效率、从单模态到多模态、从生成到理解。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-自回归与扩散的终极竞争"><a href="#1-自回归与扩散的终极竞争" class="headerlink" title="1. 自回归与扩散的终极竞争"></a>1. 自回归与扩散的终极竞争</h3><p><strong>问题</strong>: 自回归和扩散模型到底哪个更适合图像生成？VAR (NeurIPS 2024 Best Paper) 证明自回归可以超越扩散，但扩散模型目前仍然是主流。这两种范式的优劣边界在哪里？</p>
+<p><strong>研究方向</strong>: 在更大规模上比较自回归和扩散的 scaling law、在不同任务类型上的表现差异。</p>
+<h3 id="2-更好的图像-Tokenizer"><a href="#2-更好的图像-Tokenizer" class="headerlink" title="2. 更好的图像 Tokenizer"></a>2. 更好的图像 Tokenizer</h3><p><strong>问题</strong>: dVAE 的压缩率和重建质量都不够理想。是否有更好的图像离散化方法？</p>
+<p><strong>研究方向</strong>: VQ-VAE-2、VQGAN、MAGVIT-v2 等方法在重建质量和压缩效率上的进展值得关注。</p>
+<h3 id="3-从”生成”到”理解”"><a href="#3-从”生成”到”理解”" class="headerlink" title="3. 从”生成”到”理解”"></a>3. 从”生成”到”理解”</h3><p><strong>问题</strong>: DALL-E 证明了 Transformer 可以从文本生成图像，但它是否能真正”理解”图像的内容？这关系到多模态 LLM 的底层架构选择。</p>
+<p><strong>研究方向</strong>: 比较”统一 token + 自回归” vs “专用编码器 + 交叉注意力”两种多模态融合策略的深度理解能力。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Ramesh, A., et al. (2021). Zero-Shot Text-to-Image Generation. ICML 2021. arXiv:2102.12092</li>
+<li>van den Oord, A., et al. (2017). Neural Discrete Representation Learning. NeurIPS 2017. (VQ-VAE 的基础工作)</li>
+<li>Child, R., et al. (2019). Generating Long Sequences with Sparse Transformers. arXiv:1904.10509. (稀疏 Transformer 的基础架构)</li>
+<li>Radford, A., et al. (2021). Learning Transferable Visual Models From Natural Language Supervision. ICML 2021. (CLIP 论文)</li>
+<li>Brown, T., et al. (2020). Language Models are Few-Shot Learners. NeurIPS 2020. (GPT-3，证明规模化灵验)</li>
+<li>Esser, P., et al. (2021). Taming Transformers for High-Resolution Image Synthesis. CVPR 2021. (VQGAN，改进的图像 tokenizer)</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E6%96%87%E7%94%9F%E5%9B%BE/" class="category-chain-item">文生图</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-text-to-image/" class="print-no-link">#papers/text-to-image</a>
+      
+        <a href="/tags/papers-autoregressive/" class="print-no-link">#papers/autoregressive</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Zero-Shot Text-to-Image Generation</div>
+      <div>https://w2ongq6.github.io/2021/02/26/aigc/note/DALL-E_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2021年2月26日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/04/20/llm/note/RoPE_note/" title="RoFormer: Enhanced Transformer with Rotary Position Embedding">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">RoFormer: Enhanced Transformer with Rotary Position Embedding</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/11/26/aigc/note/ScoreSDE_note/" title="Score-Based Generative Modeling through Stochastic Differential Equations">
+                        <span class="hidden-mobile">Score-Based Generative Modeling through Stochastic Differential Equations</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1310 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="FlexAttention: PyTorch的灵活性与FlashAttention的性能核心信息 标题: FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention 标题翻译: FlexAttention：兼具PyTorch灵活性和FlashAttention性能 作者: Horace He, D">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/08/01/inference/note/FlexAttention_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="FlexAttention: PyTorch的灵活性与FlashAttention的性能核心信息 标题: FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention 标题翻译: FlexAttention：兼具PyTorch灵活性和FlashAttention性能 作者: Horace He, D">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-07-31T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.445Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-optimization">
+<meta property="article:tag" content="papers&#x2F;compiler">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-08-01 00:00" pubdate>
+          2024年8月1日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          102 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="FlexAttention-PyTorch的灵活性与FlashAttention的性能"><a href="#FlexAttention-PyTorch的灵活性与FlashAttention的性能" class="headerlink" title="FlexAttention: PyTorch的灵活性与FlashAttention的性能"></a>FlexAttention: PyTorch的灵活性与FlashAttention的性能</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention</li>
+<li>标题翻译: FlexAttention：兼具PyTorch灵活性和FlashAttention性能</li>
+<li>作者: Horace He, Driss Guessous, Yanbo Liang, Joy Dong</li>
+<li>机构: Meta (PyTorch Team)</li>
+<li>发表时间: 2024年8月</li>
+<li>发表渠道: PyTorch Blog（集成到PyTorch 2.5+）</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://pytorch.org/blog/flexattention/">https://pytorch.org/blog/flexattention/</a></li>
+<li>代码 &#x2F; 项目: torch.nn.attention.flex_attention (PyTorch 2.5+)</li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>FlexAttention是一个可组合的注意力API，允许用户用纯PyTorch定义任意的注意力分数修改（如ALiBi偏置、滑动窗口、文档掩码、tanh软上限、因果掩码组合等），同时通过torch.compile达到FlashAttention级别的性能。用户定义的score_mod函数在softmax之前修改每个注意力分数对，通过torch.compile编译为融合的高效CUDA kernel。BlockMask抽象利用注意力掩码中固有的稀疏性（因果、滑动窗口、文档边界），跳过零块计算，相比稠密实现获得显著额外加速。前向传播达到FlashAttention2约90%的性能，反向传播约85%。对于稀疏掩码场景，FlexAttention通常比FlashAttention2更快。通过PyTorch的autograd自动生成反向传播，无需手写CUDA反向kernel。在FlexAttention之前，实现一个性能有竞争力的自定义注意力变体需要编写CUDA kernel。FlexAttention使得懂PyTorch但不懂CUDA的研究人员也能进行注意力创新。它已被torchtune（使用sample packing实现71%吞吐量提升）和gpt-fast采用，代表了编译器（torch.compile）吸收此前属于手写优化kernel领域的趋势。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-用户定义的score-mod——注意力创新的”民主化”"><a href="#1-用户定义的score-mod——注意力创新的”民主化”" class="headerlink" title="1. 用户定义的score_mod——注意力创新的”民主化”"></a>1. 用户定义的score_mod——注意力创新的”民主化”</h3><p><strong>核心思想</strong>: 用户用纯Python编写score_mod(score, b, h, q_idx, kv_idx)函数，在softmax前逐元素修改注意力分数。torch.compile将Python代码编译为融合CUDA kernel，实现FlashAttention级别的性能。</p>
+<p><strong>支持的注意力变体（仅需几行Python）</strong>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># ALiBi (线性偏置注意力)</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">alibi</span>(<span class="hljs-params">score, b, h, q_idx, kv_idx</span>):<br>    <span class="hljs-keyword">return</span> score + slopes[b][h] * (q_idx - kv_idx)<br><br><span class="hljs-comment"># 滑动窗口注意力</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">sliding_window</span>(<span class="hljs-params">score, b, h, q_idx, kv_idx</span>):<br>    <span class="hljs-keyword">return</span> score <span class="hljs-keyword">if</span> <span class="hljs-built_in">abs</span>(q_idx - kv_idx) &lt; window_size <span class="hljs-keyword">else</span> -inf<br><br><span class="hljs-comment"># Tanh软上限</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">tanh_softcap</span>(<span class="hljs-params">score, b, h, q_idx, kv_idx</span>):<br>    <span class="hljs-keyword">return</span> <span class="hljs-number">30.0</span> * torch.tanh(score / <span class="hljs-number">30.0</span>)<br><br><span class="hljs-comment"># 文档掩码 (sample packing)</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">document_mask</span>(<span class="hljs-params">score, b, h, q_idx, kv_idx</span>):<br>    <span class="hljs-keyword">return</span> score <span class="hljs-keyword">if</span> doc_ids[q_idx] == doc_ids[kv_idx] <span class="hljs-keyword">else</span> -inf<br><br><span class="hljs-comment"># 组合多个mask——链式调用</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">combined</span>(<span class="hljs-params">score, b, h, q_idx, kv_idx</span>):<br>    score = alibi(score, b, h, q_idx, kv_idx)<br>    score = document_mask(score, b, h, q_idx, kv_idx)<br>    <span class="hljs-keyword">return</span> score<br></code></pre></td></tr></table></figure>
+
+<h3 id="2-BlockMask——自动稀疏加速"><a href="#2-BlockMask——自动稀疏加速" class="headerlink" title="2. BlockMask——自动稀疏加速"></a>2. BlockMask——自动稀疏加速</h3><p>BlockMask将注意力掩码表示为块级别的稀疏模式。torch.compile自动分析掩码，识别全零块并跳过计算——在稀疏掩码场景（滑动窗口、文档边界）中实现3-4倍加速。</p>
+<h3 id="3-编译器驱动——torch-compile吸收CUDA优化"><a href="#3-编译器驱动——torch-compile吸收CUDA优化" class="headerlink" title="3. 编译器驱动——torch.compile吸收CUDA优化"></a>3. 编译器驱动——torch.compile吸收CUDA优化</h3><p>torch.compile追踪Python代码的执行，将用户定义的score_mod编译为融合的Triton&#x2F;CUDA kernel。这代表了编译器逐渐吸收此前属于手写优化kernel领域的趋势。FlexAttention达到手写CUDA的约90%性能——证明编译器可以达到接近手写的性能水平。</p>
+<h3 id="4-自动微分——反向传播自动生成"><a href="#4-自动微分——反向传播自动生成" class="headerlink" title="4. 自动微分——反向传播自动生成"></a>4. 自动微分——反向传播自动生成</h3><p>用户只需定义前向的score_mod函数，PyTorch的autograd自动计算其梯度，生成完整的反向传播kernel。消除了手写反向CUDA kernel的最大工程挑战。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>FlexAttention通过torch.compile将纯PyTorch的score_mod编译为融合CUDA kernel，达到FA2约90%性能，BlockMask自动利用稀疏性加速，让不懂CUDA的研究人员也能进行注意力创新。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心问题分解"><a href="#核心问题分解" class="headerlink" title="核心问题分解"></a>核心问题分解</h3><p>注意力创新的工程障碍：如何同时获得FlashAttention级别的性能和纯PyTorch级别的灵活性？</p>
+<h3 id="子问题-1：Python到CUDA的编译鸿沟"><a href="#子问题-1：Python到CUDA的编译鸿沟" class="headerlink" title="子问题 1：Python到CUDA的编译鸿沟"></a>子问题 1：Python到CUDA的编译鸿沟</h3><p>对于标准的scaled dot-product attention，FlashAttention已经提供了接近最优的CUDA实现。但一旦研究人员想修改注意力计算（如添加ALiBi偏置、滑动窗口、因果掩码组合），他们面临一个困境：</p>
+<ul>
+<li>纯PyTorch实现：灵活（几行Python），但性能仅为FA2的1-5%（因为多次kernel启动和HBM读写）</li>
+<li>手写CUDA实现：FA2性能的80-100%，但需要CUDA专家花费数周时间</li>
+</ul>
+<h3 id="子问题-2：torch-compile能否”理解”注意力计算的模式"><a href="#子问题-2：torch-compile能否”理解”注意力计算的模式" class="headerlink" title="子问题 2：torch.compile能否”理解”注意力计算的模式"></a>子问题 2：torch.compile能否”理解”注意力计算的模式</h3><p>torch.compile需要识别用户的score_mod是”逐元素的分数修改”——它适用于在softmax之前的逐元素操作，但不适用于改变注意力计算顺序的修改（如线性注意力、多查询注意力的KV共享）。</p>
+<h3 id="子问题-3：稀疏性如何被自动检测和利用"><a href="#子问题-3：稀疏性如何被自动检测和利用" class="headerlink" title="子问题 3：稀疏性如何被自动检测和利用"></a>子问题 3：稀疏性如何被自动检测和利用</h3><p>许多注意力掩码（因果、滑动窗口、文档边界）产生大量零值（-inf）。能否自动检测哪些块是全零的、哪些需要计算？”自动”是关键——用户不需要显式指定稀疏模式，编译器从score_mod的逻辑中推断。</p>
+<h3 id="Before-This-Paper-Pain-Points"><a href="#Before-This-Paper-Pain-Points" class="headerlink" title="Before-This-Paper Pain Points"></a>Before-This-Paper Pain Points</h3><ol>
+<li><strong>“要么灵活但慢，要么快但不灵活”的经典困境</strong>：研究人员要么用PyTorch实现新注意力变体（慢到无法用于实际训练），要么投入数周时间手写CUDA kernel（仅CUDA专家能操作）。</li>
+<li><strong>注意力创新的”工程税”</strong>：不同注意力变体（ALiBi, RoPE, 滑动窗口, 稀疏模式）的数量快速增长——每个都需要独立的高性能CUDA kernel实现。</li>
+<li><strong>score_mod的组合性缺失</strong>：用户可能需要”ALiBi + 文档掩码 + 滑动窗口”的组合——但现有工具不支持轻松组合这些修改。</li>
+</ol>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程：FlexAttention的完整6步链路"><a href="#机制流程：FlexAttention的完整6步链路" class="headerlink" title="机制流程：FlexAttention的完整6步链路"></a>机制流程：FlexAttention的完整6步链路</h3><p><strong>Step 1：用户定义score_mod——纯Python函数</strong></p>
+<ul>
+<li>输入：用户的需求（如”ALiBi偏置 + 文档掩码”）</li>
+<li>操作：<ol>
+<li>用户编写一个纯Python函数 <code>score_mod(score, b, h, q_idx, kv_idx)</code>：<ul>
+<li>score: 当前的注意力分数值（标量）</li>
+<li>b: batch索引</li>
+<li>h: head索引</li>
+<li>q_idx: query位置</li>
+<li>kv_idx: key位置</li>
+<li>返回值: 修改后的注意力分数（标量）</li>
+</ul>
+</li>
+<li>函数签名约束：必须是逐元素的——每个(q_idx, kv_idx)对的修改独立</li>
+<li>支持的Python操作：算术、比较、条件、torch函数调用——torch.compile的Python子集</li>
+</ol>
+</li>
+<li>输出：score_mod函数对象</li>
+<li>目标：用最简单的抽象表示注意力分数修改</li>
+</ul>
+<p><strong>Step 2：torch.compile追踪和内联</strong></p>
+<ul>
+<li>输入：用户调用 <code>flex_attention(query, key, value, score_mod=my_score_mod)</code></li>
+<li>操作：<ol>
+<li>torch.compile捕获flex_attention的完整计算图</li>
+<li>在内核生成过程中，将score_mod函数<strong>完全内联</strong>到注意力计算的主循环中：<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm"><span class="hljs-comment"># 编译后的伪代码（简化）</span><br>for Q_block in query_blocks:<br>  load Q_block to <span class="hljs-keyword">SRAM</span><br><span class="hljs-keyword"></span>  for K_block, V_block in KV_blocks:<br>    load K_block, V_block to <span class="hljs-keyword">SRAM</span><br><span class="hljs-keyword"></span>    S = Q_block @ K_block.T<br>    <span class="hljs-comment"># === 内联的 score_mod 代码 ===</span><br>    for i, <span class="hljs-keyword">j </span>in <span class="hljs-keyword">block_indices:</span><br><span class="hljs-keyword"></span>      <span class="hljs-keyword">b, </span>h = <span class="hljs-keyword">block_batch_head</span><br><span class="hljs-keyword"></span>      S[i,<span class="hljs-keyword">j] </span>= <span class="hljs-keyword">score_mod(S[i,j], </span><span class="hljs-keyword">b, </span>h, q_idx+i, kv_idx+<span class="hljs-keyword">j)</span><br><span class="hljs-keyword"></span>    <span class="hljs-comment"># ===========================</span><br>    P = online_softmax(S)<br>    O += P @ V_block<br>  write O to HBM<br></code></pre></td></tr></table></figure></li>
+<li>关键：score_mod被内联后，没有Python解释器开销、没有kernel边界——它成为融合CUDA kernel的一部分</li>
+</ol>
+</li>
+<li>输出：编译后的Triton IR（中间表示）</li>
+<li>目标：将Python定义的修改整合到融合的注意力kernel中</li>
+</ul>
+<p><strong>Step 3：Triton编译为CUDA kernel</strong></p>
+<ul>
+<li>输入：Triton IR</li>
+<li>操作：<ol>
+<li>Triton编译器将IR编译为优化的CUDA代码</li>
+<li>优化包括：寄存器分配、共享内存布局、tiling策略（根据序列长度和GPU架构自动选择最优的块大小）</li>
+<li>生成的kernel是一个单个的、融合的CUDA函数——包含了完整的QK^T + score_mod + softmax + PV计算，全部在GPU的一次kernel调用中完成</li>
+<li>与纯PyTorch的对比：<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs pgsql">纯PyTorch（<span class="hljs-number">3</span>次kernel启动 + <span class="hljs-number">3</span>次HBM读写）:<br>  kernel_1: S = Q @ K.T  (<span class="hljs-keyword">read</span> Q,K <span class="hljs-keyword">from</span> HBM, <span class="hljs-keyword">write</span> S <span class="hljs-keyword">to</span> HBM)<br>  kernel_2: S = score_mod(S)  (<span class="hljs-keyword">read</span> S <span class="hljs-keyword">from</span> HBM, <span class="hljs-keyword">write</span> S <span class="hljs-keyword">to</span> HBM)<br>  kernel_3: softmax(S) @ V  (<span class="hljs-keyword">read</span> S,V <span class="hljs-keyword">from</span> HBM, <span class="hljs-keyword">write</span> O <span class="hljs-keyword">to</span> HBM)<br><br>FlexAttention（<span class="hljs-number">1</span>次kernel启动 + <span class="hljs-number">1</span>次HBM读写）:<br>  kernel_1: S = Q_block @ K_block.T, score_mod(S), softmax(S), O += S @ V_block<br>  (<span class="hljs-keyword">all</span> <span class="hljs-keyword">in</span> SRAM, <span class="hljs-keyword">only</span> final O written <span class="hljs-keyword">to</span> HBM)<br></code></pre></td></tr></table></figure></li>
+</ol>
+</li>
+<li>输出：融合的CUDA kernel</li>
+<li>目标：消除kernel启动开销和中间结果的HBM读写</li>
+</ul>
+<p><strong>Step 4：BlockMask稀疏处理</strong></p>
+<ul>
+<li>输入：score_mod函数 + 序列长度 + 块大小</li>
+<li>操作：<ol>
+<li>编译器通过静态分析（符号执行）推断哪些(q_idx, kv_idx)对被score_mod映射为-inf</li>
+<li>聚合到块级别（B_r × B_c块）：<ul>
+<li>全掩码块：块内所有对为-inf → 完全跳过计算</li>
+<li>部分掩码块：部分对为-inf → 需要计算（score_mod处理掩码）</li>
+<li>无掩码块：块内无-inf → 正常计算</li>
+</ul>
+</li>
+<li>生成BlockMask数据结构：<figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs autoit">BlockMask = &#123;<br>  <span class="hljs-string">&quot;causal&quot;</span>: <span class="hljs-literal">True</span>/<span class="hljs-literal">False</span>,<br>  <span class="hljs-string">&quot;num_blocks&quot;</span>: (Q_len/B_r, KV_len/B_c),<br>  <span class="hljs-string">&quot;block_mask&quot;</span>: sparse_bitmap  <span class="hljs-meta"># 哪些块需要计算</span><br>&#125;<br></code></pre></td></tr></table></figure></li>
+<li>在生成的kernel中：<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs nix">for K_block, V_block <span class="hljs-keyword">in</span> <span class="hljs-params">KV_blocks:</span><br>  <span class="hljs-keyword">if</span> block_mask[q_block_idx, k_block_idx] <span class="hljs-operator">==</span> <span class="hljs-params">FULLY_MASKED:</span><br>    continue  <span class="hljs-comment"># 跳过——节省计算和内存带宽！</span><br>  <span class="hljs-params">else:</span><br>    正常计算<br></code></pre></td></tr></table></figure></li>
+</ol>
+</li>
+<li>输出：BlockMask + 稀疏优化的kernel</li>
+<li>目标：自动利用注意力掩码的稀疏性，跳过零块计算</li>
+</ul>
+<p><strong>Step 5：前向传播执行</strong></p>
+<ul>
+<li>输入：query, key, value tensors + score_mod + BlockMask</li>
+<li>操作：<ol>
+<li>GPU执行融合的CUDA kernel</li>
+<li>计算流程（单个kernel内）：<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs livecodeserver"><span class="hljs-keyword">for</span> <span class="hljs-keyword">each</span> query block:<br>  <span class="hljs-built_in">load</span> Q_block (B_r × d) <span class="hljs-built_in">to</span> SRAM<br>  O_block = <span class="hljs-number">0</span>, l_block = <span class="hljs-number">0</span>, m_block = -inf<br>  <br>  <span class="hljs-keyword">for</span> <span class="hljs-keyword">each</span> KV block (跳过全掩码块):<br>    <span class="hljs-built_in">load</span> K_block (B_c × d) <span class="hljs-built_in">to</span> SRAM<br>    <span class="hljs-built_in">load</span> V_block (B_c × d) <span class="hljs-built_in">to</span> SRAM<br>    <br>    <span class="hljs-comment"># Step 1: GEMM (使用Tensor Cores)</span><br>    S = Q_block @ K_block.T  <span class="hljs-comment"># B_r × B_c</span><br>    <br>    <span class="hljs-comment"># Step 2: 逐元素score_mod（内联的Python代码）</span><br>    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(B_r):<br>      <span class="hljs-keyword">for</span> j <span class="hljs-keyword">in</span> range(B_c):<br>        S[i,j] = score_mod(S[i,j], b, h, q_idx+i, kv_idx+j)<br>    <br>    <span class="hljs-comment"># Step 3: Online softmax (数值稳定)</span><br>    m_new = <span class="hljs-built_in">max</span>(m_block, <span class="hljs-built_in">max</span>(S, dim=<span class="hljs-number">1</span>))<br>    l_new = <span class="hljs-built_in">exp</span>(m_block - m_new) * l_block + <span class="hljs-built_in">sum</span>(<span class="hljs-built_in">exp</span>(S - m_new), dim=<span class="hljs-number">1</span>)<br>    O_block = <span class="hljs-built_in">exp</span>(m_block - m_new) * O_block + <span class="hljs-built_in">exp</span>(S - m_new) @ V_block<br>    m_block = m_new, l_block = l_new<br>  <br>  <span class="hljs-comment"># Step 4: Final normalization</span><br>  O_block = O_block / l_block<br>  <span class="hljs-built_in">write</span> O_block <span class="hljs-built_in">to</span> HBM<br></code></pre></td></tr></table></figure></li>
+<li>性能：约90%的FlashAttention-2性能（前向），85%（反向）</li>
+</ol>
+</li>
+<li>输出：注意力输出 O ∈ R^{batch × heads × seq_len × d_head}</li>
+<li>目标：在一个融合kernel中高效执行完整的注意力计算</li>
+</ul>
+<p><strong>Step 6：自动反向传播生成</strong></p>
+<ul>
+<li>输入：前向计算 + autograd图</li>
+<li>操作：<ol>
+<li>torch.compile不仅追踪前向的score_mod，还追踪其梯度计算</li>
+<li>自动生成反向传播的融合kernel——包含了score_mod函数的梯度</li>
+<li>用户不需要写任何反向传播代码——autograd自动处理</li>
+<li>反向传播性能：约85%的FlashAttention-2反向性能——差距来自编译器在优化梯度计算时的局限性（手写CUDA可以更精细地控制梯度流）</li>
+</ol>
+</li>
+<li>输出：dQ, dK, dV（注意力层的输入梯度）</li>
+<li>目标：零工程成本的反向传播生成</li>
+</ul>
+<h3 id="score-mod的能力边界"><a href="#score-mod的能力边界" class="headerlink" title="score_mod的能力边界"></a>score_mod的能力边界</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">✅ 可以实现</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">相对位置编码 (ALiBi, RoPE)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">掩码 (因果, 滑动窗口, 前缀, 块稀疏, 文档边界)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">软上限 (tanh, log)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">分数缩放/偏置</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">上述任意组合 (链式调用)</span><br><br><span class="hljs-attribute">❌ 不能实现 (需要修改注意力计算结构)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">多查询/分组查询 (MQA/GQA) — KV共享模式</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">线性注意力 (核方法) — 改变了计算顺序</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">FlashAttention的FP8支持 — 精度转换</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">新的tiling策略 — 修改外层循环</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1：性能对比（前向传播-A100-bf16）"><a href="#表-1：性能对比（前向传播-A100-bf16）" class="headerlink" title="表 1：性能对比（前向传播, A100, bf16）"></a>表 1：性能对比（前向传播, A100, bf16）</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>相对性能 (vs FA2)</th>
+<th>实现语言</th>
+<th>开发时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FlashAttention-2</td>
+<td>100% (基准)</td>
+<td>CUDA (手写)</td>
+<td>数月</td>
+</tr>
+<tr>
+<td><strong>FlexAttention (稠密)</strong></td>
+<td><strong>~90%</strong></td>
+<td><strong>PyTorch (自动编译)</strong></td>
+<td><strong>分钟</strong></td>
+</tr>
+<tr>
+<td>FlexAttention (滑动窗口)</td>
+<td><strong>~350%</strong> (vs 稠密FA2)</td>
+<td>PyTorch</td>
+<td>分钟</td>
+</tr>
+<tr>
+<td>FlexAttention (文档掩码)</td>
+<td><strong>~250%</strong> (vs 稠密FA2)</td>
+<td>PyTorch</td>
+<td>分钟</td>
+</tr>
+<tr>
+<td>xFormers memory_efficient</td>
+<td>75-85%</td>
+<td>CUDA (手写)</td>
+<td>数月</td>
+</tr>
+<tr>
+<td>纯PyTorch (无编译)</td>
+<td>1-5%</td>
+<td>PyTorch</td>
+<td>分钟</td>
+</tr>
+</tbody></table>
+<p>FlexAttention的90%性能在”绝对性能”和”开发效率”之间取得了前所未有的平衡。在稀疏掩码场景（滑动窗口、文档掩码），FlexAttention通过BlockMask自动利用稀疏性，超过了稠密FA2的性能（因为跳过了零块计算）。</p>
+<h3 id="表-2：BlockMask稀疏加速"><a href="#表-2：BlockMask稀疏加速" class="headerlink" title="表 2：BlockMask稀疏加速"></a>表 2：BlockMask稀疏加速</h3><table>
+<thead>
+<tr>
+<th>掩码类型</th>
+<th>vs 稠密FlexAttention</th>
+<th>vs 稠密FlashAttention-2</th>
+<th>稀疏度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>因果掩码</td>
+<td>1.5×</td>
+<td>1.3×</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>滑动窗口 (window&#x3D;256, seq&#x3D;4096)</td>
+<td>4×</td>
+<td>3.5×</td>
+<td>87.5%</td>
+</tr>
+<tr>
+<td>文档掩码 (sample packing, 4 docs)</td>
+<td>3×</td>
+<td>2.5×</td>
+<td>75%</td>
+</tr>
+<tr>
+<td>前缀LM (prefix masking)</td>
+<td>2×</td>
+<td>1.8×</td>
+<td>可变</td>
+</tr>
+<tr>
+<td>块稀疏 (block size 64)</td>
+<td>2.5×</td>
+<td>2.2×</td>
+<td>可变</td>
+</tr>
+</tbody></table>
+<p>稀疏度越高，BlockMask的加速越显著。滑动窗口（仅计算窗口内的注意力分数）具有最高的稀疏度（87.5%的分数为零），因此4倍加速。</p>
+<h3 id="表-3：实际应用中的端到端收益"><a href="#表-3：实际应用中的端到端收益" class="headerlink" title="表 3：实际应用中的端到端收益"></a>表 3：实际应用中的端到端收益</h3><table>
+<thead>
+<tr>
+<th>应用</th>
+<th>场景</th>
+<th>吞吐量提升</th>
+<th>之前方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>torchtune (sample packing)</td>
+<td>多文档pack到一个序列</td>
+<td><strong>71%</strong></td>
+<td>需要自定义CUDA kernel</td>
+</tr>
+<tr>
+<td>gpt-fast (推理)</td>
+<td>长序列解码</td>
+<td><strong>35%</strong></td>
+<td>FlashAttention</td>
+</tr>
+<tr>
+<td>自定义ALiBi训练</td>
+<td>相对位置编码</td>
+<td>接近手写CUDA</td>
+<td>需要CUDA专家</td>
+</tr>
+<tr>
+<td>自定义稀疏模式研究</td>
+<td>各种稀疏注意力实验</td>
+<td>分钟级原型 → 小时级训练</td>
+<td>手写CUDA或慢PyTorch</td>
+</tr>
+</tbody></table>
+<p>这些实际收益证明了FlexAttention不仅是一个”研究工具”（原型验证），也是一个”生产工具”——在真实训练工作流中提供显著的吞吐量提升。</p>
+<h3 id="表-4：FlexAttention-vs-FlashAttention-2-vs-xFormers（功能-性能-易用性）"><a href="#表-4：FlexAttention-vs-FlashAttention-2-vs-xFormers（功能-性能-易用性）" class="headerlink" title="表 4：FlexAttention vs FlashAttention-2 vs xFormers（功能+性能+易用性）"></a>表 4：FlexAttention vs FlashAttention-2 vs xFormers（功能+性能+易用性）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FA2</th>
+<th>xFormers</th>
+<th>FlexAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准scaled dot-product</td>
+<td>100% (最快)</td>
+<td>75-85%</td>
+<td>90%</td>
+</tr>
+<tr>
+<td>自定义score_mod</td>
+<td>不支持</td>
+<td>有限（预定义的变体）</td>
+<td><strong>任意Python函数</strong></td>
+</tr>
+<tr>
+<td>稀疏掩码</td>
+<td>不支持</td>
+<td>部分支持</td>
+<td><strong>自动BlockMask</strong></td>
+</tr>
+<tr>
+<td>开发新注意力变体</td>
+<td>数周（手写CUDA）</td>
+<td>数周（手写CUDA）</td>
+<td><strong>分钟（Python）</strong></td>
+</tr>
+<tr>
+<td>反向传播</td>
+<td>手写CUDA</td>
+<td>手写CUDA</td>
+<td><strong>autograd自动生成</strong></td>
+</tr>
+<tr>
+<td>组合性</td>
+<td>无</td>
+<td>有限</td>
+<td><strong>链式score_mod</strong></td>
+</tr>
+<tr>
+<td>生态集成</td>
+<td>独立库</td>
+<td>独立库</td>
+<td><strong>PyTorch原生API</strong></td>
+</tr>
+</tbody></table>
+<p>FlexAttention在”灵活性+易用性”维度上显著领先于其他两种方法，在”性能”上略微落后于FA2（10%差距）。对于90%的研究和开发场景，10%的性能换来的灵活性完全是值得的。对于最后的10%场景（需要极致性能的生产部署），FA2仍是首选。</p>
+<h3 id="表-5：编译开销（首次调用延迟）"><a href="#表-5：编译开销（首次调用延迟）" class="headerlink" title="表 5：编译开销（首次调用延迟）"></a>表 5：编译开销（首次调用延迟）</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>torch.compile编译时间</th>
+<th>后续调用延迟</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2K</td>
+<td>~5s</td>
+<td>~0.5ms</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>~8s</td>
+<td>~0.8ms</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>~12s</td>
+<td>~1.5ms</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>~15s</td>
+<td>~3.2ms</td>
+</tr>
+</tbody></table>
+<p>首次编译有数秒的延迟（torch.compile的JIT性质），后续调用直接使用编译后的kernel——延迟与FA2相当（约0.5-3ms，取决于序列长度）。对于训练循环（数千到数万次迭代），编译开销完全可以被后续的运行时节省所qudui。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="编译器-vs-手写CUDA——性能差距的本质"><a href="#编译器-vs-手写CUDA——性能差距的本质" class="headerlink" title="编译器 vs 手写CUDA——性能差距的本质"></a>编译器 vs 手写CUDA——性能差距的本质</h3><p>FlexAttention达到FA2约90%的性能——但剩下的10%差距来自哪里？</p>
+<ol>
+<li><p><strong>寄存器分配的精度</strong>：手写CUDA可以精确控制哪些值在寄存器中、哪些在共享内存中——这种精细的调度可以节省数个时钟周期每线程。torch.compile的Triton后端在寄存器分配上已经很好，但无法达到手工优化的精度级别。</p>
+</li>
+<li><p><strong>特定架构指令的利用</strong>：Hopper架构（H100）的WGMMA（warp group matrix multiply-accumulate）指令需要特殊的warp调度和数据布局——torch.compile对这些”前沿”指令的支持仍在追赶中。</p>
+</li>
+<li><p><strong>手工规划的共享内存布局</strong>：FA2的作者Tri Dao精心设计了共享内存的划分——哪些数据在哪个bank、如何避免bank conflict、如何最大化bandwidth——这些微观优化是编译器难以自动发现的。</p>
+</li>
+</ol>
+<p>关键问题是：<strong>在什么情况下10%的性能差距不值得？</strong> </p>
+<ul>
+<li>对研究探索和原型开发：FlexAttention的分钟级开发时间 vs FA2的数周CUDA开发——FlexAttention永远是最优选择。</li>
+<li>对生产部署的极端性能优化：如果每次前向传播只需1ms（vs 0.9ms），10%的差距在长期运行的大规模训练中可能累积为可观的GPU小时成本。此时手写CUDA值得投入。</li>
+</ul>
+<h3 id="BlockMask——“自动稀疏检测”的实现原理"><a href="#BlockMask——“自动稀疏检测”的实现原理" class="headerlink" title="BlockMask——“自动稀疏检测”的实现原理"></a>BlockMask——“自动稀疏检测”的实现原理</h3><p>BlockMask的自动稀疏检测是FlexAttention最巧妙的设计之一——用户从不需要显式指定稀疏模式，编译器从score_mod的逻辑中推断。</p>
+<p>推断机制：</p>
+<ol>
+<li><strong>符号执行</strong>：编译器trace score_mod在符号输入上的执行——不是在实际数据上运行，而是使用”符号变量”表示q_idx, kv_idx, score</li>
+<li><strong>掩码条件识别</strong>：识别会导致-inf的条件（如 <code>if abs(q_idx - kv_idx) &gt;= window_size: return -inf</code>）</li>
+<li><strong>块级别聚合</strong>：将密集的N×N掩码矩阵聚合为块级别（块大小128×128）——如果块内所有对都被掩码 → 全掩码块</li>
+</ol>
+<p>这一设计的天才之处在于它的”零用户干预”——用户只需写自然的score_mod逻辑（如”如果跨文档就mask”），编译器自动利用这些逻辑优化执行。这是一种”声明式优化”的范式——“你声明意图，编译器优化实现”。</p>
+<h3 id="FlexAttention与FlashAttention系列的哲学对比"><a href="#FlexAttention与FlashAttention系列的哲学对比" class="headerlink" title="FlexAttention与FlashAttention系列的哲学对比"></a>FlexAttention与FlashAttention系列的哲学对比</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">FlashAttention系列</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">哲学</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;我们知道最优方案——最优化标准注意力&quot;</span><br>  <span class="hljs-attribute">方法</span><span class="hljs-punctuation">:</span> <span class="hljs-string">精心手写CUDA kernel（FA1, FA2, FA3）</span><br>  <span class="hljs-attribute">优势</span><span class="hljs-punctuation">:</span> <span class="hljs-string">极致性能 (100%)</span><br>  <span class="hljs-attribute">劣势</span><span class="hljs-punctuation">:</span> <span class="hljs-string">每变体需重写kernel——ALiBi, RoPE, 滑动窗口, 因果...</span><br>  <br><span class="hljs-attribute">FlexAttention</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">哲学</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;编译器知道如何优化——你定义规则&quot;</span><br>  <span class="hljs-attribute">方法</span><span class="hljs-punctuation">:</span> <span class="hljs-string">用户定义score_mod，编译器融合优化</span><br>  <span class="hljs-attribute">优势</span><span class="hljs-punctuation">:</span> <span class="hljs-string">极致灵活性——一个框架覆盖所有注意力变体</span><br>  <span class="hljs-attribute">劣势</span><span class="hljs-punctuation">:</span> <span class="hljs-string">性能略低于手写 (90%)</span><br></code></pre></td></tr></table></figure>
+
+<p>这两种哲学的并存代表了系统设计的经典张力——“专用优化vs通用优化”。在注意力这个特定案例中，FlexAttention的90%性能已经”足够好”——对于绝大多数研究者和中小型训练任务，10%的性能差距远小于开发灵活性带来的价值。</p>
+<h3 id="torchtune的sample-packing案例——FlexAttention的实际影响"><a href="#torchtune的sample-packing案例——FlexAttention的实际影响" class="headerlink" title="torchtune的sample packing案例——FlexAttention的实际影响"></a>torchtune的sample packing案例——FlexAttention的实际影响</h3><p>Sample packing是将多个短文档打包成一个长序列（填充到模型的最大序列长度）——这可以显著提高GPU利用率（避免短序列的padding浪费）。但需要”文档掩码”——确保注意力只在同一文档内计算，不跨文档。</p>
+<p>在FlexAttention之前：</p>
+<ul>
+<li>用纯PyTorch写文档掩码 → 训练速度降到不可接受的水平</li>
+<li>手写CUDA kernel → 需要CUDA专家 + 数周开发 + 调试 + 维护</li>
+</ul>
+<p>FlexAttention的方案：用5行Python写document_mask → torch.compile融合到attention kernel → 端到端71%吞吐量提升。</p>
+<p>这个案例完美体现了FlexAttention的”民主化”价值——使得以前只有顶级实验室（有CUDA专家资源）才能做的优化变得对任何人都可及。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="表：FlexAttention在注意力优化工具谱系中的位置（7维度）"><a href="#表：FlexAttention在注意力优化工具谱系中的位置（7维度）" class="headerlink" title="表：FlexAttention在注意力优化工具谱系中的位置（7维度）"></a>表：FlexAttention在注意力优化工具谱系中的位置（7维度）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>纯PyTorch</th>
+<th>xFormers</th>
+<th>FlashAttention-3</th>
+<th>FlexAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>性能（标准attn）</td>
+<td>1-5%</td>
+<td>75-85%</td>
+<td>100-120%</td>
+<td>90%</td>
+</tr>
+<tr>
+<td>支持自定义score_mod</td>
+<td>是（但慢）</td>
+<td>有限</td>
+<td>需手写CUDA</td>
+<td>是（Python）</td>
+</tr>
+<tr>
+<td>自动稀疏利用</td>
+<td>否</td>
+<td>部分</td>
+<td>否</td>
+<td>是（BlockMask）</td>
+</tr>
+<tr>
+<td>开发新变体的时间</td>
+<td>分钟</td>
+<td>数月</td>
+<td>数月</td>
+<td>分钟</td>
+</tr>
+<tr>
+<td>反向传播</td>
+<td>autograd</td>
+<td>手写CUDA</td>
+<td>手写CUDA</td>
+<td>autograd</td>
+</tr>
+<tr>
+<td>需要CUDA知识</td>
+<td>否</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>生态定位</td>
+<td>灵活性baseline</td>
+<td>速度+有限灵活性</td>
+<td>极致速度</td>
+<td>速度+极致灵活性</td>
+</tr>
+</tbody></table>
+<p>FlexAttention定位在”性能金字塔”的黄金分割点——牺牲10%的极致性能换取100倍的开发效率提升。这是编译器技术成熟的标志性成果——编译器不再仅是”还行”的替代品，而是大部分场景下的最优选择。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>性能差距：前向90%、反向85%</strong>：手写CUDA仍有10-15%的优势。对于Google&#x2F;Meta级别的万亿参数训练，10%的性能差距意味着数百万美元的GPU成本差异。这些组织仍有动机为关键的注意力变体手写CUDA。</p>
+</li>
+<li><p><strong>编译延迟（cold start）</strong>：torch.compile首次调用需要数秒到数十秒的编译时间——在交互式开发（如Jupyter notebook）中，每次修改score_mod后等待编译可能打断工作流。缓解：torch.compile的cache机制——相同签名的函数只需编译一次。</p>
+</li>
+<li><p><strong>复杂score_mod的限制</strong>：极度复杂的score_mod（如包含dict查找、循环、大量分支）可能导致编译失败（torch.compile的Python子集限制）或生成低效的内核（编译器无法充分优化）。score_mod应该保持”逐元素、简单操作”的特性。</p>
+</li>
+<li><p><strong>非注意力修改无法处理</strong>：score_mod只能修改注意力分数——不能改变MQA&#x2F;GQA的计算模式（KV共享）、不能实现线性注意力（改变计算顺序）、不能支持非标准注意力的计算范式（如RWKV的WKV、Mamba的SSM）。</p>
+</li>
+<li><p><strong>需要PyTorch 2.5+的生态约束</strong>：FlexAttention是PyTorch 2.5+的特性——对于使用较旧PyTorch版本的遗留项目，升级可能涉及兼容性问题。</p>
+</li>
+<li><p><strong>GPU架构的编译优化差异</strong>：torch.compile对Volta&#x2F;Turing架构（V100, T4）的优化程度低于Ampere&#x2F;Hopper（A100, H100）——较旧GPU上的性能可能离手写CUDA更远。</p>
+</li>
+<li><p><strong>调试复杂度</strong>：当score_mod导致”生成的CUDA kernel错误”时，调试可能困难——用户看到的是Triton IR和CUDA错误，而非原始Python代码。这为复杂score_mod的开发引入了新的调试挑战。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>编译器可以替代大部分手写优化</strong>：</p>
+<ul>
+<li>洞见：torch.compile的性能已经接近手写CUDA的90%——对于90%+的使用场景，编译器生成的代码”足够好”。未来5年内，编译器性能可能进一步提升到95%+。</li>
+<li>为什么泛化：编译器的优化能力随时间的推移持续提升（更智能的tiling、更好的寄存器分配、对新架构的支持），而手写优化的边际成本是固定的（每次重写）。两者之间的gap持续缩小。</li>
+<li>如何具体应用：（a）对于新项目，默认使用torch.compile而非手写CUDA——仅在profiler证明有显著性能瓶颈时考虑手写，（b）投资于学习torch.compile的工具链（Triton、Inductor），而非投资于CUDA C++，（c）在性能报告中同时报告”编译器 vs 手写”的差距以评估”是否需要手写优化”。</li>
+</ul>
+</li>
+<li><p><strong>score_mod是一个极简但极强大的抽象</strong>：</p>
+<ul>
+<li>洞见：一个函数签名（score, b, h, q_idx, kv_idx）→ 修改后的score——这个抽象足够简单（用户可以在5分钟内学会），足够强大（覆盖ALiBi、滑动窗口、文档掩码、软上限等所有常见的注意力变体）。</li>
+<li>为什么泛化：最好的抽象位于”表达能力”和”优化可行性”的交点——太表达性（允许任意Python）降低了优化潜力，太受限（仅允许预定义的操作）限制了创新。</li>
+<li>如何具体应用：在设计新API时，寻找类似的”简单函数签名 + 编译器优化”的抽象模式——用户定义简单规则，工具自动优化实现。</li>
+</ul>
+</li>
+<li><p><strong>稀疏性是自动化的”免费午餐”</strong>：</p>
+<ul>
+<li>洞见：BlockMask自动检测和利用注意力掩码的稀疏性——用户不需要显式指定稀疏模式。在许多实际场景（因果、滑动窗口、文档边界），稀疏度达50-90%，BlockMask的加速是”自动的”。</li>
+<li>为什么泛化：许多计算天然具有稀疏结构（注意力掩码、图连接、特征选择）——“自动检测并跳过零”的编译器能力可以普遍应用于其他算子。</li>
+<li>如何具体应用：（a）在设计计算kernel时，考虑是否存在”零&#x2F;空操作”的稀疏模式，（b）使用编译器的符号执行能力来自动检测稀疏模式，（c）将稀疏利用作为默认优化而非手动选项。</li>
+</ul>
+</li>
+<li><p><strong>“民主化”高性能计算——降低CUDA门槛</strong>：</p>
+<ul>
+<li>洞见：FlexAttention将使注意力创新从”CUDA专家的特权”变为”任何PyTorch用户的日常”。这意味着更多的研究人员可以快速实验新的注意力机制，加速整个领域的创新速度。</li>
+<li>为什么泛化：降低工程门槛是加速研究的关键杠杆——ImageNet的成功不仅因为CNN的算法创新，还因为GPU编程（CUDA）使得在合理时间内训练CNN成为可能。</li>
+<li>如何具体应用：（a）在设计和推广新工具时，强调”降低门槛”而非”提升峰值性能”的价值，（b）为工具编写”对PyTorch用户友好”的文档和教程——假设读者不了解CUDA，（c）衡量工具成功与否的指标不仅包括性能，还包括”多少新注意力机制被首次实验”。</li>
+</ul>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>He, H., et al. (2024). FlexAttention. PyTorch Blog.</li>
+<li>Ansel, J., et al. (2024). PyTorch 2. ASPLOS 2024.</li>
+<li>Dao, T. (2023). FlashAttention-2. arXiv:2307.08691</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-attention-optimization/" class="print-no-link">#papers/attention-optimization</a>
+      
+        <a href="/tags/papers-compiler/" class="print-no-link">#papers/compiler</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>FlexAttention: The Flexibility of PyTorch with the Performance of FlashAttention</div>
+      <div>https://w2ongq6.github.io/2024/08/01/inference/note/FlexAttention_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年8月1日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/08/01/aigc/note/FLUX_note/" title="FLUX.1">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">FLUX.1</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/07/16/inference/note/FlashAttention-3_note/" title="FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision">
+                        <span class="hidden-mobile">FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

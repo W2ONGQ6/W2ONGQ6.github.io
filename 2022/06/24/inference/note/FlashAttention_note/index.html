@@ -1,0 +1,1590 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="FlashAttention: 快速且内存高效的精确注意力机制与IO感知核心信息 标题: FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness 标题翻译: FlashAttention：快速且内存高效的精确注意力机制与IO感知 作者: Tri Dao, Daniel Y. Fu, Stefano Er">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/06/24/inference/note/FlashAttention_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="FlashAttention: 快速且内存高效的精确注意力机制与IO感知核心信息 标题: FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness 标题翻译: FlashAttention：快速且内存高效的精确注意力机制与IO感知 作者: Tri Dao, Daniel Y. Fu, Stefano Er">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/Figure_1.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/Table_1.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/Table_2.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/Figure_3.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/Figure_2.png">
+<meta property="article:published_time" content="2022-06-23T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.387Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-optimization">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/Figure_1.png">
+  
+  
+  
+  <title>FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-24 00:00" pubdate>
+          2022年6月24日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          103 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="FlashAttention-快速且内存高效的精确注意力机制与IO感知"><a href="#FlashAttention-快速且内存高效的精确注意力机制与IO感知" class="headerlink" title="FlashAttention: 快速且内存高效的精确注意力机制与IO感知"></a>FlashAttention: 快速且内存高效的精确注意力机制与IO感知</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</li>
+<li>标题翻译: FlashAttention：快速且内存高效的精确注意力机制与IO感知</li>
+<li>作者: Tri Dao, Daniel Y. Fu, Stefano Ermon, Atri Rudra, Christopher Ré</li>
+<li>机构: Stanford University, University at Buffalo, SUNY</li>
+<li>发表时间: 2022年6月24日</li>
+<li>发表渠道: NeurIPS 2022</li>
+<li>DOI: 10.52202&#x2F;068431-1189</li>
+<li>arXiv: 2205.14135</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2205.14135">https://arxiv.org/abs/2205.14135</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/HazyResearch/flash-attention">https://github.com/HazyResearch/flash-attention</a></li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>Transformer在处理长序列时速度慢且内存消耗大，因为自注意力的时间和内存复杂度随序列长度呈二次增长。现有近似注意力方法试图通过牺牲模型质量来降低计算复杂度，但往往无法实现实际的加速。本文提出一个关键原则：使注意力算法具备IO感知能力——即仔细考虑GPU不同层级内存之间的读写操作。我们提出FlashAttention，一种IO感知的精确注意力算法，使用分块技术减少GPU高带宽内存（HBM）和片上SRAM之间的内存读写次数。我们分析了FlashAttention的IO复杂度，证明它比标准注意力需要更少的HBM访问，且在一定范围的SRAM大小内是最优的。我们还将FlashAttention扩展为块稀疏注意力，产生了一种比任何现有近似注意力方法都更快的近似注意力算法。FlashAttention训练Transformer的速度超过现有基线：在BERT-large（序列长度512）上比MLPerf 1.1训练速度记录快15%，在GPT-2（序列长度1K）上快3倍，在长程竞技场（序列长度1K-4K）上快2.4倍。FlashAttention和块稀疏FlashAttention使Transformer能够处理更长的上下文，从而产生更高质量的模型（GPT-2困惑度改善0.7，长文档分类提升6.4个点）并实现全新能力：首个在Path-X挑战（序列长度16K，准确率61.4%）上超越随机性能的Transformer，以及在Path-256（序列长度64K，准确率63.1%）上达成首个超越随机性能的序列模型。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-IO感知的精确注意力算法"><a href="#1-IO感知的精确注意力算法" class="headerlink" title="1. IO感知的精确注意力算法"></a>1. IO感知的精确注意力算法</h3><p><strong>核心思想</strong>: 不同于传统方法试图降低计算复杂度（FLOPs），FlashAttention关注的是内存访问复杂度（IO）。通过避免在高带宽内存（HBM）中实例化完整的$N \times N$注意力矩阵，将内存访问从$O(N^2)$降低到$O(N^2d^2&#x2F;M)$，其中$d$是头维度，$M$是SRAM大小。</p>
+<p><strong>为什么重要</strong>: 现代GPU上，计算速度已经远远超过内存速度。大多数Transformer操作是内存受限的（memory-bound），而非计算受限的（compute-bound）。这意味着实际运行时间主要由内存访问决定，而非浮点运算次数。</p>
+<h3 id="2-分块计算与在线Softmax"><a href="#2-分块计算与在线Softmax" class="headerlink" title="2. 分块计算与在线Softmax"></a>2. 分块计算与在线Softmax</h3><p><strong>核心机制</strong>: </p>
+<ul>
+<li><strong>分块技术（Tiling）</strong>: 将输入$Q, K, V$分成块，在快速的SRAM中计算局部注意力，然后增量式地组合结果</li>
+<li><strong>在线Softmax算法</strong>: 维护额外的统计量$m$（最大值）和$l$（归一化常数），使得可以在不知道全局最大值的情况下正确计算softmax</li>
+</ul>
+<p><strong>为什么重要</strong>: 这两个技术的结合使得可以在不存储完整注意力矩阵的情况下计算精确注意力，同时保持数值稳定性。</p>
+<h3 id="3-IO复杂度的理论最优性证明"><a href="#3-IO复杂度的理论最优性证明" class="headerlink" title="3. IO复杂度的理论最优性证明"></a>3. IO复杂度的理论最优性证明</h3><p><strong>核心贡献</strong>: </p>
+<ul>
+<li>证明FlashAttention的IO复杂度为$\Theta(N^2d^2&#x2F;M)$</li>
+<li>证明标准注意力的IO复杂度为$\Theta(Nd + N^2)$</li>
+<li><strong>Proposition 3</strong>: 证明不存在算法能在所有SRAM大小$M$上渐近改进HBM访问次数</li>
+</ul>
+<p><strong>为什么重要</strong>: 这不仅是工程优化，而是理论上证明了在给定硬件约束下的最优性。对于典型的$d$（64-128）和$M$（约100KB），$d^2$比$M$小很多倍，因此FlashAttention需要的HBM访问次数比标准实现少很多倍（最多少9倍）。</p>
+<h3 id="4-块稀疏FlashAttention"><a href="#4-块稀疏FlashAttention" class="headerlink" title="4. 块稀疏FlashAttention"></a>4. 块稀疏FlashAttention</h3><p><strong>核心扩展</strong>: 将FlashAttention扩展到块稀疏注意力模式，IO复杂度降低为$\Theta(Nd + N^2d^2s&#x2F;M)$，其中$s$是非零块的比例。</p>
+<p><strong>为什么重要</strong>: 稀疏化与IO优化可以叠加，在长程竞技场（LRA）基准上实现2.8倍加速，同时保持与标准注意力相当的性能。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>FlashAttention通过IO感知设计，在保持精确注意力计算的同时，利用分块计算、在线softmax和核融合技术，将GPU内存访问从$O(N^2)$降低到$O(N^2d^2&#x2F;M)$，实现了最高7.6倍的速度提升和20倍的内存节省，并使Transformer首次能够在16K和64K序列长度上完成之前无法完成的任务。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>Transformer自注意力机制的计算公式为：</p>
+<p>$$S &#x3D; QK^\top \in \mathbb{R}^{N \times N}$$<br>$$P &#x3D; \text{softmax}(S) \in \mathbb{R}^{N \times N}$$<br>$$O &#x3D; PV \in \mathbb{R}^{N \times d}$$</p>
+<p>其中$N$是序列长度，$d$是头维度。</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>标准注意力实现</strong>: </p>
+<ul>
+<li>时间复杂度$O(N^2d)$</li>
+<li>内存复杂度$O(N^2)$，需要存储完整的$N \times N$注意力矩阵</li>
+<li>在HBM中多次读写中间矩阵$S$和$P$，导致大量IO开销</li>
+</ul>
+</li>
+<li><p><strong>近似注意力方法</strong>（如Linformer、Performer、Reformer等）:</p>
+<ul>
+<li>理论上将计算复杂度降低到线性或近线性</li>
+<li>但在实际中往往<strong>无法实现墙钟时间加速</strong></li>
+<li>原因：只关注FLOP减少，忽视了内存访问（IO）开销</li>
+<li>牺牲模型质量，且实现复杂</li>
+</ul>
+</li>
+<li><p><strong>硬件性能失衡</strong>:</p>
+<ul>
+<li>GPU计算速度增长远快于内存速度</li>
+<li>A100 GPU: SRAM带宽19 TB&#x2F;s（192KB），HBM带宽1.5-2.0 TB&#x2F;s（40-80GB）</li>
+<li>SRAM比HBM快一个数量级，但容量小很多个数量级</li>
+<li>大多数Transformer操作是<strong>内存受限</strong>的，而非计算受限的</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>IO感知是关键</strong>: 在内存受限的操作中，减少HBM访问次数比减少FLOPs更重要。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估数据集"><a href="#评估数据集" class="headerlink" title="评估数据集"></a>评估数据集</h3><p>本文在以下数据集和任务上评估FlashAttention：</p>
+<ol>
+<li><strong>BERT-large训练</strong>: Wikipedia数据集，序列长度512，评估掩码语言建模准确率</li>
+<li><strong>GPT-2训练</strong>: OpenWebtext数据集，序列长度1K-8K，评估困惑度</li>
+<li><strong>Long-Range Arena (LRA)</strong>: 5个基准任务（ListOps、Text、Retrieval、Image、Pathfinder），序列长度1K-4K</li>
+<li><strong>长文档分类</strong>: MIMIC-III（医疗记录）和ECtHR（法律案例），序列长度512-16K</li>
+<li><strong>Path-X和Path-256</strong>: 路径分类任务，序列长度16K和64K</li>
+</ol>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>GPU: NVIDIA A100 (40GB HBM)</li>
+<li>SRAM: 192KB per streaming multiprocessor</li>
+<li>对比基线: PyTorch原生实现、HuggingFace、Megatron-LM、Nvidia MLPerf</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p><img src="/images/Figure_1.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 左侧—GPU三级内存层次（DRAM→HBM→SRAM）；右侧—标准注意力与FlashAttention的对比。FlashAttention通过分块策略避免在HBM中物化N×N注意力矩阵，实现7.6×加速。</em></p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><strong>步骤1: 分块加载</strong></p>
+<ul>
+<li><strong>输入</strong>: $Q, K, V$矩阵在HBM中</li>
+<li><strong>操作</strong>: <ul>
+<li>将$Q$分成$T_r &#x3D; N&#x2F;B_r$个$B_r \times d$块：$Q_1, \ldots, Q_{T_r}$</li>
+<li>将$K, V$分成$T_c &#x3D; N&#x2F;B_c$个$B_c \times d$块：$K_1, \ldots, K_{T_c}$和$V_1, \ldots, V_{T_c}$</li>
+<li>块大小选择：$B_c &#x3D; \lfloor M&#x2F;d \rfloor$, $B_r &#x3D; \min(\lfloor M&#x2F;d \rfloor, d)$</li>
+<li>加载$K_j, V_j$从HBM到SRAM</li>
+</ul>
+</li>
+<li><strong>输出</strong>: SRAM中的$K_j, V_j$块</li>
+</ul>
+<p><strong>步骤2: 局部注意力计算</strong></p>
+<ul>
+<li><strong>输入</strong>: SRAM中的$Q_i, K_j, V_j$</li>
+<li><strong>操作</strong>:<ul>
+<li>计算局部注意力分数：$S_{ij} &#x3D; Q_i K_j^\top \in \mathbb{R}^{B_r \times B_c}$</li>
+<li>计算局部softmax统计量：<ul>
+<li>$\tilde{m}<em>{ij} &#x3D; \text{rowmax}(S</em>{ij}) \in \mathbb{R}^{B_r}$</li>
+<li>$\tilde{P}<em>{ij} &#x3D; \exp(S</em>{ij} - \tilde{m}_{ij}) \in \mathbb{R}^{B_r \times B_c}$（逐元素）</li>
+<li>$\tilde{l}<em>{ij} &#x3D; \text{rowsum}(\tilde{P}</em>{ij}) \in \mathbb{R}^{B_r}$</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 局部注意力分数$S_{ij}$和统计量$\tilde{m}<em>{ij}, \tilde{P}</em>{ij}, \tilde{l}_{ij}$</li>
+</ul>
+<p><strong>步骤3: 在线Softmax更新</strong></p>
+<ul>
+<li><strong>输入</strong>: 当前块的统计量$\tilde{m}<em>{ij}, \tilde{P}</em>{ij}, \tilde{l}_{ij}$和历史统计量$m_i, l_i, O_i$</li>
+<li><strong>操作</strong>:<ul>
+<li>更新最大值：$m_{\text{new}} &#x3D; \max(m_i, \tilde{m}_{ij}) \in \mathbb{R}^{B_r}$</li>
+<li>更新归一化常数：$l_{\text{new}} &#x3D; e^{m_i - m_{\text{new}}} l_i + e^{\tilde{m}<em>{ij} - m</em>{\text{new}}} \tilde{l}_{ij} \in \mathbb{R}^{B_r}$</li>
+<li>更新输出：$O_i \leftarrow \text{diag}(l_{\text{new}})^{-1} \left( \text{diag}(l_i) e^{m_i - m_{\text{new}}} O_i + e^{\tilde{m}<em>{ij} - m</em>{\text{new}}} \tilde{P}_{ij} V_j \right)$</li>
+</ul>
+</li>
+<li><strong>输出</strong>: 更新的统计量$m_{\text{new}}, l_{\text{new}}$和输出块$O_i$</li>
+</ul>
+<p><strong>步骤4: 写回HBM</strong></p>
+<ul>
+<li><strong>输入</strong>: SRAM中的$O_i, l_i, m_i$</li>
+<li><strong>操作</strong>: 将更新的输出块$O_i$和统计量$l_i, m_i$写回HBM</li>
+<li><strong>输出</strong>: HBM中的最终输出$O$和统计量$l, m$</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="算法正确性"><a href="#算法正确性" class="headerlink" title="算法正确性"></a>算法正确性</h4><p><strong>Theorem 1</strong>: Algorithm 1返回$O &#x3D; \text{softmax}(QK^\top)V$，需要$O(N^2d)$次FLOPs，并且需要$O(N)$额外内存（超出输入和输出）。</p>
+<p><strong>证明思路</strong>: 通过归纳法证明，在处理完前$j$个$K, V$块后，HBM中的$O^{(j)}$等于$\text{softmax}(S_{:, :j})V_{:, j}$，其中$S_{:, :j} &#x3D; QK_{:, :j}^\top$。</p>
+<h4 id="IO复杂度分析"><a href="#IO复杂度分析" class="headerlink" title="IO复杂度分析"></a>IO复杂度分析</h4><p><strong>Theorem 2</strong>: 设$N$为序列长度，$d$为头维度，$M$为SRAM大小（$d \leq M \leq Nd$）。</p>
+<ul>
+<li><strong>标准注意力</strong>（Algorithm 0）：需要$\Theta(Nd + N^2)$次HBM访问</li>
+<li><strong>FlashAttention</strong>（Algorithm 1）：需要$\Theta(N^2d^2M^{-1})$次HBM访问</li>
+</ul>
+<p><strong>证明要点</strong>:</p>
+<ol>
+<li>给定SRAM大小$M$，可以加载大小为$\Theta(M)$的$K, V$块</li>
+<li>对于每个$K, V$块，需要遍历所有$Q$块，产生$\Theta(NdM^{-1})$次遍历</li>
+<li>每次遍历加载$\Theta(Nd)$个元素</li>
+<li>总计：$\Theta(N^2d^2M^{-1})$次HBM访问</li>
+</ol>
+<p><strong>实际意义</strong>: 对于典型值$d \in [64, 128]$和$M \approx 100\text{KB}$，$d^2$比$M$小很多倍，因此FlashAttention需要的HBM访问次数比标准实现少很多倍。</p>
+<h4 id="最优性下界"><a href="#最优性下界" class="headerlink" title="最优性下界"></a>最优性下界</h4><p><strong>Proposition 3</strong>: 不存在算法能在所有$M \in [d, Nd]$上以$o(N^2d^2M^{-1})$次HBM访问计算精确注意力。</p>
+<p><strong>证明思路</strong>: 当$M &#x3D; \Theta(Nd)$时，任何算法必须执行$\Omega(N^2d^2M^{-1}) &#x3D; \Omega(Nd)$次HBM访问。</p>
+<p><strong>意义</strong>: FlashAttention在所有SRAM大小上都是渐近最优的，不存在算法能在所有$M$值上改进HBM访问次数。</p>
+<h3 id="扩展机制：Block-Sparse-FlashAttention"><a href="#扩展机制：Block-Sparse-FlashAttention" class="headerlink" title="扩展机制：Block-Sparse FlashAttention"></a>扩展机制：Block-Sparse FlashAttention</h3><h4 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h4><p>给定块稀疏掩码$M \in {0, 1}^{N&#x2F;B_r \times N&#x2F;B_c}$，只计算非零块的注意力。</p>
+<h4 id="IO复杂度"><a href="#IO复杂度" class="headerlink" title="IO复杂度"></a>IO复杂度</h4><p><strong>Proposition 4</strong>: Block-Sparse FlashAttention需要$\Theta(Nd + N^2d^2M^{-1}s)$次HBM访问，其中$s$是块稀疏掩码中非零块的比例。</p>
+<p><strong>意义</strong>: 稀疏化带来的改进与稀疏度成正比。对于大序列长度$N$，$s$通常设置为$N^{-1&#x2F;2}$或$N^{-1}\log N$，产生$\Theta(N\sqrt{N})$或$\Theta(N\log N)$的IO复杂度。</p>
+<h4 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h4><p>使用固定的butterfly稀疏模式，已被证明能够近似任意稀疏模式。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="训练加速"><a href="#训练加速" class="headerlink" title="训练加速"></a>训练加速</h3><h4 id="BERT-large训练"><a href="#BERT-large训练" class="headerlink" title="BERT-large训练"></a>BERT-large训练</h4><table>
+<thead>
+<tr>
+<th>实现</th>
+<th>训练时间（分钟）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nvidia MLPerf 1.1</td>
+<td>20.0 ± 1.5</td>
+</tr>
+<tr>
+<td>FlashAttention (ours)</td>
+<td>17.4 ± 1.4</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: 比MLPerf 1.1记录快<strong>15%</strong></p>
+<p><img src="/images/Table_1.png" srcset="/img/loading.gif" lazyload alt="Table 1"><br><em>Table 1: BERT-large训练时间对比（8×A100 GPU）。FlashAttention比MLPerf 1.1记录快15%。</em></p>
+<h4 id="GPT-2训练"><a href="#GPT-2训练" class="headerlink" title="GPT-2训练"></a>GPT-2训练</h4><table>
+<thead>
+<tr>
+<th>模型实现</th>
+<th>OpenWebText (ppl)</th>
+<th>训练时间（加速比）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-2 small - HuggingFace</td>
+<td>18.2</td>
+<td>9.5 days (1.0×)</td>
+</tr>
+<tr>
+<td>GPT-2 small - Megatron-LM</td>
+<td>18.2</td>
+<td>4.7 days (2.0×)</td>
+</tr>
+<tr>
+<td>GPT-2 small - FlashAttention</td>
+<td>18.2</td>
+<td>2.7 days (<strong>3.5×</strong>)</td>
+</tr>
+<tr>
+<td>GPT-2 medium - HuggingFace</td>
+<td>14.2</td>
+<td>21.0 days (1.0×)</td>
+</tr>
+<tr>
+<td>GPT-2 medium - Megatron-LM</td>
+<td>14.3</td>
+<td>11.5 days (1.8×)</td>
+</tr>
+<tr>
+<td>GPT-2 medium - FlashAttention</td>
+<td>14.3</td>
+<td>6.9 days (<strong>3.0×</strong>)</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: </p>
+<ul>
+<li>比HuggingFace快<strong>3.5倍</strong>（GPT-2 small）</li>
+<li>比Megatron-LM快<strong>1.7倍</strong></li>
+</ul>
+<p><img src="/images/Table_2.png" srcset="/img/loading.gif" lazyload alt="Table 2"><br><em>Table 2: GPT-2训练时间对比。FlashAttention比HuggingFace快3.5×，比Megatron-LM快1.7×。</em></p>
+<h4 id="Long-Range-Arena基准"><a href="#Long-Range-Arena基准" class="headerlink" title="Long-Range Arena基准"></a>Long-Range Arena基准</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>ListOps</th>
+<th>Text</th>
+<th>Retrieval</th>
+<th>Image</th>
+<th>Pathfinder</th>
+<th>Avg</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer</td>
+<td>36.0</td>
+<td>63.6</td>
+<td>81.6</td>
+<td>42.3</td>
+<td>72.7</td>
+<td>59.3</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FlashAttention</td>
+<td>37.6</td>
+<td>63.9</td>
+<td>81.4</td>
+<td>43.5</td>
+<td>72.7</td>
+<td>59.8</td>
+<td><strong>2.4×</strong></td>
+</tr>
+<tr>
+<td>Block-sparse FlashAttention</td>
+<td>37.0</td>
+<td>63.0</td>
+<td>81.3</td>
+<td>43.6</td>
+<td>73.3</td>
+<td>59.6</td>
+<td><strong>2.8×</strong></td>
+</tr>
+<tr>
+<td>Linformer</td>
+<td>35.6</td>
+<td>55.9</td>
+<td>77.7</td>
+<td>37.8</td>
+<td>67.6</td>
+<td>54.9</td>
+<td>2.5×</td>
+</tr>
+<tr>
+<td>Linear Attention</td>
+<td>38.8</td>
+<td>63.2</td>
+<td>80.7</td>
+<td>42.6</td>
+<td>72.5</td>
+<td>59.6</td>
+<td>2.3×</td>
+</tr>
+<tr>
+<td>Performer</td>
+<td>36.8</td>
+<td>63.6</td>
+<td>82.2</td>
+<td>42.1</td>
+<td>69.9</td>
+<td>58.9</td>
+<td>1.8×</td>
+</tr>
+<tr>
+<td>Reformer</td>
+<td>36.5</td>
+<td>63.8</td>
+<td>78.5</td>
+<td>39.6</td>
+<td>69.4</td>
+<td>57.6</td>
+<td>1.3×</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: </p>
+<ul>
+<li>比标准注意力快<strong>2.4倍</strong></li>
+<li>Block-sparse版本快<strong>2.8倍</strong>，且性能与标准注意力相当</li>
+</ul>
+<h3 id="内存效率"><a href="#内存效率" class="headerlink" title="内存效率"></a>内存效率</h3><p><img src="/images/Figure_3.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 左—不同序列长度下注意力前向+反向运行时间对比；右—注意力内存占用对比。FlashAttention内存线性增长（vs 二次增长），节省最高20×内存。</em></p>
+<p><strong>核心发现</strong>:</p>
+<ul>
+<li>内存占用随序列长度<strong>线性增长</strong>（而非二次增长）</li>
+<li>比精确注意力基线节省高达<strong>20倍</strong>内存</li>
+<li>在64K序列长度下比Linformer节省<strong>2倍</strong>内存</li>
+<li>所有其他算法（除Linformer外）在A100 GPU上在64K之前就会内存溢出</li>
+</ul>
+<h3 id="模型质量提升"><a href="#模型质量提升" class="headerlink" title="模型质量提升"></a>模型质量提升</h3><h4 id="长上下文语言建模"><a href="#长上下文语言建模" class="headerlink" title="长上下文语言建模"></a>长上下文语言建模</h4><table>
+<thead>
+<tr>
+<th>模型实现</th>
+<th>上下文长度</th>
+<th>OpenWebText (ppl)</th>
+<th>训练时间（加速比）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-2 small - Megatron-LM</td>
+<td>1K</td>
+<td>18.2</td>
+<td>4.7 days (1.0×)</td>
+</tr>
+<tr>
+<td>GPT-2 small - FlashAttention</td>
+<td>1K</td>
+<td>18.2</td>
+<td>2.7 days (1.7×)</td>
+</tr>
+<tr>
+<td>GPT-2 small - FlashAttention</td>
+<td>4K</td>
+<td>17.6</td>
+<td>3.0 days (1.6×)</td>
+</tr>
+<tr>
+<td>GPT-2 small - FlashAttention</td>
+<td>8K</td>
+<td>17.5</td>
+<td>3.6 days (1.3×)</td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>: </p>
+<ul>
+<li>使用4倍长上下文（4K vs 1K）仍然比Megatron-LM快<strong>30%</strong></li>
+<li>困惑度改善<strong>0.7</strong>（17.5 vs 18.2）</li>
+</ul>
+<h4 id="长文档分类"><a href="#长文档分类" class="headerlink" title="长文档分类"></a>长文档分类</h4><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>序列长度512</th>
+<th>序列长度8K</th>
+<th>序列长度16K</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MIMIC-III</td>
+<td>52.8</td>
+<td>56.4</td>
+<td><strong>57.1</strong></td>
+</tr>
+<tr>
+<td>ECtHR</td>
+<td>72.2</td>
+<td>78.6</td>
+<td><strong>80.7</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li>MIMIC-III: 序列长度16K比512提升<strong>4.3个点</strong></li>
+<li>ECtHR: 序列长度8K比512提升<strong>8.5个点</strong></li>
+</ul>
+<h4 id="Path-X和Path-256挑战"><a href="#Path-X和Path-256挑战" class="headerlink" title="Path-X和Path-256挑战"></a>Path-X和Path-256挑战</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Path-X (16K)</th>
+<th>Path-256 (64K)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer</td>
+<td>OOM</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>Linformer</td>
+<td>随机</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>Linear Attention</td>
+<td>随机</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>Performer</td>
+<td>随机</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td>Reformer</td>
+<td>随机</td>
+<td>OOM</td>
+</tr>
+<tr>
+<td><strong>FlashAttention</strong></td>
+<td><strong>61.4</strong></td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Block-sparse FlashAttention</strong></td>
+<td>-</td>
+<td><strong>63.1</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li><strong>首个</strong>在Path-X（16K序列）上达到61.4%准确率的Transformer（超越随机）</li>
+<li><strong>首个</strong>在Path-256（64K序列）上达到63.1%准确率的序列模型</li>
+</ul>
+<h3 id="性能基准测试"><a href="#性能基准测试" class="headerlink" title="性能基准测试"></a>性能基准测试</h3><p><img src="/images/Figure_2.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 左—标准注意力与FlashAttention在GPT-2 medium上的前向+反向运行时间、GFLOPs和HBM读写量对比；中—不同块大小对前向运行时间的影响；右—块稀疏FlashAttention的稀疏度加速效果。</em></p>
+<p><strong>GPT-2 medium上的对比</strong>（序列长度1024，头维度64，16头，batch size 64）:</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>标准注意力</th>
+<th>FlashAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GFLOPs</td>
+<td>66.6</td>
+<td>75.2</td>
+</tr>
+<tr>
+<td>HBM R&#x2F;W (GB)</td>
+<td>40.3</td>
+<td><strong>4.4</strong></td>
+</tr>
+<tr>
+<td>Runtime (ms)</td>
+<td>41.7</td>
+<td><strong>7.3</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键洞察</strong>:</p>
+<ul>
+<li>FlashAttention的FLOPs实际上<strong>更高</strong>（由于重计算）</li>
+<li>但HBM访问量只有标准方法的<strong>1&#x2F;9</strong></li>
+<li>运行时间是标准方法的<strong>1&#x2F;5.7</strong></li>
+<li><strong>证明</strong>: HBM访问量是决定运行时的主要因素，而非FLOPs</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="IO复杂度与FLOPs的权衡"><a href="#IO复杂度与FLOPs的权衡" class="headerlink" title="IO复杂度与FLOPs的权衡"></a>IO复杂度与FLOPs的权衡</h3><p>FlashAttention的核心洞见在于：在现代GPU上，<strong>内存访问是主要瓶颈</strong>，而非计算。这解释了为什么FlashAttention虽然增加了FLOPs（由于重计算），但实际运行时间却大幅减少。</p>
+<p><strong>关键数据分析</strong>:</p>
+<ul>
+<li>标准注意力: 66.6 GFLOPs, 40.3 GB HBM读写, 41.7ms</li>
+<li>FlashAttention: 75.2 GFLOPs (+13%), <strong>4.4 GB HBM读写 (-89%)</strong>, <strong>7.3ms (-82%)</strong></li>
+</ul>
+<p>这证明了一个反直觉的结论：<strong>在内存受限场景下，增加计算以减少内存访问可以显著提升性能</strong>。</p>
+<h3 id="在线Softmax的数值稳定性"><a href="#在线Softmax的数值稳定性" class="headerlink" title="在线Softmax的数值稳定性"></a>在线Softmax的数值稳定性</h3><p>FlashAttention使用在线softmax算法，通过维护额外的统计量$m$（最大值）和$l$（归一化常数）来增量计算softmax。这种方法的数值稳定性如何？</p>
+<p>论文通过Theorem 1证明了算法的正确性，并通过实验验证了FlashAttention与标准注意力产生完全相同的结果（Figure 4显示验证困惑度曲线完全重合）。这证明在线softmax算法在实际应用中是数值稳定的。</p>
+<h3 id="块大小选择的工程挑战"><a href="#块大小选择的工程挑战" class="headerlink" title="块大小选择的工程挑战"></a>块大小选择的工程挑战</h3><p>FlashAttention的性能高度依赖于块大小$B_r$和$B_c$的选择。论文在Figure 2中间展示了块大小对性能的影响：</p>
+<ul>
+<li>块大小增加 → HBM访问减少 → 运行时间减少</li>
+<li>但块大小过大 → 无法放入SRAM → 性能下降</li>
+</ul>
+<p>这意味着<strong>FlashAttention需要针对不同GPU架构调优块大小</strong>，这是一个重要的工程挑战。</p>
+<h3 id="与近似方法的根本区别"><a href="#与近似方法的根本区别" class="headerlink" title="与近似方法的根本区别"></a>与近似方法的根本区别</h3><p>FlashAttention与Linformer、Performer等近似方法的根本区别在于：</p>
+<ul>
+<li><strong>近似方法</strong>: 改变计算内容（近似注意力矩阵），降低理论复杂度</li>
+<li><strong>FlashAttention</strong>: 保持计算内容不变（精确注意力），只改变计算顺序和内存访问模式</li>
+</ul>
+<p>这解释了为什么FlashAttention在短序列上比近似方法更快：近似方法虽然理论复杂度低，但IO开销大；而FlashAttention通过减少IO开销实现了实际加速。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-标准注意力实现"><a href="#vs-标准注意力实现" class="headerlink" title="vs 标准注意力实现"></a>vs 标准注意力实现</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>标准注意力</th>
+<th>FlashAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内存占用</td>
+<td>$O(N^2)$</td>
+<td>$O(N)$</td>
+</tr>
+<tr>
+<td>IO复杂度</td>
+<td>$\Theta(Nd + N^2)$</td>
+<td>$\Theta(N^2d^2&#x2F;M)$</td>
+</tr>
+<tr>
+<td>HBM访问</td>
+<td>存储完整$N \times N$矩阵</td>
+<td>避免实例化注意力矩阵</td>
+</tr>
+<tr>
+<td>数值精度</td>
+<td>精确</td>
+<td><strong>精确</strong>（相同结果）</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>简单（PyTorch原生）</td>
+<td>需要CUDA kernel</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: FlashAttention不改变计算结果，只改变计算顺序和内存访问模式。</p>
+<h3 id="vs-近似注意力方法"><a href="#vs-近似注意力方法" class="headerlink" title="vs 近似注意力方法"></a>vs 近似注意力方法</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>理论复杂度</th>
+<th>实际加速</th>
+<th>精度</th>
+<th>IO优化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Linformer</td>
+<td>线性</td>
+<td>有时更快</td>
+<td>近似</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Performer</td>
+<td>线性</td>
+<td>有时更快</td>
+<td>近似</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Reformer</td>
+<td>线性</td>
+<td>不明显</td>
+<td>近似</td>
+<td>否</td>
+</tr>
+<tr>
+<td><strong>FlashAttention</strong></td>
+<td>二次</td>
+<td><strong>总是更快</strong></td>
+<td><strong>精确</strong></td>
+<td><strong>是</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: </p>
+<ul>
+<li>近似方法只关注FLOP减少，忽视IO开销</li>
+<li>FlashAttention保持精确性，且通过IO优化实现实际加速</li>
+<li>在序列长度≤512时，FlashAttention比所有近似方法都快</li>
+<li>在序列长度&gt;1K时，某些近似方法（如Linformer）可能更快</li>
+</ul>
+<h3 id="vs-梯度检查点"><a href="#vs-梯度检查点" class="headerlink" title="vs 梯度检查点"></a>vs 梯度检查点</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>梯度检查点</th>
+<th>FlashAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原理</td>
+<td>用时间换空间</td>
+<td>IO优化</td>
+</tr>
+<tr>
+<td>内存节省</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>速度影响</td>
+<td><strong>变慢</strong>（需要重计算）</td>
+<td><strong>变快</strong>（减少HBM访问）</td>
+</tr>
+<tr>
+<td>HBM访问</td>
+<td>不变或增加</td>
+<td><strong>显著减少</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: </p>
+<ul>
+<li>传统梯度检查点用时间换内存，实际运行时间增加</li>
+<li>FlashAttention的重计算因为减少了HBM访问反而<strong>更快</strong></li>
+<li>这是IO受限场景下的反直觉结果：更多计算 &#x3D; 更快速度</li>
+</ul>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-工程成本高"><a href="#1-工程成本高" class="headerlink" title="1. 工程成本高"></a>1. 工程成本高</h3><p><strong>问题</strong>: 需要为每种注意力变体编写新的CUDA kernel</p>
+<ul>
+<li>当前方法要求用比PyTorch低得多的语言编写注意力算法</li>
+<li>需要大量工程工作</li>
+<li>类似于图像处理中的Halide，需要专门的编译器</li>
+</ul>
+<p><strong>影响</strong>: 实现新的注意力变体（如不同的稀疏模式、不同的归一化方式）需要重新编写CUDA kernel。</p>
+<h3 id="2-硬件依赖性"><a href="#2-硬件依赖性" class="headerlink" title="2. 硬件依赖性"></a>2. 硬件依赖性</h3><p><strong>问题</strong>: 实现可能无法跨GPU架构移植</p>
+<ul>
+<li>不同GPU有不同的SRAM大小</li>
+<li>需要为不同GPU架构调整块大小</li>
+<li>A100的SRAM是192KB，T4的SRAM更小</li>
+</ul>
+<p><strong>影响</strong>: 在一种GPU上优化的实现可能在另一种GPU上表现不佳。</p>
+<h3 id="3-超长序列的局限性"><a href="#3-超长序列的局限性" class="headerlink" title="3. 超长序列的局限性"></a>3. 超长序列的局限性</h3><p><strong>问题</strong>: 对于超长序列（&gt;1K），某些近似方法可能更快</p>
+<ul>
+<li>当序列长度超过1K-2K时，Linformer等近似方法的运行时开始超越FlashAttention</li>
+<li>FlashAttention的IO复杂度仍然是$O(N^2)$（虽然常数更小）</li>
+</ul>
+<p><strong>影响</strong>: 在极端长序列场景下，可能需要结合稀疏化或其他近似技术。</p>
+<h3 id="4-多GPU场景"><a href="#4-多GPU场景" class="headerlink" title="4. 多GPU场景"></a>4. 多GPU场景</h3><p><strong>问题</strong>: 单GPU上的IO最优，但多GPU场景需要考虑GPU间数据传输</p>
+<ul>
+<li>当前分析只考虑单个GPU内的HBM-SRAM层次</li>
+<li>多GPU训练需要额外的通信开销</li>
+<li>可能需要跨GPU的IO感知设计</li>
+</ul>
+<p><strong>影响</strong>: 在多GPU设置中，FlashAttention的优势可能减弱。</p>
+<h3 id="5-Block-Sparse的稀疏模式"><a href="#5-Block-Sparse的稀疏模式" class="headerlink" title="5. Block-Sparse的稀疏模式"></a>5. Block-Sparse的稀疏模式</h3><p><strong>问题</strong>: Block-Sparse使用固定的butterfly稀疏模式，不是学习到的稀疏模式</p>
+<ul>
+<li>butterfly模式虽然能近似任意稀疏，但可能不是最优的</li>
+<li>没有利用输入数据的特定结构</li>
+</ul>
+<p><strong>影响</strong>: 在特定任务上，学习到的稀疏模式可能表现更好。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-IO感知是通用优化原则"><a href="#1-IO感知是通用优化原则" class="headerlink" title="1. IO感知是通用优化原则"></a>1. IO感知是通用优化原则</h3><p><strong>洞见</strong>: IO感知不仅限于注意力机制，可以推广到其他深度学习操作</p>
+<ul>
+<li>归一化（LayerNorm、BatchNorm）</li>
+<li>卷积操作</li>
+<li>激活函数</li>
+<li>任何内存密集型操作</li>
+</ul>
+<p><strong>如何应用</strong>: </p>
+<ul>
+<li>识别操作中的内存瓶颈</li>
+<li>分析IO复杂度</li>
+<li>使用分块和核融合减少HBM访问</li>
+</ul>
+<h3 id="2-分块计算与在线算法的威力"><a href="#2-分块计算与在线算法的威力" class="headerlink" title="2. 分块计算与在线算法的威力"></a>2. 分块计算与在线算法的威力</h3><p><strong>洞见</strong>: 分块计算和在线算法可以将内存密集型操作转换为计算密集型</p>
+<ul>
+<li>避免实例化大型中间矩阵</li>
+<li>增量式计算最终结果</li>
+<li>在快速内存中完成大部分计算</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>识别可以分块计算的操作</li>
+<li>设计在线算法维护中间状态</li>
+<li>确保数值稳定性</li>
+</ul>
+<h3 id="3-理论IO复杂度分析的价值"><a href="#3-理论IO复杂度分析的价值" class="headerlink" title="3. 理论IO复杂度分析的价值"></a>3. 理论IO复杂度分析的价值</h3><p><strong>洞见</strong>: 理论IO复杂度分析可以指导算法设计并证明最优性</p>
+<ul>
+<li>不仅关注FLOPs，也关注内存访问</li>
+<li>证明算法在给定硬件约束下的最优性</li>
+<li>指导块大小等超参数的选择</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>为新算法推导IO复杂度</li>
+<li>比较不同算法的IO效率</li>
+<li>证明下界，指导未来研究</li>
+</ul>
+<h3 id="4-核融合是加速内存受限操作的有效手段"><a href="#4-核融合是加速内存受限操作的有效手段" class="headerlink" title="4. 核融合是加速内存受限操作的有效手段"></a>4. 核融合是加速内存受限操作的有效手段</h3><p><strong>洞见</strong>: 将多个操作融合为单个kernel可以避免重复读写HBM</p>
+<ul>
+<li>减少kernel启动开销</li>
+<li>避免中间结果的HBM存储</li>
+<li>提高数据局部性</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>识别可以融合的操作序列</li>
+<li>在单个kernel中实现完整计算</li>
+<li>使用CUDA或其他低级语言实现</li>
+</ul>
+<h3 id="5-重计算策略的反直觉优势"><a href="#5-重计算策略的反直觉优势" class="headerlink" title="5. 重计算策略的反直觉优势"></a>5. 重计算策略的反直觉优势</h3><p><strong>洞见</strong>: 在IO受限场景下，重计算可能比存储中间结果更快</p>
+<ul>
+<li>传统观点：重计算浪费算力</li>
+<li>新观点：减少HBM访问可以抵消重计算的开销</li>
+<li>关键：比较HBM访问时间 vs 重计算时间</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>评估操作的IO成本 vs 计算成本</li>
+<li>对于IO受限操作，考虑重计算策略</li>
+<li>保存必要的统计量以支持重计算</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>IO感知优化的普适性</strong>: FlashAttention的IO感知原则可以推广到其他深度学习操作，如归一化、卷积、激活函数等。这为整个深度学习栈的系统优化提供了新思路。</p>
+</li>
+<li><p><strong>硬件-算法协同设计</strong>: FlashAttention的成功证明，算法设计必须考虑底层硬件特性。未来的算法研究应该更多地考虑IO复杂度，而非仅仅关注FLOPs。</p>
+</li>
+<li><p><strong>精确性与效率的平衡</strong>: FlashAttention证明了在某些场景下，保持精确性反而能实现更高的效率。这对于其他近似算法的设计也有启发意义。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>长序列训练</strong>: FlashAttention使Transformer能够处理更长的序列（如16K、64K），这对于长文档理解、代码生成等任务至关重要。</p>
+</li>
+<li><p><strong>资源受限环境</strong>: FlashAttention的内存效率使其能够在资源受限的环境（如单GPU、边缘设备）上训练大模型。</p>
+</li>
+<li><p><strong>推理加速</strong>: 虽然本文主要关注训练，但FlashAttention的原理也可以应用于推理阶段，特别是对于长序列推理。</p>
+</li>
+</ol>
+<h3 id="与其他系统优化的关系"><a href="#与其他系统优化的关系" class="headerlink" title="与其他系统优化的关系"></a>与其他系统优化的关系</h3><p>FlashAttention可以与以下技术结合使用：</p>
+<ul>
+<li><strong>Flash-Decoding</strong>: 针对推理阶段的优化，与FlashAttention互补</li>
+<li><strong>梯度检查点</strong>: FlashAttention的重计算策略与梯度检查点有相似之处，但更高效</li>
+<li><strong>混合精度训练</strong>: FlashAttention可以与混合精度训练结合，进一步提升性能</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-扩展到其他操作"><a href="#1-扩展到其他操作" class="headerlink" title="1. 扩展到其他操作"></a>1. 扩展到其他操作</h3><p><strong>问题</strong>: 如何将IO感知方法扩展到其他深度学习操作（如归一化、卷积）？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析LayerNorm、BatchNorm的IO复杂度</li>
+<li>设计IO优化的卷积实现</li>
+<li>探索其他内存密集型操作的IO优化</li>
+</ul>
+<p><strong>潜在影响</strong>: 可能带来整个深度学习栈的性能提升。</p>
+<h3 id="2-自动编译器"><a href="#2-自动编译器" class="headerlink" title="2. 自动编译器"></a>2. 自动编译器</h3><p><strong>问题</strong>: 能否开发高级语言编译器自动生成IO优化的CUDA kernel？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>类似Halide的编译器，但针对深度学习</li>
+<li>从PyTorch代码自动推导IO优化实现</li>
+<li>自动选择块大小和其他超参数</li>
+</ul>
+<p><strong>潜在影响</strong>: 降低工程成本，使IO优化更易获取。</p>
+<h3 id="3-多GPU-IO感知"><a href="#3-多GPU-IO感知" class="headerlink" title="3. 多GPU IO感知"></a>3. 多GPU IO感知</h3><p><strong>问题</strong>: 多GPU场景下如何设计IO感知的注意力实现？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>考虑GPU间数据传输的IO分析</li>
+<li>设计跨GPU的分块策略</li>
+<li>优化通信与计算的重叠</li>
+</ul>
+<p><strong>潜在影响</strong>: 在大规模训练中实现更好的扩展性。</p>
+<h3 id="4-自动调优"><a href="#4-自动调优" class="headerlink" title="4. 自动调优"></a>4. 自动调优</h3><p><strong>问题</strong>: 对于不同的GPU架构（不同SRAM大小），如何自动调优块大小？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>运行时检测和适应硬件特性</li>
+<li>自动搜索最优块大小</li>
+<li>考虑不同操作的最优配置</li>
+</ul>
+<p><strong>潜在影响</strong>: 提高跨平台可移植性和性能。</p>
+<h3 id="5-与其他技术结合"><a href="#5-与其他技术结合" class="headerlink" title="5. 与其他技术结合"></a>5. 与其他技术结合</h3><p><strong>问题</strong>: FlashAttention能否与Flash-Decoding等技术结合进一步提升推理速度？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>结合FlashAttention（训练）和Flash-Decoding（推理）</li>
+<li>探索KV缓存的IO优化</li>
+<li>设计端到端的IO优化推理流程</li>
+</ul>
+<p><strong>潜在影响</strong>: 在推理阶段实现更大的加速。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Aggarwal, A., &amp; Vitter, J. S. (1988). The input&#x2F;output complexity of sorting and related problems. Communications of the ACM, 31(9), 1116-1124.</li>
+<li>Rabe, M. N., &amp; Staats, C. (2021). Self-attention Does not need O(n²) memory. arXiv:2112.05682.</li>
+<li>Milakov, M., &amp; Gimelshein, N. (2018). Online normalizer calculation for softmax. arXiv:1805.02867.</li>
+<li>Chen, T., et al. (2016). Training deep nets with sublinear memory cost. arXiv:1604.06174.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-attention-optimization/" class="print-no-link">#papers/attention-optimization</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</div>
+      <div>https://w2ongq6.github.io/2022/06/24/inference/note/FlashAttention_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/07/26/aigc/note/ClassifierFreeGuidance_note/" title="Classifier-Free Diffusion Guidance">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Classifier-Free Diffusion Guidance</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/06/15/llm/note/EmergentAbilities_note/" title="Emergent Abilities of Large Language Models">
+                        <span class="hidden-mobile">Emergent Abilities of Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

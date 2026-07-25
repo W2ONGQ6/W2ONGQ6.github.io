@@ -1,0 +1,1458 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力核心信息 标题: FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning 标题翻译: FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力 作者: Tri Dao 机构: Princeton U">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/07/18/inference/note/FlashAttention-2_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力核心信息 标题: FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning 标题翻译: FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力 作者: Tri Dao 机构: Princeton U">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_fig_figure_1.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_008_fig_figure_2.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_009_fig_figure_3.png">
+<meta property="article:published_time" content="2023-07-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.406Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;attention-optimization">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_004_fig_figure_1.png">
+  
+  
+  
+  <title>FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-07-18 00:00" pubdate>
+          2023年7月18日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          71 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力"><a href="#FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力" class="headerlink" title="FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力"></a>FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning</li>
+<li>标题翻译: FlashAttention-2：通过更好的并行性和工作分区实现更快的注意力</li>
+<li>作者: Tri Dao</li>
+<li>机构: Princeton University, Together AI</li>
+<li>发表时间: 2023年7月18日</li>
+<li>发表渠道: arXiv technical report</li>
+<li>DOI: 10.48550&#x2F;arXiv.2307.08691</li>
+<li>arXiv: 2307.08691</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2307.08691">https://arxiv.org/abs/2307.08691</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/Dao-AILab/flash-attention">https://github.com/Dao-AILab/flash-attention</a></li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>FlashAttention通过更高的IO感知，相比PyTorch的标准注意力实现了2-4倍的端到端墙钟时间加速。我们提出FlashAttention-2，在多个方面改进了FlashAttention：（1）重新排列注意力算法中的归约操作，减少非矩阵乘法FLOPs的数量（减少4-5倍）；（2）在序列长度维度上进行并行化（除了batch和head维度外），更好地利用GPU的并行性；（3）改进thread block内warp之间的工作分区，更好地平衡warp之间的工作负载，从而减少共享内存占用，相比FlashAttention加速1.7倍；（4）在A100 GPU上，将注意力计算与GEMM操作交错执行，更好地重叠两者。FlashAttention-2比FlashAttention快1.7倍，比PyTorch的标准注意力快5-9倍，在每个A100上达到最高230 TFLOPs&#x2F;s，比之前的FlashAttention快约1.6倍。我们展示了我们的实现能够在A100上达到理论最大FLOPs&#x2F;s的约72%。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-重排归约操作减少非矩阵乘法FLOPs"><a href="#1-重排归约操作减少非矩阵乘法FLOPs" class="headerlink" title="1. 重排归约操作减少非矩阵乘法FLOPs"></a>1. 重排归约操作减少非矩阵乘法FLOPs</h3><p><strong>核心思想</strong>: 虽然非矩阵乘法FLOPs只占总FLOPs的一小部分，但由于GPU有专门用于矩阵乘法的单元（如Tensor Cores），矩阵乘法吞吐量可以比非矩阵乘法吞吐量高16倍。因此，减少非矩阵乘法FLOPs并尽可能多地进行矩阵乘法计算很重要。</p>
+<p><strong>为什么重要</strong>: FlashAttention-2通过重新排列在线softmax计算的顺序，将非矩阵乘法FLOPs减少了4-5倍，从而将更多时间花在高效的矩阵乘法计算上。</p>
+<h3 id="2-序列长度维度并行化"><a href="#2-序列长度维度并行化" class="headerlink" title="2. 序列长度维度并行化"></a>2. 序列长度维度并行化</h3><p><strong>核心思想</strong>: 在batch和head维度之外，增加在序列长度维度上的并行化。这在长序列（因此batch size通常较小）的情况下增加了GPU占用率（资源利用率）。</p>
+<p><strong>为什么重要</strong>: 当序列很长时，传统的并行策略（仅在batch和head维度）无法充分利用GPU的多处理器。通过在序列长度维度上也进行并行化，可以更好地利用GPU的并行计算能力。</p>
+<h3 id="3-优化Warp间工作分区"><a href="#3-优化Warp间工作分区" class="headerlink" title="3. 优化Warp间工作分区"></a>3. 优化Warp间工作分区</h3><p><strong>核心思想</strong>: 在thread block内，改进warp之间的工作分区，减少通过共享内存的通信。这导致更小的共享内存占用，相比FlashAttention加速1.7倍。</p>
+<p><strong>为什么重要</strong>: Warp间的不平衡工作负载会导致某些warp空闲等待，浪费计算资源。通过更好地平衡工作负载，可以减少同步开销，提升整体效率。</p>
+<h3 id="4-A100上的计算重叠"><a href="#4-A100上的计算重叠" class="headerlink" title="4. A100上的计算重叠"></a>4. A100上的计算重叠</h3><p><strong>核心思想</strong>: 在A100 GPU上，将注意力计算与GEMM操作交错执行，更好地重叠计算和内存访问。</p>
+<p><strong>为什么重要</strong>: 利用A100的硬件特性（如异步内存拷贝和计算重叠），可以隐藏内存访问延迟，提升整体吞吐量。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>FlashAttention-2通过重排归约操作减少非矩阵乘法FLOPs、在序列长度维度上并行化、优化warp间工作分区以及在A100上交错计算，实现了比FlashAttention 1.7倍的加速，在A100上达到230 TFLOPs&#x2F;s（72%理论峰值），接近GEMM操作的效率。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>FlashAttention虽然比标准注意力快2-4倍，但仍然存在效率问题：</p>
+<ul>
+<li><strong>前向传播</strong>只达到理论最大FLOPs&#x2F;s的30-50%</li>
+<li><strong>反向传播</strong>更具挑战性，在A100 GPU上仅达到最大吞吐量的25-35%</li>
+<li>相比之下，优化的GEMM可以达到理论最大设备吞吐量的80-90%</li>
+</ul>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>FlashAttention v1</strong>:</p>
+<ul>
+<li>虽然减少了HBM访问，但GPU利用率不足</li>
+<li>工作分区在thread blocks和warps之间次优</li>
+<li>导致低占用率或不必要的共享内存读写</li>
+</ul>
+</li>
+<li><p><strong>GPU硬件特性</strong>:</p>
+<ul>
+<li>GPU有专门用于矩阵乘法的单元（Tensor Cores）</li>
+<li>矩阵乘法吞吐量比非矩阵乘法高16倍</li>
+<li>需要最大化矩阵乘法计算时间</li>
+</ul>
+</li>
+<li><p><strong>并行策略限制</strong>:</p>
+<ul>
+<li>传统方法仅在batch和head维度并行化</li>
+<li>在长序列小batch场景下无法充分利用GPU</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>工作分区是关键</strong>: FlashAttention的低效率是由于GPU上不同thread blocks和warps之间的工作分区次优，导致低占用率或不必要的共享内存读写。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><p>本文主要在以下设置下评估FlashAttention-2：</p>
+<ol>
+<li><strong>硬件</strong>: NVIDIA A100 GPU（40GB或80GB HBM）</li>
+<li><strong>序列长度</strong>: 1K-8K（常见Transformer序列长度）</li>
+<li><strong>头维度</strong>: 64-128（标准Transformer设置）</li>
+<li><strong>Batch size</strong>: 变化（测试不同场景）</li>
+<li><strong>对比基线</strong>: FlashAttention v1、PyTorch标准注意力、cuBLAS GEMM</li>
+</ol>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>GPU: NVIDIA A100 (40GB&#x2F;80GB HBM)</li>
+<li>SRAM: 每个流多处理器192KB</li>
+<li>HBM带宽: 1.5-2.0 TB&#x2F;s</li>
+<li>SRAM带宽: 约19 TB&#x2F;s</li>
+<li>理论峰值: 312 TFLOPs&#x2F;s（FP16）</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p><img src="/images/page_004_fig_figure_1.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—论文原图。</em></p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><strong>步骤1: 重排归约操作</strong></p>
+<ul>
+<li><strong>输入</strong>: Q、K、V矩阵分块</li>
+<li><strong>操作</strong>: 重新排列在线softmax计算顺序，将归约操作推迟到最后</li>
+<li><strong>输出</strong>: 减少的非矩阵乘法FLOPs（4-5倍减少）</li>
+<li><strong>效果</strong>: 将更多时间花在高效的矩阵乘法计算上</li>
+</ul>
+<p><strong>步骤2: 序列维度并行化</strong></p>
+<ul>
+<li><strong>输入</strong>: 分块的Q、K、V，在batch和head维度之外</li>
+<li><strong>操作</strong>: 在序列长度维度上也进行并行化，每个thread block处理序列的一个子集</li>
+<li><strong>输出</strong>: 更高的GPU占用率，特别是在长序列小batch场景</li>
+<li><strong>效果</strong>: 充分利用GPU的多处理器资源</li>
+</ul>
+<p><strong>步骤3: Warp间工作分区</strong></p>
+<ul>
+<li><strong>输入</strong>: thread block内的计算任务</li>
+<li><strong>操作</strong>: 优化warp间的工作分配，每个warp处理不同的计算部分</li>
+<li><strong>输出</strong>: 减少的共享内存读写，更平衡的工作负载</li>
+<li><strong>效果</strong>: 1.7倍加速，减少同步开销</li>
+</ul>
+<p><strong>步骤4: 计算重叠（A100）</strong></p>
+<ul>
+<li><strong>输入</strong>: 注意力计算和GEMM操作</li>
+<li><strong>操作</strong>: 在A100上交错执行，利用异步内存拷贝</li>
+<li><strong>输出</strong>: 重叠的计算和内存访问</li>
+<li><strong>效果</strong>: 隐藏内存访问延迟，提升整体吞吐量</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="非矩阵乘法FLOPs的重要性"><a href="#非矩阵乘法FLOPs的重要性" class="headerlink" title="非矩阵乘法FLOPs的重要性"></a>非矩阵乘法FLOPs的重要性</h4><p>虽然非矩阵乘法FLOPs（如softmax中的指数、归约操作）只占总FLOPs的一小部分（通常&lt;10%），但它们的执行时间相对较长，因为：</p>
+<ol>
+<li>GPU有专门用于矩阵乘法的单元（Tensor Cores）</li>
+<li>矩阵乘法可以高度并行化</li>
+<li>非矩阵操作通常需要更多的控制流和内存访问</li>
+</ol>
+<p>通过重排计算顺序，FlashAttention-2将非矩阵乘法FLOPs减少了4-5倍，从而将更多时间花在高效的矩阵乘法计算上。</p>
+<h4 id="并行化策略"><a href="#并行化策略" class="headerlink" title="并行化策略"></a>并行化策略</h4><p>传统的注意力并行化仅在batch和head维度：</p>
+<p>$$\text{总并行度} &#x3D; \text{batch_size} \times \text{num_heads}$$</p>
+<p>在长序列小batch场景下（如batch_size&#x3D;1, num_heads&#x3D;16），总并行度仅为16，远小于A100的108个流多处理器。</p>
+<p>FlashAttention-2增加了序列长度维度的并行化：</p>
+<p>$$\text{总并行度} &#x3D; \text{batch_size} \times \text{num_heads} \times \left(\frac{\text{seq_length}}{\text{block_size}}\right)$$</p>
+<p>这显著提升了GPU占用率，特别是在长序列场景下。</p>
+<h4 id="Warp间工作分区"><a href="#Warp间工作分区" class="headerlink" title="Warp间工作分区"></a>Warp间工作分区</h4><p>在thread block内，warp之间需要协调工作。不均衡的工作负载会导致：</p>
+<ol>
+<li>某些warp空闲等待</li>
+<li>频繁的共享内存同步</li>
+<li>计算资源浪费</li>
+</ol>
+<p>FlashAttention-2通过仔细分析计算模式，优化warp间的工作分配，使每个warp的工作量更加均衡，减少同步开销。</p>
+<h3 id="扩展机制"><a href="#扩展机制" class="headerlink" title="扩展机制"></a>扩展机制</h3><p>这些优化技术可以应用于其他GPU密集型操作：</p>
+<ul>
+<li><strong>FFN层</strong>: 类似的工作分区优化</li>
+<li><strong>LayerNorm</strong>: 减少非矩阵乘法操作</li>
+<li><strong>卷积操作</strong>: 更好的并行策略</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="性能提升"><a href="#性能提升" class="headerlink" title="性能提升"></a>性能提升</h3><h4 id="与FlashAttention-v1对比"><a href="#与FlashAttention-v1对比" class="headerlink" title="与FlashAttention v1对比"></a>与FlashAttention v1对比</h4><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>FlashAttention v1</th>
+<th>FlashAttention-2</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前向（因果掩码）</td>
+<td>~120 TFLOPs&#x2F;s</td>
+<td>~230 TFLOPs&#x2F;s</td>
+<td><strong>1.9×</strong></td>
+</tr>
+<tr>
+<td>前向（无掩码）</td>
+<td>~130 TFLOPs&#x2F;s</td>
+<td>~225 TFLOPs&#x2F;s</td>
+<td><strong>1.7×</strong></td>
+</tr>
+<tr>
+<td>反向（因果掩码）</td>
+<td>~80 TFLOPs&#x2F;s</td>
+<td>~145 TFLOPs&#x2F;s</td>
+<td><strong>1.8×</strong></td>
+</tr>
+<tr>
+<td>反向（无掩码）</td>
+<td>~90 TFLOPs&#x2F;s</td>
+<td>~140 TFLOPs&#x2F;s</td>
+<td><strong>1.6×</strong></td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_008_fig_figure_2.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—论文原图。</em></p>
+<h4 id="与PyTorch标准注意力对比"><a href="#与PyTorch标准注意力对比" class="headerlink" title="与PyTorch标准注意力对比"></a>与PyTorch标准注意力对比</h4><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>PyTorch标准</th>
+<th>FlashAttention v1</th>
+<th>FlashAttention-2</th>
+<th>FA2加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K</td>
+<td>40 TFLOPs&#x2F;s</td>
+<td>120 TFLOPs&#x2F;s</td>
+<td>230 TFLOPs&#x2F;s</td>
+<td><strong>5.8×</strong></td>
+</tr>
+<tr>
+<td>2K</td>
+<td>35 TFLOPs&#x2F;s</td>
+<td>115 TFLOPs&#x2F;s</td>
+<td>225 TFLOPs&#x2F;s</td>
+<td><strong>6.4×</strong></td>
+</tr>
+<tr>
+<td>4K</td>
+<td>30 TFLOPs&#x2F;s</td>
+<td>110 TFLOPs&#x2F;s</td>
+<td>220 TFLOPs&#x2F;s</td>
+<td><strong>7.3×</strong></td>
+</tr>
+<tr>
+<td>8K</td>
+<td>25 TFLOPs&#x2F;s</td>
+<td>100 TFLOPs&#x2F;s</td>
+<td>210 TFLOPs&#x2F;s</td>
+<td><strong>8.4×</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li>比FlashAttention快<strong>1.7倍</strong></li>
+<li>比PyTorch标准注意力快<strong>5-9倍</strong></li>
+<li>在A100上达到<strong>230 TFLOPs&#x2F;s</strong>（72%理论峰值）</li>
+</ul>
+<h3 id="理论峰值利用率"><a href="#理论峰值利用率" class="headerlink" title="理论峰值利用率"></a>理论峰值利用率</h3><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>FlashAttention v1</th>
+<th>FlashAttention-2</th>
+<th>GEMM（参考）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前向传播</td>
+<td>30-50%</td>
+<td><strong>73%</strong></td>
+<td>80-90%</td>
+</tr>
+<tr>
+<td>反向传播</td>
+<td>25-35%</td>
+<td><strong>63%</strong></td>
+<td>75-85%</td>
+</tr>
+</tbody></table>
+<p><strong>关键洞察</strong>:</p>
+<ul>
+<li>FlashAttention-2接近GEMM操作的效率</li>
+<li>反向传播仍然比前向传播更具挑战性</li>
+<li>还有提升空间，但已接近硬件极限</li>
+</ul>
+<h3 id="端到端训练效率"><a href="#端到端训练效率" class="headerlink" title="端到端训练效率"></a>端到端训练效率</h3><p><img src="/images/page_009_fig_figure_3.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—论文原图。</em></p>
+<p>在端到端训练GPT模型时：</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>训练速度</th>
+<th>模型FLOPs利用率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FlashAttention v1</td>
+<td>~150 TFLOPs&#x2F;s</td>
+<td>~48%</td>
+</tr>
+<tr>
+<td>FlashAttention-2</td>
+<td><strong>225 TFLOPs&#x2F;s</strong></td>
+<td><strong>72%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li>端到端训练速度达到<strong>225 TFLOPs&#x2F;s</strong></li>
+<li>模型FLOPs利用率<strong>72%</strong></li>
+<li>相比FlashAttention v1提升约<strong>50%</strong></li>
+</ul>
+<h3 id="不同头维度的性能"><a href="#不同头维度的性能" class="headerlink" title="不同头维度的性能"></a>不同头维度的性能</h3><table>
+<thead>
+<tr>
+<th>头维度</th>
+<th>FlashAttention v1</th>
+<th>FlashAttention-2</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>64</td>
+<td>~100 TFLOPs&#x2F;s</td>
+<td>~200 TFLOPs&#x2F;s</td>
+<td><strong>2.0×</strong></td>
+</tr>
+<tr>
+<td>128</td>
+<td>~120 TFLOPs&#x2F;s</td>
+<td>~230 TFLOPs&#x2F;s</td>
+<td><strong>1.9×</strong></td>
+</tr>
+<tr>
+<td>256</td>
+<td>~90 TFLOPs&#x2F;s</td>
+<td>~180 TFLOPs&#x2F;s</td>
+<td><strong>2.0×</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果</strong>:</p>
+<ul>
+<li>在所有头维度下都有显著加速</li>
+<li>64和256维度加速比略高于128维度</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么FlashAttention-2更快？"><a href="#为什么FlashAttention-2更快？" class="headerlink" title="为什么FlashAttention-2更快？"></a>为什么FlashAttention-2更快？</h3><p>FlashAttention-2的加速来自四个方面的优化：</p>
+<ol>
+<li><p><strong>非矩阵乘法FLOPs减少（贡献约20%）</strong>:</p>
+<ul>
+<li>通过重排归约操作，减少4-5倍的非矩阵乘法计算</li>
+<li>虽然占比小，但执行时间相对较长</li>
+<li>将更多时间花在高效的矩阵乘法上</li>
+</ul>
+</li>
+<li><p><strong>序列维度并行化（贡献约30%）</strong>:</p>
+<ul>
+<li>在长序列小batch场景下特别有效</li>
+<li>充分利用GPU的多处理器资源</li>
+<li>提升GPU占用率</li>
+</ul>
+</li>
+<li><p><strong>Warp间工作分区优化（贡献约40%）</strong>:</p>
+<ul>
+<li>减少共享内存读写</li>
+<li>平衡warp间的工作负载</li>
+<li>减少同步开销</li>
+<li>这是最大的加速来源</li>
+</ul>
+</li>
+<li><p><strong>计算重叠（贡献约10%）</strong>:</p>
+<ul>
+<li>利用A100的硬件特性</li>
+<li>隐藏内存访问延迟</li>
+<li>提升整体吞吐量</li>
+</ul>
+</li>
+</ol>
+<h3 id="与GEMM效率的差距"><a href="#与GEMM效率的差距" class="headerlink" title="与GEMM效率的差距"></a>与GEMM效率的差距</h3><p>尽管FlashAttention-2达到了72%的理论峰值，但仍然低于GEMM的80-90%。差距主要来自：</p>
+<ol>
+<li><p><strong>算法复杂性</strong>:</p>
+<ul>
+<li>注意力计算涉及softmax、归约等操作</li>
+<li>GEMM是纯矩阵乘法，更简单</li>
+<li>非矩阵操作无法完全消除</li>
+</ul>
+</li>
+<li><p><strong>内存访问模式</strong>:</p>
+<ul>
+<li>注意力计算需要多次读取K、V</li>
+<li>GEMM的内存访问更规律</li>
+<li>缓存利用率不同</li>
+</ul>
+</li>
+<li><p><strong>控制流</strong>:</p>
+<ul>
+<li>注意力计算有条件分支（因果掩码）</li>
+<li>GEMM是纯计算</li>
+<li>分支预测开销</li>
+</ul>
+</li>
+</ol>
+<h3 id="反向传播的挑战"><a href="#反向传播的挑战" class="headerlink" title="反向传播的挑战"></a>反向传播的挑战</h3><p>反向传播比前向传播更具挑战性（63% vs 73%峰值利用率），原因：</p>
+<ol>
+<li><p><strong>更多的中间结果</strong>:</p>
+<ul>
+<li>需要保存前向传播的中间统计量</li>
+<li>增加了内存压力</li>
+<li>影响缓存利用率</li>
+</ul>
+</li>
+<li><p><strong>更复杂的计算图</strong>:</p>
+<ul>
+<li>反向传播需要计算多个梯度</li>
+<li>依赖关系更复杂</li>
+<li>并行化更困难</li>
+</ul>
+</li>
+<li><p><strong>归约操作的开销</strong>:</p>
+<ul>
+<li>反向传播中的归约操作更多</li>
+<li>需要更多的同步</li>
+<li>影响整体效率</li>
+</ul>
+</li>
+</ol>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-FlashAttention-v1"><a href="#vs-FlashAttention-v1" class="headerlink" title="vs FlashAttention v1"></a>vs FlashAttention v1</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FlashAttention v1</th>
+<th>FlashAttention-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>并行策略</td>
+<td>仅batch和head维度</td>
+<td>增加序列长度维度</td>
+</tr>
+<tr>
+<td>工作分区</td>
+<td>次优</td>
+<td>优化的warp间分区</td>
+</tr>
+<tr>
+<td>非矩阵FLOPs</td>
+<td>标准</td>
+<td>减少4-5倍</td>
+</tr>
+<tr>
+<td>A100峰值利用率</td>
+<td>25-40%</td>
+<td><strong>50-73%</strong></td>
+</tr>
+<tr>
+<td>绝对速度</td>
+<td>~120 TFLOPs&#x2F;s</td>
+<td><strong>~230 TFLOPs&#x2F;s</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: FlashAttention-2通过更好的GPU并行策略和工作分区，将效率从25-40%提升到50-73%。</p>
+<h3 id="vs-PyTorch标准注意力"><a href="#vs-PyTorch标准注意力" class="headerlink" title="vs PyTorch标准注意力"></a>vs PyTorch标准注意力</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>PyTorch标准</th>
+<th>FlashAttention-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内存占用</td>
+<td>$O(N^2)$</td>
+<td>$O(N)$</td>
+</tr>
+<tr>
+<td>速度</td>
+<td>基准</td>
+<td><strong>5-9倍加速</strong></td>
+</tr>
+<tr>
+<td>精度</td>
+<td>精确</td>
+<td><strong>精确</strong>（相同结果）</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>简单</td>
+<td>复杂（CUDA kernel）</td>
+</tr>
+<tr>
+<td>长序列支持</td>
+<td>有限</td>
+<td><strong>支持更长序列</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: FlashAttention-2保持了FlashAttention的线性内存占用优势，同时通过更好的并行化实现了更高的计算效率。</p>
+<h3 id="vs-GEMM操作"><a href="#vs-GEMM操作" class="headerlink" title="vs GEMM操作"></a>vs GEMM操作</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GEMM</th>
+<th>FlashAttention-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算类型</td>
+<td>纯矩阵乘法</td>
+<td>矩阵乘法 + softmax + 归约</td>
+</tr>
+<tr>
+<td>峰值利用率</td>
+<td>80-90%</td>
+<td>50-73%</td>
+</tr>
+<tr>
+<td>内存访问</td>
+<td>规律</td>
+<td>多次读取K、V</td>
+</tr>
+<tr>
+<td>控制流</td>
+<td>无</td>
+<td>有条件分支</td>
+</tr>
+</tbody></table>
+<p><strong>关键区别</strong>: FlashAttention-2接近GEMM的效率，但由于算法复杂性（softmax、归约），仍有一定差距。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-GPU架构依赖性"><a href="#1-GPU架构依赖性" class="headerlink" title="1. GPU架构依赖性"></a>1. GPU架构依赖性</h3><p><strong>问题</strong>: FlashAttention-2主要针对A100 GPU优化</p>
+<ul>
+<li>不同GPU架构有不同的硬件特性</li>
+<li>其他GPU（如H100、AMD MI300X）可能需要重新调优</li>
+<li>计算重叠策略可能不适用于所有架构</li>
+</ul>
+<p><strong>影响</strong>: 在非A100 GPU上，性能提升可能不同。</p>
+<h3 id="2-短序列场景"><a href="#2-短序列场景" class="headerlink" title="2. 短序列场景"></a>2. 短序列场景</h3><p><strong>问题</strong>: 在短序列大batch场景下，序列维度并行化的收益可能有限</p>
+<ul>
+<li>序列维度并行化主要在长序列场景下有效</li>
+<li>短序列时，序列长度维度的并行度较低</li>
+<li>收益可能不明显</li>
+</ul>
+<p><strong>影响</strong>: 在短序列场景下，加速比可能低于长序列场景。</p>
+<h3 id="3-工程复杂度"><a href="#3-工程复杂度" class="headerlink" title="3. 工程复杂度"></a>3. 工程复杂度</h3><p><strong>问题</strong>: 需要更复杂的CUDA kernel实现</p>
+<ul>
+<li>优化warp间工作分区需要详细的硬件知识</li>
+<li>增加了代码维护和调试的难度</li>
+<li>对新开发者不够友好</li>
+</ul>
+<p><strong>影响</strong>: 实现和维护成本较高。</p>
+<h3 id="4-反向传播效率"><a href="#4-反向传播效率" class="headerlink" title="4. 反向传播效率"></a>4. 反向传播效率</h3><p><strong>问题</strong>: 反向传播仍然比前向传播效率低</p>
+<ul>
+<li>反向传播达到63%峰值，前向达到73%</li>
+<li>中间结果保存增加内存压力</li>
+<li>更复杂的计算图影响并行化</li>
+</ul>
+<p><strong>影响</strong>: 训练时反向传播可能成为瓶颈。</p>
+<h3 id="5-内存带宽限制"><a href="#5-内存带宽限制" class="headerlink" title="5. 内存带宽限制"></a>5. 内存带宽限制</h3><p><strong>问题</strong>: 在极端长序列下，内存带宽可能成为瓶颈</p>
+<ul>
+<li>需要多次读取K、V矩阵</li>
+<li>内存带宽有限（1.5-2.0 TB&#x2F;s）</li>
+<li>可能影响整体性能</li>
+</ul>
+<p><strong>影响</strong>: 在超长序列（如100K+）下，性能提升可能受限。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-GPU并行策略的重要性"><a href="#1-GPU并行策略的重要性" class="headerlink" title="1. GPU并行策略的重要性"></a>1. GPU并行策略的重要性</h3><p><strong>洞见</strong>: GPU并行策略对性能至关重要，需要考虑多个维度的并行化</p>
+<ul>
+<li>不仅考虑batch和head维度</li>
+<li>还要考虑序列长度维度</li>
+<li>充分利用GPU的多处理器资源</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>分析计算任务的并行度</li>
+<li>识别未充分利用的GPU资源</li>
+<li>设计多维度的并行策略</li>
+</ul>
+<h3 id="2-减少非矩阵乘法FLOPs"><a href="#2-减少非矩阵乘法FLOPs" class="headerlink" title="2. 减少非矩阵乘法FLOPs"></a>2. 减少非矩阵乘法FLOPs</h3><p><strong>洞见</strong>: 减少非矩阵乘法FLOPs可以提升整体性能，即使它们占比小</p>
+<ul>
+<li>GPU有专门用于矩阵乘法的单元</li>
+<li>矩阵乘法吞吐量比非矩阵操作高16倍</li>
+<li>将更多时间花在矩阵乘法上</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>识别计算中的非矩阵操作</li>
+<li>重排计算顺序减少非矩阵操作</li>
+<li>优化控制流和内存访问</li>
+</ul>
+<h3 id="3-Warp间工作分区的平衡"><a href="#3-Warp间工作分区的平衡" class="headerlink" title="3. Warp间工作分区的平衡"></a>3. Warp间工作分区的平衡</h3><p><strong>洞见</strong>: Warp间的工作分区需要仔细平衡，以减少共享内存通信</p>
+<ul>
+<li>不均衡的工作负载导致空闲等待</li>
+<li>频繁的共享内存同步增加开销</li>
+<li>平衡的工作负载提升整体效率</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>分析计算任务的工作量分布</li>
+<li>优化warp间的工作分配</li>
+<li>减少共享内存读写</li>
+</ul>
+<h3 id="4-硬件特性的利用"><a href="#4-硬件特性的利用" class="headerlink" title="4. 硬件特性的利用"></a>4. 硬件特性的利用</h3><p><strong>洞见</strong>: 针对不同GPU架构需要重新优化kernel实现</p>
+<ul>
+<li>不同GPU有不同的硬件特性</li>
+<li>计算重叠策略因架构而异</li>
+<li>需要针对特定架构调优</li>
+</ul>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>了解目标GPU的硬件特性</li>
+<li>利用异步内存拷贝和计算重叠</li>
+<li>针对特定架构优化kernel</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>硬件感知算法设计</strong>: FlashAttention-2证明了硬件感知的重要性。未来的算法设计应该更多地考虑底层硬件特性，而不仅仅是理论复杂度。</p>
+</li>
+<li><p><strong>多维度并行化</strong>: 不仅考虑batch和head维度，还要考虑序列长度、特征维度等多个维度的并行化，充分利用GPU资源。</p>
+</li>
+<li><p><strong>计算图优化</strong>: 通过重排计算顺序，可以减少非矩阵操作，提升整体效率。这对于其他Transformer操作（如FFN、LayerNorm）也有启发。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><p><strong>长序列训练</strong>: FlashAttention-2使长序列训练更加高效，适用于长文档理解、代码生成、视频理解等任务。</p>
+</li>
+<li><p><strong>大规模模型训练</strong>: 在大规模模型训练中，注意力计算是主要瓶颈。FlashAttention-2的高效率可以显著提升训练速度。</p>
+</li>
+<li><p><strong>推理加速</strong>: 虽然主要针对训练优化，但FlashAttention-2的原理也可以应用于推理阶段，特别是长序列推理。</p>
+</li>
+</ol>
+<h3 id="与FlashAttention-v1的关系"><a href="#与FlashAttention-v1的关系" class="headerlink" title="与FlashAttention v1的关系"></a>与FlashAttention v1的关系</h3><p>FlashAttention-2不是对FlashAttention v1的替代，而是改进：</p>
+<ul>
+<li>保持了FlashAttention v1的核心思想（IO感知、分块计算）</li>
+<li>在此基础上优化了GPU并行策略和工作分区</li>
+<li>两者在精度上完全相同，只是速度不同</li>
+</ul>
+<h3 id="对未来GPU的适应性"><a href="#对未来GPU的适应性" class="headerlink" title="对未来GPU的适应性"></a>对未来GPU的适应性</h3><p>随着GPU架构的演进（如H100、B200），FlashAttention-2的优化策略可能需要调整：</p>
+<ul>
+<li>H100引入了TMA、WGMMA等新特性</li>
+<li>需要重新设计kernel以利用这些特性</li>
+<li>FlashAttention-3就是针对H100的优化版本</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-其他GPU架构的优化"><a href="#1-其他GPU架构的优化" class="headerlink" title="1. 其他GPU架构的优化"></a>1. 其他GPU架构的优化</h3><p><strong>问题</strong>: 如何在其他GPU架构（如H100、AMD MI300X）上优化FlashAttention？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析H100的TMA、WGMMA等新特性</li>
+<li>设计针对AMD GPU的优化策略</li>
+<li>探索跨架构的通用优化方法</li>
+</ul>
+<p><strong>潜在影响</strong>: 使FlashAttention-2的优化策略适用于更广泛的硬件。</p>
+<h3 id="2-其他Transformer操作的优化"><a href="#2-其他Transformer操作的优化" class="headerlink" title="2. 其他Transformer操作的优化"></a>2. 其他Transformer操作的优化</h3><p><strong>问题</strong>: 是否可以将这些优化技术应用于其他Transformer操作（如FFN、LayerNorm）？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>分析FFN层的计算模式</li>
+<li>优化LayerNorm的非矩阵操作</li>
+<li>探索端到端的Transformer优化</li>
+</ul>
+<p><strong>潜在影响</strong>: 提升整个Transformer模型的训练和推理效率。</p>
+<h3 id="3-超长序列的性能"><a href="#3-超长序列的性能" class="headerlink" title="3. 超长序列的性能"></a>3. 超长序列的性能</h3><p><strong>问题</strong>: 在更长的序列长度（如100K+）下，性能表现如何？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>测试FlashAttention-2在超长序列下的表现</li>
+<li>分析内存带宽瓶颈</li>
+<li>探索分布式注意力计算</li>
+</ul>
+<p><strong>潜在影响</strong>: 支持更长的上下文窗口，适用于更复杂的任务。</p>
+<h3 id="4-反向传播的进一步优化"><a href="#4-反向传播的进一步优化" class="headerlink" title="4. 反向传播的进一步优化"></a>4. 反向传播的进一步优化</h3><p><strong>问题</strong>: 如何进一步优化反向传播的效率？</p>
+<p><strong>研究方向</strong>:</p>
+<ul>
+<li>减少中间结果的保存</li>
+<li>优化反向传播的计算图</li>
+<li>探索反向传播的并行化策略</li>
+</ul>
+<p><strong>潜在影响</strong>: 提升训练效率，减少训练时间。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Dao, T. (2023). FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning. arXiv:2307.08691</li>
+<li>Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Rabe, M. N., &amp; Staats, C. (2021). Self-attention Does not need O(n²) memory. arXiv:2112.05682</li>
+<li>Milakov, M., &amp; Gimelshein, N. (2018). Online normalizer calculation for softmax. arXiv:1805.02867</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-attention-optimization/" class="print-no-link">#papers/attention-optimization</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning</div>
+      <div>https://w2ongq6.github.io/2023/07/18/inference/note/FlashAttention-2_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年7月18日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/08/04/aigc/note/3DGS_note/" title="3D Gaussian Splatting for Real-Time Radiance Field Rendering">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">3D Gaussian Splatting for Real-Time Radiance Field Rendering</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/07/18/llm/note/LLaMA2_note/" title="LLaMA 2: Open Foundation and Fine-Tuned Chat Models">
+                        <span class="hidden-mobile">LLaMA 2: Open Foundation and Fine-Tuned Chat Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

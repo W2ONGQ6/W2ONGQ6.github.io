@@ -1,0 +1,1380 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving1. TL;DR &#x2F; 一句话总结Mooncake 提出了一种以 KV 缓存为中心的解耦架构，将 LLM 推理的 Prefill（预填充）和 Decode（解码）阶段分配到不同的 GPU 集群上执行，通过高速 RDMA 网络传输 KV 缓存，在保持低延">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/25/inference/note/Mooncake_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving1. TL;DR &#x2F; 一句话总结Mooncake 提出了一种以 KV 缓存为中心的解耦架构，将 LLM 推理的 Prefill（预填充）和 Decode（解码）阶段分配到不同的 GPU 集群上执行，通过高速 RDMA 网络传输 KV 缓存，在保持低延">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-25T10:55:19.533Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.001Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="KV-cache">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="disaggregated">
+<meta property="article:tag" content="distributed">
+<meta property="article:tag" content="inference">
+<meta property="article:tag" content="prefill-decode">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-25 18:55" pubdate>
+          2026年7月25日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          94 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Mooncake-A-KVCache-Centric-Disaggregated-Architecture-for-LLM-Serving"><a href="#Mooncake-A-KVCache-Centric-Disaggregated-Architecture-for-LLM-Serving" class="headerlink" title="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving"></a>Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving</h1><h2 id="1-TL-DR-一句话总结"><a href="#1-TL-DR-一句话总结" class="headerlink" title="1. TL;DR &#x2F; 一句话总结"></a>1. TL;DR &#x2F; 一句话总结</h2><p>Mooncake 提出了一种以 <strong>KV 缓存为中心的解耦架构</strong>，将 LLM 推理的 Prefill（预填充）和 Decode（解码）阶段分配到不同的 GPU 集群上执行，通过高速 RDMA 网络传输 KV 缓存，在保持低延迟的同时实现了近乎线性的吞吐扩展，解决了传统共置架构中 Prefill 干扰 Decode 延迟的根本矛盾。</p>
+<blockquote>
+<p>[!figure] Figure 1: 论文整体架构&#x2F;核心思想示意图<br>建议位置：架构总览<br>放置原因：帮助读者快速建立对系统整体架构和核心设计理念的宏观认识<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 1：该图展示了论文的核心系统架构和设计理念。）</em></p>
+<hr>
+<h2 id="2-研究背景与动机-Background-Motivation"><a href="#2-研究背景与动机-Background-Motivation" class="headerlink" title="2. 研究背景与动机 (Background &amp; Motivation)"></a>2. 研究背景与动机 (Background &amp; Motivation)</h2><h3 id="2-1-共置架构的根本问题"><a href="#2-1-共置架构的根本问题" class="headerlink" title="2.1 共置架构的根本问题"></a>2.1 共置架构的根本问题</h3><p>传统的 LLM 推理系统（vLLM、TensorRT-LLM）采用<strong>共置（Colocated）架构</strong>：</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs arcade">单一 GPU / GPU 集群<br>┌─────────────────────────┐<br>│  Prefill + <span class="hljs-built_in">Decode</span> 混合   │<br>│  同一 GPU 处理两种请求    │<br>└─────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<p>这存在根本性的性能矛盾：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>详情</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prefill 干扰 Decode</td>
+<td>Prefill（计算密集）占用 GPU 时，Decode 请求被迫等待</td>
+</tr>
+<tr>
+<td>资源争抢</td>
+<td>内存带宽、SM 计算单元、KV 缓存空间的竞争</td>
+</tr>
+<tr>
+<td>尾延迟恶化</td>
+<td>长 Prefill 请求导致 Decode 延迟不可预测</td>
+</tr>
+<tr>
+<td>扩展性受限</td>
+<td>无法为 Prefill 和 Decode 独立分配最优资源</td>
+</tr>
+</tbody></table>
+<h3 id="2-2-为什么需要解耦？"><a href="#2-2-为什么需要解耦？" class="headerlink" title="2.2 为什么需要解耦？"></a>2.2 为什么需要解耦？</h3><p>Prefill 和 Decode 在资源需求上有本质差异：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">Prefill 特征</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">并行处理所有输入 token</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">计算密集型：大量 GEMM 操作</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">需要高 FLOPS GPU (如 H100)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">内存需求较低（仅处理单个请求的 KV 缓存）</span><br><br><span class="hljs-attribute">Decode 特征</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">逐 token 自回归生成</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">内存密集型：高频读取 KV 缓存</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">需要大显存 GPU（存储多个请求的 KV 缓存）</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">计算需求较低（每步仅一次矩阵乘法）</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>核心思想</strong>：既然 Prefill 和 Decode 有不同的硬件偏好，应该使用不同类型的 GPU 分别处理。</p>
+<h3 id="2-3-设计目标"><a href="#2-3-设计目标" class="headerlink" title="2.3 设计目标"></a>2.3 设计目标</h3><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>解耦架构</td>
+<td>Prefill 和 Decode 集群独立部署和扩展</td>
+</tr>
+<tr>
+<td>KV 缓存传输</td>
+<td>通过 RDMA 高速传输 KV 缓存，延迟可接受</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td>智能路由和调度，最大化集群利用率</td>
+</tr>
+<tr>
+<td>容错能力</td>
+<td>KV 缓存冗余，处理节点故障</td>
+</tr>
+<tr>
+<td>近线性扩展</td>
+<td>增加 Prefill&#x2F;Decode 节点时吞吐量线性增长</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="3-核心方法论-Core-Methodology"><a href="#3-核心方法论-Core-Methodology" class="headerlink" title="3. 核心方法论 (Core Methodology)"></a>3. 核心方法论 (Core Methodology)</h2><blockquote>
+<p>[!figure] Figure 2: 核心方法论&#x2F;算法流程图<br>建议位置：核心方法论<br>放置原因：用流程图直观展示核心算法的关键步骤和组件交互关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="3-1-系统架构总览"><a href="#3-1-系统架构总览" class="headerlink" title="3.1 系统架构总览"></a>3.1 系统架构总览</h3><blockquote>
+<p>[!figure] Figure 3: 系统架构图<br>建议位置：核心方法论 &gt; 系统架构<br>放置原因：展示系统的组件分层、数据流和模块间通信关系<br>当前状态：图表占位</p>
+</blockquote>
+<figure class="highlight crmsh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs crmsh">                  ┌──────────────┐<br>                  │   API 网关    │<br>                  └──────┬───────┘<br>                         │<br>          ┌──────────────┼──────────────┐<br>          │              │              │<br>          ▼              ▼              ▼<br>┌─────────────┐  ┌─────────────┐  ┌─────────────┐<br>│  Prefill    │  │  Prefill    │  │  Prefill    │<br>│  <span class="hljs-keyword">Node</span> <span class="hljs-title">1</span>     │  │  <span class="hljs-keyword">Node</span> <span class="hljs-title">2</span>     │  │  <span class="hljs-keyword">Node</span> <span class="hljs-title">N</span>     │<br>│ (H100 GPU)  │  │ (H100 GPU)  │  │ (H100 GPU)  │<br>└──────┬──────┘  └──────┬──────┘  └──────┬──────┘<br>       │                │                │<br>       │    RDMA Network (<span class="hljs-literal">Inf</span>iniBand/RoCE)  │<br>       │                │                │<br>       ▼                ▼                ▼<br>┌─────────────┐  ┌─────────────┐  ┌─────────────┐<br>│  Decode     │  │  Decode     │  │  Decode     │<br>│  <span class="hljs-keyword">Node</span> <span class="hljs-title">1</span>     │  │  <span class="hljs-keyword">Node</span> <span class="hljs-title">2</span>     │  │  <span class="hljs-keyword">Node</span> <span class="hljs-title">M</span>     │<br>│ (A100 GPU)  │  │ (A100 GPU)  │  │ (A100 GPU)  │<br>└─────────────┘  └─────────────┘  └─────────────┘<br>       │                │                │<br>       └────────────────┼────────────────┘<br>                        │<br>                 ┌──────┴──────┐<br>                 │  KV Cache   │<br>                 │  Storage    │<br>                 │  (可选)     │<br>                 └─────────────┘<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-2-KV-缓存传输协议"><a href="#3-2-KV-缓存传输协议" class="headerlink" title="3.2 KV 缓存传输协议"></a>3.2 KV 缓存传输协议</h3><p>Mooncake 的核心技术创新在于高效的 KV 缓存传输协议。</p>
+<h4 id="3-2-1-传输策略"><a href="#3-2-1-传输策略" class="headerlink" title="3.2.1 传输策略"></a>3.2.1 传输策略</h4><figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs markdown">请求生命周期:<br><br><span class="hljs-bullet">1.</span> 用户请求 → API 网关<br><span class="hljs-bullet">2.</span> 网关选择 Prefill 节点<br><span class="hljs-bullet">3.</span> Prefill 节点: 处理输入 prompt → 生成 KV 缓存<br><span class="hljs-bullet">4.</span> KV 缓存通过 RDMA 传输到 Decode 节点<br><span class="hljs-bullet">5.</span> Decode 节点: 逐 token 自回归生成<br><span class="hljs-bullet">6.</span> 流式返回结果给用户<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-2-2-RDMA-传输设计"><a href="#3-2-2-RDMA-传输设计" class="headerlink" title="3.2.2 RDMA 传输设计"></a>3.2.2 RDMA 传输设计</h4><figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs tap">KV 缓存结构 (Llama-2-7B, seq=4096, FP16):<br><br>每层:<br>  Key Cache:   [32 heads ×<span class="hljs-number"> 128 </span>dim ×<span class="hljs-number"> 4096 </span>seq] =<span class="hljs-number"> 32 </span>MB<br>  Value Cache: [32 heads ×<span class="hljs-number"> 128 </span>dim ×<span class="hljs-number"> 4096 </span>seq] =<span class="hljs-number"> 32 </span>MB<br>  每层合计:<span class="hljs-number"> 64 </span>MB<br><br>总计 (32 layers): 约<span class="hljs-number"> 2 </span>GB<br><br>RDMA 传输:<br>  InfiniBand NDR400:<span class="hljs-number"> 400 </span>Gbps =<span class="hljs-number"> 50 </span>GB/s<br>  传输时间:<span class="hljs-number"> 2 </span>GB /<span class="hljs-number"> 50 </span>GB/s ≈<span class="hljs-number"> 40 </span>ms<br>  <br>  加上协议开销: 约 50-60 ms<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-2-3-传输优化技术"><a href="#3-2-3-传输优化技术" class="headerlink" title="3.2.3 传输优化技术"></a>3.2.3 传输优化技术</h4><table>
+<thead>
+<tr>
+<th>优化</th>
+<th>描述</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GDR (GPU Direct RDMA)</td>
+<td>GPU 显存直接 RDMA，绕过 CPU</td>
+<td>减少 1 次拷贝</td>
+</tr>
+<tr>
+<td>流水线传输</td>
+<td>Prefill 逐层完成后即传输该层 KV</td>
+<td>计算与传输重叠</td>
+</tr>
+<tr>
+<td>选择性传输</td>
+<td>仅传输 Decode 需要的 KV 层</td>
+<td>减少传输量</td>
+</tr>
+<tr>
+<td>KV 压缩</td>
+<td>量化 KV 缓存 (INT8&#x2F;FP8)</td>
+<td>减少 50-75%</td>
+</tr>
+<tr>
+<td>分块传输</td>
+<td>大 KV 缓存分块并行传输</td>
+<td>利用多队列 RDMA</td>
+</tr>
+</tbody></table>
+<h4 id="3-2-4-流水线传输流程"><a href="#3-2-4-流水线传输流程" class="headerlink" title="3.2.4 流水线传输流程"></a>3.2.4 流水线传输流程</h4><figure class="highlight prolog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs prolog">时间 →<br><span class="hljs-symbol">Prefill</span> <span class="hljs-symbol">Node</span>:<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">0</span>: [<span class="hljs-symbol">Compute</span> <span class="hljs-symbol">KV0</span>]──────────────────┐<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">1</span>: [<span class="hljs-symbol">Compute</span> <span class="hljs-symbol">KV1</span>]────────────┐     │<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">2</span>: [<span class="hljs-symbol">Compute</span> <span class="hljs-symbol">KV2</span>]──────┐     │     │<br>  ...                          │     │     │<br>                               ▼     ▼     ▼<br><span class="hljs-symbol">RDMA</span> <span class="hljs-symbol">Transfer</span>:            [<span class="hljs-symbol">TX</span> <span class="hljs-symbol">KV0</span>][<span class="hljs-symbol">TX</span> <span class="hljs-symbol">KV1</span>][<span class="hljs-symbol">TX</span> <span class="hljs-symbol">KV2</span>]...<br><br><span class="hljs-symbol">Decode</span> <span class="hljs-symbol">Node</span>:<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">0</span>:                    [<span class="hljs-symbol">Load</span> <span class="hljs-symbol">KV0</span>]────<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">1</span>:                         [<span class="hljs-symbol">Load</span> <span class="hljs-symbol">KV1</span>]──<br>  <span class="hljs-symbol">Layer</span> <span class="hljs-number">2</span>:                              [<span class="hljs-symbol">Load</span> <span class="hljs-symbol">KV2</span>]<br><br>总延迟 = max(<span class="hljs-symbol">Prefill</span>计算, <span class="hljs-symbol">RDMA</span>传输) + 最后一层传输延迟<br>     ≈ <span class="hljs-symbol">Prefill</span>时间 + 传输延迟（而非两者之和）<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-3-调度系统"><a href="#3-3-调度系统" class="headerlink" title="3.3 调度系统"></a>3.3 调度系统</h3><h4 id="3-3-1-两级调度架构"><a href="#3-3-1-两级调度架构" class="headerlink" title="3.3.1 两级调度架构"></a>3.3.1 两级调度架构</h4><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">Level 1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">集群调度器 (Global Scheduler)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">维护所有 Prefill/Decode 节点的状态</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">分配请求到最优的 Prefill 节点</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">路由 KV 缓存到合适的 Decode 节点</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">负载均衡决策</span><br><br><span class="hljs-attribute">Level 2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">节点调度器 (Local Scheduler)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">管理本地 GPU 上的请求队列</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">In-Flight Batching</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">KV 缓存页管理</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">性能监控和上报</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="3-3-2-Prefill-节点选择策略"><a href="#3-3-2-Prefill-节点选择策略" class="headerlink" title="3.3.2 Prefill 节点选择策略"></a>3.3.2 Prefill 节点选择策略</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">select_prefill_node</span>(<span class="hljs-params">request, cluster_state</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;选择最优的 Prefill 节点&quot;&quot;&quot;</span><br>    candidates = cluster_state.get_prefill_nodes()<br><br>    <span class="hljs-comment"># 过滤条件</span><br>    candidates = [<br>        n <span class="hljs-keyword">for</span> n <span class="hljs-keyword">in</span> candidates<br>        <span class="hljs-keyword">if</span> n.available_memory &gt;= estimate_prefill_memory(request)<br>        <span class="hljs-keyword">and</span> n.queue_length &lt; MAX_QUEUE_LENGTH<br>    ]<br><br>    <span class="hljs-comment"># 评分函数</span><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">score</span>(<span class="hljs-params">node</span>):<br>        <span class="hljs-keyword">return</span> (<br>            w1 * node.gpu_utilization +           <span class="hljs-comment"># GPU 利用率（越低越好）</span><br>            w2 * (<span class="hljs-number">1.0</span> / node.available_memory) +   <span class="hljs-comment"># 可用内存</span><br>            w3 * node.queue_length                  <span class="hljs-comment"># 队列长度</span><br>        )<br><br>    <span class="hljs-keyword">return</span> <span class="hljs-built_in">min</span>(candidates, key=score)<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-3-3-Decode-节点匹配策略"><a href="#3-3-3-Decode-节点匹配策略" class="headerlink" title="3.3.3 Decode 节点匹配策略"></a>3.3.3 Decode 节点匹配策略</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">select_decode_node</span>(<span class="hljs-params">prefill_node, kv_cache_size, cluster_state</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;选择 Decode 节点并路由 KV 缓存&quot;&quot;&quot;</span><br><br>    <span class="hljs-comment"># 考虑因素:</span><br>    <span class="hljs-comment"># 1. 网络拓扑距离（同一交换机 &gt; 同一 Pod &gt; 跨 Pod）</span><br>    <span class="hljs-comment"># 2. Decode 节点的可用 KV 缓存槽位</span><br>    <span class="hljs-comment"># 3. 当前负载（活跃请求数）</span><br><br>    candidates = cluster_state.get_decode_nodes()<br><br>    <span class="hljs-comment"># 按网络距离分组</span><br>    same_rack = [n <span class="hljs-keyword">for</span> n <span class="hljs-keyword">in</span> candidates <span class="hljs-keyword">if</span> n.rack == prefill_node.rack]<br>    same_pod = [n <span class="hljs-keyword">for</span> n <span class="hljs-keyword">in</span> candidates <span class="hljs-keyword">if</span> n.pod == prefill_node.pod]<br><br>    <span class="hljs-comment"># 优先选择网络距离最近的节点</span><br>    <span class="hljs-keyword">for</span> group <span class="hljs-keyword">in</span> [same_rack, same_pod, candidates]:<br>        group = [n <span class="hljs-keyword">for</span> n <span class="hljs-keyword">in</span> group <span class="hljs-keyword">if</span> n.kv_cache_slots_available &gt; <span class="hljs-number">0</span>]<br>        <span class="hljs-keyword">if</span> group:<br>            <span class="hljs-keyword">return</span> <span class="hljs-built_in">min</span>(group, key=<span class="hljs-keyword">lambda</span> n: n.active_requests)<br><br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">None</span>  <span class="hljs-comment"># 需要扩容</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="3-4-KV-缓存生命周期管理"><a href="#3-4-KV-缓存生命周期管理" class="headerlink" title="3.4 KV 缓存生命周期管理"></a>3.4 KV 缓存生命周期管理</h3><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs makefile"><span class="hljs-section">状态机:</span><br>  [创建] → [传输中] → [就绪] → [使用中] → [完成] → [释放]<br><br><span class="hljs-section">创建: Prefill 节点计算 KV 缓存</span><br><span class="hljs-section">传输中: RDMA 传输到 Decode 节点</span><br><span class="hljs-section">就绪: Decode 节点可使用 KV 缓存</span><br><span class="hljs-section">使用中: Decode 请求正在读取</span><br><span class="hljs-section">完成: 所有输出 token 已生成</span><br><span class="hljs-section">释放: 内存回收（可使用 LRU 策略）</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="3-4-1-缓存预热策略"><a href="#3-4-1-缓存预热策略" class="headerlink" title="3.4.1 缓存预热策略"></a>3.4.1 缓存预热策略</h4><p>对于热门 System Prompt 或共享前缀，Mooncake 支持 KV 缓存预热：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs markdown"><span class="hljs-bullet">1.</span> 离线计算常用前缀的 KV 缓存<br><span class="hljs-bullet">2.</span> 预加载到多个 Decode 节点<br><span class="hljs-bullet">3.</span> 请求到达时直接使用，跳过 Prefill<br><span class="hljs-bullet">4.</span> 类似 CDN 的内容分发策略<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-4-2-缓存驱逐策略"><a href="#3-4-2-缓存驱逐策略" class="headerlink" title="3.4.2 缓存驱逐策略"></a>3.4.2 缓存驱逐策略</h4><figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs markdown">优先级（从低到高）:<br><span class="hljs-bullet">1.</span> 已完成的请求 KV 缓存<br><span class="hljs-bullet">2.</span> 长时间未访问的历史请求<br><span class="hljs-bullet">3.</span> 非共享前缀的 KV 缓存<br><span class="hljs-bullet">4.</span> 共享前缀（系统 prompt）KV 缓存 → 保留<br><br>驱逐阈值: KV 缓存占用 &gt; 80% → 触发 LRU 驱逐<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-5-容错设计"><a href="#3-5-容错设计" class="headerlink" title="3.5 容错设计"></a>3.5 容错设计</h3><h4 id="3-5-1-Prefill-节点故障"><a href="#3-5-1-Prefill-节点故障" class="headerlink" title="3.5.1 Prefill 节点故障"></a>3.5.1 Prefill 节点故障</h4><figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs markdown">故障检测: 心跳超时 (默认 3s)<br>处理流程:<br><span class="hljs-bullet">  1.</span> 全局调度器标记节点为不可用<br><span class="hljs-bullet">  2.</span> 未完成的 Prefill 请求重新分配到其他节点<br><span class="hljs-bullet">  3.</span> 已完成 Prefill 的请求 → 立即转移到 Decode 节点（KV 缓存已就绪）<br><span class="hljs-bullet">  4.</span> 重新平衡集群负载<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-5-2-Decode-节点故障"><a href="#3-5-2-Decode-节点故障" class="headerlink" title="3.5.2 Decode 节点故障"></a>3.5.2 Decode 节点故障</h4><figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs markdown">故障检测: 心跳超时<br>处理流程:<br><span class="hljs-bullet">  1.</span> 标记节点不可用<br><span class="hljs-bullet">  2.</span> 该节点上的活跃请求 → KV 缓存已丢失<br><span class="hljs-bullet">  3.</span> 重新提交请求: 重新 Prefill → 新 Decode 节点<br><span class="hljs-bullet">  4.</span> 对用户透明（重试机制）<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-5-3-KV-缓存冗余（可选）"><a href="#3-5-3-KV-缓存冗余（可选）" class="headerlink" title="3.5.3 KV 缓存冗余（可选）"></a>3.5.3 KV 缓存冗余（可选）</h4><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">高可用模式</span><span class="hljs-punctuation">:</span> <span class="hljs-string">KV 缓存在 2 个 Decode 节点上冗余存储</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">主 Decode 节点故障 → 从节点立即接管</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">代价: 双倍 KV 缓存内存 + 双倍 RDMA 传输</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">适用于高 SLA 场景</span><br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-实验与关键发现-Experiments-Key-Findings"><a href="#4-实验与关键发现-Experiments-Key-Findings" class="headerlink" title="4. 实验与关键发现 (Experiments &amp; Key Findings)"></a>4. 实验与关键发现 (Experiments &amp; Key Findings)</h2><blockquote>
+<p>[!figure] Figure 4: 关键实验结果对比图<br>建议位置：实验与关键发现<br>放置原因：直观展示论文方法在主要指标（吞吐量、延迟、成本等）上相比基准的改进<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="4-4-实验设置"><a href="#4-4-实验设置" class="headerlink" title="4.4 实验设置"></a>4.4 实验设置</h3><ul>
+<li><strong>Prefill 节点</strong>: 2-8 台 H100-80GB (高计算能力)</li>
+<li><strong>Decode 节点</strong>: 4-16 台 A100-80GB (大显存)</li>
+<li><strong>网络</strong>: InfiniBand NDR400 (400 Gbps)</li>
+<li><strong>模型</strong>: Llama-2-70B, Mixtral-8x7B</li>
+<li><strong>对比</strong>: vLLM (共置架构), Splitwise (解耦架构)</li>
+</ul>
+<h3 id="4-2-吞吐量对比"><a href="#4-2-吞吐量对比" class="headerlink" title="4.2 吞吐量对比"></a>4.2 吞吐量对比</h3><table>
+<thead>
+<tr>
+<th>系统配置</th>
+<th>Llama-2-70B (tok&#x2F;s)</th>
+<th>Mixtral-8x7B (tok&#x2F;s)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM (8x A100, colocated)</td>
+<td>1,200</td>
+<td>1,450</td>
+</tr>
+<tr>
+<td>Splitwise (4+4 A100)</td>
+<td>1,450</td>
+<td>1,720</td>
+</tr>
+<tr>
+<td><strong>Mooncake (2 H100 + 4 A100)</strong></td>
+<td><strong>2,100</strong></td>
+<td><strong>2,480</strong></td>
+</tr>
+<tr>
+<td><strong>Mooncake (4 H100 + 8 A100)</strong></td>
+<td><strong>3,800</strong></td>
+<td><strong>4,520</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-3-延迟分析"><a href="#4-3-延迟分析" class="headerlink" title="4.3 延迟分析"></a>4.3 延迟分析</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>延迟 (ms)</th>
+<th>占比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API 网关路由</td>
+<td>2</td>
+<td>0.5%</td>
+</tr>
+<tr>
+<td>Prefill 计算 (4096 tokens)</td>
+<td>180</td>
+<td>48.3%</td>
+</tr>
+<tr>
+<td>KV 缓存 RDMA 传输</td>
+<td>55</td>
+<td>14.7%</td>
+</tr>
+<tr>
+<td>Decode 初始化</td>
+<td>5</td>
+<td>1.3%</td>
+</tr>
+<tr>
+<td>首 token 生成</td>
+<td>130</td>
+<td>34.9%</td>
+</tr>
+<tr>
+<td><strong>总计 (TTFT)</strong></td>
+<td><strong>372</strong></td>
+<td><strong>100%</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-4-扩展性测试"><a href="#4-4-扩展性测试" class="headerlink" title="4.4 扩展性测试"></a>4.4 扩展性测试</h3><table>
+<thead>
+<tr>
+<th>Prefill 节点数</th>
+<th>Decode 节点数</th>
+<th>吞吐量 (tok&#x2F;s)</th>
+<th>扩展效率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>520</td>
+<td>100% (基线)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td>1,020</td>
+<td>98.1%</td>
+</tr>
+<tr>
+<td>4</td>
+<td>8</td>
+<td>2,020</td>
+<td>97.1%</td>
+</tr>
+<tr>
+<td>8</td>
+<td>16</td>
+<td>3,800</td>
+<td>91.3%</td>
+</tr>
+</tbody></table>
+<h3 id="4-5-Prefill-干扰对比"><a href="#4-5-Prefill-干扰对比" class="headerlink" title="4.5 Prefill 干扰对比"></a>4.5 Prefill 干扰对比</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>无 Prefill 时 P99 decode 延迟</th>
+<th>有 Prefill 时 P99 decode 延迟</th>
+<th>退化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM (colocated)</td>
+<td>0.8s</td>
+<td>2.8s</td>
+<td><strong>250%</strong></td>
+</tr>
+<tr>
+<td>Splitwise</td>
+<td>0.8s</td>
+<td>1.2s</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>Mooncake</td>
+<td>0.8s</td>
+<td>0.85s</td>
+<td><strong>6.25%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键发现</strong>: Mooncake 几乎完全消除了 Prefill 对 Decode 延迟的干扰。</p>
+<h3 id="4-6-KV-缓存传输优化效果"><a href="#4-6-KV-缓存传输优化效果" class="headerlink" title="4.6 KV 缓存传输优化效果"></a>4.6 KV 缓存传输优化效果</h3><table>
+<thead>
+<tr>
+<th>优化</th>
+<th>传输时间</th>
+<th>节省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>基线 (CPU 中转)</td>
+<td>120 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>+ GPU Direct RDMA</td>
+<td>80 ms</td>
+<td>33%</td>
+</tr>
+<tr>
+<td>+ 流水线传输</td>
+<td>65 ms</td>
+<td>19%</td>
+</tr>
+<tr>
+<td>+ INT8 KV 压缩</td>
+<td>35 ms</td>
+<td>46%</td>
+</tr>
+<tr>
+<td><strong>全部优化</strong></td>
+<td><strong>35 ms</strong></td>
+<td><strong>71%</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="5-关键技术洞察-Key-Insights"><a href="#5-关键技术洞察-Key-Insights" class="headerlink" title="5. 关键技术洞察 (Key Insights)"></a>5. 关键技术洞察 (Key Insights)</h2><blockquote>
+<p>[!figure] Figure 5: 深度分析&#x2F;消融实验图<br>建议位置：实验与关键发现&#x2F;技术洞察<br>放置原因：展示各优化技术对性能的贡献度或关键设计空间的分析探索<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="Insight-1-KV-缓存是-LLM-推理中的-“一等公民”"><a href="#Insight-1-KV-缓存是-LLM-推理中的-“一等公民”" class="headerlink" title="Insight 1: KV 缓存是 LLM 推理中的 “一等公民”"></a>Insight 1: KV 缓存是 LLM 推理中的 “一等公民”</h3><p>Mooncake 将 KV 缓存提升为架构设计的中心概念。传统系统中 KV 缓存仅是 GPU 显存中的临时数据结构，而 Mooncake 将 KV 缓存视为需要在集群中<strong>传输、缓存、冗余</strong>的关键资源。这种思维转变类似于从单体应用缓存到 Redis 集群的演进。</p>
+<h3 id="Insight-2-Prefill-和-Decode-的解耦释放了异构硬件的潜力"><a href="#Insight-2-Prefill-和-Decode-的解耦释放了异构硬件的潜力" class="headerlink" title="Insight 2: Prefill 和 Decode 的解耦释放了异构硬件的潜力"></a>Insight 2: Prefill 和 Decode 的解耦释放了异构硬件的潜力</h3><p>共置架构强制 Prefill 和 Decode 共用相同的 GPU，导致”平均值”的硬件选择。解耦后，可以：</p>
+<ul>
+<li>Prefill 使用 H100（高 FLOPS，FP8 Tensor Core）</li>
+<li>Decode 使用 A100（大显存，成熟生态）</li>
+<li>甚至使用 L40S（成本优化）或 GH200（超大规模）</li>
+</ul>
+<p>这种异构部署在共置架构中是不可能实现的。</p>
+<h3 id="Insight-3-RDMA-延迟可以接受且值得付出"><a href="#Insight-3-RDMA-延迟可以接受且值得付出" class="headerlink" title="Insight 3: RDMA 延迟可以接受且值得付出"></a>Insight 3: RDMA 延迟可以接受且值得付出</h3><p>Mooncake 的一个关键发现是：KV 缓存的 RDMA 传输延迟（35-55 ms）在总 TTFT（300-400 ms）中占比可控（约 10-15%）。用 10-15% 的延迟增加换取 2-3x 的吞吐量提升和解耦架构的灵活性，是非常值得的权衡。</p>
+<h3 id="Insight-4-流水线传输几乎消除了传输开销"><a href="#Insight-4-流水线传输几乎消除了传输开销" class="headerlink" title="Insight 4: 流水线传输几乎消除了传输开销"></a>Insight 4: 流水线传输几乎消除了传输开销</h3><p>通过将 Prefill 计算和 KV 缓存传输流水线化，Mooncake 实现了计算与通信的重叠。这使得传输延迟几乎完全隐藏在计算延迟中，实际的端到端延迟增加远小于传输延迟本身。</p>
+<hr>
+<h2 id="6-工作流程-Workflow"><a href="#6-工作流程-Workflow" class="headerlink" title="6. 工作流程 (Workflow)"></a>6. 工作流程 (Workflow)</h2><h3 id="6-1-请求完整生命周期"><a href="#6-1-请求完整生命周期" class="headerlink" title="6.1 请求完整生命周期"></a>6.1 请求完整生命周期</h3><figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs autoit"><span class="hljs-keyword">Step</span> <span class="hljs-number">1</span>: 用户请求到达 API 网关<br>    → 解析请求参数 (prompt, max_tokens, temperature 等)<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">2</span>: 全局调度器选择 Prefill 节点<br>    → 考虑 GPU 利用率、可用内存、网络拓扑<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">3</span>: Prefill 节点处理<br>    → 逐层计算 KV 缓存<br>    → 流水线通过 RDMA 传输到 Decode 节点<br>    → KV 缓存压缩 (可选)<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">4</span>: Decode 节点接收 KV 缓存<br>    → 分配 KV 缓存槽位<br>    → 反序列化并加载到 GPU 显存<br>    → 通知全局调度器 <span class="hljs-string">&quot;就绪&quot;</span><br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">5</span>: 自回归生成<br>    → Decode 节点逐 token 生成<br>    → <span class="hljs-keyword">In</span>-Flight Batching 与其他请求共享 GPU<br>    → 流式返回 token 给用户<br><br><span class="hljs-keyword">Step</span> <span class="hljs-number">6</span>: 请求完成<br>    → 释放 KV 缓存<br>    → 更新集群负载状态<br>    → 返回最终结果给用户<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-2-部署流程"><a href="#6-2-部署流程" class="headerlink" title="6.2 部署流程"></a>6.2 部署流程</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># Step 1: 启动 Prefill 集群</span><br>mooncake-prefill-server \<br>    --model meta-llama/Llama-2-70b-chat-hf \<br>    --gpu-count 8 \<br>    --port 8001<br><br><span class="hljs-comment"># Step 2: 启动 Decode 集群</span><br>mooncake-decode-server \<br>    --model meta-llama/Llama-2-70b-chat-hf \<br>    --gpu-count 8 \<br>    --kv-cache-slots 256 \<br>    --port 8002<br><br><span class="hljs-comment"># Step 3: 启动全局调度器</span><br>mooncake-scheduler \<br>    --prefill-nodes node1:8001,node2:8001 \<br>    --decode-nodes node3:8002,node4:8002 \<br>    --port 8000<br><br><span class="hljs-comment"># Step 4: 客户端连接调度器</span><br>curl http://scheduler:8000/v1/chat/completions \<br>    -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \<br>    -d <span class="hljs-string">&#x27;&#123;&quot;model&quot;: &quot;llama-2-70b&quot;, &quot;messages&quot;: [...]&#125;&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="7-定量分析-Quantitative-Analysis"><a href="#7-定量分析-Quantitative-Analysis" class="headerlink" title="7. 定量分析 (Quantitative Analysis)"></a>7. 定量分析 (Quantitative Analysis)</h2><h3 id="7-1-成本效益分析"><a href="#7-1-成本效益分析" class="headerlink" title="7.1 成本效益分析"></a>7.1 成本效益分析</h3><p>以 Llama-2-70B 日处理 1000 万 token 为例：</p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>所需 GPU</th>
+<th>月成本 (估算)</th>
+<th>效率比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM (共置)</td>
+<td>8x A100</td>
+<td>$24,000</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>Splitwise</td>
+<td>4x A100 + 4x A100</td>
+<td>$24,000</td>
+<td>1.2x</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td><strong>2x H100 + 4x A100</strong></td>
+<td><strong>$19,800</strong></td>
+<td><strong>1.75x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="7-2-网络带宽分析"><a href="#7-2-网络带宽分析" class="headerlink" title="7.2 网络带宽分析"></a>7.2 网络带宽分析</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>KV 缓存大小 (FP16)</th>
+<th>传输时间 (IB NDR400)</th>
+<th>占 TTFT 比例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K</td>
+<td>0.5 GB</td>
+<td>15 ms</td>
+<td>5.2%</td>
+</tr>
+<tr>
+<td>2K</td>
+<td>1.0 GB</td>
+<td>25 ms</td>
+<td>8.1%</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>2.0 GB</td>
+<td>45 ms</td>
+<td>12.3%</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>4.0 GB</td>
+<td>85 ms</td>
+<td>18.5%</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>8.0 GB</td>
+<td>165 ms</td>
+<td>27.2%</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: 对于常见序列长度 (&lt; 8K)，传输开销在可接受范围内。</p>
+<h3 id="7-3-内存利用率"><a href="#7-3-内存利用率" class="headerlink" title="7.3 内存利用率"></a>7.3 内存利用率</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>Decode 节点 GPU 显存分配</th>
+<th>KV 缓存利用率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM</td>
+<td>权重复制 + KV 缓存</td>
+<td>35-45%</td>
+</tr>
+<tr>
+<td>Splitwise</td>
+<td>权重 (不复制) + KV 缓存</td>
+<td>55-65%</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td><strong>权重 + KV 缓存 (无 Prefill)</strong></td>
+<td><strong>65-78%</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="8-优势与局限-Strengths-Limitations"><a href="#8-优势与局限-Strengths-Limitations" class="headerlink" title="8. 优势与局限 (Strengths &amp; Limitations)"></a>8. 优势与局限 (Strengths &amp; Limitations)</h2><h3 id="8-1-优势"><a href="#8-1-优势" class="headerlink" title="8.1 优势"></a>8.1 优势</h3><ol>
+<li><strong>近线性扩展</strong>：Prefill 和 Decode 可独立水平扩展，吞吐量随节点数近线性增长。</li>
+<li><strong>消除 Prefill 干扰</strong>：Decode 延迟几乎不受 Prefill 请求影响，P99 延迟稳定。</li>
+<li><strong>异构硬件利用</strong>：可为不同阶段选择最优 GPU 型号，成本效益更好。</li>
+<li><strong>资源共享</strong>：KV 缓存可在多个 Decode 请求间共享（前缀缓存），比共置架构更高效。</li>
+<li><strong>弹性伸缩</strong>：可根据负载独立扩缩 Prefill 或 Decode 节点。</li>
+</ol>
+<h3 id="8-2-局限"><a href="#8-2-局限" class="headerlink" title="8.2 局限"></a>8.2 局限</h3><ol>
+<li><strong>网络依赖</strong>：需要高速网络（InfiniBand&#x2F;RoCE），在以太网环境下性能大幅下降。</li>
+<li><strong>额外延迟</strong>：RDMA 传输增加了 35-165 ms 的延迟（取决于序列长度）。</li>
+<li><strong>复杂性增加</strong>：需要管理两个独立的集群和全局调度器，运维复杂度提升。</li>
+<li><strong>长序列退化</strong>：当序列超过 16K 时，KV 缓存传输延迟可能成为瓶颈。</li>
+<li><strong>故障域扩大</strong>：解耦架构引入了网络和节点间故障点，需要更复杂的容错机制。</li>
+<li><strong>KV 缓存压缩的精度损失</strong>：使用 INT8 压缩 KV 缓存可能导致轻微的精度下降。</li>
+</ol>
+<hr>
+<h2 id="9-下游影响与后续工作-Impact-Follow-ups"><a href="#9-下游影响与后续工作-Impact-Follow-ups" class="headerlink" title="9. 下游影响与后续工作 (Impact &amp; Follow-ups)"></a>9. 下游影响与后续工作 (Impact &amp; Follow-ups)</h2><h3 id="9-1-学术影响"><a href="#9-1-学术影响" class="headerlink" title="9.1 学术影响"></a>9.1 学术影响</h3><ul>
+<li>解耦架构成为 LLM 推理系统设计的重要范式</li>
+<li>引发了关于 KV 缓存传输协议、压缩策略的研究方向</li>
+<li>多个后续工作（Splitwise, DejaVu, Infinistore）受其启发</li>
+</ul>
+<h3 id="9-2-工业影响"><a href="#9-2-工业影响" class="headerlink" title="9.2 工业影响"></a>9.2 工业影响</h3><ul>
+<li>Mooncake 的设计理念被 Moonshot AI (Kimi) 用于其大规模 LLM 服务</li>
+<li>多家云服务商开始探索 Prefill&#x2F;Decode 分离部署</li>
+<li>推动了 RDMA 在 AI 推理基础设施中的应用</li>
+</ul>
+<h3 id="9-3-后续工作"><a href="#9-3-后续工作" class="headerlink" title="9.3 后续工作"></a>9.3 后续工作</h3><ul>
+<li><strong>自适应 KV 压缩</strong>：根据网络带宽和延迟要求动态选择压缩率</li>
+<li><strong>多级缓存层级</strong>：GPU 显存 → CPU 内存 → NVMe SSD → 分布式 KV 存储</li>
+<li><strong>跨区域解耦</strong>：地理分布式的 Prefill&#x2F;Decode 部署</li>
+<li><strong>KV 缓存智能预热</strong>：基于请求预测的主动缓存策略</li>
+</ul>
+<hr>
+<h2 id="10-核心算法与协议-Key-Algorithms-Protocols"><a href="#10-核心算法与协议-Key-Algorithms-Protocols" class="headerlink" title="10. 核心算法与协议 (Key Algorithms &amp; Protocols)"></a>10. 核心算法与协议 (Key Algorithms &amp; Protocols)</h2><h3 id="10-1-KV-缓存传输协议"><a href="#10-1-KV-缓存传输协议" class="headerlink" title="10.1 KV 缓存传输协议"></a>10.1 KV 缓存传输协议</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">KVCacheTransferProtocol</span>:<br>    <span class="hljs-string">&quot;&quot;&quot;KV 缓存 RDMA 传输协议&quot;&quot;&quot;</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">transfer_kv_cache</span>(<span class="hljs-params">self, kv_cache, src_gpu, dst_node, dst_gpu</span>):<br>        <span class="hljs-comment"># 步骤 1: 握手</span><br>        session = <span class="hljs-variable language_">self</span>.rdma_connect(src_node, dst_node)<br><br>        <span class="hljs-comment"># 步骤 2: 元数据交换</span><br>        metadata = KVCacheMetadata(<br>            num_layers=kv_cache.num_layers,<br>            num_heads=kv_cache.num_heads,<br>            head_dim=kv_cache.head_dim,<br>            seq_length=kv_cache.seq_length,<br>            dtype=kv_cache.dtype,<br>            compressed=kv_cache.is_compressed,<br>        )<br>        session.send_metadata(metadata)<br><br>        <span class="hljs-comment"># 步骤 3: 分层流水线传输</span><br>        <span class="hljs-keyword">for</span> layer_idx <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(kv_cache.num_layers):<br>            <span class="hljs-comment"># 获取该层的 K 和 V 张量 (GPU 显存)</span><br>            k_tensor = kv_cache.get_k_layer(layer_idx, src_gpu)<br>            v_tensor = kv_cache.get_v_layer(layer_idx, src_gpu)<br><br>            <span class="hljs-comment"># GPU Direct RDMA 写入目标 GPU</span><br>            session.rdma_write(k_tensor, dst_node, dst_gpu, layer_idx, <span class="hljs-string">&quot;K&quot;</span>)<br>            session.rdma_write(v_tensor, dst_node, dst_gpu, layer_idx, <span class="hljs-string">&quot;V&quot;</span>)<br><br>        <span class="hljs-comment"># 步骤 4: 完成确认</span><br>        session.wait_completion()<br>        session.close()<br></code></pre></td></tr></table></figure>
+
+<h3 id="10-2-全局调度器核心逻辑"><a href="#10-2-全局调度器核心逻辑" class="headerlink" title="10.2 全局调度器核心逻辑"></a>10.2 全局调度器核心逻辑</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">GlobalScheduler</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">handle_request</span>(<span class="hljs-params">self, request</span>):<br>        <span class="hljs-comment"># 1. 选择 Prefill 节点</span><br>        prefill_node = <span class="hljs-variable language_">self</span>.select_best_prefill_node(request)<br><br>        <span class="hljs-comment"># 2. 提交 Prefill，异步等待完成</span><br>        kv_cache_future = prefill_node.execute_prefill_async(request)<br><br>        <span class="hljs-comment"># 3. 在 Prefill 执行期间预选 Decode 节点</span><br>        decode_node = <span class="hljs-variable language_">self</span>.reserve_decode_node(<br>            estimated_kv_cache_size=estimate_kv_size(request)<br>        )<br><br>        <span class="hljs-comment"># 4. 等待 Prefill 完成，获取 KV 缓存位置</span><br>        kv_cache_ref = kv_cache_future.result()<br><br>        <span class="hljs-comment"># 5. 触发 KV 缓存传输</span><br>        transfer_future = <span class="hljs-variable language_">self</span>.transfer_kv_cache(<br>            source=prefill_node,<br>            kv_cache_ref=kv_cache_ref,<br>            destination=decode_node,<br>        )<br><br>        <span class="hljs-comment"># 6. KV 缓存就绪后开始 Decode</span><br>        transfer_future.result()<br>        decode_node.start_generation(request, kv_cache_ref)<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-术语表-Glossary"><a href="#11-术语表-Glossary" class="headerlink" title="11. 术语表 (Glossary)"></a>11. 术语表 (Glossary)</h2><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>英文</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>解耦架构</td>
+<td>Disaggregated Architecture</td>
+<td>将 Prefill 和 Decode 分配到不同集群的架构</td>
+</tr>
+<tr>
+<td>RDMA</td>
+<td>Remote Direct Memory Access</td>
+<td>远程直接内存访问，绕过 CPU 的网络传输技术</td>
+</tr>
+<tr>
+<td>GPU Direct RDMA</td>
+<td>GPU Direct RDMA</td>
+<td>GPU 显存直接参与 RDMA，无需 CPU 拷贝</td>
+</tr>
+<tr>
+<td>InfiniBand</td>
+<td>InfiniBand</td>
+<td>高性能计算网络，提供极低延迟和高带宽</td>
+</tr>
+<tr>
+<td>RoCE</td>
+<td>RDMA over Converged Ethernet</td>
+<td>在以太网上实现 RDMA 的协议</td>
+</tr>
+<tr>
+<td>GDR</td>
+<td>GPU Direct RDMA</td>
+<td>GPU 直接 RDMA 访问技术</td>
+</tr>
+<tr>
+<td>KV 缓存</td>
+<td>KV Cache</td>
+<td>Transformer 推理中的 Key-Value 注意力状态缓存</td>
+</tr>
+<tr>
+<td>TTFT</td>
+<td>Time To First Token</td>
+<td>首 token 延迟</td>
+</tr>
+<tr>
+<td>Prefill</td>
+<td>Prefill</td>
+<td>预填充阶段，处理输入 prompt 并生成 KV 缓存</td>
+</tr>
+<tr>
+<td>Decode</td>
+<td>Decode</td>
+<td>解码阶段，逐 token 自回归生成</td>
+</tr>
+<tr>
+<td>NDR400</td>
+<td>Next Data Rate 400</td>
+<td>InfiniBand 的 400 Gbps 标准</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="12-延伸阅读-Further-Reading"><a href="#12-延伸阅读-Further-Reading" class="headerlink" title="12. 延伸阅读 (Further Reading)"></a>12. 延伸阅读 (Further Reading)</h2><ol>
+<li><strong>Splitwise</strong>: Patel et al., “Splitwise: Efficient Generative LLM Inference Using Phase Splitting”, ISCA 2024.</li>
+<li><strong>Sarathi-Serve</strong>: Agrawal et al., “Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference”, OSDI 2024.</li>
+<li><strong>vLLM</strong>: Kwon et al., “Efficient Memory Management for Large Language Model Serving with PagedAttention”, SOSP 2023.</li>
+<li><strong>SGLang</strong>: Zheng et al., “SGLang: Efficient Execution of Structured Language Model Programs”, 2024.</li>
+<li><strong>TensorRT-LLM</strong>: NVIDIA, “TensorRT-LLM: An Open-Source Library for Optimizing LLM Inference”, 2023.</li>
+<li><strong>Infinistore</strong>: Li et al., “Efficient Infinite-Context LLM Serving with KV Cache Offloading”, 2024.</li>
+<li><strong>DejaVu</strong>: Strati et al., “DejaVu: KV-cache Streaming for Fast, Fault-tolerant Generative LLM Serving”, 2024.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F/" class="category-chain-item">推理服务系统</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/LLM/" class="print-no-link">#LLM</a>
+      
+        <a href="/tags/inference/" class="print-no-link">#inference</a>
+      
+        <a href="/tags/disaggregated/" class="print-no-link">#disaggregated</a>
+      
+        <a href="/tags/KV-cache/" class="print-no-link">#KV-cache</a>
+      
+        <a href="/tags/prefill-decode/" class="print-no-link">#prefill-decode</a>
+      
+        <a href="/tags/distributed/" class="print-no-link">#distributed</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving</div>
+      <div>https://w2ongq6.github.io/2026/07/25/inference/note/Mooncake_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/TensorRT-LLM_note/" title="TensorRT-LLM: NVIDIA&#39;s Optimized Inference Engine for Large Language Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">TensorRT-LLM: NVIDIA&#39;s Optimized Inference Engine for Large Language Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/Splitwise_note/" title="Splitwise: Efficient Generative LLM Inference Using Phase Splitting">
+                        <span class="hidden-mobile">Splitwise: Efficient Generative LLM Inference Using Phase Splitting</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

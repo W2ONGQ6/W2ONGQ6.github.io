@@ -1,0 +1,1589 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="T5: 用统一的Text-to-Text框架探索迁移学习的极限核心信息 标题: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer 标题翻译: 用统一的文本到文本Transformer探索迁移学习的极限 作者: Colin Raffel, Noam Shazeer, Adam Rober">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5)">
+<meta property="og:url" content="https://w2ongq6.github.io/2019/10/23/llm/note/T5_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="T5: 用统一的Text-to-Text框架探索迁移学习的极限核心信息 标题: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer 标题翻译: 用统一的文本到文本Transformer探索迁移学习的极限 作者: Colin Raffel, Noam Shazeer, Adam Rober">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2019-10-22T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.970Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;nlp">
+<meta property="article:tag" content="papers&#x2F;pretraining">
+<meta property="article:tag" content="papers&#x2F;text-to-text">
+<meta property="article:tag" content="papers&#x2F;transfer-learning">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5) - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5)"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2019-10-23 00:00" pubdate>
+          2019年10月23日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          10k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          84 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5)</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="T5-用统一的Text-to-Text框架探索迁移学习的极限"><a href="#T5-用统一的Text-to-Text框架探索迁移学习的极限" class="headerlink" title="T5: 用统一的Text-to-Text框架探索迁移学习的极限"></a>T5: 用统一的Text-to-Text框架探索迁移学习的极限</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer</li>
+<li>标题翻译: 用统一的文本到文本Transformer探索迁移学习的极限</li>
+<li>作者: Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, Peter J. Liu</li>
+<li>机构: Google Research</li>
+<li>发表时间: 2019年10月23日（arXiv），2020年发表于JMLR</li>
+<li>发表渠道: Journal of Machine Learning Research (JMLR), Volume 21, Issue 140, 2020</li>
+<li>arXiv: 1910.10683</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1910.10683">https://arxiv.org/abs/1910.10683</a></li>
+<li>代码&#x2F;项目: <a target="_blank" rel="noopener" href="https://github.com/google-research/text-to-text-transfer-transformer">https://github.com/google-research/text-to-text-transfer-transformer</a></li>
+<li>论文类型: 系统性实证研究论文</li>
+<li>模型参数: 最高11B</li>
+<li>截至2024年引用数: 超过15,000次</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>迁移学习已成为自然语言处理（NLP）中的一项强大技术，其方法是将模型在数据丰富的任务上进行预训练，然后在下游任务上进行微调。迁移学习的有效性催生了多种多样的方法、方法论和实践。在本文中，我们通过引入一个统一的框架来探索NLP迁移学习技术的全景，该框架将每个语言问题转换为”文本到文本”的格式。我们的系统研究比较了预训练目标、架构、无标注数据集、迁移方法以及其他因素在数十个语言理解任务上的表现。通过将我们的探索洞见与规模和我们新的Colossal Clean Crawled Corpus（C4）数据集相结合，我们在包括摘要、问答和文本分类在内的众多基准测试中取得了最先进的结果。为了促进NLP迁移学习的未来工作，我们发布了我们的数据集、预训练模型和代码。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-统一的Text-to-Text框架"><a href="#1-统一的Text-to-Text框架" class="headerlink" title="1. 统一的Text-to-Text框架"></a>1. 统一的Text-to-Text框架</h3><p><strong>核心思想</strong>: T5的核心设计原则是——每个NLP任务都可以表述为”给定输入文本，生成输出文本”的形式。无论任务是分类、摘要、翻译还是问答，模型接收的是文本，输出的也是文本，使用同一个模型、同一个损失函数（交叉熵）、同一套超参数。</p>
+<p><strong>广泛适用性示例</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>任务类型</th>
+<th>输入格式</th>
+<th>输出格式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文本分类</td>
+<td>“cola sentence: {sentence}”</td>
+<td>“acceptable” &#x2F; “not acceptable”</td>
+</tr>
+<tr>
+<td>翻译</td>
+<td>“translate English to German: {text}”</td>
+<td>德语文本</td>
+</tr>
+<tr>
+<td>摘要</td>
+<td>“summarize: {document}”</td>
+<td>摘要文本</td>
+</tr>
+<tr>
+<td>问答</td>
+<td>“question: {q} context: {c}”</td>
+<td>答案文本 span</td>
+</tr>
+<tr>
+<td>完形填空</td>
+<td>“fill in the blank: {text with ___}”</td>
+<td>缺失的词</td>
+</tr>
+</tbody></table>
+<p><strong>为什么重要</strong>: 这种统一框架消除了NLP任务的碎片化——在T5之前，每个任务需要特定的架构修改（不同的输出头、不同的损失函数），T5之后，所有任务共享同一套pipeline。这极大简化了NLP系统的开发和部署。</p>
+<h3 id="2-系统性的消融实验方法论"><a href="#2-系统性的消融实验方法论" class="headerlink" title="2. 系统性的消融实验方法论"></a>2. 系统性的消融实验方法论</h3><p><strong>核心思想</strong>: T5的价值不仅在于结果，更在于过程。论文进行了超过70项受控实验，系统性地回答了”预训练到底怎么做最好”这一系列问题。</p>
+<p><strong>研究的维度</strong>:</p>
+<ul>
+<li>模型架构: Encoder-Decoder vs Decoder-only vs Language Model</li>
+<li>预训练目标: 多种去噪目标（MLM, span corruption, prefix LM等）的比较</li>
+<li>数据量: 不同规模的无监督预训练数据</li>
+<li>模型大小: 从220M到11B参数的扩展</li>
+<li>微调策略: 多任务微调、逐步解冻等</li>
+</ul>
+<p><strong>为什么重要</strong>: 在T5之前，NLP社区关于预训练的”最佳实践”是碎片化的——有人用MLM、有人用LM、有人用不同的架构。T5通过大规模受控实验为每个设计选择提供了实证依据，使社区从”信仰驱动”转向”证据驱动”。</p>
+<h3 id="3-预训练目标的最佳组合：Span-Corruption"><a href="#3-预训练目标的最佳组合：Span-Corruption" class="headerlink" title="3. 预训练目标的最佳组合：Span Corruption"></a>3. 预训练目标的最佳组合：Span Corruption</h3><p><strong>核心思想</strong>: T5对各种预训练目标进行了系统比较，最终得出”Span Corruption（跨span的去噪）”是最优预训练目标的结论。</p>
+<p><strong>Span Corruption（或称denoising objective）的具体设计</strong>:</p>
+<ol>
+<li>从输入文本中随机遮蔽连续的 token span（而非BERT的单个独立token）</li>
+<li>每个被遮蔽的span被替换为一个唯一的哨兵token（如 <code>&lt;X&gt;</code>, <code>&lt;Y&gt;</code>, <code>&lt;Z&gt;</code>）</li>
+<li>模型的目标是生成被遮蔽的span序列，以哨兵token为分隔: <code>&lt;X&gt; span1 &lt;Y&gt; span2 &lt;Z&gt; span3</code></li>
+</ol>
+<p><strong>示例</strong>:</p>
+<ul>
+<li>原始文本: “Thank you for inviting me to your party last week”</li>
+<li>输入: “Thank you <code>&lt;X&gt;</code> me to your party <code>&lt;Y&gt;</code> week”</li>
+<li>目标: “<code>&lt;X&gt;</code> for inviting <code>&lt;Y&gt;</code> last <code>&lt;Z&gt;</code>“</li>
+</ul>
+<p><strong>为什么更优</strong>: </p>
+<ul>
+<li>比BERT的MLM（遮蔽单个独立token）更自然地对应生成任务</li>
+<li>目标文本比原始文本短（仅包含被遮蔽的部分），训练更高效</li>
+<li>Span遮蔽保留了更多的语义单元完整性</li>
+</ul>
+<h3 id="4-C4数据集（Colossal-Clean-Crawled-Corpus）"><a href="#4-C4数据集（Colossal-Clean-Crawled-Corpus）" class="headerlink" title="4. C4数据集（Colossal Clean Crawled Corpus）"></a>4. C4数据集（Colossal Clean Crawled Corpus）</h3><p><strong>核心思想</strong>: T5从Common Crawl中创建了一个750GB的高质量、去重、过滤后的英文文本数据集——C4（Colossal Clean Crawled Corpus），并公开释放给学术界。</p>
+<p><strong>C4构建流程</strong>:</p>
+<ol>
+<li>从Common Crawl 2019年4月的转储中提取英文网页</li>
+<li>移除包含”脏话列表”中任何词的页面</li>
+<li>移除包含”javascript”的页面（代码页面）</li>
+<li>移除包含”lorem ipsum”的页面（占位符文本）</li>
+<li>移除包含花括号”{“的页面（可能是代码或JSON）</li>
+<li>使用启发式方法过滤掉非自然语言的文本</li>
+<li>基于最小哈希的行级去重</li>
+<li>最终保留约750GB文本（约156B token）</li>
+</ol>
+<p><strong>为什么重要</strong>: C4成为后续NLP研究的核心数据集之一，其构建流水线（去重、质量过滤、语言检测）成为大规模数据工程的标准参考。</p>
+<h3 id="5-“Scaled-up”作为方法论"><a href="#5-“Scaled-up”作为方法论" class="headerlink" title="5. “Scaled-up”作为方法论"></a>5. “Scaled-up”作为方法论</h3><p><strong>核心思想</strong>: 在确定了所有”小规模”的最优设计选择后，T5将这些选择应用于更大的规模（数据和模型），验证了小规模实验的结论在大规模上的泛化能力。</p>
+<p><strong>从小规模到大规模的结论验证</strong>:</p>
+<ul>
+<li>小规模实验（220M参数，C4子集）确定最优设计</li>
+<li>大规模验证（11B参数，完整C4）确认结论的泛化性</li>
+<li>最终模型在24项任务的17项上达到SOTA</li>
+</ul>
+<p><strong>为什么重要</strong>: 这种”小规模探索 + 大规模验证”的方法论，在计算资源紧张的学术界和工业界都具有极高的实用价值。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>T5通过将所有NLP任务统一为”文本到文本”的格式，并进行超过70项系统性消融实验，实证性地确定了预训练的最佳实践（Encoder-Decoder架构 + Span Corruption目标 + C4数据集），在24个基准中的17个上达到了当时的最优结果，并为后续迁移学习研究建立了基于证据而非直觉的实验方法论标准。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>到2019年，NLP的迁移学习领域已发展出多个”流派”:</p>
+<ol>
+<li><strong>BERT流派</strong>: MLM + Transformer编码器 → 分类头微调（理解方向）</li>
+<li><strong>GPT流派</strong>: LM + Transformer解码器 → 语言模型微调（生成方向）</li>
+<li><strong>T5试图回答的元问题</strong>: 这些不同的选择中，哪些是真正关键的？哪些只是偶然的历史选择？</li>
+</ol>
+<p><strong>T5的研究框架</strong>: </p>
+<ul>
+<li>不预设任何”理所当然”的选择</li>
+<li>将所有可能的设计维度纳入统一的实验框架</li>
+<li>用数据说话，而非惯例</li>
+</ul>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="C4数据集"><a href="#C4数据集" class="headerlink" title="C4数据集"></a>C4数据集</h3><ul>
+<li>来源: Common Crawl 2019年4月转储</li>
+<li>大小: 约750GB（过滤后），约156B token</li>
+<li>构建: 英文过滤、启发式清洗、行级去重</li>
+<li>开源: 公开发布，成为NLP研究的核心数据集</li>
+</ul>
+<h3 id="评估任务（24个基准）"><a href="#评估任务（24个基准）" class="headerlink" title="评估任务（24个基准）"></a>评估任务（24个基准）</h3><p>论文在四大类任务上评估:</p>
+<p><strong>分类</strong>:</p>
+<ul>
+<li>GLUE: CoLA, SST-2, MRPC, STS-B, QQP, MNLI, QNLI, RTE, WNLI</li>
+<li>SuperGLUE: BoolQ, CB, COPA, MultiRC, ReCoRD, RTE, WiC, WSC</li>
+</ul>
+<p><strong>摘要</strong>:</p>
+<ul>
+<li>CNN&#x2F;Daily Mail（新闻摘要）</li>
+<li>XSum（极端摘要，一句话）</li>
+</ul>
+<p><strong>问答</strong>:</p>
+<ul>
+<li>SQuAD（抽取式QA）</li>
+<li>TriviaQA（闭卷QA）</li>
+<li>WebQuestions（闭卷QA）</li>
+</ul>
+<p><strong>翻译</strong>:</p>
+<ul>
+<li>WMT En→De, En→Fr, En→Ro 及反向</li>
+</ul>
+<h3 id="预训练目标对比"><a href="#预训练目标对比" class="headerlink" title="预训练目标对比"></a>预训练目标对比</h3><p>论文系统对比了以下预训练目标（Figure 3）:</p>
+<ol>
+<li><strong>Prefix LM</strong>: 前部分是双向注意力，后部分是因果注意力</li>
+<li><strong>BERT-style MLM</strong>: 遮蔽15%独立token，仅预测被遮蔽的</li>
+<li><strong>Deshuffling</strong>: 打乱文本中的token顺序，还原顺序</li>
+<li><strong>Span Corruption</strong>: 遮蔽连续的token span，生成被遮蔽的文本</li>
+<li><strong>BERT-style + NSP</strong>: MLM + 下一句预测</li>
+<li><strong>Standard LM</strong>: 标准自回归语言模型</li>
+</ol>
+<h3 id="模型规格"><a href="#模型规格" class="headerlink" title="模型规格"></a>模型规格</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数量</th>
+<th>层数</th>
+<th>d_model</th>
+<th>d_ff</th>
+<th>头数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>T5-Small</td>
+<td>60M</td>
+<td>6</td>
+<td>512</td>
+<td>2048</td>
+<td>8</td>
+</tr>
+<tr>
+<td>T5-Base</td>
+<td>220M</td>
+<td>12</td>
+<td>768</td>
+<td>3072</td>
+<td>12</td>
+</tr>
+<tr>
+<td>T5-Large</td>
+<td>770M</td>
+<td>24</td>
+<td>1024</td>
+<td>4096</td>
+<td>16</td>
+</tr>
+<tr>
+<td>T5-3B</td>
+<td>3B</td>
+<td>24</td>
+<td>1024</td>
+<td>16384</td>
+<td>32</td>
+</tr>
+<tr>
+<td>T5-11B</td>
+<td>11B</td>
+<td>24</td>
+<td>1024</td>
+<td>65536</td>
+<td>128</td>
+</tr>
+</tbody></table>
+<p><strong>架构</strong>: Encoder-Decoder Transformer（与原始Transformer论文相同）</p>
+<h3 id="训练配置"><a href="#训练配置" class="headerlink" title="训练配置"></a>训练配置</h3><ul>
+<li>预训练: Adafactor优化器，batch size 2^11到2^19逐步增加</li>
+<li>微调: 常数学习率 1e-3，batch size 2^17，训练2^18步</li>
+<li>序列长度: 512（输入和目标各512）</li>
+<li>词汇表: SentencePiece 32,000 token</li>
+<li>嵌入: 输入和输出共享嵌入矩阵</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>T5使用标准的Encoder-Decoder Transformer架构:</p>
+<ul>
+<li><strong>编码器</strong>: 全双向注意力，处理输入文本</li>
+<li><strong>解码器</strong>: 因果自注意力 + 交叉注意力，生成输出文本</li>
+<li><strong>任务前缀</strong>: 输入文本前附加任务指令（如”translate English to German:”）</li>
+</ul>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<h4 id="阶段一-数据预处理（C4构建）"><a href="#阶段一-数据预处理（C4构建）" class="headerlink" title="阶段一: 数据预处理（C4构建）"></a>阶段一: 数据预处理（C4构建）</h4><ol>
+<li>从Common Crawl抓取网页文本</li>
+<li>过滤: 移除含脏话、javascript、lorem ipsum、花括号的页面</li>
+<li>移除短于5句的页面（可能不是自然语言文章）</li>
+<li>行级去重（使用最小哈希&#x2F;LSH）</li>
+<li>移除包含隐私信息（如”Terms of Use”）的页面</li>
+</ol>
+<h4 id="阶段二-预训练"><a href="#阶段二-预训练" class="headerlink" title="阶段二: 预训练"></a>阶段二: 预训练</h4><p><strong>Span Corruption训练</strong>:</p>
+<ol>
+<li>对输入文本随机选择连续的token span（平均span长度&#x3D;3，总遮蔽比例&#x3D;15%）</li>
+<li>每个span被替换为唯一的哨兵token: <code>&lt;extra_id_0&gt;</code>, <code>&lt;extra_id_1&gt;</code>, …</li>
+<li>目标序列由被遮蔽的span组成，以哨兵token分隔，末尾加一个哨兵token标记结束</li>
+</ol>
+<p><strong>具体示例</strong>:</p>
+<ul>
+<li>原始: “The cat sat on the mat and watched the birds”</li>
+<li>遮蔽后输入: “The cat <code>&lt;extra_id_0&gt;</code> the mat <code>&lt;extra_id_1&gt;</code> the birds”</li>
+<li>目标: “<code>&lt;extra_id_0&gt;</code> sat on <code>&lt;extra_id_1&gt;</code> and watched <code>&lt;extra_id_2&gt;</code>“</li>
+</ul>
+<p><strong>损失</strong>: 标准交叉熵（仅计算目标序列token，不包括哨兵token）</p>
+<p><strong>为什么不使用BERT的MLM</strong>: MLM需要预测单个被遮蔽的token，而T5的text-to-text框架更适合生成连续的文本span。</p>
+<h4 id="阶段三-下游微调"><a href="#阶段三-下游微调" class="headerlink" title="阶段三: 下游微调"></a>阶段三: 下游微调</h4><ol>
+<li><p><strong>任务前缀映射</strong>: 将每个下游任务映射为文本输入&#x2F;输出格式</p>
+<ul>
+<li>“cola sentence: The course is jumping well.” → “not acceptable”</li>
+<li>“stsb sentence1: The dog is running. sentence2: A canine is sprinting.” → “4.8”</li>
+</ul>
+</li>
+<li><p><strong>统一微调</strong>: 使用相同的交叉熵损失、相同的优化器设置、相同的超参数微调所有任务</p>
+</li>
+<li><p><strong>多任务微调</strong>: 论文也探索了将多个任务的数据混合在一起进行微调（多任务学习），发现混合微调在大多数情况下优于单任务微调</p>
+</li>
+</ol>
+<h3 id="关键设计决策的消融实验"><a href="#关键设计决策的消融实验" class="headerlink" title="关键设计决策的消融实验"></a>关键设计决策的消融实验</h3><h4 id="架构选择"><a href="#架构选择" class="headerlink" title="架构选择"></a>架构选择</h4><table>
+<thead>
+<tr>
+<th>架构</th>
+<th>模型结构</th>
+<th>在分类+摘要上的平均分</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Encoder-Decoder</td>
+<td>双向编码+自回归解码</td>
+<td><strong>84.4</strong></td>
+</tr>
+<tr>
+<td>Decoder-only (Prefix LM)</td>
+<td>前半双向+后半自回归</td>
+<td>83.5</td>
+</tr>
+<tr>
+<td>Decoder-only (Full LM)</td>
+<td>全因果注意力</td>
+<td>83.2</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: Encoder-Decoder架构在总参数量相同的情况下表现最优。原因: 编码器的双向注意力 + 解码器的自回归生成为理解和生成分别提供了最优的归纳偏置。</p>
+<h4 id="预训练目标比较"><a href="#预训练目标比较" class="headerlink" title="预训练目标比较"></a>预训练目标比较</h4><table>
+<thead>
+<tr>
+<th>预训练目标</th>
+<th>相对性能（在多种Task上）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Span Corruption (平均span&#x3D;3)</td>
+<td><strong>最高</strong></td>
+</tr>
+<tr>
+<td>Span Corruption (平均span&#x3D;2)</td>
+<td>略低</td>
+</tr>
+<tr>
+<td>Span Corruption (平均span&#x3D;10)</td>
+<td>更低（目标太长，训练慢）</td>
+</tr>
+<tr>
+<td>BERT-style MLM (独立token)</td>
+<td>低于Span Corruption</td>
+</tr>
+<tr>
+<td>Prefix LM</td>
+<td>明显低于Span Corruption</td>
+</tr>
+<tr>
+<td>Standard LM</td>
+<td>最低</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: Span Corruption（平均span长度&#x3D;3，遮蔽比例15%）是最优的预训练目标。</p>
+<h4 id="数据量影响"><a href="#数据量影响" class="headerlink" title="数据量影响"></a>数据量影响</h4><table>
+<thead>
+<tr>
+<th>预训练数据量</th>
+<th>GLUE平均</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>完整C4</td>
+<td><strong>最高</strong></td>
+</tr>
+<tr>
+<td>C4的1&#x2F;4</td>
+<td>略低 (~0.5点)</td>
+</tr>
+<tr>
+<td>C4的1&#x2F;16</td>
+<td>明显低 (~2点)</td>
+</tr>
+<tr>
+<td>C4的1&#x2F;64</td>
+<td>大幅下降 (~5点)</td>
+</tr>
+<tr>
+<td>C4的1&#x2F;256</td>
+<td>极差</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: 数据越多越好，但存在边际递减。即使是完整C4，模型仍未完全收敛。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="系统性消融实验的核心结论"><a href="#系统性消融实验的核心结论" class="headerlink" title="系统性消融实验的核心结论"></a>系统性消融实验的核心结论</h3><p>论文通过70+项实验，确定了以下”最佳实践”:</p>
+<table>
+<thead>
+<tr>
+<th>设计维度</th>
+<th>最优选择</th>
+<th>替代方案</th>
+<th>性能差距</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>Encoder-Decoder</td>
+<td>Decoder-only</td>
+<td>~1点</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<h3 id="GLUE-基准"><a href="#GLUE-基准" class="headerlink" title="GLUE 基准"></a>GLUE 基准</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>GLUE Score</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BERT-Large</td>
+<td>80.5</td>
+</tr>
+<tr>
+<td>RoBERTa-Large</td>
+<td>88.5</td>
+</tr>
+<tr>
+<td>ALBERT-xxlarge</td>
+<td>89.4</td>
+</tr>
+<tr>
+<td>T5-3B</td>
+<td>89.6</td>
+</tr>
+<tr>
+<td>T5-11B</td>
+<td><strong>90.3</strong></td>
+</tr>
+<tr>
+<td>Human</td>
+<td>87.1</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: T5-11B达到了新的SOTA（90.3），超越了此前所有方法。但需要注意的是，T5-11B的参数是ALBERT-xxlarge等的数倍。</p>
+<h3 id="SuperGLUE-基准"><a href="#SuperGLUE-基准" class="headerlink" title="SuperGLUE 基准"></a>SuperGLUE 基准</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>SuperGLUE Score</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BERT++</td>
+<td>69.5</td>
+</tr>
+<tr>
+<td>RoBERTa</td>
+<td>73.5</td>
+</tr>
+<tr>
+<td>T5-3B</td>
+<td>86.6</td>
+</tr>
+<tr>
+<td>T5-11B</td>
+<td><strong>89.3</strong></td>
+</tr>
+<tr>
+<td>Human</td>
+<td>89.8</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: T5-11B 89.3，接近人类水平（89.8）。这是当时在SuperGLUE上最接近人类表现的模型。</p>
+<h3 id="CNN-Daily-Mail-摘要"><a href="#CNN-Daily-Mail-摘要" class="headerlink" title="CNN&#x2F;Daily Mail 摘要"></a>CNN&#x2F;Daily Mail 摘要</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>ROUGE-1</th>
+<th>ROUGE-2</th>
+<th>ROUGE-L</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pre-T5 SOTA (BART)</td>
+<td>44.2</td>
+<td>21.3</td>
+<td>40.9</td>
+</tr>
+<tr>
+<td>T5-11B</td>
+<td><strong>43.5</strong></td>
+<td><strong>21.6</strong></td>
+<td><strong>40.7</strong></td>
+</tr>
+</tbody></table>
+<h3 id="SQuAD-问答"><a href="#SQuAD-问答" class="headerlink" title="SQuAD 问答"></a>SQuAD 问答</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>EM</th>
+<th>F1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BERT-Large</td>
+<td>84.1</td>
+<td>90.9</td>
+</tr>
+<tr>
+<td>XLNet-Large</td>
+<td><strong>89.9</strong></td>
+<td><strong>95.1</strong></td>
+</tr>
+<tr>
+<td>T5-3B</td>
+<td>89.0</td>
+<td>94.7</td>
+</tr>
+<tr>
+<td>T5-11B</td>
+<td><strong>90.1</strong></td>
+<td><strong>95.4</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: T5-11B在SQuAD上打破了XLNet的记录，达到新SOTA。</p>
+<h3 id="翻译"><a href="#翻译" class="headerlink" title="翻译"></a>翻译</h3><table>
+<thead>
+<tr>
+<th>语言对</th>
+<th>T5-11B BLEU</th>
+<th>SOTA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>En→De</td>
+<td>28.9</td>
+<td>~42</td>
+</tr>
+<tr>
+<td>En→Fr</td>
+<td>40.4</td>
+<td>~41</td>
+</tr>
+<tr>
+<td>En→Ro</td>
+<td>26.9</td>
+<td>~34</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: T5的翻译能力不错但非顶尖——因为它的训练数据以英语为主，缺少大规模平行语料。</p>
+<h3 id="模型规模扩展"><a href="#模型规模扩展" class="headerlink" title="模型规模扩展"></a>模型规模扩展</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数量</th>
+<th>GLUE</th>
+<th>SuperGLUE</th>
+<th>CNNDM R-1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Small</td>
+<td>60M</td>
+<td>77.2</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>220M</td>
+<td>81.3</td>
+<td>68.8</td>
+<td>39.2</td>
+</tr>
+<tr>
+<td>Large</td>
+<td>770M</td>
+<td>84.1</td>
+<td>76.1</td>
+<td>41.4</td>
+</tr>
+<tr>
+<td>3B</td>
+<td>3B</td>
+<td>89.6</td>
+<td>86.6</td>
+<td>42.9</td>
+</tr>
+<tr>
+<td>11B</td>
+<td>11B</td>
+<td><strong>90.3</strong></td>
+<td><strong>89.3</strong></td>
+<td><strong>43.5</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键模式</strong>: 性能随规模持续改善，在11B时仍未出现明显饱和。这进一步验证了”更大 &#x3D; 更好”的趋势。</p>
+<h3 id="多任务微调-vs-单任务微调"><a href="#多任务微调-vs-单任务微调" class="headerlink" title="多任务微调 vs 单任务微调"></a>多任务微调 vs 单任务微调</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>GLUE Average</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单任务微调</td>
+<td>90.3</td>
+</tr>
+<tr>
+<td>多任务微调（所有GLUE任务混合）</td>
+<td>90.4</td>
+</tr>
+<tr>
+<td>多任务微调 + 逐步解冻</td>
+<td>90.1</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>: 多任务微调与单任务微调效果相当甚至略好，这支持了”一个模型做所有事”的统一范式。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="Text-to-Text框架的哲学意义"><a href="#Text-to-Text框架的哲学意义" class="headerlink" title="Text-to-Text框架的哲学意义"></a>Text-to-Text框架的哲学意义</h3><p>T5的text-to-text框架不仅是工程简化，更是一种哲学声明: “语言理解的所有形式都是文本生成的特殊情况”。</p>
+<p>这一声明的影响深远:</p>
+<ul>
+<li>将NLP从”分类器设计”重新定义为”提示设计”</li>
+<li>暗示了通用语言智能的可能性——一个模型可以学会在任务之间泛化</li>
+<li>为后来源指令微调（Instruction Tuning）和ChatGPT奠定了基础</li>
+</ul>
+<h3 id="Span-Corruption-vs-BERT-MLM的深入对比"><a href="#Span-Corruption-vs-BERT-MLM的深入对比" class="headerlink" title="Span Corruption vs BERT MLM的深入对比"></a>Span Corruption vs BERT MLM的深入对比</h3><p>T5发现Span Corruption（遮蔽连续span）优于BERT MLM（遮蔽独立token）。这有两个可能的深层原因:</p>
+<ol>
+<li><p><strong>语义单元完整性</strong>: 自然语言中，”New York”作为一个语义单元比”New”和”York”分别预测更合理。Span Corruption保留了语义单元的完整性</p>
+</li>
+<li><p><strong>目标长度效率</strong>: Span Corruption的目标是原始文本的子集（仅被遮蔽的部分），比原始文本短，模型需要生成的token更少，训练和推理更高效</p>
+</li>
+<li><p><strong>与下游任务对齐</strong>: 下游生成任务（摘要、翻译）通常需要生成长span的连贯文本，而非独立的单个token。Span Corruption的预训练更接近这些任务的分布</p>
+</li>
+</ol>
+<h3 id="为什么Encoder-Decoder优于Decoder-only"><a href="#为什么Encoder-Decoder优于Decoder-only" class="headerlink" title="为什么Encoder-Decoder优于Decoder-only"></a>为什么Encoder-Decoder优于Decoder-only</h3><p>这是一个常被忽视的结论。在同等参数下:</p>
+<ul>
+<li>Encoder-Decoder: 编码器双向处理输入，解码器自回归生成输出</li>
+<li>Decoder-only: 前半双向处理输入，后半自回归生成输出</li>
+</ul>
+<p>Encoder-Decoder的优势在于”分而治之”:</p>
+<ul>
+<li>编码器和解码器可以独立扩展（T5-11B: enc&#x3D;5.5B, dec&#x3D;5.5B）</li>
+<li>编码器的双向注意力无位置限制（所有位置平等）</li>
+<li>Decoder-only的前缀LM方案在”输入部分”受到因果掩码的部分限制</li>
+</ul>
+<h3 id="T5与GPT-3的”同时空不同路径”"><a href="#T5与GPT-3的”同时空不同路径”" class="headerlink" title="T5与GPT-3的”同时空不同路径”"></a>T5与GPT-3的”同时空不同路径”</h3><p>T5和GPT-3在同一年（2020年）发表，代表了两种不同的路径:</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>T5</th>
+<th>GPT-3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>Encoder-Decoder</td>
+<td>Decoder-only</td>
+</tr>
+<tr>
+<td>核心贡献</td>
+<td>系统实验方法论</td>
+<td>规模涌现能力</td>
+</tr>
+<tr>
+<td>最大模型</td>
+<td>11B</td>
+<td>175B</td>
+</tr>
+<tr>
+<td>下游使用</td>
+<td>微调</td>
+<td>上下文学习</td>
+</tr>
+<tr>
+<td>设计哲学</td>
+<td>一切都可以通过微调达到最优</td>
+<td>微调不是必需的</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>完全开源</td>
+<td>API-only</td>
+</tr>
+</tbody></table>
+<p>T5的路径（微调范式）在2020-2021年主导了NLP研究，GPT-3的路径（上下文学习）在2022年ChatGPT爆发后成为主流。但T5的系统方法论至今仍有价值——它的结论”Encoder-Decoder + Span Corruption”被后续的Flan-T5、UL2等工作继承。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-BERT"><a href="#vs-BERT" class="headerlink" title="vs BERT"></a>vs BERT</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>BERT</th>
+<th>T5</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>Encoder-only</td>
+<td>Encoder-Decoder</td>
+</tr>
+<tr>
+<td>预训练目标</td>
+<td>MLM + NSP</td>
+<td>Span Corruption</td>
+</tr>
+<tr>
+<td>生成能力</td>
+<td>无（仅理解）</td>
+<td>有（理解和生成）</td>
+</tr>
+<tr>
+<td>任务适配</td>
+<td>分类头</td>
+<td>Text-to-text</td>
+</tr>
+<tr>
+<td>训练数据</td>
+<td>BooksCorpus + Wiki</td>
+<td>C4 (Common Crawl过滤)</td>
+</tr>
+<tr>
+<td>方法论</td>
+<td>提出新方法</td>
+<td>系统对比现有方法</td>
+</tr>
+</tbody></table>
+<p><strong>总结</strong>: BERT定义了”预训练-微调”范式，T5通过系统实验优化了这个范式。T5的贡献更多是方法论的——告诉社区哪些选择是关键的、哪些不是。</p>
+<h3 id="vs-GPT-2"><a href="#vs-GPT-2" class="headerlink" title="vs GPT-2"></a>vs GPT-2</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GPT-2</th>
+<th>T5</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>Decoder-only</td>
+<td>Encoder-Decoder</td>
+</tr>
+<tr>
+<td>注意力</td>
+<td>单向</td>
+<td>双向编码+单向解码</td>
+</tr>
+<tr>
+<td>核心能力</td>
+<td>零样本生成</td>
+<td>微调后理解+生成</td>
+</tr>
+<tr>
+<td>零样本</td>
+<td>合理但不强</td>
+<td>有限（设计为微调用）</td>
+</tr>
+<tr>
+<td>对下游态度</td>
+<td>不需要微调</td>
+<td>微调是核心工作流</td>
+</tr>
+</tbody></table>
+<h3 id="vs-T5后续工作"><a href="#vs-T5后续工作" class="headerlink" title="vs T5后续工作"></a>vs T5后续工作</h3><p><strong>Flan-T5</strong> (2022): 在T5基础上添加指令微调（instruction tuning），使模型理解和执行自然语言指令，大幅提升了零样本和少样本能力，性能超越GPT-3在某些任务上。</p>
+<p><strong>UL2</strong> (2023): 将T5的text-to-text框架扩展到混合多种去噪目标（Mixture of Denoisers），在理解和生成任务上都取得了SOTA。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-依赖微调"><a href="#1-依赖微调" class="headerlink" title="1. 依赖微调"></a>1. 依赖微调</h3><p>T5的范式需要为每个下游任务进行微调，与GPT-3的零样本&#x2F;少样本相比，灵活性较差。</p>
+<h3 id="2-翻译不是最强项"><a href="#2-翻译不是最强项" class="headerlink" title="2. 翻译不是最强项"></a>2. 翻译不是最强项</h3><p>Encoder-Decoder架构本应对翻译特别擅长，但T5的训练数据以英语为主，翻译能力不如专门的翻译系统。</p>
+<h3 id="3-实验的成本门槛"><a href="#3-实验的成本门槛" class="headerlink" title="3. 实验的成本门槛"></a>3. 实验的成本门槛</h3><p>70+项消融实验是有价值的，但也是昂贵的——只有Google级别的资源才能执行这样的研究。</p>
+<h3 id="4-11B的规模不够大"><a href="#4-11B的规模不够大" class="headerlink" title="4. 11B的规模不够大"></a>4. 11B的规模不够大</h3><p>虽然T5-11B在2020年是巨无霸，但随着GPT-3 175B的出现，T5的规模相对较小，其某些结论（如Span Corruption最优）在更大规模上可能不再成立。</p>
+<h3 id="5-Text-to-Text框架的语义粒度问题"><a href="#5-Text-to-Text框架的语义粒度问题" class="headerlink" title="5. Text-to-Text框架的语义粒度问题"></a>5. Text-to-Text框架的语义粒度问题</h3><p>某些任务（如序列标注、实体识别）在text-to-text框架下不够自然——输出是B-I-O标签的文本序列，与预训练的”自然语言”分布存在gap。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-统一任务接口简化系统工程"><a href="#1-统一任务接口简化系统工程" class="headerlink" title="1. 统一任务接口简化系统工程"></a>1. 统一任务接口简化系统工程</h3><p>“所有任务都是文本输入→文本输出”的设计让系统架构极其简洁——添加新任务不需要修改模型代码。</p>
+<h3 id="2-小规模探索-大规模验证的价值"><a href="#2-小规模探索-大规模验证的价值" class="headerlink" title="2. 小规模探索+大规模验证的价值"></a>2. 小规模探索+大规模验证的价值</h3><p>T5证明了先用小模型进行消融实验，然后将最优选择应用到大规模的方法论是有效的——这在资源受限场景下极具实用价值。</p>
+<h3 id="3-数据工程比想象的重要"><a href="#3-数据工程比想象的重要" class="headerlink" title="3. 数据工程比想象的重要"></a>3. 数据工程比想象的重要</h3><p>C4的构建经验——从Common Crawl中清洗出高质量数据——成为数据工程的标准操作流程。</p>
+<h3 id="4-Span-Corruption是一种高效的预训练目标"><a href="#4-Span-Corruption是一种高效的预训练目标" class="headerlink" title="4. Span Corruption是一种高效的预训练目标"></a>4. Span Corruption是一种高效的预训练目标</h3><p>更短的目标序列 → 更快的训练 → 更好的效果。这个”加粗”的成功对高效预训练有启发意义。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="T5的”安静”影响力"><a href="#T5的”安静”影响力" class="headerlink" title="T5的”安静”影响力"></a>T5的”安静”影响力</h3><p>T5不像BERT或GPT-3那样轰动，但它可能是被引用最为平静的NLP论文之一。原因:</p>
+<ul>
+<li>它的贡献是方法论的（”我们系统比较了所有方法，找到了最优组合”），而非突破性的</li>
+<li>但它确立的”最佳实践”深深嵌入到了后续所有NLP研究中</li>
+<li>Flan-T5至今仍是最常用的开源模型之一</li>
+</ul>
+<h3 id="对当前LLM研究的启示"><a href="#对当前LLM研究的启示" class="headerlink" title="对当前LLM研究的启示"></a>对当前LLM研究的启示</h3><p>T5的核心教训仍然适用: </p>
+<ul>
+<li>统一的任务接口简化一切</li>
+<li>系统性实证研究比直觉更可靠</li>
+<li>数据和规模是最可靠的性能杠杆</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-更大规模下的结论泛化"><a href="#1-更大规模下的结论泛化" class="headerlink" title="1. 更大规模下的结论泛化"></a>1. 更大规模下的结论泛化</h3><p>T5的消融实验在&lt;11B规模上进行，在100B+规模上结论是否仍然成立？</p>
+<h3 id="2-Text-to-Text-Instruction-Tuning"><a href="#2-Text-to-Text-Instruction-Tuning" class="headerlink" title="2. Text-to-Text + Instruction Tuning"></a>2. Text-to-Text + Instruction Tuning</h3><p>将T5的统一框架与指令微调结合（如Flan-T5），能否达到GPT-3级别的零样本能力？</p>
+<h3 id="3-多语言Text-to-Text"><a href="#3-多语言Text-to-Text" class="headerlink" title="3. 多语言Text-to-Text"></a>3. 多语言Text-to-Text</h3><p>如何将T5的统一框架扩展到100+种语言？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Raffel, C., et al. (2020). Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer. JMLR 21(140).</li>
+<li>Devlin, J., et al. (2019). BERT: Pre-training of Deep Bidirectional Transformers. NAACL 2019.</li>
+<li>Brown, T. B., et al. (2020). Language Models are Few-Shot Learners (GPT-3). NeurIPS 2020.</li>
+<li>Vaswani, A., et al. (2017). Attention Is All You Need. NeurIPS 2017.</li>
+<li>Liu, Y., et al. (2019). RoBERTa: A Robustly Optimized BERT Pretraining Approach. arXiv:1907.11692.</li>
+<li>Chung, H. W., et al. (2022). Scaling Instruction-Finetuned Language Models (Flan-T5). arXiv:2210.11416.</li>
+<li>Tay, Y., et al. (2023). UL2: Unifying Language Learning Paradigms. ICLR 2023.</li>
+<li>Radford, A., et al. (2019). Language Models are Unsupervised Multitask Learners. OpenAI.</li>
+<li>Lewis, M., et al. (2020). BART: Denoising Sequence-to-Sequence Pre-training. ACL 2020.</li>
+<li>Shazeer, N., &amp; Stern, M. (2018). Adafactor: Adaptive Learning Rates with Sublinear Memory Cost. ICML 2018.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%9E%B6%E6%9E%84%E5%9F%BA%E7%A1%80/" class="category-chain-item">架构基础</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-nlp/" class="print-no-link">#papers/nlp</a>
+      
+        <a href="/tags/papers-pretraining/" class="print-no-link">#papers/pretraining</a>
+      
+        <a href="/tags/papers-transfer-learning/" class="print-no-link">#papers/transfer-learning</a>
+      
+        <a href="/tags/papers-text-to-text/" class="print-no-link">#papers/text-to-text</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5)</div>
+      <div>https://w2ongq6.github.io/2019/10/23/llm/note/T5_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2019年10月23日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2020/01/23/llm/note/ScalingLaws_Kaplan_note/" title="Scaling Laws for Neural Language Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Scaling Laws for Neural Language Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2019/10/11/llm/note/ZeRO_note/" title="ZeRO: Memory Optimizations Toward Training Trillion Parameter Models">
+                        <span class="hidden-mobile">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

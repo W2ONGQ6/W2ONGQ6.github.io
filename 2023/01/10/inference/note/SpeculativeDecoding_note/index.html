@@ -1,0 +1,1247 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Fast Inference from Transformers via Speculative Decoding核心信息 标题: Fast Inference from Transformers via Speculative Decoding 标题翻译: 基于投机解码的Transformer快速推理 作者: Yaniv Leviathan, Matan Kalman, Yossi Matias">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Fast Inference from Transformers via Speculative Decoding">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/01/10/inference/note/SpeculativeDecoding_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Fast Inference from Transformers via Speculative Decoding核心信息 标题: Fast Inference from Transformers via Speculative Decoding 标题翻译: 基于投机解码的Transformer快速推理 作者: Yaniv Leviathan, Matan Kalman, Yossi Matias">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2023-01-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.342Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;inference">
+<meta property="article:tag" content="papers&#x2F;speculative-decoding">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Fast Inference from Transformers via Speculative Decoding - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Fast Inference from Transformers via Speculative Decoding"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-10 00:00" pubdate>
+          2023年1月10日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          79 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Fast Inference from Transformers via Speculative Decoding</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Fast-Inference-from-Transformers-via-Speculative-Decoding"><a href="#Fast-Inference-from-Transformers-via-Speculative-Decoding" class="headerlink" title="Fast Inference from Transformers via Speculative Decoding"></a>Fast Inference from Transformers via Speculative Decoding</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Fast Inference from Transformers via Speculative Decoding</li>
+<li>标题翻译: 基于投机解码的Transformer快速推理</li>
+<li>作者: Yaniv Leviathan, Matan Kalman, Yossi Matias</li>
+<li>机构: Google Research</li>
+<li>发表时间: 2023年1月10日（arXiv首发），被ICML 2023接收为Oral</li>
+<li>发表渠道: ICML 2023 (Oral)</li>
+<li>arXiv: 2211.17192</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2211.17192">https://arxiv.org/abs/2211.17192</a></li>
+<li>论文类型: AI推理系统方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>自回归解码是大型语言模型推理中的标准方法，但其顺序特性限制了推理速度。本文提出投机解码（Speculative Decoding），一种加速Transformer推理的算法框架。核心思想是使用一个更小、更快的”草稿模型”（draft model）自回归地生成若干候选token，然后由一个更大的”目标模型”（target model）通过一次并行前向传播对所有候选token进行批量验证。我们引入了一种基于拒绝采样的新验证方案，能够保证输出分布在数学上与目标模型独立自回归解码的输出完全一致。因此，该方法是一种无损加速方案。实验表明，在T5-XXL（11B参数）的翻译和摘要任务上，该方法可实现2-3倍的实际推理加速。该方法也在LaMDA（137B参数）对话模型上进行了验证，展示了其在大规模生产系统中的适用性。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-Draft-then-Verify范式"><a href="#1-Draft-then-Verify范式" class="headerlink" title="1. Draft-then-Verify范式"></a>1. Draft-then-Verify范式</h3><p><strong>核心思想</strong>: 将自回归解码分解为两个阶段——草稿生成（draft）和验证（verify）。小型草稿模型快速生成k个候选token序列，大型目标模型通过一次前向传播同时计算所有k个位置的精确概率分布，从而利用硬件的并行计算能力。</p>
+<p><strong>为什么重要</strong>: 这是投机解码领域的奠基性范式。在此之前，自回归解码被视为难以并行化的顺序过程。Draft-then-Verify范式揭示了：语言建模中大量token是”容易”的（entropy低），小型模型可以正确预测，只有少数”困难”token需要大模型的全部能力。这从根本上改变了推理加速的研究方向。</p>
+<h3 id="2-基于拒绝采样的无损验证方案"><a href="#2-基于拒绝采样的无损验证方案" class="headerlink" title="2. 基于拒绝采样的无损验证方案"></a>2. 基于拒绝采样的无损验证方案</h3><p><strong>核心思想</strong>: 设计了一种新颖的投机采样（speculative sampling）方法，基于拒绝采样原理逐token验证草稿模型的候选——对于每个候选token，以概率min(1, p(x)&#x2F;q(x))接受它，其中p是目标模型的概率，q是草稿模型的概率。被拒绝的token从调整后的分布中重新采样。</p>
+<p><strong>为什么重要</strong>: 这是保证无损性的关键。与简单使用草稿模型预测或贪心选择不同，拒绝采样方案保证输出分布与目标模型完全一致，使得投机解码成为严格的无损方案。这一数学保证对实际部署至关重要——用户可以确信没有模型质量损失。</p>
+<h3 id="3-现成模型即插即用"><a href="#3-现成模型即插即用" class="headerlink" title="3. 现成模型即插即用"></a>3. 现成模型即插即用</h3><p><strong>核心思想</strong>: 无需训练新模型、修改模型架构或调整权重。只需将一个已有的小型模型与一个已有的目标模型配对即可。</p>
+<p><strong>为什么重要</strong>: 这极大降低了采用门槛。在实践中，训练大型模型成本极高；在已有模型基础上添加投机解码几乎零成本。该方法兼容任何自回归Transformer模型对。</p>
+<h3 id="4-大规模实际验证"><a href="#4-大规模实际验证" class="headerlink" title="4. 大规模实际验证"></a>4. 大规模实际验证</h3><p><strong>核心思想</strong>: 不仅在11B参数模型上验证，还在137B LaMDA对话模型上进行了测试。</p>
+<p><strong>为什么重要</strong>: 证明了该方法在大规模生产系统中的可行性，从实验室方法跨越到实际服务系统。Google部署中验证的LaMDA 2-3倍加速展示了该方法的生产价值。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>投机解码通过在大型目标模型和高效近似模型之间以一次大量并行的前向传播来预测、验证并选择性地校正临时token，将原本自回归的token生成过程转化为批量并行验证过程，在T5-XXL和LaMDA上实现2-3倍无损推理加速，奠定了整个投机解码研究领域的理论基础。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>大型语言模型的标准自回归解码过程是顺序的：每生成一个token，需要将整个序列重新输入模型计算下一个token的概率分布。对于Transformer架构，这意味着每次解码步骤需要O(T)次前向传播来生成T个token。由于GPU擅长大规模并行计算而非顺序小批量操作，这种解码方式严重低效利用了硬件能力。</p>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><strong>自回归解码</strong>: 每次只生成一个token，对GPU并行能力利用率极低。批量大小&#x3D;1，矩阵乘法维度远小于硬件设计目标。</li>
+<li><strong>非自回归解码</strong>: 尝试一次生成所有token，但严重牺牲输出质量——语言本质上具有顺序依赖性，并行生成无法建模token间的复杂依存关系。</li>
+<li><strong>剪枝与量化</strong>: 虽然减少了每次前向传播的成本，但没有改变解码的顺序性本质。加速受限于每次前向传播的物理时间，而非前向传播的次数。</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>容易的token与困难的token</strong>: 语言建模任务在大多数位置是”简单”的——下一个token的分布高度集中在少数选项上，小型模型能够准确预测。只有少数位置（高entropy点）需要大模型的全部能力。利用这一事实，可以让小模型处理简单token，大模型批量验证所有候选。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估任务"><a href="#评估任务" class="headerlink" title="评估任务"></a>评估任务</h3><p>本文在以下任务和模型上评估投机解码：</p>
+<ol>
+<li><p><strong>T5-XXL（11B参数）</strong>:</p>
+<ul>
+<li>WMT 2014 德英翻译（EnDe）</li>
+<li>WMT 2018 法英翻译（EnFr）</li>
+<li>CNN&#x2F;DailyMail 摘要生成</li>
+<li>使用T5-small（80M参数）作为草稿模型</li>
+</ul>
+</li>
+<li><p><strong>LaMDA（137B参数，仅解码器）</strong>:</p>
+<ul>
+<li>对话任务</li>
+<li>使用较小版本的LaMDA作为草稿模型</li>
+</ul>
+</li>
+</ol>
+<h3 id="评估指标"><a href="#评估指标" class="headerlink" title="评估指标"></a>评估指标</h3><ul>
+<li><strong>墙钟加速比（Wall-clock Speedup）</strong>: 生成给定数量token的实际时间对比</li>
+<li><strong>平均接受长度（Average Acceptance Length）</strong>: 每个验证周期平均接受多少个草稿token</li>
+<li><strong>BLEU分数</strong>: 翻译任务质量指标</li>
+<li><strong>ROUGE分数</strong>: 摘要任务质量指标</li>
+<li><strong>输出分布一致性</strong>: 验证投机解码输出与原始自回归解码输出在分布上的一致性</li>
+</ul>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>GPU: TPUv4和TPUv3（Google Cloud）</li>
+<li>对比基线: 标准自回归解码</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p>投机解码由两个交替执行的核心操作组成：草稿生成和批量验证。</p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 草稿生成（Draft Generation）</strong></p>
+<p><strong>步骤输入</strong>: 前缀序列 $x_{&lt;t}$ (前缀context)，草稿模型 $M_q$，草稿长度 $K$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>使用草稿模型 $M_q$ 自回归生成 $K$ 个候选token序列</li>
+<li>生成 $x_t \sim q(x_t | x_{&lt;t})$，$x_{t+1} \sim q(x_{t+1} | x_{\leq t})$，依此类推，共生成 $x_t, \ldots, x_{t+K-1}$</li>
+<li>记录每个位置草稿模型给出的条件概率 $q(x_{t+i} | x_{&lt;t+i})$<br><strong>步骤输出</strong>: $K$ 个候选token ${x_t, \ldots, x_{t+K-1}}$ 及其草稿条件概率</li>
+</ul>
+<p><strong>步骤2: 目标模型批量验证（Target Model Parallel Verification）</strong></p>
+<p><strong>步骤输入</strong>: 前缀序列 $x_{&lt;t}$，$K$ 个候选token，目标模型 $M_p$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>构建长为 $|x_{&lt;t}| + K$ 的完整输入序列</li>
+<li>目标模型执行<strong>一次前向传播</strong>，同时计算所有 $K$ 个位置的条件概率分布：$p(x_{t+i} | x_{&lt;t+i})$ for $i &#x3D; 0, \ldots, K-1$</li>
+<li>此步利用了Transformer的特点：一次前向传播自动为序列中每个位置产生条件概率分布<br><strong>步骤输出</strong>: $K$ 个目标模型条件概率分布</li>
+</ul>
+<p><strong>步骤3: 投机采样验证（Speculative Sampling Verification）</strong></p>
+<p><strong>步骤输入</strong>: 草稿模型条件概率 $q(x_{t+i} | x_{&lt;t+i})$，目标模型条件概率 $p(x_{t+i} | x_{&lt;t+i})$，候选token $x_{t+i}$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>对每个位置 $i &#x3D; 0, \ldots, K-1$ 依次执行：<ul>
+<li>计算接受概率：$r_i &#x3D; \min\left(1, \frac{p(x_{t+i} | x_{&lt;t+i})}{q(x_{t+i} | x_{&lt;t+i})}\right)$</li>
+<li>以概率 $r_i$ 接受token $x_{t+i}$</li>
+<li>如果接受：继续下一个位置</li>
+<li>如果拒绝：从调整后的分布 $p’(x) &#x3D; \text{norm}\left(\max(0, p(x) - q(x))\right)$ 中重新采样一个新的token，终止验证，丢弃后续所有候选<br><strong>步骤输出</strong>: 一组被接受的token（可能少于K个），以及可能的一个重新采样的终止token</li>
+</ul>
+</li>
+</ul>
+<p><strong>步骤4: 循环迭代</strong></p>
+<p><strong>步骤输入</strong>: 新扩展的前缀序列<br><strong>步骤操作</strong>: 如果已接受所有K个token，从最后一个接受位置后面的新前缀开始，返回步骤1继续生成<br><strong>步骤输出</strong>: 最终完成的生成序列</p>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="输出分布保留性"><a href="#输出分布保留性" class="headerlink" title="输出分布保留性"></a>输出分布保留性</h4><p><strong>Theorem 1（无损性）</strong>: 对于任意前缀 $x_{&lt;t}$ 和任意草稿模型 $M_q$，投机解码生成的token序列的分布与目标模型 $M_p$ 标准自回归解码生成的分布完全一致。</p>
+<p><strong>证明思路</strong>: </p>
+<ul>
+<li>对每个token位置使用归纳法证明</li>
+<li>在每个位置 $j$，被接受的token以概率 $\min(1, p&#x2F;q)$ 接受，最终输出分布等于目标分布 $p$</li>
+<li>被拒绝后从残差分布 $p’(x) &#x3D; \text{norm}(\max(0, p(x) - q(x)))$ 重采样，保证了输出分布等于 $p$</li>
+<li>推导过程类似于经典拒绝采样分析</li>
+</ul>
+<h4 id="效率分析"><a href="#效率分析" class="headerlink" title="效率分析"></a>效率分析</h4><p><strong>加速比上界</strong>:</p>
+<ul>
+<li>理想情况下，每个验证周期平均接受 $\alpha K$ 个token，其中 $\alpha$ 是平均接受率</li>
+<li>加速比 &#x3D; $\frac{\alpha K}{1 + c}$，其中 $c$ 是草稿模型前向传播相对于目标模型前向传播的成本比</li>
+<li>草稿模型成本 $c$ 通常远小于1（因为草稿模型远小于目标模型）</li>
+</ul>
+<p><strong>加速比下界</strong>:</p>
+<ul>
+<li>在最坏情况下（所有草稿预测被拒绝），加速比趋近于1（无加速但无减速）</li>
+<li>在最好情况下（所有草稿预测被接受，且 $\alpha&#x3D;1$），加速比接近 $K&#x2F;(1+c)$</li>
+</ul>
+<h3 id="算法细节"><a href="#算法细节" class="headerlink" title="算法细节"></a>算法细节</h3><h4 id="草稿模型生成策略"><a href="#草稿模型生成策略" class="headerlink" title="草稿模型生成策略"></a>草稿模型生成策略</h4><p>草稿模型可以使用贪婪解码、束搜索或温度采样。论文推荐使用标准温度采样以保证接受率。</p>
+<h4 id="K值选择"><a href="#K值选择" class="headerlink" title="K值选择"></a>K值选择</h4><p>$K$ 的选取依赖于草稿模型的质量和两者相对成本：</p>
+<ul>
+<li>较小的 $K$（如3-5）：适合草稿模型质量较低的场景</li>
+<li>较大的 $K$（如8-10）：适合草稿模型质量较高的场景</li>
+<li>论文通过实验发现 $K&#x3D;8$ 在T5-XXL上取得最佳平衡</li>
+</ul>
+<h4 id="批量验证的内存优化"><a href="#批量验证的内存优化" class="headerlink" title="批量验证的内存优化"></a>批量验证的内存优化</h4><p>一个关键实现细节是：目标模型的一次前向传播自动为序列中所有位置生成条件概率——这是Transformer Attention Mask的固有特性。不需要对K个位置分别调用目标模型。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="T5-XXL翻译任务加速"><a href="#T5-XXL翻译任务加速" class="headerlink" title="T5-XXL翻译任务加速"></a>T5-XXL翻译任务加速</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>模型</th>
+<th>加速比</th>
+<th>平均接受长度</th>
+<th>BLEU</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WMT EnDe</td>
+<td>T5-XXL + T5-Small</td>
+<td>2.6x</td>
+<td>3.5</td>
+<td>不变</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>翻译任务上实现2.6-2.7倍加速，摘要任务更简单（上下文pattern更规律），达到3.0倍</li>
+<li>BLEU&#x2F;ROUGE分数完全不变——验证了无损性</li>
+<li>平均接受长度3.5-4.2，意味着每次草稿生成8个token的批次中约有3.5-4.2个被接受</li>
+</ul>
+<h3 id="LaMDA（137B）对话任务"><a href="#LaMDA（137B）对话任务" class="headerlink" title="LaMDA（137B）对话任务"></a>LaMDA（137B）对话任务</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>加速比</th>
+<th>平均接受长度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LaMDA 137B + 小LaMDA</td>
+<td>2.0x</td>
+<td>2.8</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>即使在137B大型对话模型上也实现了2倍加速</li>
+<li>对话任务比机器翻译更难预测（创造性更高），接受率略低</li>
+<li>证明了方法在生产系统中的实际价值</li>
+</ul>
+<h3 id="加速比随K值的变化"><a href="#加速比随K值的变化" class="headerlink" title="加速比随K值的变化"></a>加速比随K值的变化</h3><table>
+<thead>
+<tr>
+<th>K值</th>
+<th>加速比 (EnDe)</th>
+<th>平均接受长度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3</td>
+<td>1.8x</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>2.3x</td>
+<td>3.0</td>
+</tr>
+<tr>
+<td>8</td>
+<td>2.6x</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td>10</td>
+<td>2.5x</td>
+<td>3.8</td>
+</tr>
+<tr>
+<td>12</td>
+<td>2.3x</td>
+<td>4.0</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>K&#x3D;8时达到峰值加速比2.6倍</li>
+<li>进一步增大K导致递减回报：更多草稿token带来的额外接受被草稿模型的额外计算开销抵消</li>
+<li>最佳K值受限于草稿模型质量和相对成本</li>
+</ul>
+<h3 id="输出分布一致性验证"><a href="#输出分布一致性验证" class="headerlink" title="输出分布一致性验证"></a>输出分布一致性验证</h3><p>论文通过统计检验（KS检验和卡方检验）验证了投机解码输出与原始输出的分布一致性：</p>
+<ul>
+<li>在采样温度T&#x3D;1.0时，输出分布无统计显著差异</li>
+<li>在贪心解码（T&#x3D;0）时，输出完全一致（因为接受率&#x3D;1对于argmax token）</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="拒绝采样机制的优雅性"><a href="#拒绝采样机制的优雅性" class="headerlink" title="拒绝采样机制的优雅性"></a>拒绝采样机制的优雅性</h3><p>投机解码的拒绝采样方案设计极为巧妙，需要深入理解：</p>
+<p><strong>标准拒绝采样视角</strong>: 目标分布 $p(x)$ 是”困难”的（计算成本高），提议分布 $q(x)$ 是”简单”的（草稿模型快速生成）。拒绝采样以概率 $p(x)&#x2F;(M \cdot q(x))$ 接受样本，但这需要提前知道上界常数 $M$（使得对所有x有 $p(x) \leq M \cdot q(x)$）。</p>
+<p><strong>投机解码的创新</strong>: 按token位置逐次应用拒绝采样，且接受概率简化为 $\min(1, p(x)&#x2F;q(x))$（即 $M&#x3D;1$）。这不是因为 $p \leq q$，而是因为：</p>
+<ul>
+<li>如果 $p(x) \geq q(x)$：直接接受（概率&#x3D;1），因为草稿模型的预测保守</li>
+<li>如果 $p(x) &lt; q(x)$：以概率 $p(x)&#x2F;q(x)$ 接受，否则重采样</li>
+<li>重采样分布调整为 $\text{norm}(\max(0, p - q))$，消除了过采样偏差</li>
+</ul>
+<h3 id="为什么”容易”的token占大多数"><a href="#为什么”容易”的token占大多数" class="headerlink" title="为什么”容易”的token占大多数"></a>为什么”容易”的token占大多数</h3><p>这是投机解码有效的基础。从信息论角度分析：</p>
+<ul>
+<li>语言模型中大多数位置的entropy较低：例如在机器翻译中，一旦确定了源句和已生成的部分翻译，下一个词的选择空间通常很小</li>
+<li>小型草稿模型和大目标模型在这些低entropy位置具有高度一致的概率分布（KL散度小）</li>
+<li>只有关键决策点（如命名实体、语法结构选择）entropy较高，两者的预测差异大</li>
+</ul>
+<h3 id="加速比的理论极限"><a href="#加速比的理论极限" class="headerlink" title="加速比的理论极限"></a>加速比的理论极限</h3><p>投机解码的加速比受限于两个因素：</p>
+<ol>
+<li><strong>模型容量比</strong>：草稿模型与目标模型的相对大小决定了一个周期的草稿生成成本</li>
+<li><strong>分布对齐度</strong>：两模型输出分布的相似性决定了接受率</li>
+</ol>
+<p>理论加速比上限为 $\min(K, \frac{1}{\text{草稿成本比}})$，实践中受草稿模型质量的约束。Google的后续工作（如Medusa、EAGLE）通过消除单独草稿模型的需求来逼近这一极限。</p>
+<h3 id="与并行解码方法的根本区别"><a href="#与并行解码方法的根本区别" class="headerlink" title="与并行解码方法的根本区别"></a>与并行解码方法的根本区别</h3><p>投机解码与非自回归解码的关键区别：</p>
+<ul>
+<li><strong>非自回归解码</strong>: 假设token之间相互条件独立，一次生成所有token——牺牲了序列依赖建模</li>
+<li><strong>投机解码</strong>: 保持完整的自回归依赖关系——草稿模型负责序列依赖，目标模型负责精确验证</li>
+<li>投机解码是”验证并行化”而非”生成并行化”</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-非自回归解码"><a href="#vs-非自回归解码" class="headerlink" title="vs 非自回归解码"></a>vs 非自回归解码</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>非自回归解码</th>
+<th>投机解码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>并行方式</td>
+<td>一次生成所有token</td>
+<td>一次验证多个草稿token</td>
+</tr>
+<tr>
+<td>质量损失</td>
+<td>通常有损失</td>
+<td><strong>无损</strong>（分布保留）</td>
+</tr>
+<tr>
+<td>依赖建模</td>
+<td>弱依赖&#x2F;独立假设</td>
+<td>完整自回归依赖（通过草稿模型）</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>理论上更高（O(T)→O(1)）</td>
+<td>2-3倍</td>
+</tr>
+<tr>
+<td>工程复杂度</td>
+<td>需要训练特殊模型</td>
+<td>即插即用，不需要训练</td>
+</tr>
+</tbody></table>
+<h3 id="vs-量化-剪枝"><a href="#vs-量化-剪枝" class="headerlink" title="vs 量化&#x2F;剪枝"></a>vs 量化&#x2F;剪枝</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>量化&#x2F;剪枝</th>
+<th>投机解码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>加速方式</td>
+<td>减少单步计算量</td>
+<td>减少总步数</td>
+</tr>
+<tr>
+<td>与硬件的兼容性</td>
+<td>需要硬件支持</td>
+<td>软件层面即可</td>
+</tr>
+<tr>
+<td>与原始模型的差异</td>
+<td>参数改变</td>
+<td>参数不变</td>
+</tr>
+<tr>
+<td>可叠加性</td>
+<td>可与投机解码叠加</td>
+<td>可与量化&#x2F;剪枝叠加</td>
+</tr>
+</tbody></table>
+<h3 id="vs-模型蒸馏"><a href="#vs-模型蒸馏" class="headerlink" title="vs 模型蒸馏"></a>vs 模型蒸馏</h3><p>投机解码可以看作是一种”在线蒸馏”形式——草稿模型在每次推理时临时充当”学生”，目标模型充当”教师”。但与蒸馏的本质区别是：</p>
+<ul>
+<li>蒸馏是训练阶段的事前压缩（修改模型权重）</li>
+<li>投机解码是推理阶段的动态协作（不修改任何权重）</li>
+</ul>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-草稿模型依赖"><a href="#1-草稿模型依赖" class="headerlink" title="1. 草稿模型依赖"></a>1. 草稿模型依赖</h3><p><strong>问题</strong>: 需要维护两个模型，增加部署复杂度</p>
+<ul>
+<li>草稿模型需要与目标模型共享词汇表</li>
+<li>两个模型需要同时驻留在内存或显存中</li>
+<li>草稿模型的选择和配对是超参数问题</li>
+</ul>
+<p><strong>影响</strong>: 在内存受限的部署场景中（如边缘设备），加载两个模型的显存开销可能抵消部分加速收益。</p>
+<h3 id="2-非批量推理受限"><a href="#2-非批量推理受限" class="headerlink" title="2. 非批量推理受限"></a>2. 非批量推理受限</h3><p><strong>问题</strong>: 当推理已经是高批量时（如离线批量推理），投机解码的加速效果可能减弱</p>
+<ul>
+<li>自回归解码的批量推理已经能较好地利用GPU并行性</li>
+<li>草稿模型的前向传播也是顺序的</li>
+</ul>
+<p><strong>影响</strong>: 主要适用于在线推理（单序列生成latency关键），在离线批量场景中加速效果需重新评估。</p>
+<h3 id="3-K值最佳选择的上下文依赖性"><a href="#3-K值最佳选择的上下文依赖性" class="headerlink" title="3. K值最佳选择的上下文依赖性"></a>3. K值最佳选择的上下文依赖性</h3><p><strong>问题</strong>: 最优草稿长度K随输入上下文和生成阶段变化</p>
+<ul>
+<li>在entropy低的常规模板区域，大K有效</li>
+<li>在创造性内容区域（如对话中的开放性问题），小K更好</li>
+<li>固定K无法适应这种变化</li>
+</ul>
+<p><strong>影响</strong>: 需要开发自适应的K值选择策略。</p>
+<h3 id="4-草稿模型质量的瓶颈"><a href="#4-草稿模型质量的瓶颈" class="headerlink" title="4. 草稿模型质量的瓶颈"></a>4. 草稿模型质量的瓶颈</h3><p><strong>问题</strong>: 加速比与草稿模型质量直接相关</p>
+<ul>
+<li>草稿模型太弱：接受率低，加速有限</li>
+<li>草稿模型太强：草稿生成本身变慢，抵消部分收益</li>
+<li>最优草稿模型选择是一个探索问题</li>
+</ul>
+<p><strong>影响</strong>: 需要针对每个目标模型进行草稿模型选择的实验和调优。</p>
+<h3 id="5-内存带宽瓶颈"><a href="#5-内存带宽瓶颈" class="headerlink" title="5. 内存带宽瓶颈"></a>5. 内存带宽瓶颈</h3><p><strong>问题</strong>: 投机解码在内存带宽受限的场景中效果受限</p>
+<ul>
+<li>即使无计算成本，草稿token加载和验证需要内存访问</li>
+<li>在大批量推理中，内存带宽可能成为瓶颈而非计算</li>
+</ul>
+<p><strong>影响</strong>: 加速效果依赖于具体的硬件配置和工作负载特性。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-推理中的投机执行原则"><a href="#1-推理中的投机执行原则" class="headerlink" title="1. 推理中的投机执行原则"></a>1. 推理中的投机执行原则</h3><p><strong>洞见</strong>: “猜测然后验证”的投机原则可以推广到其他推理场景</p>
+<ul>
+<li>核心：用廉价操作做猜测，用昂贵操作做验证</li>
+<li>条件是猜测的正确率足够高，使得批量验证的额外开销低于猜测失误的代价</li>
+<li>这一原则已在数据库查询优化、CPU分支预测中广泛使用</li>
+</ul>
+<p><strong>如何应用</strong>: 在需要顺序处理但又可以并行验证的任何推理任务中，可以考虑投机执行策略。</p>
+<h3 id="2-拒绝采样作为无损保证机制"><a href="#2-拒绝采样作为无损保证机制" class="headerlink" title="2. 拒绝采样作为无损保证机制"></a>2. 拒绝采样作为无损保证机制</h3><p><strong>洞见</strong>: 拒绝采样不仅是采样技术，更是质量保证机制</p>
+<ul>
+<li>允许使用近似方法加速，同时保持精确的统计性质</li>
+<li>关键在于设计合适的残差采样方案</li>
+<li>这种”近似计算+精确校正”的模式可以推广</li>
+</ul>
+<p><strong>如何应用</strong>: 对于任何需要精确输出的推理任务，考虑使用轻量近似方法+拒绝采样校正的组合。</p>
+<h3 id="3-分布式协作推理范式"><a href="#3-分布式协作推理范式" class="headerlink" title="3. 分布式协作推理范式"></a>3. 分布式协作推理范式</h3><p><strong>洞见</strong>: 大型模型和小型模型可以协作而非替代</p>
+<ul>
+<li>小型模型处理简单token（节省计算）</li>
+<li>大型模型批量验证（利用并行性）</li>
+<li>两者分工协作，整体效率超过各自单独运行</li>
+</ul>
+<p><strong>如何应用</strong>: 在多模型系统中设计分工合作策略，而非简单的大小模型选择。</p>
+<h3 id="4-无训练优化的部署优势"><a href="#4-无训练优化的部署优势" class="headerlink" title="4. 无训练优化的部署优势"></a>4. 无训练优化的部署优势</h3><p><strong>洞见</strong>: 不需要训练或修改模型参数的优化方法具有极高的实际价值</p>
+<ul>
+<li>训练大模型成本极高（数百万美元）</li>
+<li>无需重新训练的优化方法可以立即应用于已有模型</li>
+<li>降低采用门槛是推动技术从论文到生产的关键因素</li>
+</ul>
+<p><strong>如何应用</strong>: 在设计推理优化方法时，优先考虑不需要重新训练或微调的方案。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>Draft-then-Verify范式的扩展</strong>: 后续工作从三个方向扩展了这一范式——消除单独草稿模型（Medusa）、改进草稿质量（EAGLE）、优化验证效率（Tree Attention）。理解原始投机解码对理解所有这些工作至关重要。</p>
+</li>
+<li><p><strong>多种加速技术的组合</strong>: 投机解码可以与量化（减少每次前向传播的时间）、FlashAttention（减少注意力计算的内存开销）、KV-cache量化（减少显存占用）等技术组合，获得叠加加速效果。现代生产推理系统（如vLLM、TensorRT-LLM）已经将多种技术组合部署。</p>
+</li>
+<li><p><strong>理论价值的深远影响</strong>: 相比工程价值，投机解码的文章更重大的贡献是打开了”推理加速不需要牺牲质量”的研究方向。此前的主流观点是加速必然伴随质量损失（量化、蒸馏、剪枝），而投机解码证明了无损加速的可能。</p>
+</li>
+</ol>
+<h3 id="实际应用考量"><a href="#实际应用考量" class="headerlink" title="实际应用考量"></a>实际应用考量</h3><ol>
+<li><p><strong>草稿模型的内存与延迟权衡</strong>: 在实践中，草稿模型的质量（接受率）与其计算成本（推理时间）需要仔细权衡。一个常用的经验法则是草稿模型的参数量约为目标模型的1&#x2F;10-1&#x2F;20。</p>
+</li>
+<li><p><strong>部署策略</strong>: 在服务系统中，通常使用较小的草稿模型专用于草稿生成（轻量GPU或CPU），较大的目标模型专用于批量验证。草稿模型的推理甚至可以offload到CPU，目标模型留在GPU。</p>
+</li>
+<li><p><strong>温度参数对接受率的影响</strong>: 较高的采样温度降低接受率（因为分布更分散），贪心解码（T&#x3D;0）最大化接受率。对于需要创造性输出的任务，温度和加速之间存在权衡。</p>
+</li>
+</ol>
+<h3 id="与其他系统优化的协同"><a href="#与其他系统优化的协同" class="headerlink" title="与其他系统优化的协同"></a>与其他系统优化的协同</h3><p>投机解码可以与以下技术协同工作：</p>
+<ul>
+<li><strong>Continuous Batching（vLLM）</strong>: 混合不同序列的草稿生成和验证阶段</li>
+<li><strong>PagedAttention</strong>: 将KV-cache分页存储，配合投机解码的多次前向传播</li>
+<li><strong>FlashAttention</strong>: 减少注意力计算的内存开销，提升每次前向传播的速度</li>
+<li><strong>SpecInfer的树验证</strong>: 扩展为多草稿模型的树状验证</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-自适应K值选择"><a href="#1-自适应K值选择" class="headerlink" title="1. 自适应K值选择"></a>1. 自适应K值选择</h3><p><strong>问题</strong>: 能否根据上下文entropy动态调整草稿长度K？</p>
+<p><strong>研究方向</strong>: 设计一个轻量级entropy估计器，在草稿生成前预估当前上下文的难度，据此选择K值。高entropy上下文使用小K（减少浪费的草稿），低entropy上下文使用大K（充分利用投机机会）。</p>
+<p><strong>潜在影响</strong>: 进一步提升加速比5-15%，特别是在多样化的对话和推理任务中。</p>
+<h3 id="2-草稿模型自动选择"><a href="#2-草稿模型自动选择" class="headerlink" title="2. 草稿模型自动选择"></a>2. 草稿模型自动选择</h3><p><strong>问题</strong>: 对于给定的目标模型和部署环境，如何自动选择最优草稿模型？</p>
+<p><strong>研究方向</strong>: 开发一个轻量级评估框架，自动尝试不同的草稿模型候选（不同大小、不同架构），测量接受率和草稿生成成本，选择帕累托最优的草稿模型。</p>
+<p><strong>潜在影响</strong>: 消除人工试错的部署开销。</p>
+<h3 id="3-跨模态投机解码"><a href="#3-跨模态投机解码" class="headerlink" title="3. 跨模态投机解码"></a>3. 跨模态投机解码</h3><p><strong>问题</strong>: 投机解码的Draft-then-Verify范式能否推广到多模态模型（如VLMs、语音模型）？</p>
+<p><strong>研究方向</strong>: 探索图像token、音频token与文本token的投机解码。多模态场景中的”容易token”与”困难token”的分布可能完全不同。</p>
+<p><strong>潜在影响</strong>: 扩展到多模态推理，开启新的加速应用场景。</p>
+<h3 id="4-投机解码与模型量化的组合优化"><a href="#4-投机解码与模型量化的组合优化" class="headerlink" title="4. 投机解码与模型量化的组合优化"></a>4. 投机解码与模型量化的组合优化</h3><p><strong>问题</strong>: 当草稿模型和目标模型都经过不同量化级别处理时，加速比如何变化？</p>
+<p><strong>研究方向</strong>: 系统研究量化级别与接受率的关系，寻找最优组合（如4-bit目标模型 + 8-bit草稿模型 vs 8-bit + 8-bit）。</p>
+<p><strong>潜在影响</strong>: 在资源极度受限的设备（手机、IoT）上实现高质量生成。</p>
+<h3 id="5-分布差异的量化度量"><a href="#5-分布差异的量化度量" class="headerlink" title="5. 分布差异的量化度量"></a>5. 分布差异的量化度量</h3><p><strong>问题</strong>: 是否存在比接受率更好的度量来预测投机解码的加速效果？</p>
+<p><strong>研究方向</strong>: 探索KL散度、Total Variation距离、交叉熵等分布差异度量与实际加速比的关系，寻找更精确的加速预测模型。</p>
+<p><strong>潜在影响</strong>: 在设计阶段就能预测加速效果，指导草稿模型的设计和选择。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Leviathan, Y., Kalman, M., &amp; Matias, Y. (2023). Fast Inference from Transformers via Speculative Decoding. ICML 2023 (Oral). arXiv:2211.17192</li>
+<li>Vaswani, A., et al. (2017). Attention Is All You Need. NeurIPS 2017.</li>
+<li>Raffel, C., et al. (2020). Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer. JMLR 2020.</li>
+<li>Gu, J., &amp; Kong, X. (2021). Fully Non-autoregressive Neural Machine Translation: Tricks of the Trade. ACL 2021.</li>
+<li>Stern, M., et al. (2018). Blockwise Parallel Decoding for Deep Autoregressive Models. NeurIPS 2018.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8A%95%E6%9C%BA%E8%A7%A3%E7%A0%81/" class="category-chain-item">投机解码</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-inference/" class="print-no-link">#papers/inference</a>
+      
+        <a href="/tags/papers-speculative-decoding/" class="print-no-link">#papers/speculative-decoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Fast Inference from Transformers via Speculative Decoding</div>
+      <div>https://w2ongq6.github.io/2023/01/10/inference/note/SpeculativeDecoding_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年1月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/01/17/aigc/note/GLIGEN_note/" title="GLIGEN: Open-Set Grounded Text-to-Image Generation">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">GLIGEN: Open-Set Grounded Text-to-Image Generation</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/01/02/inference/note/SparseGPT_note/" title="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot">
+                        <span class="hidden-mobile">SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

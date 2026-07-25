@@ -1,0 +1,1407 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot核心信息 作者: Elias Frantar, Dan Alistarh (IST Austria) 发表: ICML 2023 arXiv: 2301.00774 代码: IST-DASLab&#x2F;sparsegpt 关键词: One-Shot Pr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/01/02/inference/note/SparseGPT_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot核心信息 作者: Elias Frantar, Dan Alistarh (IST Austria) 发表: ICML 2023 arXiv: 2301.00774 代码: IST-DASLab&#x2F;sparsegpt 关键词: One-Shot Pr">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-01-02T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.310Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="hessian">
+<meta property="article:tag" content="llm-compression">
+<meta property="article:tag" content="one-shot-pruning">
+<meta property="article:tag" content="optimal-brain-surgeon">
+<meta property="article:tag" content="pruning">
+<meta property="article:tag" content="sparsegpt">
+<meta property="article:tag" content="sparsity">
+<meta property="article:tag" content="unstructured-pruning">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-02 08:00" pubdate>
+          2023年1月2日 早上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          81 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="SparseGPT-Massive-Language-Models-Can-Be-Accurately-Pruned-in-One-Shot"><a href="#SparseGPT-Massive-Language-Models-Can-Be-Accurately-Pruned-in-One-Shot" class="headerlink" title="SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot"></a>SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>作者</strong>: Elias Frantar, Dan Alistarh (IST Austria)</li>
+<li><strong>发表</strong>: ICML 2023</li>
+<li><strong>arXiv</strong>: 2301.00774</li>
+<li><strong>代码</strong>: <a target="_blank" rel="noopener" href="https://github.com/IST-DASLab/sparsegpt">IST-DASLab&#x2F;sparsegpt</a></li>
+<li><strong>关键词</strong>: One-Shot Pruning, Unstructured Sparsity, Hessian-based, Optimal Brain Surgeon, LLM Compression</li>
+</ul>
+<p>SparseGPT 是大语言模型一次性剪枝领域的开创性工作。它将经典的 Optimal Brain Surgeon（OBS）框架重新设计为一种可以在大规模 Transformer 模型上高效运行的剪枝算法。核心思想是：基于 Hessian 矩阵的二阶信息，在剪掉权重的”同时”更新剩余权重以补偿剪枝带来的误差。与 GPTQ 同源（来自同一研究组），SparseGPT 证明了 LLM 可以在不需要任何重训练的情况下，一次性达到 50-60% 的非结构化稀疏度（unstructured sparsity），且困惑度上升极低。对于最大的模型，甚至可以在约 4 个 GPU 小时内完成剪枝。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 SparseGPT，这是第一种在单次操作中精确剪枝大规模语言模型的方法，无需任何重训练。SparseGPT 将大规模 Transformer 模型的剪枝问题视为一种大规模的稀疏回归问题，并通过一种新的大规模近似稀疏回归求解器来解决，该求解器效率足以在数小时内处理像 OPT-175B 和 BLOOM-176B 这样的最大开源模型。我们的实验表明，SparseGPT 在规模巨大的模型上效果惊人：只需 4 个 GPU 小时，我们就可以诱导 50-60% 的非结构化稀疏度，使其在困惑度上的增加极小。在极端稀疏度（如 80%）下，SparseGPT 仍然能够保持模型的准确性。与之前所有已知的从头训练和一次性方法相比，SparseGPT 显著推进了大规模剪枝的帕累托前沿。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>将 OBS 框架简化为大规模场景</strong>: 重新设计了 Optimal Brain Surgeon——从必须按 Hessian 对角元顺序贪心剪枝，简化为固定顺序的行更新，通过矩阵求逆的秩-1 更新公式（Sherman-Morrison）高效实现。</p>
+</li>
+<li><p><strong>大规模稀疏回归求解器</strong>: 将剪枝问题构建为逐行的稀疏回归问题：在每行上，选择 sparsity% 的最大权重保留，将其余权重设为零，同时用保留的权重更新来补偿剪枝误差。</p>
+</li>
+<li><p><strong>自适应掩码选择</strong>: 核心创新——不是在选择权重之前补偿误差（OBS 做法），而是迭代更新剩余权重的过程中动态调整哪些权重被保留。剪枝掩码 M 和权重更新交替进行。</p>
+</li>
+<li><p><strong>一次性完成、量化级效率</strong>: 不需要任何重训练、不需要多轮迭代。对最大模型（175B）的剪枝仅需 4 GPU 小时，与 GPTQ 的量化速度相当。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>SparseGPT 将 OBS 框架重新设计为固定顺序+自适应掩码的大规模稀疏回归，首次在无需重训练的情况下一次性将 175B 模型剪枝到 50-60% 稀疏度且精度几乎无损。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><p>剪枝是模型压缩的重要技术路线，但传统方法要么需要大量的重训练（迭代剪枝、基于梯度的剪枝），要么在 LLM 规模下精度崩溃（幅度剪枝等简单方法）。核心挑战在于：<strong>能否找到一种无需重训练的一次性剪枝方法，在 LLM 上实现高稀疏度（50%+）的同时保持模型精度？</strong></p>
+<p>这个问题本质上比量化更困难。量化是将权重映射到有限的离散集合，而剪枝是将权重设为零——丢失了信息。OBS 框架在理论上可以通过 Hessian 信息补偿剪枝误差，但经典的 OBS 算法复杂度为 O(n^4)，在 LLM 上完全不可行。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="任务定义"><a href="#任务定义" class="headerlink" title="任务定义"></a>任务定义</h3><p>给定预训练的 Transformer 模型和每层的目标稀疏度 p（如 50%），目标是找到每层的最优剪枝掩码 M ∈ {0,1}，使得剪枝后模型的输出误差最小：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs coq">argmin_&#123;M, Ŵ&#125; |<span class="hljs-type">|WX</span> - (M ⊙ Ŵ)X|<span class="hljs-type">|_2</span>^<span class="hljs-number">2</span>,  subject to |<span class="hljs-type">|M</span>|<span class="hljs-type">|_0</span> / |<span class="hljs-type">M</span>| <span class="hljs-type">= p</span><br></code></pre></td></tr></table></figure>
+
+<p>其中 M ⊙ Ŵ 表示仅保留非剪枝权重。关键是，未剪枝的权重 Ŵ 可以被更新以补偿剪枝误差。</p>
+<h3 id="校准数据"><a href="#校准数据" class="headerlink" title="校准数据"></a>校准数据</h3><ul>
+<li>从 C4 训练集中随机采样 128 个序列，每个序列 2048 tokens</li>
+<li>仅用于 forward pass 收集 Hessian 信息</li>
+</ul>
+<h3 id="评估"><a href="#评估" class="headerlink" title="评估"></a>评估</h3><ul>
+<li><strong>语言建模困惑度</strong>: WikiText-2, PTB, C4</li>
+<li><strong>零样本任务</strong>: LAMBADA, ARC, PIQA, StoryCloze, HellaSwag, WinoGrande</li>
+</ul>
+<h2 id="方法主线-机制流程"><a href="#方法主线-机制流程" class="headerlink" title="方法主线 + 机制流程"></a>方法主线 + 机制流程</h2><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-问题重构：剪枝-稀疏回归"><a href="#1-问题重构：剪枝-稀疏回归" class="headerlink" title="1. 问题重构：剪枝 &#x3D; 稀疏回归"></a>1. 问题重构：剪枝 &#x3D; 稀疏回归</h3><p>SparseGPT 将剪枝问题重新定义为逐行的稀疏回归。对于权重矩阵 W 的第 i 行 w_i：</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">argmin_&#123;ŵ_i, ||<span class="hljs-string">ŵ_i</span>||<span class="hljs-string">_0 = k&#125; </span>||<span class="hljs-string">W_&#123;&lt;i&#125; X - Ŵ_&#123;&lt;i&#125; X</span>||<br></code></pre></td></tr></table></figure>
+
+<p>即：在其他行已经剪枝的条件下，找到第 i 行的 k 个非零元素（k 由稀疏度 p 决定），使得当前行的输出误差最小。这等价于一个带有 mask 约束的稀疏最小二乘回归。</p>
+<h3 id="2-Hessian-矩阵的秩-1-更新"><a href="#2-Hessian-矩阵的秩-1-更新" class="headerlink" title="2. Hessian 矩阵的秩-1 更新"></a>2. Hessian 矩阵的秩-1 更新</h3><p>SparseGPT 的关键数学工具是 Hessian 矩阵 H &#x3D; 2XX^T。当权重矩阵的一行被更新时，Hessian 逆可以通过 Sherman-Morrison 公式高效更新，而不需要重新计算矩阵求逆：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">(H_</span><span class="hljs-template-variable">&#123;-i&#125;</span><span class="language-xml">)^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml"> = (H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml"> - (H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">_</span><span class="hljs-template-variable">&#123;:,i&#125;</span><span class="language-xml"> · H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">_</span><span class="hljs-template-variable">&#123;i,:&#125;</span><span class="language-xml">) / H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">_</span><span class="hljs-template-variable">&#123;i,i&#125;</span><span class="language-xml">)</span><br></code></pre></td></tr></table></figure>
+
+<p>这个公式的复杂度为 O(d^2)（而非 O(d^3)），使其在大规模矩阵上可行。</p>
+<h3 id="3-自适应掩码选择（Adaptive-Mask-Selection）"><a href="#3-自适应掩码选择（Adaptive-Mask-Selection）" class="headerlink" title="3. 自适应掩码选择（Adaptive Mask Selection）"></a>3. 自适应掩码选择（Adaptive Mask Selection）</h3><p>这是 SparseGPT 区别于传统 OBS 的核心创新。传统 OBS 要求在剪枝前就确定掩码（按 Hessian 逆对角元选择），但 SparseGPT 采用了一种迭代方法：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">对于权重矩阵 W 的每一行 w_i</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">1. 初始化掩码 M_i</span><span class="hljs-punctuation">:</span> <span class="hljs-string">选择 |w_i| 最大的 k 个位置（k = 行大小 × (1-p)）</span><br>  <span class="hljs-attribute">2. 对于每个选中的权重位置 q</span><span class="hljs-punctuation">:</span><br>     <span class="hljs-attribute">a. 计算 Hessian 引导的误差补偿</span><span class="hljs-punctuation">:</span> <span class="hljs-string">ε = w_q / [H^&#123;-1&#125;]_&#123;qq&#125;</span><br>     <span class="hljs-attribute">b. 将 w_q 设为零</span><br><span class="hljs-attribute">     c. 更新剩余权重</span><span class="hljs-punctuation">:</span> <span class="hljs-string">w ← w - ε · H^&#123;-1&#125;_&#123;:,q&#125;</span><br>     <span class="hljs-attribute">d. 可能调整掩码</span><span class="hljs-punctuation">:</span> <span class="hljs-string">如果更新后某未掩码权重变小，可以将其替换为更大的已掩码权重</span><br>  3. 重复步骤 2 直到掩码稳定<br></code></pre></td></tr></table></figure>
+
+<p><strong>自适应性的价值</strong>：在误差补偿过程中，原来的”不重要”权重可能变得重要（因为接收了补偿），反之亦然。通过动态调整掩码，SparseGPT 找到了真正最优的稀疏化方案。</p>
+<h3 id="4-分块处理（Block-wise-Processing）"><a href="#4-分块处理（Block-wise-Processing）" class="headerlink" title="4. 分块处理（Block-wise Processing）"></a>4. 分块处理（Block-wise Processing）</h3><p>类似于 GPTQ 的批量更新，SparseGPT 将权重矩阵的列分成块（block size B &#x3D; 50-150），逐块进行剪枝和补偿。这有两个好处：</p>
+<ul>
+<li>利用 GPU 的矩阵运算批量处理，提高效率</li>
+<li>避免对整个矩阵进行 Hessian 更新，控制内存使用</li>
+</ul>
+<h3 id="5-完整-SparseGPT-算法"><a href="#5-完整-SparseGPT-算法" class="headerlink" title="5. 完整 SparseGPT 算法"></a>5. 完整 SparseGPT 算法</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">输入</span><span class="hljs-punctuation">:</span> <span class="hljs-string">权重 W ∈ R^&#123;d_row×d_col&#125;, Hessian H = 2XX^T, 稀疏度 p</span><br><span class="hljs-attribute">输出</span><span class="hljs-punctuation">:</span> <span class="hljs-string">剪枝后的权重 Ŵ, 剪枝掩码 M</span><br><br><span class="hljs-attribute">1. 逐行处理 (i = 1 to d_row)</span><span class="hljs-punctuation">:</span><br>   <span class="hljs-attribute">a. 按 |w_i| 排序，初始化掩码 M_i（保留最大的 k 个）</span><br><span class="hljs-attribute">   b. 对掩码中每个位置 q</span><span class="hljs-punctuation">:</span><br>      <span class="hljs-bullet">-</span> <span class="hljs-string">w_q 设为 0</span><br>      <span class="hljs-bullet">-</span> <span class="hljs-string">补偿误差: w_i ← w_i - w_q/[H^&#123;-1&#125;]_&#123;qq&#125; · H^&#123;-1&#125;_&#123;:,q&#125;</span><br>      <span class="hljs-bullet">-</span> <span class="hljs-string">可选: 重新评估掩码，替换不合适的权重</span><br>   c. 通过 Sherman-Morrison 更新 H^&#123;-1&#125;<br><br>2. 对所有层重复步骤 1<br>3. 返回 Ŵ, M<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-半结构化稀疏模式（Semi-structured-N-M-Sparsity）"><a href="#6-半结构化稀疏模式（Semi-structured-N-M-Sparsity）" class="headerlink" title="6. 半结构化稀疏模式（Semi-structured N:M Sparsity）"></a>6. 半结构化稀疏模式（Semi-structured N:M Sparsity）</h3><p>除了非结构化稀疏，SparseGPT 还支持半结构化稀疏模式（如 NVIDIA 的 2:4 稀疏），这种模式对 GPU 硬件加速友好。在 2:4 稀疏中，每连续 4 个权重中恰好有 2 个为零。SparseGPT 通过修改掩码约束（每 4 个权重中选 2 个最大的）即可适配。</p>
+<h2 id="关键结果-表格"><a href="#关键结果-表格" class="headerlink" title="关键结果 + 表格"></a>关键结果 + 表格</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="语言建模困惑度（WikiText-2-OPT-模型-非结构化稀疏）"><a href="#语言建模困惑度（WikiText-2-OPT-模型-非结构化稀疏）" class="headerlink" title="语言建模困惑度（WikiText-2, OPT 模型, 非结构化稀疏）"></a>语言建模困惑度（WikiText-2, OPT 模型, 非结构化稀疏）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Sparsity</th>
+<th align="center">Baseline PPL</th>
+<th align="center">SparseGPT PPL</th>
+<th align="center">ΔPPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-125M</td>
+<td align="center">50%</td>
+<td align="center">27.65</td>
+<td align="center">29.94</td>
+<td align="center">+2.29</td>
+</tr>
+<tr>
+<td>OPT-125M</td>
+<td align="center">60%</td>
+<td align="center">27.65</td>
+<td align="center">33.21</td>
+<td align="center">+5.56</td>
+</tr>
+<tr>
+<td>OPT-350M</td>
+<td align="center">50%</td>
+<td align="center">22.00</td>
+<td align="center">23.31</td>
+<td align="center">+1.31</td>
+</tr>
+<tr>
+<td>OPT-350M</td>
+<td align="center">60%</td>
+<td align="center">22.00</td>
+<td align="center">25.58</td>
+<td align="center">+3.58</td>
+</tr>
+<tr>
+<td>OPT-1.3B</td>
+<td align="center">50%</td>
+<td align="center">14.63</td>
+<td align="center">15.14</td>
+<td align="center">+0.51</td>
+</tr>
+<tr>
+<td>OPT-1.3B</td>
+<td align="center">60%</td>
+<td align="center">14.63</td>
+<td align="center">16.28</td>
+<td align="center">+1.65</td>
+</tr>
+<tr>
+<td>OPT-2.7B</td>
+<td align="center">50%</td>
+<td align="center">12.47</td>
+<td align="center">12.84</td>
+<td align="center">+0.37</td>
+</tr>
+<tr>
+<td>OPT-2.7B</td>
+<td align="center">60%</td>
+<td align="center">12.47</td>
+<td align="center">13.64</td>
+<td align="center">+1.17</td>
+</tr>
+<tr>
+<td>OPT-6.7B</td>
+<td align="center">50%</td>
+<td align="center">10.86</td>
+<td align="center">11.09</td>
+<td align="center">+0.23</td>
+</tr>
+<tr>
+<td>OPT-6.7B</td>
+<td align="center">60%</td>
+<td align="center">10.86</td>
+<td align="center">11.68</td>
+<td align="center">+0.82</td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td align="center">50%</td>
+<td align="center">10.13</td>
+<td align="center">10.32</td>
+<td align="center">+0.19</td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td align="center">60%</td>
+<td align="center">10.13</td>
+<td align="center">10.80</td>
+<td align="center">+0.67</td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td align="center">50%</td>
+<td align="center">9.56</td>
+<td align="center">9.71</td>
+<td align="center">+0.15</td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td align="center">60%</td>
+<td align="center">9.56</td>
+<td align="center">10.11</td>
+<td align="center">+0.55</td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td align="center">50%</td>
+<td align="center">9.34</td>
+<td align="center">9.46</td>
+<td align="center">+0.12</td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td align="center">60%</td>
+<td align="center">9.34</td>
+<td align="center">9.76</td>
+<td align="center">+0.42</td>
+</tr>
+<tr>
+<td>OPT-175B</td>
+<td align="center">50%</td>
+<td align="center">8.34</td>
+<td align="center">8.42</td>
+<td align="center">+0.08</td>
+</tr>
+<tr>
+<td>OPT-175B</td>
+<td align="center">60%</td>
+<td align="center">8.34</td>
+<td align="center">8.62</td>
+<td align="center">+0.28</td>
+</tr>
+</tbody></table>
+<h3 id="BLOOM-模型（WikiText-2-50-非结构化稀疏）"><a href="#BLOOM-模型（WikiText-2-50-非结构化稀疏）" class="headerlink" title="BLOOM 模型（WikiText-2, 50% 非结构化稀疏）"></a>BLOOM 模型（WikiText-2, 50% 非结构化稀疏）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Baseline PPL</th>
+<th align="center">SparseGPT PPL</th>
+<th align="center">ΔPPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BLOOM-560M</td>
+<td align="center">23.04</td>
+<td align="center">24.27</td>
+<td align="center">+1.23</td>
+</tr>
+<tr>
+<td>BLOOM-1.1B</td>
+<td align="center">16.92</td>
+<td align="center">17.47</td>
+<td align="center">+0.55</td>
+</tr>
+<tr>
+<td>BLOOM-1.7B</td>
+<td align="center">15.63</td>
+<td align="center">16.09</td>
+<td align="center">+0.46</td>
+</tr>
+<tr>
+<td>BLOOM-3B</td>
+<td align="center">13.51</td>
+<td align="center">13.88</td>
+<td align="center">+0.37</td>
+</tr>
+<tr>
+<td>BLOOM-7.1B</td>
+<td align="center">11.37</td>
+<td align="center">11.63</td>
+<td align="center">+0.26</td>
+</tr>
+<tr>
+<td>BLOOM-176B</td>
+<td align="center">8.10</td>
+<td align="center">8.28</td>
+<td align="center">+0.18</td>
+</tr>
+</tbody></table>
+<h3 id="半结构化-2-4-稀疏（50-稀疏度）"><a href="#半结构化-2-4-稀疏（50-稀疏度）" class="headerlink" title="半结构化 2:4 稀疏（50% 稀疏度）"></a>半结构化 2:4 稀疏（50% 稀疏度）</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">Baseline PPL</th>
+<th align="center">SparseGPT 2:4 PPL</th>
+<th align="center">ΔPPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-6.7B</td>
+<td align="center">10.86</td>
+<td align="center">11.70</td>
+<td align="center">+0.84</td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td align="center">10.13</td>
+<td align="center">10.80</td>
+<td align="center">+0.67</td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td align="center">9.56</td>
+<td align="center">10.08</td>
+<td align="center">+0.52</td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td align="center">9.34</td>
+<td align="center">9.72</td>
+<td align="center">+0.38</td>
+</tr>
+</tbody></table>
+<h3 id="Zero-Shot-准确率（OPT-50-稀疏）"><a href="#Zero-Shot-准确率（OPT-50-稀疏）" class="headerlink" title="Zero-Shot 准确率（OPT, 50% 稀疏）"></a>Zero-Shot 准确率（OPT, 50% 稀疏）</h3><table>
+<thead>
+<tr>
+<th>Task</th>
+<th align="center">OPT-13B FP16</th>
+<th align="center">OPT-13B 50%</th>
+<th align="center">OPT-30B FP16</th>
+<th align="center">OPT-30B 50%</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LAMBADA</td>
+<td align="center">72.4%</td>
+<td align="center">71.5%</td>
+<td align="center">74.9%</td>
+<td align="center">74.2%</td>
+</tr>
+<tr>
+<td>ARC-easy</td>
+<td align="center">64.9%</td>
+<td align="center">63.3%</td>
+<td align="center">68.4%</td>
+<td align="center">67.1%</td>
+</tr>
+<tr>
+<td>ARC-challenge</td>
+<td align="center">29.8%</td>
+<td align="center">28.4%</td>
+<td align="center">32.9%</td>
+<td align="center">31.5%</td>
+</tr>
+<tr>
+<td>PIQA</td>
+<td align="center">77.3%</td>
+<td align="center">76.0%</td>
+<td align="center">78.6%</td>
+<td align="center">77.9%</td>
+</tr>
+<tr>
+<td>StoryCloze</td>
+<td align="center">67.1%</td>
+<td align="center">65.9%</td>
+<td align="center">71.1%</td>
+<td align="center">70.3%</td>
+</tr>
+<tr>
+<td>HellaSwag</td>
+<td align="center">56.6%</td>
+<td align="center">55.0%</td>
+<td align="center">62.5%</td>
+<td align="center">61.2%</td>
+</tr>
+<tr>
+<td>WinoGrande</td>
+<td align="center">63.0%</td>
+<td align="center">62.2%</td>
+<td align="center">68.3%</td>
+<td align="center">67.5%</td>
+</tr>
+<tr>
+<td><strong>Average</strong></td>
+<td align="center">61.6%</td>
+<td align="center">60.3%</td>
+<td align="center">65.2%</td>
+<td align="center">64.2%</td>
+</tr>
+</tbody></table>
+<h3 id="与竞争方法的比较（OPT-13B-50-非结构化稀疏）"><a href="#与竞争方法的比较（OPT-13B-50-非结构化稀疏）" class="headerlink" title="与竞争方法的比较（OPT-13B, 50% 非结构化稀疏）"></a>与竞争方法的比较（OPT-13B, 50% 非结构化稀疏）</h3><table>
+<thead>
+<tr>
+<th>Method</th>
+<th align="center">WikiText-2 PPL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16 Baseline</td>
+<td align="center">10.13</td>
+</tr>
+<tr>
+<td>Magnitude Pruning</td>
+<td align="center">769.80</td>
+</tr>
+<tr>
+<td>OBC</td>
+<td align="center">11.55</td>
+</tr>
+<tr>
+<td>SparseGPT</td>
+<td align="center"><strong>10.32</strong></td>
+</tr>
+</tbody></table>
+<h3 id="剪枝速度"><a href="#剪枝速度" class="headerlink" title="剪枝速度"></a>剪枝速度</h3><table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="center">GPU Hours (50% sparsity)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-125M</td>
+<td align="center">0.01</td>
+</tr>
+<tr>
+<td>OPT-1.3B</td>
+<td align="center">0.05</td>
+</tr>
+<tr>
+<td>OPT-6.7B</td>
+<td align="center">0.2</td>
+</tr>
+<tr>
+<td>OPT-13B</td>
+<td align="center">0.4</td>
+</tr>
+<tr>
+<td>OPT-30B</td>
+<td align="center">0.9</td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td align="center">1.9</td>
+</tr>
+<tr>
+<td>OPT-175B</td>
+<td align="center">4.2</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="规模效应：越大越好剪"><a href="#规模效应：越大越好剪" class="headerlink" title="规模效应：越大越好剪"></a>规模效应：越大越好剪</h3><p>SparseGPT 最惊人的发现可能是<strong>规模效应</strong>：模型越大，剪枝后的精度损失越小。OPT-175B 在 50% 稀疏度下的困惑度增量仅为 +0.08，而 OPT-125M 为 +2.29。这个趋势强烈且一致：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">OPT</span>-<span class="hljs-number">125</span>M: +<span class="hljs-number">2</span>.<span class="hljs-number">29</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">350</span>M: +<span class="hljs-number">1</span>.<span class="hljs-number">31</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">1</span>.<span class="hljs-number">3</span>B: +<span class="hljs-number">0</span>.<span class="hljs-number">51</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">2</span>.<span class="hljs-number">7</span>B: +<span class="hljs-number">0</span>.<span class="hljs-number">37</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">6</span>.<span class="hljs-number">7</span>B: +<span class="hljs-number">0</span>.<span class="hljs-number">23</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">13</span>B:  +<span class="hljs-number">0</span>.<span class="hljs-number">19</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">30</span>B:  +<span class="hljs-number">0</span>.<span class="hljs-number">15</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">66</span>B:  +<span class="hljs-number">0</span>.<span class="hljs-number">12</span><br><span class="hljs-attribute">OPT</span>-<span class="hljs-number">175</span>B: +<span class="hljs-number">0</span>.<span class="hljs-number">08</span><br></code></pre></td></tr></table></figure>
+
+<p>这个发现具有深远的含义：<strong>更大的模型不仅能力更强，而且更具”可压缩性”</strong>。有几种可能的解释：</p>
+<ol>
+<li>大模型有更多的冗余参数，剪掉一部分不影响整体功能</li>
+<li>大模型的参数空间更平滑，Hessian 矩阵条件数更好</li>
+<li>大模型的过参数化程度更高，有效维度远低于标称参数数量</li>
+</ol>
+<h3 id="二次信息-vs-一次信息：Hessian-为什么重要"><a href="#二次信息-vs-一次信息：Hessian-为什么重要" class="headerlink" title="二次信息 vs. 一次信息：Hessian 为什么重要"></a>二次信息 vs. 一次信息：Hessian 为什么重要</h3><p>SparseGPT 论文通过消融实验清晰地展示了 Hessian 信息的价值。如果仅使用权重大小（幅度剪枝）来选择掩码，困惑度会从 10.13 爆炸到 769.80。而加入 Hessian 引导的误差补偿后，困惑度仅上升到 10.32。</p>
+<p>这背后的数学原理是：<strong>权重的重要性不是由其绝对值单独决定的，而是由其被剪除后在 Hessian 度量下的误差贡献决定的</strong>。具体来说，剪掉权重 w_q 导致的损失函数增加为：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">ΔL ≈ w_q^2 / [H^</span><span class="hljs-template-variable">&#123;-1&#125;</span><span class="language-xml">]_</span><span class="hljs-template-variable">&#123;qq&#125;</span><br></code></pre></td></tr></table></figure>
+
+<p>这意味着：一个数值很大的权重如果其对应的 Hessian 逆对角元也很大（意味着可以通过其他权重很好地补偿），实际上并不重要；反之，一个数值很小的权重如果其 Hessian 逆对角元很小（难以补偿），可能是致命的。</p>
+<h3 id="非结构化-vs-半结构化剪枝"><a href="#非结构化-vs-半结构化剪枝" class="headerlink" title="非结构化 vs. 半结构化剪枝"></a>非结构化 vs. 半结构化剪枝</h3><p>论文的一个重要对比是：</p>
+<ul>
+<li>非结构化 50% 稀疏（OPT-13B）：+0.19 PPL</li>
+<li>半结构化 2:4 稀疏（OPT-13B）：+0.67 PPL</li>
+</ul>
+<p>虽然 2:4 也是 50%，但精度损失更大。这是因为 2:4 对掩码施加了硬约束（每 4 个连续权重中必须有 2 个为 0），限制了自适应掩码搜索的自由度。然而，2:4 稀疏在 NVIDIA Ampere GPU 上可以获得 2x 的矩阵乘法加速，而非结构化稀疏在通用 GPU 上几乎无法加速。</p>
+<h3 id="自适应掩码-vs-固定掩码"><a href="#自适应掩码-vs-固定掩码" class="headerlink" title="自适应掩码 vs. 固定掩码"></a>自适应掩码 vs. 固定掩码</h3><p>SparseGPT 的自适应掩码是其相对于其他 OBS 变体的关键改进。与传统的 “先选掩码、再补偿” 策略不同，SparseGPT 在补偿过程中动态调整掩码。这种自适应性使得最终的掩码方案更接近全局最优。</p>
+<p>一个关键的实现细节是：SparseGPT 使用 “Hard Thresholding” 机制——在每次迭代中保留 k 个绝对值最大的权重。这本质上是 Iterative Hard Thresholding（IHT）在 Hessian 度量下的推广。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="剪枝方法谱系"><a href="#剪枝方法谱系" class="headerlink" title="剪枝方法谱系"></a>剪枝方法谱系</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th align="center">需要训练</th>
+<th>时间复杂度</th>
+<th>适用规模</th>
+<th align="center">稀疏度</th>
+<th align="center">精度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Magnitude Pruning</td>
+<td align="center">否</td>
+<td>O(n)</td>
+<td>任意</td>
+<td align="center">低</td>
+<td align="center">崩溃</td>
+</tr>
+<tr>
+<td>OBD (1990)</td>
+<td align="center">否</td>
+<td>O(n^3)</td>
+<td>小型</td>
+<td align="center">中</td>
+<td align="center">好</td>
+</tr>
+<tr>
+<td>OBS (1993)</td>
+<td align="center">否</td>
+<td>O(n^4)</td>
+<td>小型</td>
+<td align="center">中</td>
+<td align="center">很好</td>
+</tr>
+<tr>
+<td>Movement Pruning</td>
+<td align="center">是</td>
+<td>O(n·epochs)</td>
+<td>中等</td>
+<td align="center">中</td>
+<td align="center">好</td>
+</tr>
+<tr>
+<td>LTH (Lottery Ticket)</td>
+<td align="center">是</td>
+<td>O(n·epochs·rounds)</td>
+<td>中等</td>
+<td align="center">高</td>
+<td align="center">好</td>
+</tr>
+<tr>
+<td><strong>SparseGPT</strong></td>
+<td align="center"><strong>否</strong></td>
+<td><strong>O(n^2)</strong></td>
+<td><strong>175B+</strong></td>
+<td align="center"><strong>高(60%)</strong></td>
+<td align="center"><strong>很好</strong></td>
+</tr>
+<tr>
+<td>Wanda</td>
+<td align="center">否</td>
+<td>O(n)</td>
+<td>175B+</td>
+<td align="center">高(50%)</td>
+<td align="center">好</td>
+</tr>
+</tbody></table>
+<h3 id="与-GPTQ-的同源关系"><a href="#与-GPTQ-的同源关系" class="headerlink" title="与 GPTQ 的同源关系"></a>与 GPTQ 的同源关系</h3><p>SparseGPT 和 GPTQ 都源于同一研究组，共享相同的 Hessian 框架，但面向不同任务：</p>
+<table>
+<thead>
+<tr>
+<th>方面</th>
+<th>GPTQ</th>
+<th>SparseGPT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>任务</td>
+<td>量化</td>
+<td>剪枝</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!figure] Figure 4: 消融实验&#x2F;详细分析图<br>建议位置：关键结果<br>放置原因：展示各组件对最终性能的贡献（消融实验）、参数敏感性分析或速度-质量权衡曲线<br>当前状态：图表占位<br>| 压缩操作 | 映射到离散网格 | 设为零 |<br>| 误差来源 | 舍入误差 | 完全丢失信息 |<br>| 掩码&#x2F;网格 | 预定义 (量化网格) | 自适应搜索 |<br>| 难度 | 相对容易 (信息保留) | 更难 (信息丢失) |<br>| 可逆性 | 部分可逆 | 不可逆 |</p>
+</blockquote>
+<p>有趣的是，尽管剪枝（完全丢失信息）比量化（部分丢失信息）更困难，SparseGPT 在 50% 稀疏度下的精度损失与 GPTQ 在 3-bit 量化下的精度损失相当。这说明 Hessian 补偿机制对两种压缩形式同样有效。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>非结构化稀疏的硬件加速困难</strong>: 尽管理论上可以剪掉 60% 的参数，但通用 GPU 对非结构化稀疏的加速支持有限。实际部署中，要么接受无加速（仅节省内存），要么使用半结构化 2:4 稀疏（性能略差）。</p>
+</li>
+<li><p><strong>无重训练的限制</strong>: 虽然一次性剪枝很方便，但缺乏微调意味着剪枝后的模型无法”适应”稀疏化带来的分布偏移。对于需要极高精度的场景，可能需要少量微调。</p>
+</li>
+<li><p><strong>逐层独立剪枝</strong>: 每层独立剪枝忽略了层间的相互影响和误差传播。虽然实验表明对于 Transformer 架构这种忽略是可接受的，但在更深的网络上可能累积误差。</p>
+</li>
+<li><p><strong>任务特定性不足</strong>: 校准数据来自 C4 通用语料，可能无法最优地适应特定下游任务。如果需要为特定任务优化稀疏模式，可能需要任务特定的校准数据。</p>
+</li>
+<li><p><strong>对激活函数和结构的假设</strong>: SparseGPT 假设激活值是线性层的输入（可以收集 Hessian），对于非标准组件（如自定义 activation 后的层），可能需要额外适配。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>规模越大越可压缩</strong>: 这可能是 SparseGPT 最反直觉但最重要的发现。在考虑压缩策略时，不应假定大模型比小模型更”脆弱”——恰恰相反。</p>
+</li>
+<li><p><strong>自适应掩码 + Hessian 补偿</strong>: 将掩码选择和误差补偿交替进行，而非串行执行，可以获得更好的整体优化。这对其他组合优化问题也有启发。</p>
+</li>
+<li><p><strong>Sherman-Morrison 用于高效行更新</strong>: 秩-1 更新的数学技巧使得 O(n^3) 的 Hessian 逆更新降低到 O(n^2)，这是使 OBS 框架在大规模场景中可行的关键数学工具。</p>
+</li>
+<li><p><strong>一次性方法的规模边界</strong>: SparseGPT 证明了对足够大的模型，一次性方法可以达到与迭代方法相当的精度。但规模阈值在哪里，以及如何预测，仍需要更多研究。</p>
+</li>
+<li><p><strong>半结构化稀疏的现实约束</strong>: 2:4 稀疏虽然精度略低，但因为有硬件加速，在实践中可能比 50% 非结构化稀疏更有价值。这是一个算法精度和硬件效率权衡的典型案例。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>SparseGPT 和 GPTQ 是同一研究组围绕 Hessian 框架的双子星。两者共享核心思想（OBS → 大规模高效版本），但面向不同压缩范式（量化 vs. 剪枝）。阅读这两篇论文可以深刻理解二阶信息在模型压缩中的普适价值。</p>
+<p>我认为 SparseGPT 最具启发性的发现是规模效应的”单调性”：模型越大，剪枝精度损失越小，且这个趋势在 OPT 系列上从 125M 到 175B 一直成立。这暗示了一个深层属性——大语言模型的”有效参数数量”可能远低于其标称参数数量，存在大量的”过度参数化”。</p>
+<p>与 Wanda 的对比也很有意思。Wanda 用极其简单的一阶准则（|W|·||X||_2）就取得了与 SparseGPT 接近的效果，这说明 Hessian 虽然在理论上更优，但在足够大的模型上，简单启发式已经够用——或者反过来，Wanda 隐式地近似了 Hessian 的某些关键性质。</p>
+<p>从实用角度看，SparseGPT 最直接的应用场景可能是：在内存受限的环境中运行大模型（内存节省），或与其他压缩技术（量化、蒸馏）叠加使用实现更高压缩率。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>SparseGPT 剪枝后的模型结构是否存在可解释的模式？某些类型的层（注意力 vs. FFN）是否有不同的最优稀疏度？</li>
+<li>能否将 SparseGPT 的思想推广到结构化剪枝（如剪除整个注意力头或 FFN 中间维度）？</li>
+<li>SparseGPT + 微调的组合是否能在极高稀疏度下恢复精度？</li>
+<li>MoE 架构如何应用 SparseGPT？不同专家的稀疏度是否应该不同？</li>
+<li>稀疏化的权重矩阵是否对某些攻击（如对抗样本、数据投毒）更脆弱？</li>
+<li>能否在训练过程中使用 SparseGPT 作为”稀疏化调度器”，实现渐进式稀疏训练？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;frantar2023sparsegpt,<br>  title=&#123;SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot&#125;,<br>  author=&#123;Frantar, Elias and Alistarh, Dan&#125;,<br>  booktitle=&#123;International Conference on Machine Learning (ICML)&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@inproceedings&#123;frantar2023gptq,<br>  title=&#123;GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers&#125;,<br>  author=&#123;Frantar, Elias and Ashkboos, Saleh and Hoefler, Torsten and Alistarh, Dan&#125;,<br>  booktitle=&#123;ICLR&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;hassibi1993optimal,<br>  title=&#123;Optimal Brain Surgeon and general network pruning&#125;,<br>  author=&#123;Hassibi, Babak and Stork, David G&#125;,<br>  journal=&#123;IEEE International Conference on Neural Networks&#125;,<br>  year=&#123;1993&#125;<br>&#125;<br><br>@article&#123;lecun1989optimal,<br>  title=&#123;Optimal Brain Damage&#125;,<br>  author=&#123;LeCun, Yann and Denker, John and Solla, Sara&#125;,<br>  journal=&#123;Advances in Neural Information Processing Systems&#125;,<br>  volume=&#123;2&#125;,<br>  year=&#123;1989&#125;<br>&#125;<br><br>@inproceedings&#123;sun2024wanda,<br>  title=&#123;A Simple and Effective Pruning Approach for Large Language Models&#125;,<br>  author=&#123;Sun, Mingjie and Liu, Zhuang and Bair, Anna and Kolter, J. Zico&#125;,<br>  booktitle=&#123;ICML&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E5%89%AA%E6%9E%9D%E4%B8%8E%E7%A8%80%E7%96%8F%E5%8C%96/" class="category-chain-item">剪枝与稀疏化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/llm-compression/" class="print-no-link">#llm-compression</a>
+      
+        <a href="/tags/hessian/" class="print-no-link">#hessian</a>
+      
+        <a href="/tags/pruning/" class="print-no-link">#pruning</a>
+      
+        <a href="/tags/sparsity/" class="print-no-link">#sparsity</a>
+      
+        <a href="/tags/one-shot-pruning/" class="print-no-link">#one-shot-pruning</a>
+      
+        <a href="/tags/optimal-brain-surgeon/" class="print-no-link">#optimal-brain-surgeon</a>
+      
+        <a href="/tags/sparsegpt/" class="print-no-link">#sparsegpt</a>
+      
+        <a href="/tags/unstructured-pruning/" class="print-no-link">#unstructured-pruning</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</div>
+      <div>https://w2ongq6.github.io/2023/01/02/inference/note/SparseGPT_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年1月2日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/01/10/inference/note/SpeculativeDecoding_note/" title="Fast Inference from Transformers via Speculative Decoding">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Fast Inference from Transformers via Speculative Decoding</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/15/llm/note/ConstitutionalAI_note/" title="Constitutional AI: Harmlessness from AI Feedback">
+                        <span class="hidden-mobile">Constitutional AI: Harmlessness from AI Feedback</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

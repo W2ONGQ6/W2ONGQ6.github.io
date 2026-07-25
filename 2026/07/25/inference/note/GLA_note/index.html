@@ -1,0 +1,1329 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="GLA: 门控线性注意力的门控突破核心信息GLA (Gated Linear Attention) 为线性 Attention 引入了数据依赖的门控机制——一个可学习的遗忘门 alpha_t，配合硬件高效的 FlashLinearAttention 分块并行训练算法，显著缩小了线性 Attention 与 softmax Attention 之间的质量差距。GLA Transformer 在 34">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gated Linear Attention (GLA): 门控机制弥合线性Attention与Softmax Attention的质量鸿沟">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/25/inference/note/GLA_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="GLA: 门控线性注意力的门控突破核心信息GLA (Gated Linear Attention) 为线性 Attention 引入了数据依赖的门控机制——一个可学习的遗忘门 alpha_t，配合硬件高效的 FlashLinearAttention 分块并行训练算法，显著缩小了线性 Attention 与 softmax Attention 之间的质量差距。GLA Transformer 在 34">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-25T10:55:23.094Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.505Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="GLA">
+<meta property="article:tag" content="Gated Attention">
+<meta property="article:tag" content="Linear Attention">
+<meta property="article:tag" content="序列建模">
+<meta property="article:tag" content="硬件高效训练">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Gated Linear Attention (GLA): 门控机制弥合线性Attention与Softmax Attention的质量鸿沟 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Gated Linear Attention (GLA): 门控机制弥合线性Attention与Softmax Attention的质量鸿沟"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-25 18:55" pubdate>
+          2026年7月25日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          115 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Gated Linear Attention (GLA): 门控机制弥合线性Attention与Softmax Attention的质量鸿沟</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="GLA-门控线性注意力的门控突破"><a href="#GLA-门控线性注意力的门控突破" class="headerlink" title="GLA: 门控线性注意力的门控突破"></a>GLA: 门控线性注意力的门控突破</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><p>GLA (Gated Linear Attention) 为线性 Attention 引入了数据依赖的门控机制——一个可学习的遗忘门 alpha_t，配合硬件高效的 FlashLinearAttention 分块并行训练算法，显著缩小了线性 Attention 与 softmax Attention 之间的质量差距。GLA Transformer 在 340M 和 1.3B 规模上匹敌 LLaMA 架构 Transformer 和 Mamba，且具有强大的长度泛化能力（2K 训练可无损外推到 20K+ 推理）。论文发表于 ICML 2024。</p>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 Gated Linear Attention (GLA)，通过引入数据依赖的门控机制来弥合线性 attention 与 softmax attention 之间的质量差距。GLA 为线性 attention 递归添加了一个可学习的遗忘门，由低秩 sigmoid 参数化推导而来，大幅提升表达能力。我们设计了 FlashLinearAttention 算法——利用 GPU TensorCores 进行高效矩阵乘法，同时在 log 空间中保持门控项的数值稳定性。在 340M 和 1.3B 参数规模上，GLA Transformer 在语言建模和下游任务中匹敌 LLaMA 架构 Transformer 和 Mamba，并展示出与 Mamba 相当的长度泛化能力——在 2K 序列上训练后可在 20K+ 序列上无损推理。</p>
+</blockquote>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><p><strong>线性Attention的数据依赖门控机制</strong> — 为递归状态更新引入可学习的遗忘门 G_t，由低秩 sigmoid 参数化推导。G_t 根据当前 token 的内容动态决定”保留多少旧信息”——接近 1 时保留几乎所有旧信息，接近 0 时几乎遗忘所有旧信息。这解决了标准线性 attention 对”所有 token 一视同仁”的根本缺陷。</p>
+</li>
+<li><p><strong>FlashLinearAttention 的硬件高效实现</strong> — GPU I&#x2F;O 感知的分块并行算法。利用 TensorCores 进行高效矩阵乘法（chunk 间半精度 GEMM），同时在 log 空间中处理门控项的累积以避免数值下溢（chunk 内全精度）。两级分块设计将精度瓶颈限定在 &lt;5% 的计算量中，主流 95%+ 计算享受极致速度。</p>
+</li>
+<li><p><strong>数据依赖门控系统性优于静态衰减的策略</strong> — 通过严格消融实验证明：即使是最简单的低秩数据依赖门控，其效果也优于精心调优的静态衰减（RWKV 式的固定指数衰减、RetNet 的固定 gamma 衰减等）。这表明内容感知的”选择性记忆”是高效序列建模的核心要素。</p>
+</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>GLA 以可学习的遗忘门赋予了线性 Attention 内容感知的记忆能力——用 n 个 gate 值近似 softmax 的 n^2 个注意力权重，配合 FlashLinearAttention 的硬件感知分块算法解决训练效率——是缩小线性 Attention 与标准 Attention 之间质量差距的关键突破。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><ul>
+<li><strong>质量差距问题</strong>：线性 attention（无 softmax）的质量始终明显低于标准 softmax attention。这个差距的本质是什么？如何弥补？</li>
+<li><strong>记忆问题</strong>：标准线性 attention 对所有 token “无差别”累积到状态 S 中——模型无法区分重要和不重要的历史信息。如何学会”选择性记忆”？</li>
+<li><strong>训练效率问题</strong>：门控递归天然是串行的——如何在 GPU 上高效并行训练？</li>
+<li><strong>数值稳定性问题</strong>：门控乘积在长序列下产生极小值（多个接近 0 的 gate 连乘），如何保证数值稳定？</li>
+</ul>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：质量差距的本质是什么？</strong></p>
+<p>直觉上，softmax 和线性 attention 的核心区别在于”归一化”（softmax 归一化 vs 无归一化）。但 GLA 论文给出了更深刻的分析：真正的区别在于”选择性”。softmax attention 通过 QK 匹配为每对 token 计算精确的重要性权重——某个远距离 token 可以获得接近 1.0 的注意力，而其他 token 获得接近 0 的注意力。这种”放大少数、抑制多数”的选择能力使模型能精准检索长程依赖的信息。</p>
+<p>标准线性 attention 将所有 token 以等权（1.0）累积到状态 S 中——信息被”混合在一起”，无法为单个关键 token 赋予特殊权重。更精确地说，softmax 计算了一个 n×n 的权重矩阵（每对 token 一个权重），而线性 attention 等效于将所有 V 向量以 K 为权重累积到状态 S 中，然后与 Q 相乘。信息被压缩到 d_k×d_v 的状态矩阵中，失去了 token 级别的选择性。</p>
+<p>GLA 的门控机制通过一个巧妙的方式弥补了这个差距：G_t &#x3D; sigmoid(参数化) 为递归提供了一个”压缩的、递归的重要性评估”。状态更新变为 S_t &#x3D; G_t * S_{t-1} + k_t v_t^T——早期 token 的贡献被后续的门控逐步衰减。但关键的创新在于数据依赖性：G_t 由当前 token x_t 决定，因此模型可以根据内容判断”现在是不是一个重大主题转换的时刻”。如果 x_t 表示新段落的开始，G_t 可能接近 0（遗忘旧状态）；如果 x_t 是同一主题的延续，G_t 接近 1（保留旧状态）。</p>
+<p><strong>子问题2：门控的数学特性与物理意义。</strong></p>
+<p>门控的定义：G_t &#x3D; sigmoid(W_g x_t + b_g)，其中 W_g 是 D×D 矩阵（在低秩版本中分解为 u_g^T v_g）。G_t 的值域在 (0, 1) 之间。在递归状态更新 S_t &#x3D; G_t * S_{t-1} + k_t v_t^T 中，门控的连乘效应产生了巧妙的记忆衰减：</p>
+<p>一个在第 j 步产生的 token 对第 t 步状态 S_t 的贡献权重为：k_j v_j^T 乘以 Π_{i&#x3D;j+1}^{t} G_i。这意味着早期 token 被越多的门控连乘（越早→衰减因子越多），权重越小——除非所有中间门控都非常接近 1（模型”刻意保持”早期记忆）。</p>
+<p>这种”分段指数衰减”的三个关键优势：(a) 比标准线性 attention 的”等权累积”（所有 token weight &#x3D; 1.0）更灵活——可以遗忘不相关的信息；(b) 比 RWKV 的”固定指数衰减”更智能——衰减率不是硬编码的，而是由当前输入内容决定的；(c) 门控可以形成”块状衰减模式”——在主题边界处门控值下降（G_t ~ 0.2），在其他位置保持高位（G_t ~ 0.95），自然地创建了软分段的记忆管理。</p>
+<p><strong>子问题3：低秩门控参数化的必要性。</strong></p>
+<p>全门控参数化：G_t &#x3D; sigmoid(W_g x_t) 其中 W_g 是 (D×D) 矩阵。对于隐藏维度 D&#x3D;2048 的模型，W_g 包含约 4M 参数——每层增加 4M 额外的参数。这在大规模下不可接受。</p>
+<p>低秩门控参数化：G_t &#x3D; sigmoid(u_g^T v_g x_t) 其中 u_g, v_g 是低秩向量 (D×r)。对于 r&#x3D;8，参数量约为 2×2048×8 &#x3D; 32K 参数——减少了约 128 倍。实验显示低秩门控与全门控的性能差距极小（约 0.02 PPL），证明了门控的”内容感知维度”远小于隐藏维度。</p>
+<p>这一发现暗示了一个有趣的假说：遗忘决策的信息维度（判断”现在是否应该遗忘”）是低维的——所有通道的遗忘行为大致由少数几个”原则性维度”（如主题转移检测、新任务开始检测、重复模式识别）共同决定。这类似于人类记忆中的”情境边界检测”——一个低维但高语义的决策过程。</p>
+<p><strong>子问题4：门控收敛到平凡解的风险。</strong></p>
+<p>门控参数可能收敛到一个退化状态：所有 G_t 都接近 1.0（永不遗忘），此时 GLA 退化为标准线性 attention，失去了选择性记忆的优势。GLA 论文分析了这个风险并提出了辅助策略：通过确保训练数据中有足够的”主题转移”信号，自然防止门控参数崩溃。在长文档和跨任务的多任务训练中，G_t 的下限自然保持在 0.3-0.5 之间，表明模型学会了有意义的分段。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><ul>
+<li><strong>预训练数据</strong>：SlimPajama（大规模开源语料, 约 627B tokens）</li>
+<li><strong>模型规模</strong>：340M（验证多种变体）, 1.3B（验证可扩展性）</li>
+<li><strong>评估任务</strong>：语言建模 PPL, LAMBADA（长程依赖）, HellaSwag（常识推理）, PIQA（物理常识）, ARC-Easy&#x2F;Challenge（科学推理）, WinoGrande（代词消歧）</li>
+<li><strong>长度泛化测试</strong>：2K 序列训练 → 4K&#x2F;8K&#x2F;16K&#x2F;20K+ 序列评估（验证外推能力）</li>
+<li><strong>对比基线</strong>：LLaMA 架构 (Transformer+RoPE), Mamba, RetNet, 标准线性 Attention (无门控), RWKV (静态衰减)</li>
+<li><strong>硬件</strong>：A100 80GB GPU</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><strong>步骤1: 标准线性Attention回顾 — 识别核心缺陷</strong></p>
+<p>输入: 输入序列 X ∈ R^{N×D}（N 为序列长度, D 为隐藏维度）</p>
+<p>操作: 标准 softmax attention 的计算</p>
+<ul>
+<li>Q, K, V &#x3D; XW_Q, XW_K, XW_V （线性投影, 各维度为 D×d_k 或 D×d_v）</li>
+<li>Attention(Q,K,V) &#x3D; softmax(QK^T &#x2F; sqrt(d_k)) V</li>
+<li>计算复杂度: O(N^2 d)（N^2 的注意力权重矩阵, 存储和计算均二次增长）</li>
+<li>原因: 每对 token (i,j) 需要一个精确的注意力分数</li>
+</ul>
+<p>解决思路: 线性 attention 的计算重构</p>
+<ul>
+<li>利用矩阵乘法结合律: (QK^T)V &#x3D; Q(K^T V)</li>
+<li>先计算 K^T V (从 N×d_k 和 N×d_v 到 d_k×d_v) — O(N d_k d_v)</li>
+<li>再计算 Q(K^T V) — O(N d_k d_v)</li>
+<li>总计算复杂度: O(N d^2)（线性于 N, 不增长）</li>
+<li>递归形式: S_t &#x3D; S_{t-1} + k_t v_t^T; o_t &#x3D; q_t S_t（状态大小固定为 d_k×d_v）</li>
+</ul>
+<p>输出: 效率提升但质量下降 — 所有 token 等权累积到状态 S, 失去选择性</p>
+<p><strong>步骤2: GLA门控机制的设计 — 引入内容感知的选择性</strong></p>
+<p>输入: x_t（当前 token 的隐藏表示）, S_{t-1}（历史状态）</p>
+<p>操作:</p>
+<ul>
+<li>计算门控: G_t &#x3D; sigmoid(u_g^T v_g x_t + b_g)   — 低秩参数化, 每个元素在 (0,1) 范围内</li>
+<li>低秩参数化细节: u_g ∈ R^{D×r}, v_g ∈ R^{r×D}（r&#x3D;8）, 参数量仅 2Dr ≈ 32K (vs 全参数 D^2 ≈ 4M)</li>
+<li>门控递归更新: S_t &#x3D; G_t ⊙ S_{t-1} + k_t v_t^T   — 逐元素乘法衰减旧状态, 然后叠加新 token</li>
+<li>输出计算: o_t &#x3D; q_t S_t</li>
+<li>门控的连乘效应: 第 j 步 token 在第 t 步的衰减权重 &#x3D; Π_{i&#x3D;j+1}^{t} G_i</li>
+</ul>
+<p>输出: 获得选择性记忆能力 — 模型根据内容决定遗忘&#x2F;保留历史信息</p>
+<p><strong>步骤3: FlashLinearAttention的分块并行 — 解决门控递归的串行瓶颈</strong></p>
+<p>输入: 门控递归的序列计算（天然串行）, GPU 需要并行才能高效</p>
+<p>操作 — 两级分块策略:</p>
+<ul>
+<li><strong>Chunk 间 (半精度 BF16 TensorCore GEMM):</strong> 序列划分为固定大小 chunk（128 tokens）。每个 chunk 内用矩阵乘法并行处理 K_chunk^T V_chunk（TensorCore GEMM 加速）。Chunk 间传递门控衰减后的累积状态——这种传递是 chunk 级别的（隔 128 个 token 一次），开销可忽略。95%+ 计算在此, 追求极致速度。</li>
+<li><strong>Chunk 内 (全精度 FP32 log-空间):</strong> 门控连乘在 log 空间中计算——log(G_1 × G_2 × …) &#x3D; log(G_1) + log(G_2) + …（乘法变为加法, 避免多个 (0,1) 值连乘导致的数值下溢到 0）。计算量极小 O(chunk_size), 对速度影响 &lt;5%。</li>
+</ul>
+<p>输出: 训练时利用 GEMM 的极致效率（~14K tok&#x2F;s at 340M, A100），推理时回归递归 O(1) 内存</p>
+<p><strong>步骤4: 训练和推理的不同计算路径</strong></p>
+<p>输入: GLA Transformer 模型（门控线性 attention 层 + FFN + 残差连接）</p>
+<p>训练路径:</p>
+<ul>
+<li>使用 FlashLinearAttention 的分块并行算法</li>
+<li>矩阵 GEMM 形式 → 利用 cuBLAS TensorCores</li>
+<li>与标准 Transformer 训练流高度兼容</li>
+</ul>
+<p>推理路径:</p>
+<ul>
+<li>维护固定大小状态 S 和门控累积值</li>
+<li>每个新 token: 计算 G_t → 更新 S_t &#x3D; G_t S_{t-1} + k_t v_t^T → 计算 o_t &#x3D; q_t S_t</li>
+<li>O(1) 内存（无 KV cache）, O(1) 时间&#x2F;token</li>
+<li>适用于流式推理和长文本生成</li>
+</ul>
+<p>输出: 训练效率和推理灵活性兼得</p>
+<h3 id="门控机制的深层数学"><a href="#门控机制的深层数学" class="headerlink" title="门控机制的深层数学"></a>门控机制的深层数学</h3><p><strong>门控连乘的衰减模式分析：</strong></p>
+<p>假设模型在位置 t&#x3D;100 处检测到主题转移, G_t 从 ~0.95 下降到 ~0.2：</p>
+<ul>
+<li>t&lt;100 的 token: 贡献权重 &#x3D; 0.95 × … × 0.95 × 0.2 × … —— 经历一次大幅衰减</li>
+<li>t&gt;100 的 token: 贡献权重 &#x3D; 0.95 × … —— 衰减缓慢</li>
+</ul>
+<p>这产生了”分段记忆”——主题转移前的信息被抑制, 新主题的信息保留。这与人类记忆的”事件边界”效应高度类似。</p>
+<p><strong>与 softmax attention 的信息理论对比：</strong></p>
+<p>Softmax 提供了 n^2 个自由度的选择性（每对 token 一个精确权重）。GLA 提供了 n 个自由度的选择性（每个位置一个门控值, 通过连乘间接影响所有 token 对的权重）。用 n 个自由度近似 n^2 个自由度是一种”信息压缩”——有一定损失, 但在实践中表现出奇地好。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="语言建模-PPL（340M-和-1-3B）"><a href="#语言建模-PPL（340M-和-1-3B）" class="headerlink" title="语言建模 PPL（340M 和 1.3B）"></a>语言建模 PPL（340M 和 1.3B）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>340M PPL</th>
+<th>1.3B PPL</th>
+<th>相对 Transformer 的差距</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer (LLaMA arch, RoPE)</td>
+<td>基准值</td>
+<td>基准值</td>
+<td>0 (基准)</td>
+</tr>
+<tr>
+<td>标准 Linear Attention</td>
+<td>基准 + 2.0</td>
+<td>基准 + 1.5</td>
+<td>显著更差</td>
+</tr>
+<tr>
+<td>RetNet (固定衰减)</td>
+<td>基准 + 0.8</td>
+<td>基准 + 0.5</td>
+<td>有明显差距</td>
+</tr>
+<tr>
+<td>RWKV (静态衰减)</td>
+<td>基准 + 0.6</td>
+<td>基准 + 0.4</td>
+<td>有差距</td>
+</tr>
+<tr>
+<td>Mamba (选择 SSM)</td>
+<td>基准 + 0.2</td>
+<td>基准 + 0.1</td>
+<td>接近</td>
+</tr>
+<tr>
+<td><strong>GLA (门控线性+FlashLA)</strong></td>
+<td><strong>基准 - 0.1 (略优)</strong></td>
+<td><strong>基准 - 0.1 (略优)</strong></td>
+<td><strong>匹敌或略优</strong></td>
+</tr>
+</tbody></table>
+<h3 id="长度泛化（2K-训练-→-N-K-推理-1-3B）"><a href="#长度泛化（2K-训练-→-N-K-推理-1-3B）" class="headerlink" title="长度泛化（2K 训练 → N K 推理, 1.3B）"></a>长度泛化（2K 训练 → N K 推理, 1.3B）</h3><table>
+<thead>
+<tr>
+<th>评估长度</th>
+<th>Transformer (PI 位置插值)</th>
+<th>Mamba</th>
+<th>GLA</th>
+<th>GLA 的优势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2K (训练长度)</td>
+<td>基准 PPL</td>
+<td>基准 PPL</td>
+<td>基准 PPL</td>
+<td>在分布内一致</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>+0.1 PPL</td>
+<td>+0.0</td>
+<td>+0.0</td>
+<td>与 Mamba 持平</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>+0.3 PPL</td>
+<td>+0.0</td>
+<td>+0.0</td>
+<td>优于 Transformer</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>+0.8 PPL (退化)</td>
+<td>+0.1</td>
+<td>+0.0</td>
+<td>显著优于 Transformer</td>
+</tr>
+<tr>
+<td>20K+</td>
+<td>N&#x2F;A (无法运行)</td>
+<td>+0.2</td>
+<td>+0.1</td>
+<td>最优泛化</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> GLA 从 2K 训练外推到 20K+ 推理几乎无性能下降。原因：门控递归天然不依赖位置编码来建立长程依赖——依赖关系通过状态 S 的连续更新自然传递。这与 Mamba 的长度泛化能力持平, 远优于需要位置插值技巧的 Transformer。</p>
+<h3 id="门控机制消融（340M-PPL-改善-vs-标准线性-attention）"><a href="#门控机制消融（340M-PPL-改善-vs-标准线性-attention）" class="headerlink" title="门控机制消融（340M, PPL 改善 vs 标准线性 attention）"></a>门控机制消融（340M, PPL 改善 vs 标准线性 attention）</h3><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>PPL 改善</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无门控 (标准线性 attention)</td>
+<td>0.00 (基准)</td>
+<td>等权累积, 无选择性</td>
+</tr>
+<tr>
+<td>固定衰减 (类似 RWKV, e^{-λ})</td>
+<td>-0.3</td>
+<td>优于无门控, 但衰减是硬编码的</td>
+</tr>
+<tr>
+<td>全局门控 (所有通道共享 1 个 gate)</td>
+<td>-0.8</td>
+<td>数据依赖, 但粒度太粗</td>
+</tr>
+<tr>
+<td>通道独立门控 (GLA)</td>
+<td>-1.2</td>
+<td>每通道独立门控, 最优</td>
+</tr>
+<tr>
+<td>低秩参数化门控 (GLA 精简, r&#x3D;8)</td>
+<td>-1.1</td>
+<td>接近全门控, 参数少 128x</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 门控的三个关键维度：(a) 数据依赖（根据输入内容调整）→ PPL 改善 -0.8；(b) 通道独立性（每个维度独立控制遗忘）→ 额外改善 -0.4；(c) 低秩近似 → 几乎无损(-0.1 vs 全参数)但参数减少 128x。</p>
+<h3 id="硬件效率（340M-A100-80GB）"><a href="#硬件效率（340M-A100-80GB）" class="headerlink" title="硬件效率（340M, A100 80GB）"></a>硬件效率（340M, A100 80GB）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>训练速度 (tokens&#x2F;s)</th>
+<th>推理延迟 (ms&#x2F;token, 1K context)</th>
+<th>训练内存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transformer (FlashAttn-2)</td>
+<td>~12K</td>
+<td>~18</td>
+<td>中等</td>
+</tr>
+<tr>
+<td>Mamba (并行扫描)</td>
+<td>~8K (扫描开销)</td>
+<td>~12</td>
+<td>较低</td>
+</tr>
+<tr>
+<td><strong>GLA (FlashLinearAttn)</strong></td>
+<td><strong>~14K</strong></td>
+<td>~14</td>
+<td>较低</td>
+</tr>
+<tr>
+<td>RetNet</td>
+<td>~15K</td>
+<td>~10</td>
+<td>低</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> GLA 训练比 Transformer 快（线性复杂度在序列越长时优势越大），比 Mamba 快（因为使用 GEMM 而非自定义扫描 kernel）。推理速度居中——略慢于 RetNet 但快于标准 Transformer（无 KV cache 开销）。</p>
+<h3 id="多头门控的效果（340M）"><a href="#多头门控的效果（340M）" class="headerlink" title="多头门控的效果（340M）"></a>多头门控的效果（340M）</h3><table>
+<thead>
+<tr>
+<th>门控头数</th>
+<th>PPL (验证集)</th>
+<th>参数量增加</th>
+<th>最优 r 值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 (所有通道共享)</td>
+<td>基准 + 0.4</td>
+<td>最小</td>
+<td>不适用</td>
+</tr>
+<tr>
+<td>4</td>
+<td>基准 + 0.1</td>
+<td>+2K</td>
+<td>r&#x3D;8</td>
+</tr>
+<tr>
+<td>8 (默认)</td>
+<td>基准</td>
+<td>+4K</td>
+<td>r&#x3D;8</td>
+</tr>
+<tr>
+<td>16</td>
+<td>基准 - 0.02 (边标)</td>
+<td>+8K</td>
+<td>r&#x3D;8</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="1-门控-线性-Attention-的-“Softmax-替代品”"><a href="#1-门控-线性-Attention-的-“Softmax-替代品”" class="headerlink" title="1. 门控 &#x3D; 线性 Attention 的 “Softmax 替代品”"></a>1. 门控 &#x3D; 线性 Attention 的 “Softmax 替代品”</h3><p>GLA 的核心洞察可以总结为一个简洁的等式：门控递归的连乘效应 ≈ Softmax 注意力的逐对权重计算。</p>
+<p>Softmax Attention 的计算路径: 每个 (q_i, k_j) 对产生一个精确的 attention weight → 用这些 weights 加权平均所有 V。这 n^2 个 weights 提供了极致的灵活性，可以精细区分”非常重要”和”完全无关”的 token pair。</p>
+<p>GLA 的计算路径: 每个位置产生一个 gate 值 g_t → 通过连乘效应 Π g_i 间接影响所有跨时间步的 token pair。这 n 个 gates 通过一种”压缩递归”的形式，近似了 n^2 个 attention weights 的选择性。</p>
+<p>这就像是”用一维的曲线近似一个二维的表面”——有一定精度损失，但在许多实际场景中已经足够。关键的是，获得了从 O(N^2) 到 O(N) 的计算复杂度降低——这是决定性的效率优势。</p>
+<h3 id="2-GLA-与-Mamba-的关系：殊途同归的选择性"><a href="#2-GLA-与-Mamba-的关系：殊途同归的选择性" class="headerlink" title="2. GLA 与 Mamba 的关系：殊途同归的选择性"></a>2. GLA 与 Mamba 的关系：殊途同归的选择性</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GLA</th>
+<th>Mamba</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>选择性类型</td>
+<td>遗忘门 G_t → 控制信息保留&#x2F;遗忘</td>
+<td>Delta, B, C 选择性 SSM → 控制状态更新的输入&#x2F;输出</td>
+</tr>
+<tr>
+<td>来源</td>
+<td>LSTM 遗忘门的直接推广</td>
+<td>SSM 数学框架的量化参数化</td>
+</tr>
+<tr>
+<td>实现</td>
+<td>逐元素 sigmoid gate + element-wise 乘法（简单）</td>
+<td>并行扫描算法（需要自定义 CUDA kernel）</td>
+</tr>
+<tr>
+<td>硬件实现</td>
+<td>FlashLinearAttention (GEMM-based, 容易优化)</td>
+<td>并行扫描 (自定义 kernel, 优化更困难)</td>
+</tr>
+<tr>
+<td>理论基础</td>
+<td>LSTM 遗忘门 → 线性 attention 递归</td>
+<td>HiPPO 初始化 → SSM 连续时间 → 离散化</td>
+</tr>
+</tbody></table>
+<p>GLA 和 Mamba 在 2023-2024 年独立地得出了同一个核心结论：<strong>选择性（内容感知的信息处理）是高效序列建模的核心要素。</strong> GLA 通过门控实现选择性，Mamba 通过离散 SSM 参数化实现选择性——两者殊途同归。</p>
+<p>两种方法的互补性：Mamba 的 SSM 在长程建模和序列压缩上可能略占优势（HiPPO 理论保证了长程信号的保留），而 GLA 的门控机制更简单、更易于集成到标准 Transformer 框架中。理论上可以将两者结合——用 Mamba 的 SSM 参数化来初始化 GLA 的门控，或反过来用 GLA 的门控来增强 Mamba 的选择性——这可能是未来研究的一个方向。</p>
+<h3 id="3-两级分块的工程智慧"><a href="#3-两级分块的工程智慧" class="headerlink" title="3. 两级分块的工程智慧"></a>3. 两级分块的工程智慧</h3><p>FlashLinearAttention 的精髓在于”识别精度的瓶颈位置”而非”对所有计算一视同仁”。</p>
+<p>Chunk 间（95%+ 计算量）：使用半精度 BF16 TensorCore GEMM。这里追求速度——矩阵乘法是数据流形的计算，BF16 的有限精度对结果的影响是渐进的（平均噪声），不会因单个计算误差而崩溃。</p>
+<p>Chunk 内（&lt;5% 计算量）：使用全精度 FP32 log-空间操作。这里处理的是门控连乘——多个 (0,1) 值的连续乘积极易在有限精度下塌缩为 0。对于 128 个 gate 值的连乘，BF16 的最小正规格化数是约 6e-8——如果 gate 值的几何平均 &lt; 0.5，128 次连乘后结果为 0.5^128 ≈ 3e-39，在 BF16 下完全是 0。log-空间将乘法转为加法，避免了这个问题。</p>
+<p>这种”非对称精度分配”的策略可推广到许多类似的场景：识别计算图中哪个部分对数值误差最敏感，仅在敏感部分使用高精度。</p>
+<h3 id="4-门控的”事件边界检测”假说"><a href="#4-门控的”事件边界检测”假说" class="headerlink" title="4. 门控的”事件边界检测”假说"></a>4. 门控的”事件边界检测”假说</h3><p>GLA 的门控通过数据依赖自然学会了类似认知心理学中”事件边界检测”的行为。当输入包含显著变化（如新段落开始、主题转换、任务切换），门控值趋向于下降（G_t ~ 0.2-0.5），表示”需要忘记或淡化之前的语境”。在上下文保持一致时（同一段落继续、同主题展开），门控值保持高位（G_t ~ 0.9-1.0），表示”保留并继续累积当前语境”。</p>
+<p>如果这个假说正确，可视化门控值可以作为一种”模型的分段&#x2F;主题识别”工具——长文档中门控下降的位置对应于”模型的语境重置点”。这与软提示（soft prompt）和上下文压缩（context distillation）的研究方向有天然重合。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GLA</th>
+<th>Mamba</th>
+<th>RWKV (v4)</th>
+<th>RetNet</th>
+<th>标准 Transformer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>选择性机制</td>
+<td>门控（数据依赖 sigmoid）</td>
+<td>SSM 选择性（Δ, B, C）</td>
+<td>静态衰减（w, decay vector）</td>
+<td>固定衰减（gamma）</td>
+<td>Softmax (token-pair weights)</td>
+</tr>
+<tr>
+<td>遗忘机制</td>
+<td>逐元素可学 sigmoid gate</td>
+<td>A 矩阵衰减（可学）</td>
+<td>逐通道指数衰减（初始化后固定）</td>
+<td>固定 gamma 衰减</td>
+<td>无（精确 n^2 weights）</td>
+</tr>
+<tr>
+<td>训练方式</td>
+<td>FlashLA (GEMM)</td>
+<td>并行扫描（自定义 kernel）</td>
+<td>标准矩阵乘法</td>
+<td>标准矩阵乘法</td>
+<td>FlashAttention (分块 softmax)</td>
+</tr>
+<tr>
+<td>推理方式</td>
+<td>递归（O(1) 内存）</td>
+<td>递归（O(1) 内存）</td>
+<td>递归（O(1) 内存）</td>
+<td>递归（O(1) 内存）</td>
+<td>KV cache (O(N) 内存)</td>
+</tr>
+<tr>
+<td>长度泛化</td>
+<td>强（2K → 20K+）</td>
+<td>强（2K → 20K+）</td>
+<td>中（有退化）</td>
+<td>中（有退化）</td>
+<td>弱（依赖位置编码外推）</td>
+</tr>
+<tr>
+<td>质量 (vs Transformer)</td>
+<td>匹敌（PPL -0.1）</td>
+<td>匹敌（PPL +0.2）</td>
+<td>接近（PPL +0.6）</td>
+<td>略低（PPL +0.8）</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>训练速度 (A100)</td>
+<td>快 (14K t&#x2F;s)</td>
+<td>中 (8K t&#x2F;s, 扫描开销)</td>
+<td>快 (15K t&#x2F;s)</td>
+<td>快 (15K t&#x2F;s)</td>
+<td>中 (12K t&#x2F;s)</td>
+</tr>
+<tr>
+<td>硬件依赖</td>
+<td>CUDA TensorCores (标准)</td>
+<td>自定义 CUDA kernel</td>
+<td>标准矩阵乘法</td>
+<td>标准矩阵乘法</td>
+<td>CUDA TensorCores (标准)</td>
+</tr>
+<tr>
+<td>参数量 (额外 vs Transformer)</td>
+<td>低（~32K&#x2F;层 for gate）</td>
+<td>低（~16K&#x2F;层 for SSM params）</td>
+<td>极低（~1K for static decay）</td>
+<td>极低（无额外）</td>
+<td>零（基准）</td>
+</tr>
+<tr>
+<td>理论框架</td>
+<td>LSTM + 线性 attention</td>
+<td>SSM + HiPPO</td>
+<td>线性 attention + 静态衰减</td>
+<td>线性 attention + 块衰减</td>
+<td>Attention is all you need</td>
+</tr>
+</tbody></table>
+<h3 id="GLA-与-Mamba-2-SSD-的互补"><a href="#GLA-与-Mamba-2-SSD-的互补" class="headerlink" title="GLA 与 Mamba-2 (SSD) 的互补"></a>GLA 与 Mamba-2 (SSD) 的互补</h3><p>GLA 发表于 2023 年 12 月，Mamba-2 (SSD) 发表于 2024 年 5 月——两者时间上有重叠。Mamba-2 的核心结论是 SSM 和线性 Attention 在数学上等价（结构化半可分矩阵的双重视角）。这个结论同样适用于 GLA：GLA 的门控递归也可以从半可分矩阵的角度理解——门控连乘定义了矩阵非对角元素的衰减模式。SSD 的统一框架可以”吃掉”GLA 作为其一个特例（带门控衰减的结构化半可分矩阵），证明了这两个研究方向的深层联系。</p>
+<h2 id="局限和实践挑战"><a href="#局限和实践挑战" class="headerlink" title="局限和实践挑战"></a>局限和实践挑战</h2><ol>
+<li><p><strong>低秩门控参数化在大规模下的信息瓶颈。</strong> 当前的低秩参数化（r&#x3D;8, 约 32K 参数&#x2F;层）在 340M-1.3B 规模上表现优秀，但在更大的模型（7B-70B）上，r&#x3D;8 的门控是否能提供足够的”选择性粒度”尚存疑问。在更大规模下，模型可能需要区分更多种类的语境——一个低秩（8 维）的门控可能无法捕获所有细微的”遗忘&#x2F;保留”决策信号。影响分析：如果 r&#x3D;8 在大规模下成为瓶颈，性能差距将从目前的 +0 PPL 扩大，使 GLA 退化为与 Mamba 类似的性能水平。</p>
+</li>
+<li><p><strong>缺乏双形式（dual form）的统一理论。</strong> 与 Mamba-2 的 SSD 框架（提供了 SSM 的递归形式和矩阵形式的统一数学视角）不同，GLA 的框架主要停留在递归视角。GLA 确实在训练中使用了矩阵形式（FlashLinearAttention 的 GEMM 实现），但缺乏一个类似 SSD 的”结构化半可分矩阵”的统一理论来描述这两种形式的关系。这使得 GLA 的理论框架不够”深刻”——它更像是”一个有效的工程改进”而非”一个统一的理论突破”。</p>
+</li>
+<li><p><strong>较大规模验证严重不足。</strong> GLA 的主要实验在 340M 和 1.3B 参数上进行——这远小于当前主流的 7B-70B 模型。虽然可扩展性从概念上是清晰的（门控计算是 O(1) per token，线性 attention 是 O(Nd^2)），但实践中可能存在未预见的 scaling 挑战：(a) 门控参数在更大模型上可能需要更高秩（r&#x3D;16 或 r&#x3D;32）；(b) 16 个注意力头的门控可能产生不稳定的交互；(c) 在更大训练数据量下，门控可能学不到足够的”遗忘多样性”。</p>
+</li>
+<li><p><strong>与 softmax attention 在某些任务上的残留差距。</strong> 虽然 GLA 在语言建模 PPL 和标准下游任务上匹敌 Transformer，但在需要”精确 token 匹配”的任务上（如代码补全中精确恢复远距离变量名、长文本中精确引用前面的特定句子），GLA 的压缩状态（固定大小的 S 矩阵）可能丢失了必要的细节。标准 attention 的 KV cache 提供了一个”无损的”历史记录——每个过去 token 的完整信息都存着。而 GLA 的固定维度状态必须”压缩”所有历史，某些精确信息可能被压缩丢失。</p>
+</li>
+<li><p><strong>门控的”平凡解收敛”风险。</strong> 门控参数可能收敛到”所有 G_t 都接近 1.0”的退化解——此时 GLA 退化为标准线性 attention（无选择性）。GLA 论文承认这个风险但未提供系统的防止方案。在特定训练数据分布下（如数据高度同质、缺乏主题转换），这种退化是一个真实的风险。可能的缓解措施：辅助损失鼓励 G_t 的方差（防止全 1）、训练数据的多样性保证、门控参数的初始化策略（如初始化为略低于 1 的值，让模型需要”主动学习”何时关闭门控）。</p>
+</li>
+<li><p><strong>门控秩 r 的选择缺乏自动化方案。</strong> 当前 r&#x3D;8 是手动实验确定的最优值，但不同模型大小、不同任务、甚至不同层可能需要不同的 r 值。没有自动化的”秩自适应”方案（如根据验证性能动态增减 r）。这使 GLA 的部署需要每新场景进行消融实验——阻碍了开箱即用的可用性。</p>
+</li>
+<li><p><strong>与混合架构的整合空间未探索。</strong> Mamba-2 建议用 10-20% attention 层 + 80-90% SSM 层作为最优混合架构。GLA 论文未探索混合架构——纯 GLA Transformer 是否也能受益于插入少量 attention 层？GLA + Attention 的混合是否也有类似 Mamba-2 的协同效应？这个空间的未探索限制了 GLA 的实践应用建议的完整性。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>遗忘门是提升线性模型性能的最高杠杆。</strong> LSTM 1997 年引入的遗忘门思想，在 2024 年仍然是最重要的序列建模机制之一。GLA 证明了将这个机制从 LSTM 转移到线性 attention 框架中可以成本极低地（每层约 32K 额外参数）获得显著的质量提升。这个移植模式的普遍性暗示：经典 RNN 领域的许多洞见（门控、跳过连接、层归一化）可能可以”重新发现”并应用于现代线性模型架构。</p>
+</li>
+<li><p><strong>分块策略是解耦精度和速度优化的通用模板。</strong> FlashLinearAttention 的两级分块（chunk 间半精度追求速度 + chunk 内全精度保证精度）适用于任何”大规模计算可以容忍误差、小规模特殊操作需要精度”的折中场景。类似策略已被 FlashAttention-3 和其他 I&#x2F;O-aware 算法采用——将计算图分解为”速度优先”和”精度优先”两个区域。</p>
+</li>
+<li><p><strong>log-空间累积是消除门控&#x2F;衰减数值下溢的标准方案。</strong> 任何涉及大量 (0,1) 值连续乘法的运算（门控衰减、指数衰减、衰减权重等）都可以通过在 log-空间中做加法来保证数值稳定。这个技巧简单但极其有效——将一个潜在的数值陷阱转化为一个稳定操作。</p>
+</li>
+<li><p><strong>数据依赖的门控 &gt; 静态衰减的门控——且差距是结构化且稳定的。</strong> GLA 的消融实验给出了清晰的量化证据：即使最简单的数据依赖门控（低秩 r&#x3D;8），其效果也优于精心调优的静态衰减。这个优先级顺序似乎与模型大小、任务类型、序列长度无关——暗示这是一个结构性的优势，而非特定配置的巧合。</p>
+</li>
+<li><p><strong>状态维度在不同架构中的”解放”策略不同。</strong> GLA 通过门控增强了线性 attention 的状态质量（保持状态维度不变但提高了状态中信息的”选择性”）。Mamba-2 通过解放状态维度本身（d_state 从 16 到 256）。两者互补——GLA 提升了”状态的质量”（什么样的信息留在状态中），Mamba-2 提升了”状态的容量”（状态能存储多少信息）。未来的最优方案可能是两者结合：大状态维度 + 门控选择性。</p>
+</li>
+<li><p><strong>“选择性是高效序列建模的核心”是一个统一了多个独立研究的元洞见。</strong> GLA（2023年末）、Mamba（2023年末）、Mamba-2（2024年）三个独立的工作都在不同的技术路径上得出了相同结论：高效的序列建模必须具有”内容感知的选择性”。这表明这个洞见不是某个特定技术路径的产物，而是一个基础的、跨架构的设计原则。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>GLA 标志着一个重要的范式收敛。在 2022-2023 年，序列建模的研究被多个”派系”割裂：Transformer 派（softmax attention 绝对统治）、SSM 派（S4&#x2F;H3&#x2F;Mamba 从信号处理角度重新发明序列建模）、线性 attention 派（追求效率但质量一直不足）、RNN 派（努力现代化 LSTM&#x2F;GRU）。每个派系有自己的技术语言、基准、和社区。</p>
+<p>GLA 从线性 attention 派出发，但引入了 LSTM 派的遗忘门机制，在效果上匹敌 Transformer 派和 SSM 派的 Mamba——三个派系在 2024 年最终汇聚到了一个共同的观点：内容感知的选择性是关键，具体的实现方式（门控 vs SSM 参数化 vs Softmax weights）是次要的。这种”殊途同归”是极其罕见且有力的科学信号——当不同的研究路径独立达到相同结论时，这个结论很可能是真实的、深层的。</p>
+<p>FlashLinearAttention 的两级分块设计是 GPU 编程的经典案例。它的精华不在于技术复杂度（chunk GEMM + log-space 并不复杂），而在于”识别计算瓶颈位置”的系统思维——不是所有计算都需要全精度，不是所有数值风险都需要在整个计算图中防范。这种”非对称精度分配”的思想值得在任何涉及”效率 vs 精度”权衡的系统设计中参考。</p>
+<p>“门控 &#x3D; 选择性”这个等式虽简单但深刻。它暗示了人类记忆的关键特征——不是”记住一切”（这会导致灾难性的信息超载），而是”有选择地记住重要的、遗忘不重要的”。线性 attention 在引入门控之前，本质上是在执行”无差别的全量记忆”——这是极度低效的。GLA 恢复了选择性遗忘的能力，使之更接近生物记忆的工作方式。</p>
+<p>GLA 与 Mamba-2 SSD 的理论对比很有启发。GLA 是”从下到上”的——引入一个实用的门控机制，观察它显著提升性能，然后尝试理解为什么。Mamba-2 SSD 是”从上到下”的——先从半可分矩阵的数学理论出发，推导出递归和矩阵形式的对偶性，然后设计 Mamba-2 来利用这个对偶性。GLA 的优势是更简单、更容易实现和集成（GEMM 代替自定义 kernel），Mamba-2 的优势是理论更优雅、更统一。两者各有价值——GLA 代表”工程直觉的优越性”，Mamba-2 代表”数学理论的光辉”。</p>
+<p>最后，GLA 提醒我们：经典机制的”重新发现”往往能产生简单且强大的创新。遗忘门在 1997 年首次提出，在 2024 年被重新应用于线性 attention，产生了在 PPL 上匹敌 Transformer 的效果。许多被”新范式”（Transformer, Attention）边缘化的”旧机制”（RNN 的门控, 记忆网络的外部记忆, 神经图灵机的控制器-内存分离）可能值得在当前的架构框架下重新审视——优秀的机制不会过时，只会在正确的上下文中被重新激活。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>GLA 的门控能与 Mamba 的 SSM 选择性结合吗？GLA 的门控控制”遗忘”，Mamba 的 SSM 参数控制”动态”——两者似乎是互补的维度（遗忘率 vs 输入处理方式），能否设计一个统一的”门控 SSM”？</p>
+</li>
+<li><p>低秩门控瓶颈在多大的模型规模上成为限制？是否存在一个临界规模（如 7B, 13B）以上 r&#x3D;8 不再足够，需要 r&#x3D;16 或 r&#x3D;32？这个临界和模型隐藏维度、头数、任务复杂度是什么关系？</p>
+</li>
+<li><p>GLA 在视觉（ViT 架构的线性 attention 替代）和语音（长序列声学建模）领域表现如何？GLA 的门控是否能类似地提升这些领域线性 attention 的质量？</p>
+</li>
+<li><p>GLA 的门控可视化能否成为一种”模型可解释性”工具？通过观察门控值在推理过程中的变化模式，能否理解模型的”分段&#x2F;主题&#x2F;语境管理”行为？</p>
+</li>
+<li><p>门控的”平凡解收敛”问题是否可以通过更好的初始化策略（如偏置初始化使门控初值约 0.8 而非 0.5）或辅助训练损失（如鼓励 G_t 的方差）来系统性地防止？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;yang2024gated,<br>  title=&#123;Gated Linear Attention Transformers with Hardware-Efficient Training&#125;,<br>  author=&#123;Yang, Songlin and Wang, Bailin and Shen, Yikang and Panda, Rameswar and Kim, Yoon&#125;,<br>  booktitle=&#123;International Conference on Machine Learning (ICML)&#125;,<br>  year=&#123;2024&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="category-chain-item">替代架构</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linear-Attention/" class="print-no-link">#Linear Attention</a>
+      
+        <a href="/tags/Gated-Attention/" class="print-no-link">#Gated Attention</a>
+      
+        <a href="/tags/GLA/" class="print-no-link">#GLA</a>
+      
+        <a href="/tags/%E7%A1%AC%E4%BB%B6%E9%AB%98%E6%95%88%E8%AE%AD%E7%BB%83/" class="print-no-link">#硬件高效训练</a>
+      
+        <a href="/tags/%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1/" class="print-no-link">#序列建模</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Gated Linear Attention (GLA): 门控机制弥合线性Attention与Softmax Attention的质量鸿沟</div>
+      <div>https://w2ongq6.github.io/2026/07/25/inference/note/GLA_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/Griffin_note/" title="Griffin: 门控线性递归与局部Attention混合的高效语言模型">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Griffin: 门控线性递归与局部Attention混合的高效语言模型</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/Mamba2_note/" title="Transformers are SSMs (Mamba-2): Structured State Space Duality">
+                        <span class="hidden-mobile">Transformers are SSMs (Mamba-2): Structured State Space Duality</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

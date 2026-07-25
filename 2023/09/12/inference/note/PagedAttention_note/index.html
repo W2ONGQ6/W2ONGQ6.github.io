@@ -1,0 +1,1425 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="PagedAttention：LLM服务中KV缓存的高效内存管理核心信息 标题: Efficient Memory Management for Large Language Model Serving with PagedAttention 标题翻译: PagedAttention：使用分页注意力实现大语言模型服务的高效内存管理 作者: Woosuk Kwon, Zhuohan Li, Siyu">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PagedAttention: Efficient Memory Management for LLM Serving">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/09/12/inference/note/PagedAttention_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="PagedAttention：LLM服务中KV缓存的高效内存管理核心信息 标题: Efficient Memory Management for Large Language Model Serving with PagedAttention 标题翻译: PagedAttention：使用分页注意力实现大语言模型服务的高效内存管理 作者: Woosuk Kwon, Zhuohan Li, Siyu">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_006_full.png">
+<meta property="article:published_time" content="2023-09-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.019Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;inference-optimization">
+<meta property="article:tag" content="papers&#x2F;kv-cache">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>PagedAttention: Efficient Memory Management for LLM Serving - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="PagedAttention: Efficient Memory Management for LLM Serving"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-09-12 00:00" pubdate>
+          2023年9月12日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          106 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">PagedAttention: Efficient Memory Management for LLM Serving</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="PagedAttention：LLM服务中KV缓存的高效内存管理"><a href="#PagedAttention：LLM服务中KV缓存的高效内存管理" class="headerlink" title="PagedAttention：LLM服务中KV缓存的高效内存管理"></a>PagedAttention：LLM服务中KV缓存的高效内存管理</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Efficient Memory Management for Large Language Model Serving with PagedAttention</li>
+<li>标题翻译: PagedAttention：使用分页注意力实现大语言模型服务的高效内存管理</li>
+<li>作者: Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, Ion Stoica</li>
+<li>机构: UC Berkeley, Stanford University, UC San Diego</li>
+<li>发表时间: 2023年9月</li>
+<li>发表渠道: SOSP 2023 (ACM操作系统原理研讨会)</li>
+<li>arXiv: 2309.06180</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2309.06180">https://arxiv.org/abs/2309.06180</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/vllm-project/vllm">https://github.com/vllm-project/vllm</a></li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大语言模型的高吞吐量服务需要同时批处理足够多的请求。然而现有系统难以应对此需求，因为每个请求的键值（KV）缓存占用大量内存且动态增减。当KV缓存管理不当、出现碎片化和冗余复制时，内存浪费严重——仅有20-40%的分配内存被实际使用。这一低效限制了批处理大小，成为服务吞吐量的主要瓶颈。为解决此问题，我们提出PagedAttention，一种受操作系统经典虚拟内存和分页技术启发的注意力算法。PagedAttention将KV缓存分割成固定大小的块，这些块无需在物理内存中连续存储。这消除了内部和外部内存碎片，实现了接近100%的内存利用率。此外，PagedAttention支持块级内存共享——当多个序列共享相同前缀时（如并行采样和beam search），物理块可被多个逻辑序列引用，无需复制。基于PagedAttention，我们构建了vLLM，一个高吞吐量的分布式LLM服务引擎，实现了KV缓存接近零浪费、灵活的块级共享、以及高效的内存调度。vLLM对流行的LLM实现了比最先进系统（如FasterTransformer和ORCA）高2-4倍的吞吐量提升，且无需对模型架构做任何改动。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-KV缓存的分页抽象"><a href="#1-KV缓存的分页抽象" class="headerlink" title="1. KV缓存的分页抽象"></a>1. KV缓存的分页抽象</h3><p><strong>核心思想</strong>: 将操作系统的虚拟内存分页技术应用于LLM推理的KV缓存管理。每个请求的KV缓存被分割成固定大小的”块”（如16个token&#x2F;块），块在物理GPU内存中可不连续存储。逻辑上连续的KV序列通过”块表”映射到物理块地址。</p>
+<p><strong>为什么重要</strong>:</p>
+<ul>
+<li><strong>消除内存浪费</strong>: 此前KV缓存内存中有60-80%因碎片和预分配而浪费。FasterTransformer和ORCA等系统需要预分配最大可能长度的连续内存空间。当实际生成短于最大长度时，大量预留内存被浪费（内部碎片）。不同请求的分配导致外部碎片。</li>
+<li><strong>接近100%利用率</strong>: 分页抽象仅分配实际使用的内存。当新token生成时动态分配新块，当序列结束时立即回收。无需预留，无碎片。</li>
+<li><strong>类比操作系统</strong>: 1960年代的分页虚拟内存解决了完全相同的碎片化问题。论文将60年前的OS智慧应用到LLM推理这一全新场景。</li>
+</ul>
+<h3 id="2-块级内存共享（写时复制）"><a href="#2-块级内存共享（写时复制）" class="headerlink" title="2. 块级内存共享（写时复制）"></a>2. 块级内存共享（写时复制）</h3><p><strong>核心思想</strong>: 物理KV缓存块可在多个逻辑序列间共享。当多个序列共享相同前缀时（如并行采样生成多个候选、beam search中的共享路径、或系统提示前缀），所有序列引用相同的物理块。仅在某个序列需要修改时（实际生成不同时），才创建新块（写时复制语义）。</p>
+<p><strong>为什么重要</strong>:</p>
+<ul>
+<li><strong>并行采样</strong>: 生成n个候选答案时，传统方案需复制整个KV缓存n次。PagedAttention只复制块表引用，物理块共享，内存节省55%。</li>
+<li><strong>Beam Search</strong>: beam&#x3D;6时，传统方案需维护6份KV缓存。PagedAttention通过块表引用节省40%内存。</li>
+<li><strong>共享前缀</strong>: 多请求共享系统提示（如”你是一个有帮助的AI助手”）时，每个请求的提示KV缓存指向相同物理块，节省28%内存。</li>
+<li><strong>COW语义</strong>: 使用引用计数实现，当块的引用计数降为0时自动回收到空闲池。</li>
+</ul>
+<h3 id="3-动态内存调度和抢占"><a href="#3-动态内存调度和抢占" class="headerlink" title="3. 动态内存调度和抢占"></a>3. 动态内存调度和抢占</h3><p><strong>核心思想</strong>: 当GPU内存不足时，vLLM可以”抢占”（swap out）部分请求的KV缓存块到CPU内存，腾出空间给其他请求。当GPU内存可用时再”换回”（swap in）。这类似于OS的虚拟内存交换（swapping）。</p>
+<p><strong>为什么重要</strong>: LLM服务面临高度可变的请求到达率和序列长度。动态调度使vLLM可以优雅处理内存压力峰值，避免OOM（内存溢出）或拒绝请求。这是首次在LLM推理中实现类似OS交换的精细内存管理。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>PagedAttention将操作系统60年的分页虚拟内存智慧应用于LLM推理，通过块级KV缓存管理将内存利用率从20-40%提升至接近100%，块级共享在并行采样中节省55%内存，动态调度支持内存抢占，使vLLM实现2-4倍的LLM服务吞吐量提升。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战：LLM推理的内存管理危机"><a href="#核心挑战：LLM推理的内存管理危机" class="headerlink" title="核心挑战：LLM推理的内存管理危机"></a>核心挑战：LLM推理的内存管理危机</h3><p>LLM推理服务（如ChatGPT、Claude）面临严重的内存管理问题。以典型LLaMA-13B模型为例：</p>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">单请求内存分解 (LLaMA-13B, FP16)</span><span class="hljs-punctuation">:</span><br><span class="hljs-attribute">├── 模型权重</span><span class="hljs-punctuation">:</span> <span class="hljs-string">   ~26 GB  (固定, 加载一次)</span><br><span class="hljs-attribute">└── KV缓存</span><span class="hljs-punctuation">:</span> <span class="hljs-string">    ~0.5-4 GB (动态, 每请求!)</span><br>    <span class="hljs-attribute">├── 公式</span><span class="hljs-punctuation">:</span> <span class="hljs-string">2 × layers × heads × head_dim × seq_len × batch × dtype</span><br>    <span class="hljs-attribute">├── 例</span><span class="hljs-punctuation">:</span> <span class="hljs-string">40层 × 40头 × 128维 × 2048 tokens × 2字节 ≈ 800 MB</span><br>    <span class="hljs-attribute">└── 上限 (OPT-175B, 2048 tokens)</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~10 GB/请求</span><br><br><span class="hljs-attribute">问题</span><span class="hljs-punctuation">:</span> <span class="hljs-string">5个并发请求 = 5+ GB仅用于KV缓存!</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>KV缓存为什么这么大？</strong> 自回归解码中，每个生成的token需要访问所有之前token的K和V。为避免重复计算，推理框架缓存已计算的K和V。对于长序列或大模型，每个请求的KV缓存可达数GB。</p>
+<p><strong>传统系统的内存浪费来源</strong>:</p>
+<figure class="highlight less"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs less"><span class="hljs-selector-tag">FasterTransformer</span>/<span class="hljs-selector-tag">ORCA</span>的内存分配:<br>┌──────────────────────────────────┐<br>│ 预分配最大长度 (如<span class="hljs-number">2048</span> tokens)    │ ← 实际可能只生成<span class="hljs-number">50</span>个<span class="hljs-selector-tag">token</span>!<br>│ ████████░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 内部碎片: ~<span class="hljs-number">97%</span> 浪费<br>└──────────────────────────────────┘<br><br>请求<span class="hljs-selector-tag">A</span>: <span class="hljs-selector-attr">[已用512]</span> <span class="hljs-selector-attr">[预留1536]</span><br>请求<span class="hljs-selector-tag">B</span>: <span class="hljs-selector-attr">[已用100]</span> <span class="hljs-selector-attr">[预留1948]</span>  ← 释放后留下碎片<br>请求<span class="hljs-selector-tag">C</span>: 需要<span class="hljs-number">800</span>连续空间, 但碎片化导致无法分配!<br></code></pre></td></tr></table></figure>
+
+<p><strong>量化浪费</strong>: 实验测量显示，在生产工作负载上，传统系统仅有20-40%的KV缓存内存被实际使用。对于一个80GB的A100 GPU，这意味着48-64GB的”幽灵内存”——已分配但未使用的浪费空间。</p>
+<h3 id="为什么不能用简单的动态分配？"><a href="#为什么不能用简单的动态分配？" class="headerlink" title="为什么不能用简单的动态分配？"></a>为什么不能用简单的动态分配？</h3><p>简单的malloc&#x2F;free风格动态分配在GPU上不可行：</p>
+<ol>
+<li><strong>GPU malloc开销高</strong>: GPU上的动态内存分配慢且不可预测</li>
+<li><strong>碎片化</strong>: 不同大小请求的分配&#x2F;释放导致外部碎片，最终无法分配连续大块</li>
+<li><strong>无法共享</strong>: 动态分配不提供跨请求共享机制</li>
+</ol>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>FasterTransformer (NVIDIA)</strong>: 预分配最大序列长度。简单但极浪费。对于变长序列，高达80%的分配内存闲置。</p>
+</li>
+<li><p><strong>ORCA (UC Berkeley, OSDI 2022)</strong>: 使用迭代级调度（iteration-level scheduling）提升批处理效率，但KV缓存管理仍是预分配。内存浪费是其主要扩展瓶颈。</p>
+</li>
+<li><p><strong>HuggingFace TGI</strong>: 使用动态批处理和简单的内存池，但无法处理碎片化和共享。</p>
+</li>
+</ol>
+<h3 id="关键洞察：为什么分页？"><a href="#关键洞察：为什么分页？" class="headerlink" title="关键洞察：为什么分页？"></a>关键洞察：为什么分页？</h3><blockquote>
+<p><strong>这是虚拟内存问题！</strong> LLM推理的KV缓存管理面临的问题——碎片化、预分配浪费、共享困难——与1960年代操作系统面临的物理内存管理问题完全相同。当时的解决方案是分页虚拟内存（paged virtual memory），它通过固定大小的页框、页表映射、写时复制共享，彻底解决了这些问题。PagedAttention将相同的智慧应用于KV缓存。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>设置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型</td>
+<td>OPT-13B, OPT-66B, OPT-175B, LLaMA-13B</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>NVIDIA A100 (40GB&#x2F;80GB)</td>
+</tr>
+<tr>
+<td>工作负载</td>
+<td>ShareGPT数据集（真实LLM服务trace）、合成数据集</td>
+</tr>
+<tr>
+<td>序列长度</td>
+<td>变长，平均256-1024 tokens</td>
+</tr>
+<tr>
+<td>对比基线</td>
+<td>FasterTransformer, ORCA (OSDI 2022), HuggingFace TGI</td>
+</tr>
+<tr>
+<td>评估指标</td>
+<td>吞吐量 (requests&#x2F;s)、延迟 (P50&#x2F;P99)、内存利用率</td>
+</tr>
+<tr>
+<td>解码策略</td>
+<td>贪婪解码、并行采样 (n&#x3D;1-10)、beam search (beam&#x3D;1-6)</td>
+</tr>
+</tbody></table>
+<h3 id="系统架构"><a href="#系统架构" class="headerlink" title="系统架构"></a>系统架构</h3><figure class="highlight inform7"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs inform7">vLLM 系统架构:<br>┌─────────────────────────────────────────────┐<br>│                    Scheduler                  │<br>│  (请求调度, 内存管理, 抢占决策)                │<br>├─────────────────────────────────────────────┤<br>│              Block Allocator                  │<br>│  (块分配/回收, 引用计数, 空闲池管理)           │<br>├──────────────┬───────────────────────────────┤<br>│  KV Cache    │         Model Executor         │<br>│  Blocks      │  (PagedAttention + FlashAttn)  │<br>│  <span class="hljs-comment">[块1]</span><span class="hljs-comment">[块3]</span>  │                                │<br>│  <span class="hljs-comment">[块2]</span><span class="hljs-comment">[块5]</span>  │                                │<br>│  <span class="hljs-comment">[块4]</span>  ...  │                                │<br>└──────────────┴───────────────────────────────┘<br>         ↕ (CPU-GPU swap)<br>    CPU Memory (swapped blocks)<br></code></pre></td></tr></table></figure>
+
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><strong>步骤1: 块分配——首次请求</strong></p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs stylus">当新请求到达 (序列长度为L):<br>  <span class="hljs-keyword">for</span> <span class="hljs-selector-tag">i</span> <span class="hljs-keyword">in</span> <span class="hljs-number">0</span> to <span class="hljs-built_in">ceil</span>(L / block_size):<br>    block = allocator<span class="hljs-selector-class">.allocate</span>()     <span class="hljs-comment">// 从空闲池获取空块</span><br>    block_table<span class="hljs-selector-attr">[seq_id]</span><span class="hljs-selector-attr">[i]</span> = block   <span class="hljs-comment">// 更新块表映射</span><br>    <span class="hljs-comment">// 使用FlashAttention计算该块的KV缓存</span><br>    <span class="hljs-built_in">compute_kv_cache</span>(block, tokens<span class="hljs-selector-attr">[i*block_size : (i+1)*block_size]</span>)<br><br>空闲池管理:<br>  ┌──────┬──────┬──────┬──────┬──────┐<br>  │ 空闲  │ 空闲  │ 空闲  │ 空闲  │ ...  │<br>  └──────┴──────┴──────┴──────┴──────┘<br>  → 固定大小块, <span class="hljs-built_in">O</span>(<span class="hljs-number">1</span>)分配, 无碎片<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤2: 增量扩展——逐块生成</strong></p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs stylus">自回归生成:<br>  while not eos:<br>    next_token = model<span class="hljs-selector-class">.forward</span>(current_token, kv_cache_blocks)<br>    缓存当前token的K和V到最后一个分配块<br>    <br>    <span class="hljs-keyword">if</span> <span class="hljs-built_in">last_block_is_full</span>():<br>      new_block = allocator<span class="hljs-selector-class">.allocate</span>()<br>      block_table<span class="hljs-selector-attr">[seq_id]</span><span class="hljs-selector-class">.append</span>(new_block)<br>      <span class="hljs-comment">// 块已满, 需要新块继续</span><br><br>关键: 每块可容纳block_size个token (如<span class="hljs-number">16</span>)<br>      当块填满时才分配新块 (批量分配, 减少开销)<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤3: PagedAttention——分块注意力计算</strong></p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs scss">PagedAttention的核心计算 (伪代码):<br><br>def <span class="hljs-built_in">paged_attention</span>(query, key_cache_blocks, value_cache_blocks, block_table):<br>    output = <span class="hljs-built_in">zeros_like</span>(query)<br>    normalizer = <span class="hljs-number">0</span><br>    <br>    for block_idx, physical_block in <span class="hljs-built_in">enumerate</span>(block_table):<br>        # 通过块表定位物理块<br>        k_block = key_cache_blocks[physical_block]<br>        v_block = value_cache_blocks[physical_block]<br>        <br>        # 标准的缩放点积注意力 (块内)<br>        scores = query @ k_block.T / <span class="hljs-built_in">sqrt</span>(d)<br>        <br>        # 如果块有填充 (最后一个块可能不满)<br>        if <span class="hljs-built_in">is_last_partial_block</span>(block_idx):<br>            scores = <span class="hljs-built_in">mask_padding</span>(scores)<br>        <br>        attn = <span class="hljs-built_in">softmax</span>(scores)<br>        output += attn @ v_block<br>    <br>    return output<br><br>注意: 与使用连续内存的注意力完全等价!<br>      唯一的区别是通过块表间接访问KV缓存。<br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤4: 块级共享——写时复制</strong></p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs stylus">场景: 并行采样 (n=<span class="hljs-number">3</span>, 共享提示前缀)<br><br>提示: <span class="hljs-string">&quot;解释量子计算的原理&quot;</span> (<span class="hljs-number">100</span> tokens = <span class="hljs-number">7</span>个块)<br>生成<span class="hljs-number">1</span>: <span class="hljs-string">&quot;量子计算利用量子比特的叠加态...&quot;</span> <br>生成<span class="hljs-number">2</span>: <span class="hljs-string">&quot;量子计算是一种基于量子力学...&quot;</span><br>生成<span class="hljs-number">3</span>: <span class="hljs-string">&quot;量子计算的核心是量子比特...&quot;</span><br><br>块表结构:<br>序列<span class="hljs-number">0</span> (提示):  <span class="hljs-selector-attr">[块A]</span> → <span class="hljs-selector-attr">[块B]</span> → <span class="hljs-selector-attr">[块C]</span> → <span class="hljs-selector-attr">[块D]</span> → <span class="hljs-selector-attr">[块E]</span> → <span class="hljs-selector-attr">[块F]</span> → <span class="hljs-selector-attr">[块G]</span><br>序列<span class="hljs-number">1</span> (生成<span class="hljs-number">1</span>): <span class="hljs-selector-attr">[块A]</span> → <span class="hljs-selector-attr">[块B]</span> → <span class="hljs-selector-attr">[块C]</span> → <span class="hljs-selector-attr">[块D]</span> → <span class="hljs-selector-attr">[块E]</span> → <span class="hljs-selector-attr">[块F]</span> → <span class="hljs-selector-attr">[块G]</span> → <span class="hljs-selector-attr">[块H]</span>  ← 新块<br>序列<span class="hljs-number">2</span> (生成<span class="hljs-number">2</span>): <span class="hljs-selector-attr">[块A]</span> → <span class="hljs-selector-attr">[块B]</span> → <span class="hljs-selector-attr">[块C]</span> → <span class="hljs-selector-attr">[块D]</span> → <span class="hljs-selector-attr">[块E]</span> → <span class="hljs-selector-attr">[块F]</span> → <span class="hljs-selector-attr">[块G]</span> → <span class="hljs-selector-attr">[块I]</span>  ← 新块<br>序列<span class="hljs-number">3</span> (生成<span class="hljs-number">3</span>): <span class="hljs-selector-attr">[块A]</span> → <span class="hljs-selector-attr">[块B]</span> → <span class="hljs-selector-attr">[块C]</span> → <span class="hljs-selector-attr">[块D]</span> → <span class="hljs-selector-attr">[块E]</span> → <span class="hljs-selector-attr">[块F]</span> → <span class="hljs-selector-attr">[块G]</span> → <span class="hljs-selector-attr">[块J]</span>  ← 新块<br>                 ↑──── <span class="hljs-number">7</span>个块被<span class="hljs-number">4</span>个序列共享, 无复制! ────↑<br><br>引用计数:<br>块A-G: refcnt = <span class="hljs-number">4</span> (被提示序列 + <span class="hljs-number">3</span>个生成序列引用)<br>块H:   refcnt = <span class="hljs-number">1</span> (仅被生成<span class="hljs-number">1</span>引用)<br>块I:   refcnt = <span class="hljs-number">1</span> (仅被生成<span class="hljs-number">2</span>引用)<br>块J:   refcnt = <span class="hljs-number">1</span> (仅被生成<span class="hljs-number">3</span>引用)<br><br>当序列完成, 释放块:<br>  <span class="hljs-keyword">for</span> block <span class="hljs-keyword">in</span> sequence<span class="hljs-selector-class">.block_table</span>:<br>    block<span class="hljs-selector-class">.refcnt</span> -= <span class="hljs-number">1</span><br>    <span class="hljs-keyword">if</span> block<span class="hljs-selector-class">.refcnt</span> == <span class="hljs-number">0</span>:<br>      allocator<span class="hljs-selector-class">.free</span>(block)  <span class="hljs-comment">// 回收到空闲池</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>步骤5: 内存抢占——GPU-CPU交换</strong></p>
+<figure class="highlight stata"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs stata">当GPU内存不足时:<br>  victim_blocks = select_victims()    <span class="hljs-comment">// 选择不活跃请求的块</span><br>  <span class="hljs-keyword">copy</span> GPU → CPU: victim_blocks       <span class="hljs-comment">// 异步拷贝到CPU内存</span><br>  <span class="hljs-keyword">mark</span> <span class="hljs-keyword">as</span> swapped                     <span class="hljs-comment">// 标记为已换出</span><br><br>当GPU内存可用时:<br>  对于被换出的请求, 在下一推理步骤前:<br>    <span class="hljs-keyword">copy</span> CPU → GPU: victim_blocks     <span class="hljs-comment">// 异步拷贝回GPU</span><br>    <span class="hljs-keyword">mark</span> <span class="hljs-keyword">as</span> active                    <span class="hljs-comment">// 标记为活跃</span><br><br>选择策略:<br>  优先换出: 等待时间最长的请求 (FCFS)<br>  次优换出: 已生成最多<span class="hljs-keyword">token</span>的请求 (已投入成本高, 但不换出影响更大)<br>  不换出:   正在计算中的请求<br></code></pre></td></tr></table></figure>
+
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="内存利用率对比"><a href="#内存利用率对比" class="headerlink" title="内存利用率对比"></a>内存利用率对比</h4><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">传统方案 (ORCA)</span><span class="hljs-punctuation">:</span><br><span class="hljs-attribute">┌─────────────────────────────┐</span><br><span class="hljs-attribute">│ 请求A</span><span class="hljs-punctuation">:</span> <span class="hljs-string">预分配4096           │ ← 实际使用: 256 tokens</span><br><span class="hljs-attribute">│ ██░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">6.25%</span><br><span class="hljs-attribute">│ 请求B</span><span class="hljs-punctuation">:</span> <span class="hljs-string">预分配4096           │</span><br><span class="hljs-attribute">│ ████████░░░░░░░░░░░░░░░░░░░ │ ← 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">25%</span><br><span class="hljs-attribute">│ 请求C</span><span class="hljs-punctuation">:</span> <span class="hljs-string">预分配4096           │</span><br><span class="hljs-attribute">│ ████░░░░░░░░░░░░░░░░░░░░░░░ │ ← 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">12.5%</span><br><span class="hljs-attribute">├─────────────────────────────┤</span><br><span class="hljs-attribute">│ 总利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~15%               │</span><br><span class="hljs-attribute">│ 浪费</span><span class="hljs-punctuation">:</span> <span class="hljs-string">85%                    │</span><br><span class="hljs-attribute">└─────────────────────────────┘</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">PagedAttention</span><span class="hljs-punctuation">:</span><br><span class="hljs-attribute">┌─────────────────────────────┐</span><br><span class="hljs-attribute">│ 块池 (256个块, 每块16 tokens)│</span><br><span class="hljs-attribute">│ ████████████████████░░░░░░░░ │ ← 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">78%</span><br><span class="hljs-attribute">│ ░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 空闲</span><span class="hljs-punctuation">:</span> <span class="hljs-string">22%</span><br><span class="hljs-attribute">├─────────────────────────────┤</span><br><span class="hljs-attribute">│ 无碎片, 动态分配, 按需使用    │</span><br><span class="hljs-attribute">│ 总利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">~96%                │</span><br><span class="hljs-attribute">│ 浪费</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&lt;4%                     │</span><br>└─────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<h4 id="块大小选择"><a href="#块大小选择" class="headerlink" title="块大小选择"></a>块大小选择</h4><p>块大小的选择是关键的工程设计决策：</p>
+<table>
+<thead>
+<tr>
+<th>块大小</th>
+<th>优势</th>
+<th>劣势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>小 (8 tokens)</td>
+<td>更细粒度, 更少内部浪费</td>
+<td>更多块表条目, 更多GPU kernel调用</td>
+</tr>
+<tr>
+<td>中 (16 tokens)</td>
+<td><strong>平衡点</strong> — 论文默认</td>
+<td>-</td>
+</tr>
+<tr>
+<td>大 (32 tokens)</td>
+<td>更少kernel调用, 更高效GEMM</td>
+<td>更多内部浪费 (短序列)</td>
+</tr>
+</tbody></table>
+<p>论文选择16 tokens&#x2F;块作为实验验证的最佳平衡点。</p>
+<h4 id="内存节省量化"><a href="#内存节省量化" class="headerlink" title="内存节省量化"></a>内存节省量化</h4><table>
+<thead>
+<tr>
+<th>共享场景</th>
+<th>传统方案</th>
+<th>PagedAttention</th>
+<th>节省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>并行采样 (n&#x3D;10, prompt&#x3D;512)</td>
+<td>10×复制 &#x3D; 5GB</td>
+<td>共享prompt &#x3D; 0.5GB + 10×新块 &#x3D; 2.5GB</td>
+<td><strong>55%</strong></td>
+</tr>
+<tr>
+<td>Beam search (beam&#x3D;6)</td>
+<td>6×复制</td>
+<td>共享+分支差异 &#x3D; 少量</td>
+<td><strong>40%</strong></td>
+</tr>
+<tr>
+<td>共享系统提示 (batch&#x3D;8)</td>
+<td>8×复制</td>
+<td>1×共享块 + 8×各请求块</td>
+<td><strong>28%</strong></td>
+</tr>
+</tbody></table>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="吞吐量提升"><a href="#吞吐量提升" class="headerlink" title="吞吐量提升"></a>吞吐量提升</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FasterTransformer</th>
+<th>ORCA</th>
+<th>vLLM</th>
+<th>vs ORCA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-13B</td>
+<td>1.0×</td>
+<td>1.2×</td>
+<td><strong>2.9×</strong></td>
+<td><strong>2.4×</strong></td>
+</tr>
+<tr>
+<td>OPT-66B</td>
+<td>1.0×</td>
+<td>1.3×</td>
+<td><strong>3.6×</strong></td>
+<td><strong>2.8×</strong></td>
+</tr>
+<tr>
+<td>OPT-175B</td>
+<td>1.0×</td>
+<td>1.1×</td>
+<td><strong>4.1×</strong></td>
+<td><strong>3.7×</strong></td>
+</tr>
+<tr>
+<td>LLaMA-13B</td>
+<td>1.0×</td>
+<td>1.2×</td>
+<td><strong>2.6×</strong></td>
+<td><strong>2.2×</strong></td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="系统级延迟分解"><a href="#系统级延迟分解" class="headerlink" title="系统级延迟分解"></a>系统级延迟分解</h3><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>传统方案 (ORCA)</th>
+<th>PagedAttention (vLLM)</th>
+<th>加速来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prefill（KV计算）</td>
+<td>350ms</td>
+<td>350ms</td>
+<td>相同（FlashAttention加速）</td>
+</tr>
+<tr>
+<td>Decode单步（注意力计算）</td>
+<td>12ms</td>
+<td>12ms</td>
+<td>相同（通过块表间接寻址，开销&lt;0.1%）</td>
+</tr>
+<tr>
+<td>内存分配&#x2F;碎片处理</td>
+<td>45ms（平均等待）</td>
+<td><strong>&lt;1ms</strong></td>
+<td>固定大小块，无搜索</td>
+</tr>
+<tr>
+<td>前缀复用（共享prompt）</td>
+<td>0（无复用，重新计算）</td>
+<td><strong>完全跳过</strong></td>
+<td>COW共享，zero-cost复用</td>
+</tr>
+<tr>
+<td>GPU-CPU交换延迟</td>
+<td>不支持（OOM即拒绝）</td>
+<td><strong>&lt;2ms&#x2F;块</strong></td>
+<td>异步PCIe传输</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_006_full.png" srcset="/img/loading.gif" lazyload alt="Figure 6"><br><em>Figure 6: 来源—原论文。</em></p>
+<h3 id="内存利用率"><a href="#内存利用率" class="headerlink" title="内存利用率"></a>内存利用率</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>峰值利用率</th>
+<th>平均利用率</th>
+<th>浪费比例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ORCA</td>
+<td>20-40%</td>
+<td>~25%</td>
+<td>60-80%</td>
+</tr>
+<tr>
+<td>FasterTransformer</td>
+<td>15-30%</td>
+<td>~20%</td>
+<td>70-85%</td>
+</tr>
+<tr>
+<td><strong>vLLM&#x2F;PagedAttention</strong></td>
+<td><strong>&gt;96%</strong></td>
+<td><strong>&gt;92%</strong></td>
+<td><strong>&lt;4%</strong></td>
+</tr>
+</tbody></table>
+<h3 id="延迟对比"><a href="#延迟对比" class="headerlink" title="延迟对比"></a>延迟对比</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>ORCA</th>
+<th>vLLM</th>
+<th>改善</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P50延迟 (OPT-13B)</td>
+<td>2.3s</td>
+<td><strong>1.1s</strong></td>
+<td>-52%</td>
+</tr>
+<tr>
+<td>P99延迟 (OPT-13B)</td>
+<td>5.8s</td>
+<td><strong>2.4s</strong></td>
+<td>-59%</td>
+</tr>
+<tr>
+<td>P50延迟 (OPT-66B)</td>
+<td>8.1s</td>
+<td><strong>3.2s</strong></td>
+<td>-60%</td>
+</tr>
+<tr>
+<td>P99延迟 (OPT-66B)</td>
+<td>18.5s</td>
+<td><strong>6.8s</strong></td>
+<td>-63%</td>
+</tr>
+</tbody></table>
+<p><strong>分析</strong>: 延迟改善来自两个因素：(1) 更高内存利用率 → 更大batch → 更好GPU利用率；(2) 块级共享避免重复KV计算。</p>
+<h3 id="批处理大小"><a href="#批处理大小" class="headerlink" title="批处理大小"></a>批处理大小</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>ORCA最大batch</th>
+<th>vLLM最大batch</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OPT-13B (40GB)</td>
+<td>16</td>
+<td><strong>48</strong></td>
+<td>3.0×</td>
+</tr>
+<tr>
+<td>OPT-66B (80GB)</td>
+<td>8</td>
+<td><strong>28</strong></td>
+<td>3.5×</td>
+</tr>
+<tr>
+<td>LLaMA-13B (40GB)</td>
+<td>12</td>
+<td><strong>42</strong></td>
+<td>3.5×</td>
+</tr>
+</tbody></table>
+<p><strong>核心洞察</strong>: 更大的batch直接转化为更高的吞吐量。PagedAttention通过消除内存浪费，使相同GPU可以同时处理3-3.5倍的请求。</p>
+<h3 id="内存共享实际节省"><a href="#内存共享实际节省" class="headerlink" title="内存共享实际节省"></a>内存共享实际节省</h3><table>
+<thead>
+<tr>
+<th>工作负载</th>
+<th>配置</th>
+<th>无共享</th>
+<th>有共享</th>
+<th>节省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ShareGPT trace</td>
+<td>并行采样 n&#x3D;5</td>
+<td>12.8 GB</td>
+<td><strong>5.8 GB</strong></td>
+<td><strong>55%</strong></td>
+</tr>
+<tr>
+<td>合成</td>
+<td>beam search beam&#x3D;4</td>
+<td>8.2 GB</td>
+<td><strong>5.0 GB</strong></td>
+<td><strong>39%</strong></td>
+</tr>
+<tr>
+<td>合成</td>
+<td>共享前缀 batch&#x3D;8</td>
+<td>10.5 GB</td>
+<td><strong>7.6 GB</strong></td>
+<td><strong>28%</strong></td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="分页开销的量化分析"><a href="#分页开销的量化分析" class="headerlink" title="分页开销的量化分析"></a>分页开销的量化分析</h3><p>PagedAttention虽然引入了块表间接寻址的开销，但实验表明该开销可忽略：</p>
+<table>
+<thead>
+<tr>
+<th>开销来源</th>
+<th>大小</th>
+<th>相对占比</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>块表内存</td>
+<td>8 bytes&#x2F;块（物理地址）</td>
+<td>&lt;0.1% KV缓存</td>
+<td>可忽略</td>
+</tr>
+<tr>
+<td>块表查找</td>
+<td>O(1) GPU寄存器操作</td>
+<td>&lt;0.01% 计算时间</td>
+<td>可忽略</td>
+</tr>
+<tr>
+<td>块内填充（最后一块）</td>
+<td>平均block_size&#x2F;2 tokens</td>
+<td>~3% KV缓存</td>
+<td>微小</td>
+</tr>
+<tr>
+<td>引用计数维护</td>
+<td>O(1) 原子操作</td>
+<td>&lt;0.001%</td>
+<td>完全可忽略</td>
+</tr>
+</tbody></table>
+<p><strong>关键结论</strong>: PagedAttention的内存节省（60-80%的碎片消除）远超其引入的间接寻址开销（&lt;0.1%）。</p>
+<h3 id="内存效率的逐层分解"><a href="#内存效率的逐层分解" class="headerlink" title="内存效率的逐层分解"></a>内存效率的逐层分解</h3><p>以OPT-13B在A100-40GB上处理ShareGPT trace（平均256 tokens）为例：</p>
+<table>
+<thead>
+<tr>
+<th>内存类别</th>
+<th>ORCA分配</th>
+<th>vLLM分配</th>
+<th>差异</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型权重</td>
+<td>26 GB</td>
+<td>26 GB</td>
+<td>0（固定）</td>
+</tr>
+<tr>
+<td>KV缓存（已用）</td>
+<td>3.2 GB</td>
+<td>3.2 GB</td>
+<td>0（实际使用相同）</td>
+</tr>
+<tr>
+<td>KV缓存（内部碎片）</td>
+<td>6.8 GB（预分配浪费）</td>
+<td><strong>0.1 GB</strong>（块填充）</td>
+<td><strong>-6.7 GB</strong></td>
+</tr>
+<tr>
+<td>KV缓存（外部碎片）</td>
+<td>4.0 GB（碎片间隙）</td>
+<td><strong>0 GB</strong>（无碎片）</td>
+<td><strong>-4.0 GB</strong></td>
+</tr>
+<tr>
+<td>块表开销</td>
+<td>0</td>
+<td>0.02 GB</td>
+<td>+0.02 GB</td>
+</tr>
+<tr>
+<td>可用作更大batch</td>
+<td>-</td>
+<td>+10.7 GB</td>
+<td><strong>关键差异</strong></td>
+</tr>
+</tbody></table>
+<h3 id="为什么发表在SOSP而非ML会议？"><a href="#为什么发表在SOSP而非ML会议？" class="headerlink" title="为什么发表在SOSP而非ML会议？"></a>为什么发表在SOSP而非ML会议？</h3><p>PagedAttention&#x2F;vLLM选择发表在SOSP（操作系统领域顶会）而非NeurIPS&#x2F;ICML，这本身就是一个重要的声明：</p>
+<ol>
+<li><strong>核心问题是系统设计</strong>: 内存碎片化、分配策略、共享机制——这些都是经典OS问题</li>
+<li><strong>解决方案来自OS</strong>: 分页、写时复制、交换——都是OS教科书概念</li>
+<li><strong>评估方法不同</strong>: 关注吞吐量、延迟、内存利用率等系统指标，而非模型精度或困惑度</li>
+<li><strong>影响力更广</strong>: SOSP论文影响了整个LLM服务生态系统的设计</li>
+</ol>
+<p>这一选择证明：随着LLM部署的规模化，<strong>系统设计</strong>变得与<strong>模型架构</strong>同等重要。</p>
+<h3 id="为什么分页抽象如此有效？"><a href="#为什么分页抽象如此有效？" class="headerlink" title="为什么分页抽象如此有效？"></a>为什么分页抽象如此有效？</h3><figure class="highlight prolog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs prolog">分页的核心优势: 解耦逻辑连续性与物理连续性<br><br>传统方案 (物理连续):<br>  逻辑<span class="hljs-symbol">KV</span>: [t0][t1][t2][t3]...[tN]<br>  物理内存: 必须在<span class="hljs-symbol">GPU</span> <span class="hljs-symbol">HBM</span>中找一块连续的 <span class="hljs-symbol">N</span>×d 空间<br>  → 碎片化, 浪费, 无法共享<br><br><span class="hljs-symbol">PagedAttention</span> (逻辑连续, 物理分页):<br>  逻辑<span class="hljs-symbol">KV</span>: [t0<span class="hljs-number">-15</span>] → [t16<span class="hljs-number">-31</span>] → [t32<span class="hljs-number">-47</span>] → ...<br>  块表:   块<span class="hljs-number">0</span>  →  块<span class="hljs-number">3</span>  →  块<span class="hljs-number">7</span>  →  ...<br>  物理内存: 块可在<span class="hljs-symbol">GPU</span> <span class="hljs-symbol">HBM</span>中任意位置<br>  → 无碎片, 按需分配, 可共享<br></code></pre></td></tr></table></figure>
+
+<h3 id="块大小对性能的影响"><a href="#块大小对性能的影响" class="headerlink" title="块大小对性能的影响"></a>块大小对性能的影响</h3><p>块大小是PagedAttention最重要的调优参数：</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs angelscript">小块的权衡 (<span class="hljs-number">4</span><span class="hljs-number">-8</span> tokens/块):<br><span class="hljs-string">  [+]</span> 更细粒度, 更少内部碎片<br><span class="hljs-string">  [+]</span> 更好的共享粒度 (前缀可能在任意位置结束)<br><span class="hljs-string">  [-]</span> 更多块表条目 (内存开销)<br><span class="hljs-string">  [-]</span> 更多GPU kernel调用 (计算开销)<br><span class="hljs-string">  [-]</span> GEMM效率低 (小矩阵乘法)<br><br>大块的权衡 (<span class="hljs-number">32</span><span class="hljs-number">-64</span> tokens/块):<br><span class="hljs-string">  [+]</span> 更少块表条目<br><span class="hljs-string">  [+]</span> 更少kernel调用, 更好的GEMM效率<br><span class="hljs-string">  [-]</span> 更多内部碎片 (短序列填充)<br><span class="hljs-string">  [-]</span> 共享粒度粗<br><br>论文选择 <span class="hljs-number">16</span> tokens/块 作为工程平衡点。<br></code></pre></td></tr></table></figure>
+
+<h3 id="PagedAttention与FlashAttention的协同"><a href="#PagedAttention与FlashAttention的协同" class="headerlink" title="PagedAttention与FlashAttention的协同"></a>PagedAttention与FlashAttention的协同</h3><p>vLLM中两种技术互补：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs scss">请求到达 → PagedAttention (内存管理)<br>         → 分配KV缓存块<br>         → 建立块表<br><br>推理计算 → FlashAttention (计算加速)<br>         → 通过块表读取KV缓存块<br>         → 分块计算注意力 (IO优化)<br>         → 在线softmax (数值稳定)<br><br>两者结合: PagedAttention确保内存高效 → 支持更大batch<br>         FlashAttention确保计算高效 → 每个请求更快<br>         协同效果: <span class="hljs-number">2</span>-<span class="hljs-number">4</span>×吞吐量提升<br></code></pre></td></tr></table></figure>
+
+<h3 id="系统的实际影响"><a href="#系统的实际影响" class="headerlink" title="系统的实际影响"></a>系统的实际影响</h3><p>vLLM已成为使用最广泛的开源LLM服务框架，被以下组织采用：</p>
+<ul>
+<li>Anthropic (Claude的推理基础设施)</li>
+<li>Databricks (MLflow AI Gateway集成)</li>
+<li>AWS (SageMaker和Bedrock集成)</li>
+<li>LMSYS (Chatbot Arena后端)</li>
+<li>无数中小企业和研究机构</li>
+</ul>
+<p>这一采用证明了PagedAttention的核心洞察——LLM推理的瓶颈在内存管理——的准确性和重要性。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-FasterTransformer"><a href="#vs-FasterTransformer" class="headerlink" title="vs FasterTransformer"></a>vs FasterTransformer</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FasterTransformer</th>
+<th>vLLM&#x2F;PagedAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KV缓存策略</td>
+<td>预分配最大长度</td>
+<td><strong>动态分页分配</strong></td>
+</tr>
+<tr>
+<td>内存利用率</td>
+<td>15-30%</td>
+<td><strong>&gt;96%</strong></td>
+</tr>
+<tr>
+<td>碎片化</td>
+<td>严重 (内部+外部)</td>
+<td><strong>无</strong></td>
+</tr>
+<tr>
+<td>前缀共享</td>
+<td>不支持</td>
+<td><strong>块级COW共享</strong></td>
+</tr>
+<tr>
+<td>实现方式</td>
+<td>手写CUDA kernel</td>
+<td><strong>块表+PagedAttention</strong></td>
+</tr>
+<tr>
+<td>部署复杂度</td>
+<td>需模型转换</td>
+<td><strong>即插即用</strong></td>
+</tr>
+</tbody></table>
+<h3 id="vs-ORCA"><a href="#vs-ORCA" class="headerlink" title="vs ORCA"></a>vs ORCA</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>ORCA</th>
+<th>vLLM&#x2F;PagedAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>调度策略</td>
+<td>迭代级 (selective batching)</td>
+<td><strong>请求级 + 抢占</strong></td>
+</tr>
+<tr>
+<td>KV缓存管理</td>
+<td>预分配</td>
+<td><strong>分页 (块级)</strong></td>
+</tr>
+<tr>
+<td>内存利用</td>
+<td>20-40%</td>
+<td><strong>&gt;96%</strong></td>
+</tr>
+<tr>
+<td>最大batch</td>
+<td>受内存碎片限制</td>
+<td><strong>受实际需求限制</strong></td>
+</tr>
+<tr>
+<td>系统复杂度</td>
+<td>中等</td>
+<td>较高 (块表管理)</td>
+</tr>
+</tbody></table>
+<h3 id="vs-连续内存方配（传统方案）"><a href="#vs-连续内存方配（传统方案）" class="headerlink" title="vs 连续内存方配（传统方案）"></a>vs 连续内存方配（传统方案）</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">对比实验</span><span class="hljs-punctuation">:</span> <span class="hljs-string">100个随机长度请求 (平均256, 最大2048 tokens)</span><br><br><span class="hljs-attribute">连续分配</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">峰值内存</span><span class="hljs-punctuation">:</span> <span class="hljs-string">14.2 GB</span><br>  <span class="hljs-attribute">实际使用</span><span class="hljs-punctuation">:</span> <span class="hljs-string">3.1 GB</span><br>  <span class="hljs-attribute">利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">  21.8%</span><br>  <span class="hljs-attribute">OOM</span><span class="hljs-punctuation">:</span> <span class="hljs-string">     12个请求被拒绝</span><br><br><span class="hljs-attribute">PagedAttention</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">峰值内存</span><span class="hljs-punctuation">:</span> <span class="hljs-string">3.8 GB</span><br>  <span class="hljs-attribute">实际使用</span><span class="hljs-punctuation">:</span> <span class="hljs-string">3.5 GB</span><br>  <span class="hljs-attribute">利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">  92.1%</span><br>  <span class="hljs-attribute">OOM</span><span class="hljs-punctuation">:</span> <span class="hljs-string">     0 (全部处理)</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-块大小敏感性"><a href="#1-块大小敏感性" class="headerlink" title="1. 块大小敏感性"></a>1. 块大小敏感性</h3><p>块大小是关键的调优参数。16 tokens&#x2F;块在大多数场景下是最优的，但不同模型和序列长度可能需要不同块大小。目前需要手动调优，缺乏自动选择机制。</p>
+<h3 id="2-块表内存开销"><a href="#2-块表内存开销" class="headerlink" title="2. 块表内存开销"></a>2. 块表内存开销</h3><p>每个请求维护一个块表。对于超大batch（如1000+请求），块表本身的内存开销变得不可忽略。但对于典型LLM服务场景（数十到数百并发请求），开销可忽略。</p>
+<h3 id="3-非注意力内存"><a href="#3-非注意力内存" class="headerlink" title="3. 非注意力内存"></a>3. 非注意力内存</h3><p>PagedAttention仅优化KV缓存内存（通常占运行时内存的30-50%）。模型权重（固定）和其他激活内存（如中间层的hidden states）仍需要常规管理。对于小型模型或短序列，PagedAttention的相对收益较小。</p>
+<h3 id="4-GPU内存分配器碎片"><a href="#4-GPU内存分配器碎片" class="headerlink" title="4. GPU内存分配器碎片"></a>4. GPU内存分配器碎片</h3><p>虽然PagedAttention消除了逻辑碎片，但底层GPU内存分配器（cudaMalloc）可能有物理碎片。vLLM使用自己的GPU内存池来缓解此问题，但无法完全避免。</p>
+<h3 id="5-CPU-GPU交换延迟"><a href="#5-CPU-GPU交换延迟" class="headerlink" title="5. CPU-GPU交换延迟"></a>5. CPU-GPU交换延迟</h3><p>当GPU内存不足需要swap时，CPU-GPU数据传输引入延迟（每次~ms级）。对于延迟敏感的应用，频繁的swap可能是不可接受的。论文通过优先swap不活跃请求来最小化影响。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-跨领域类比的力量"><a href="#1-跨领域类比的力量" class="headerlink" title="1. 跨领域类比的力量"></a>1. 跨领域类比的力量</h3><p>PagedAttention展示了将一个领域的成熟技术（OS虚拟内存）应用到新问题（LLM KV缓存）的巨大价值。这启示我们：许多ML系统的瓶颈可能已被其他领域解决。</p>
+<h3 id="2-内存管理是LLM推理的核心瓶颈"><a href="#2-内存管理是LLM推理的核心瓶颈" class="headerlink" title="2. 内存管理是LLM推理的核心瓶颈"></a>2. 内存管理是LLM推理的核心瓶颈</h3><p>在LLM推理中，内存（而非计算）通常是瓶颈。KV缓存的动态性质使其管理尤为困难。高效的LLM推理系统必须以内存管理为核心设计。</p>
+<h3 id="3-写时复制在ML推理中的威力"><a href="#3-写时复制在ML推理中的威力" class="headerlink" title="3. 写时复制在ML推理中的威力"></a>3. 写时复制在ML推理中的威力</h3><p>COW（写时复制）是系统编程中的经典模式。在LLM推理中，由于并行采样、beam search和共享前缀的普遍性，COW的收益远超预期。28-55%的内存节省证明了这一点。</p>
+<h3 id="4-分块是通用抽象"><a href="#4-分块是通用抽象" class="headerlink" title="4. 分块是通用抽象"></a>4. 分块是通用抽象</h3><p>分块（固定大小、不可变）是管理动态资源的通用模式。FlashAttention使用分块加速计算，PagedAttention使用分块管理内存——相同的抽象服务于不同目的。</p>
+<h3 id="5-系统设计与ML算法的融合"><a href="#5-系统设计与ML算法的融合" class="headerlink" title="5. 系统设计与ML算法的融合"></a>5. 系统设计与ML算法的融合</h3><p>vLLM展示了系统设计（分页、COW、swap）和ML算法（注意力计算）可以深度融合。这种融合（而非各层独立优化）是实现最优性能的关键。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="为什么PagedAttention如此重要？"><a href="#为什么PagedAttention如此重要？" class="headerlink" title="为什么PagedAttention如此重要？"></a>为什么PagedAttention如此重要？</h3><p>PagedAttention解决的是一个”痛苦但被忽视”的问题。在它之前，KV缓存的内存浪费是LLM服务中的”房间里的大象”——大家都知道它存在，但没有人系统性地解决。PagedAttention通过将60年前的OS智慧应用到新场景，优雅地解决了这一瓶颈。</p>
+<p>其影响力体现在两个方面：(1) vLLM成为事实上的LLM服务标准，被全行业采用；(2) 分页抽象启发了后续工作（如SGLang的RadixAttention、LightLLM的token级内存管理）。</p>
+<h3 id="与FlashAttention的分工"><a href="#与FlashAttention的分工" class="headerlink" title="与FlashAttention的分工"></a>与FlashAttention的分工</h3><p>FlashAttention解决”如何计算得更快”（计算效率），PagedAttention解决”如何管理得更好”（内存效率）。两者是LLM推理系统的左右手——任何一个的缺失都会严重限制整体性能。现代LLM推理框架（如vLLM、SGLang）同时使用两者。</p>
+<h3 id="未来演进"><a href="#未来演进" class="headerlink" title="未来演进"></a>未来演进</h3><p>随着模型上下文窗口向百万级token扩展（Gemini 1.5、GPT-4 128K），KV缓存的内存压力将进一步增大。PagedAttention的分页抽象为此提供了基础——更大的上下文意味着更需要块级管理和共享。未来的演进方向包括：稀疏KV缓存（仅缓存重要token）、量化KV缓存（FP8&#x2F;INT8存储）、分层存储（GPU-CPU-SSD三级缓存管理）。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><strong>自适应块大小</strong>: 如何在运行时自动选择最优块大小？能否根据请求的统计特性动态调整？</li>
+<li><strong>KV缓存的量化</strong>: 将FP8 KV缓存与分页管理结合，内存使用可再减半。块量化是否与块管理无缝集成？</li>
+<li><strong>分层存储</strong>: 对于百万级上下文，GPU内存不够。如何设计GPU-CPU-SSD的三层KV缓存系统，利用分页抽象进行透明管理？</li>
+<li><strong>训练场景</strong>: 训练期间的激活内存管理类似KV缓存管理。分页抽象能否推广到训练场景的激活检查点？</li>
+<li><strong>多节点</strong>: 在分布式服务中，多个GPU节点如何共享KV缓存块？块表是否可跨节点扩展？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Kwon, W., et al. (2023). Efficient Memory Management for Large Language Model Serving with PagedAttention. SOSP 2023. arXiv:2309.06180</li>
+<li>Yu, G., et al. (2022). ORCA: A Distributed Serving System for Transformer-Based Generative Models. OSDI 2022.</li>
+<li>Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Zheng, L., et al. (2023). SGLang: Efficient Execution of Structured Language Model Programs. arXiv:2312.07104</li>
+<li>NVIDIA. FasterTransformer. GitHub: NVIDIA&#x2F;FasterTransformer</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-kv-cache/" class="print-no-link">#papers/kv-cache</a>
+      
+        <a href="/tags/papers-inference-optimization/" class="print-no-link">#papers/inference-optimization</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>PagedAttention: Efficient Memory Management for LLM Serving</div>
+      <div>https://w2ongq6.github.io/2023/09/12/inference/note/PagedAttention_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年9月12日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/09/20/aigc/note/Emu_note/" title="Emu: Enhancing Image Generation Models Using Photogenic Needles in a Haystack">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Emu: Enhancing Image Generation Models Using Photogenic Needles in a Haystack</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/09/11/aigc/note/NExT-GPT_note/" title="NExT-GPT: Any-to-Any Multimodal LLM">
+                        <span class="hidden-mobile">NExT-GPT: Any-to-Any Multimodal LLM</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

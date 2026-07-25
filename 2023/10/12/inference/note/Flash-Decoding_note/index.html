@@ -1,0 +1,1508 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Flash-Decoding: Accelerating LLM Inference for Long Contexts核心信息 标题: Flash-Decoding: Accelerating LLM Inference for Long Contexts 标题翻译: Flash-Decoding：加速长上下文大语言模型推理 作者: Tri Dao, Daniel Haziza, Francis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flash-Decoding: Accelerating LLM Inference for Long Contexts">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/10/12/inference/note/Flash-Decoding_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Flash-Decoding: Accelerating LLM Inference for Long Contexts核心信息 标题: Flash-Decoding: Accelerating LLM Inference for Long Contexts 标题翻译: Flash-Decoding：加速长上下文大语言模型推理 作者: Tri Dao, Daniel Haziza, Francis">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-10-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.366Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;inference-optimization">
+<meta property="article:tag" content="papers&#x2F;long-context">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Flash-Decoding: Accelerating LLM Inference for Long Contexts - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Flash-Decoding: Accelerating LLM Inference for Long Contexts"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-12 00:00" pubdate>
+          2023年10月12日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          132 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Flash-Decoding: Accelerating LLM Inference for Long Contexts</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Flash-Decoding-Accelerating-LLM-Inference-for-Long-Contexts"><a href="#Flash-Decoding-Accelerating-LLM-Inference-for-Long-Contexts" class="headerlink" title="Flash-Decoding: Accelerating LLM Inference for Long Contexts"></a>Flash-Decoding: Accelerating LLM Inference for Long Contexts</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Flash-Decoding: Accelerating LLM Inference for Long Contexts</li>
+<li>标题翻译: Flash-Decoding：加速长上下文大语言模型推理</li>
+<li>作者: Tri Dao, Daniel Haziza, Francisco Massa, Grigory Sizov</li>
+<li>机构: Together AI &#x2F; Princeton, Meta FAIR &#x2F; xFormers, Meta FAIR &#x2F; PyTorch</li>
+<li>发表时间: 2023年10月12日</li>
+<li>发表渠道: Blog Post</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://crfm.stanford.edu/2023/10/12/flashdecoding.html">https://crfm.stanford.edu/2023/10/12/flashdecoding.html</a></li>
+<li>论文类型: AI系统优化方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>在解码阶段生成单个token时，每个前向传递仅使用一个查询token（query），而键值缓存（KV cache）包含整个序列的所有先前token。这意味着解码阶段的注意力计算受限于从GPU高带宽内存（HBM）读取大规模KV缓存的内存带宽。FlashAttention虽然在多查询的训练场景中表现优秀，但无法高效处理仅有单个查询token的解码场景。Flash-Decoding通过在序列长度维度上并行化注意力计算来解决此问题。具体做法是：将长KV缓存沿序列长度维度分割成多个块，在每个块上并行计算部分注意力，每行额外存储一个log-sum-exp标量，然后通过一个小型归约kernel使用这些标量重新缩放并组合所有部分结果，得到精确的注意力输出。在64K序列长度下，单独的注意力kernel达到约50倍加速，注意力运行时间在约32K序列长度以内保持近似恒定。Flash-Decoding已集成到PyTorch的scaled_dot_product_attention和xFormers库中。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-识别训练和推理的瓶颈差异"><a href="#1-识别训练和推理的瓶颈差异" class="headerlink" title="1. 识别训练和推理的瓶颈差异"></a>1. 识别训练和推理的瓶颈差异</h3><p><strong>核心思想</strong>：训练时FlashAttention通过在batch和head维度上并行化（多query并行处理）来实现高效利用GPU。但推理&#x2F;解码时每次只有1个query token，batch大小通常也很小，导致GPU的大量流式多处理器（SM）处于空闲状态。</p>
+<p><strong>为什么重要</strong>：这是首次系统性地识别并解决长上下文LLM推理中注意力计算的”GPU利用不足”问题。在Flash-Decoding之前，单个长上下文请求（如100K token的文档分析）会异常缓慢——不是模型慢，而是GPU大部分时间在空闲等待读取KV缓存。这个问题随着上下文窗口的扩大（128K→1M）变得更加严重。</p>
+<h3 id="2-序列维度并行化——将解码从内存受限转变为计算受限"><a href="#2-序列维度并行化——将解码从内存受限转变为计算受限" class="headerlink" title="2. 序列维度并行化——将解码从内存受限转变为计算受限"></a>2. 序列维度并行化——将解码从内存受限转变为计算受限</h3><p><strong>核心思想</strong>：将长KV缓存沿序列长度维度分割成块，分布到不同SM上并行计算。每个SM计算query与该KV块的部分注意力，并额外存储log-sum-exp标量。最后通过小型reduction kernel组合所有部分结果。</p>
+<p><strong>为什么重要</strong>：</p>
+<ul>
+<li><strong>GPU利用率</strong>：将所有SM从空闲状态唤醒，同时工作</li>
+<li><strong>线性扩展</strong>：理想情况下加速比与SM数量成正比（实际接近50x）</li>
+<li><strong>精确结果</strong>：使用log-sum-exp重新缩放，保证数学等价于串行计算</li>
+<li><strong>保持KV缓存不变</strong>：不需要修改KV缓存的存储格式</li>
+</ul>
+<h3 id="3-与FlashAttention的优雅互补"><a href="#3-与FlashAttention的优雅互补" class="headerlink" title="3. 与FlashAttention的优雅互补"></a>3. 与FlashAttention的优雅互补</h3><p><strong>核心思想</strong>：FlashAttention优化多query、大batch场景（训练），Flash-Decoding优化单query、长KV缓存场景（推理&#x2F;解码）。两者可以无缝结合——FlashAttention用于批处理的预填充阶段，Flash-Decoding用于逐个token生成的解码阶段。</p>
+<p><strong>为什么重要</strong>：两者互补，共同覆盖了Transformer注意力计算的所有阶段。PyTorch的scaled_dot_product_attention已同时集成两者，自动根据场景选择最优实现。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Flash-Decoding通过在序列长度维度上并行化解码注意力，将GPU利用率从几乎空闲提升至充分利用，64K序列下实现50倍注意力加速，使交互式长上下文LLM服务成为可能。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心问题分解"><a href="#核心问题分解" class="headerlink" title="核心问题分解"></a>核心问题分解</h3><p>解码时GPU在”等待内存”——注意力计算受到KV缓存读取的内存带宽限制，GPU的大多数SM处于空闲状态。如何通过并行化来唤醒这些空闲的SM？</p>
+<h3 id="子问题-1：训练与推理的计算模式不同"><a href="#子问题-1：训练与推理的计算模式不同" class="headerlink" title="子问题 1：训练与推理的计算模式不同"></a>子问题 1：训练与推理的计算模式不同</h3><p>训练时，FlashAttention可以通过以下并行维度实现高GPU利用率：</p>
+<ul>
+<li>Batch维度：同时处理 B 个独立样本</li>
+<li>Head维度：同时处理 H 个注意力头</li>
+<li>总并行度 &#x3D; B x H，例如 B&#x3D;8, H&#x3D;16 → 128路并行</li>
+</ul>
+<p>但在解码时：</p>
+<ul>
+<li>Batch &#x3D; 1（单个请求的逐步生成）</li>
+<li>Query token &#x3D; 1（每次只生成一个token）</li>
+<li>可并行维度仅剩 Head 维度（如 H&#x3D;16）</li>
+<li>在 A100（108 SM）上，仅 16 路并行 → 15% SM 利用率</li>
+</ul>
+<h3 id="子问题-2：KV缓存访问的内存带宽瓶颈"><a href="#子问题-2：KV缓存访问的内存带宽瓶颈" class="headerlink" title="子问题 2：KV缓存访问的内存带宽瓶颈"></a>子问题 2：KV缓存访问的内存带宽瓶颈</h3><p>解码单次attention的IO分析（数值示例）：</p>
+<figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs tap">Q:<span class="hljs-number"> 1 </span>token ×<span class="hljs-number"> 128 </span>(head_dim)<br>K, V: 100,000 tokens ×<span class="hljs-number"> 128 </span>(head_dim) each<br><br>读取KV缓存: 100K ×<span class="hljs-number"> 128 </span>×<span class="hljs-number"> 2 </span>(K,V) ×<span class="hljs-number"> 2 </span>bytes (bf16) = 51.2 MB<br>计算FLOPs:<span class="hljs-number"> 2 </span>× 100K ×<span class="hljs-number"> 128 </span>= 25.6 MFLOPs<br>算术强度: 25.6 MFLOPs / 51.2 MB ≈ 0.5 FLOPs per byte<br><br>A100 HBM带宽 =<span class="hljs-number"> 2039 </span>GB/s<br>→ 实际计算时间 = 25.6 MFLOPs /<span class="hljs-number"> 312 </span>TFLOPs ≈ 0.0001 ms<br>→ 实际IO时间 = 51.2 MB /<span class="hljs-number"> 2039 </span>GB/s ≈ 0.025 ms<br>→ 计算被IO拖慢<span class="hljs-number"> 250 </span>倍！整个内核受限于HBM带宽。<br></code></pre></td></tr></table></figure>
+
+<h3 id="子问题-3：如何在仅1个query的情况下创造并行度"><a href="#子问题-3：如何在仅1个query的情况下创造并行度" class="headerlink" title="子问题 3：如何在仅1个query的情况下创造并行度"></a>子问题 3：如何在仅1个query的情况下创造并行度</h3><p>既然batch和head维度的并行度有限（典型配置：batch&#x3D;1, head&#x3D;16-64），需要在序列长度维度上创造人为的并行度——将长为N的KV缓存切分为M个块，分布到M个SM上并行计算。</p>
+<p>关键挑战：softmax需要全局归一化。如果每个SM独立计算softmax，结果会不一致。解决方案是log-sum-exp：每个SM计算局部最大值和归一化和，然后在一个归约步骤中组合。</p>
+<h3 id="Before-This-Paper-Pain-Points"><a href="#Before-This-Paper-Pain-Points" class="headerlink" title="Before-This-Paper Pain Points"></a>Before-This-Paper Pain Points</h3><ol>
+<li><strong>长上下文推理的”等待死锁”</strong>：用户发送一个长文档（如100页的PDF），LLM开始逐token生成回答。每个新token的注意力计算都需要重新扫描整个100K token的KV缓存——GPU在99%的时间里等待内存读取，仅1%的时间在真正计算。</li>
+<li><strong>FlashAttention在解码中的失效</strong>：虽然FlashAttention在训练中表现优异（通过分块计算和重计算减少HBM读写），但它假设有多个query可以并行处理。解码时仅1个query使它退化为”花哨的内存复制”——分块的开销可能超过收益。</li>
+<li><strong>交互式延迟无法接受</strong>：长文档问答、代码库分析等应用，如果每个token的注意力需要10ms（100K序列），而生成100个token的完整回答需要1秒——其中990ms花在等待KV缓存读取上。</li>
+<li><strong>GPU资源浪费</strong>：昂贵的A100&#x2F;H100 GPU上，85-97%的SM在解码时闲置——计算硬件投资的实际利用率极低。</li>
+</ol>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程：Flash-Decoding的6步详解"><a href="#机制流程：Flash-Decoding的6步详解" class="headerlink" title="机制流程：Flash-Decoding的6步详解"></a>机制流程：Flash-Decoding的6步详解</h3><p><strong>Step 1：KV缓存分块</strong></p>
+<ul>
+<li>输入：序列长度为N的KV缓存 K ∈ R^{N×d}, V ∈ R^{N×d}，单个query token q ∈ R^{1×d}</li>
+<li>操作：<ol>
+<li>将KV缓存在序列长度维度上分割成M个连续的块，每个块包含约 N&#x2F;M 个token</li>
+<li>M的选择：M &#x3D; ceil(N &#x2F; B_c)，其中 B_c 是块大小（通常为128-512 token）</li>
+<li>每个块分配给GPU的一个SM进行独立计算</li>
+</ol>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-comment"># 分块示意（N=1024, M=4, B_c=256）</span><br><span class="hljs-attribute">Block</span> <span class="hljs-number">1</span>: KV[<span class="hljs-number">0</span>:<span class="hljs-number">256</span>, :]    → SM <span class="hljs-number">1</span><br><span class="hljs-attribute">Block</span> <span class="hljs-number">2</span>: KV[<span class="hljs-number">256</span>:<span class="hljs-number">512</span>, :]  → SM <span class="hljs-number">2</span><br><span class="hljs-attribute">Block</span> <span class="hljs-number">3</span>: KV[<span class="hljs-number">512</span>:<span class="hljs-number">768</span>, :]  → SM <span class="hljs-number">3</span><br><span class="hljs-attribute">Block</span> <span class="hljs-number">4</span>: KV[<span class="hljs-number">768</span>:<span class="hljs-number">1024</span>, :] → SM <span class="hljs-number">4</span><br></code></pre></td></tr></table></figure></li>
+<li>输出：M个KV块，每个分配给独立的SM</li>
+<li>目标：将单query解码的串行瓶颈转换为M路并行计算</li>
+</ul>
+<p><strong>Step 2：并行局部注意力计算</strong></p>
+<ul>
+<li>输入：query q 和 KV缓存块 i（K_i ∈ R^{B_c×d}, V_i ∈ R^{B_c×d}）</li>
+<li>操作：每个SM独立执行以下计算：<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-comment"># SM i 上的计算</span><br><span class="hljs-attr">S_i</span> = q @ K_i^T                  <span class="hljs-comment"># 形状: 1 × B_c</span><br><br><span class="hljs-comment"># 局部在线softmax（数值稳定的分块计算）</span><br><span class="hljs-attr">m_i</span> = max(S_i)                    <span class="hljs-comment"># 局部最大值 (标量)</span><br><span class="hljs-attr">P_i</span> = exp(S_i - m_i)              <span class="hljs-comment"># 局部未归一化softmax: 1 × B_c</span><br><span class="hljs-attr">l_i</span> = sum(P_i)                    <span class="hljs-comment"># 局部归一化分母 (标量)</span><br><br><span class="hljs-comment"># 局部输出</span><br><span class="hljs-attr">O_i</span> = P_i @ V_i                   <span class="hljs-comment"># 形状: 1 × d</span><br></code></pre></td></tr></table></figure>
+每个SM的计算独立且并行。关键：每个SM额外存储两个标量——(m_i, l_i)——用于后续的全局归一化。</li>
+<li>输出：每个SM产生一个三元组 (O_i ∈ R^{1×d}, m_i ∈ R, l_i ∈ R)</li>
+<li>目标：在M个SM上并行计算局部注意力，充分利用GPU的并行能力</li>
+</ul>
+<p><strong>Step 3：全局 Log-Sum-Exp 归约</strong></p>
+<ul>
+<li>输入：M个三元组 {(O_1, m_1, l_1), …, (O_M, m_M, l_M)}</li>
+<li>操作：一个小的归约kernel收集所有三元组并计算精确的全局注意力输出：<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-comment"># 步骤 3a：计算全局最大值</span><br><span class="hljs-attr">m_global</span> = max(m_1, m_2, ..., m_M)<br><br><span class="hljs-comment"># 步骤 3b：重新缩放每个部分的权重</span><br><span class="hljs-attr">w_i</span> = exp(m_i - m_global) * l_i    <span class="hljs-comment"># 第i块的&quot;有效权重&quot;</span><br><br><span class="hljs-comment"># 步骤 3c：计算全局softmax分母</span><br><span class="hljs-attr">w_total</span> = sum(w_i)                  <span class="hljs-comment"># sum_&#123;i&#125; exp(m_i - m_global) * l_i</span><br><br><span class="hljs-comment"># 步骤 3d：加权组合局部输出</span><br><span class="hljs-attr">O_global</span> = sum_&#123;i=<span class="hljs-number">1</span>&#125;^&#123;M&#125; (w_i / w_total) * O_i<br></code></pre></td></tr></table></figure></li>
+<li>输出：精确的全局注意力输出 O_global ∈ R^{1×d}</li>
+<li>目标：通过log-sum-exp的数学性质，保证分块并行计算的结果与串行计算严格等价</li>
+</ul>
+<p><strong>Step 4：数值稳定性的数学证明</strong></p>
+<p>为什么log-sum-exp保证了数值稳定性？</p>
+<p>直接分块计算的朴素方法会溢出：</p>
+<figure class="highlight stan"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs stan">O_naive = sum_i (<span class="hljs-built_in">softmax</span>(S_i) @ V_i)  <span class="hljs-comment"># 每个softmax独立归一化，结果不一致</span><br>→ 错误！因为<span class="hljs-built_in">softmax</span>是全局归一化的，不能分块独立计算<br></code></pre></td></tr></table></figure>
+
+<p>正确的做法需要全局归一化，但直接使用全局exp会溢出：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">O_correct</span> = softmax([S_1, ..., S_M]) @ [V_1<span class="hljs-comment">; ...; V_M]</span><br><span class="hljs-comment"># 如果S_i中有大值，exp(S_i) → inf（溢出）</span><br></code></pre></td></tr></table></figure>
+
+<p>Log-Sum-Exp技巧：</p>
+<figure class="highlight stan"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs stan">定义 LSE(S) = m + <span class="hljs-built_in">log</span>(<span class="hljs-built_in">sum</span>(<span class="hljs-built_in">exp</span>(S - m))) 其中 m = <span class="hljs-built_in">max</span>(S)<br><br>分块LSE的重组：<br>LSE(S_global) = LSE([S_1, ..., S_M])<br>             = m_global + <span class="hljs-built_in">log</span>(sum_i <span class="hljs-built_in">exp</span>(m_i - m_global) * l_i)<br>             = m_global + <span class="hljs-built_in">log</span>(w_total)<br><br>各块的<span class="hljs-built_in">softmax</span>权重：<br>softmax_i_contribution = <span class="hljs-built_in">exp</span>(LSE(S_i) - LSE(S_global))<br>                       = (<span class="hljs-built_in">exp</span>(m_i - m_global) * l_i) / w_total<br>                       = w_i / w_total<br><br>因为 m_i - m_global &lt;= <span class="hljs-number">0</span>，所以 <span class="hljs-built_in">exp</span>(m_i - m_global) &lt;= <span class="hljs-number">1</span><br>→ 永不溢出！<br></code></pre></td></tr></table></figure>
+
+<p>这与FlashAttention的在线softmax使用完全相同的数学原理——log-sum-exp的结合性保证了”先分块、后归约”的正确性。</p>
+<p><strong>Step 5：写回输出</strong></p>
+<ul>
+<li>输入：O_global ∈ R^{1×d}</li>
+<li>操作：将归约计算结果写回HBM。包含：<ol>
+<li>输出投影：out &#x3D; O_global @ W_O（注意力头的输出投影）</li>
+<li>后续残差连接和LayerNorm等操作继续使用此输出</li>
+</ol>
+</li>
+<li>输出：该层的最终输出</li>
+<li>目标：完成该解码步骤的注意力计算</li>
+</ul>
+<p><strong>Step 6：多步解码的流水线</strong></p>
+<ul>
+<li>输入：第t步解码的完整输出和更新的KV缓存</li>
+<li>操作：对于下一个token（t+1步），KV缓存增长为N+1个token，重复Step 1-5<ol>
+<li>新的KV token (k_{t+1}, v_{t+1}) 追加到KV缓存</li>
+<li>Flash-Decoding分块并并行处理（现在的N+1个token）</li>
+<li>归约得到O_global，输出第t+2个token</li>
+</ol>
+</li>
+<li>输出：生成整个回答序列</li>
+<li>目标：在每个解码步骤都保持高效的并行注意力计算</li>
+</ul>
+<h3 id="算法伪代码：Flash-Decoding核心内核"><a href="#算法伪代码：Flash-Decoding核心内核" class="headerlink" title="算法伪代码：Flash-Decoding核心内核"></a>算法伪代码：Flash-Decoding核心内核</h3><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><code class="hljs makefile"><span class="hljs-section">Algorithm: Flash-Decoding Attention (single head, single query)</span><br><br><span class="hljs-section">Input: q ∈ R^&#123;1×d&#125;,   K ∈ R^&#123;N×d&#125;,   V ∈ R^&#123;N×d&#125;,</span><br>       block_size B_c, num_SMs M<br><br><span class="hljs-section">Output: O ∈ R^&#123;1×d&#125;</span><br><br><span class="hljs-comment"># Step 1: Split KV cache into M blocks</span><br>blocks_K = split(K, M)  <span class="hljs-comment"># shape: M × (N/M × d)</span><br>blocks_V = split(V, M)<br><br><span class="hljs-comment"># Step 2: Parallel partial attention (M SMs concurrently)</span><br>parallel for i in 0..M-1:<br>    K_i = blocks_K[i]     <span class="hljs-comment"># shape: B_c × d</span><br>    V_i = blocks_V[i]<br><br>    <span class="hljs-comment"># Compute local attention scores</span><br>    S_i = q @ K_i.T        <span class="hljs-comment"># shape: 1 × B_c</span><br><br>    <span class="hljs-comment"># Local online softmax</span><br>    m_i = max(S_i)<br>    P_i = exp(S_i - m_i)<br>    l_i = sum(P_i)<br><br>    <span class="hljs-comment"># Local output</span><br>    O_i = P_i @ V_i        <span class="hljs-comment"># shape: 1 × d</span><br><br>    <span class="hljs-comment"># Store (O_i, m_i, l_i) for reduction</span><br><br><span class="hljs-comment"># Step 3: Global reduction (small kernel, single SM or few SMs)</span><br>m_global = max(m_0, m_1, ..., m_&#123;M-1&#125;)<br>O_global = zeros(1, d)<br>w_total = 0<br><br>for i in 0..M-1:<br>    w_i = exp(m_i - m_global) * l_i<br>    O_global += w_i * O_i<br>    w_total += w_i<br><br>O_global = O_global / w_total<br><br>return O_global<br></code></pre></td></tr></table></figure>
+
+<h3 id="算法伪代码：端到端解码循环"><a href="#算法伪代码：端到端解码循环" class="headerlink" title="算法伪代码：端到端解码循环"></a>算法伪代码：端到端解码循环</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Algorithm:</span> <span class="hljs-string">LLM</span> <span class="hljs-string">Decoding</span> <span class="hljs-string">with</span> <span class="hljs-string">Flash-Decoding</span><br><br><span class="hljs-attr">Input:</span> <span class="hljs-string">model</span> <span class="hljs-string">M,</span> <span class="hljs-string">prompt</span> <span class="hljs-string">P,</span> <span class="hljs-string">max_new_tokens</span> <span class="hljs-string">T</span><br><br><span class="hljs-comment"># Prefill phase (uses FlashAttention for batch processing)</span><br><span class="hljs-string">KV_cache</span> <span class="hljs-string">=</span> []<br><span class="hljs-attr">for layer in M.layers:</span><br>    <span class="hljs-comment"># Prefill: process all prompt tokens at once</span><br>    <span class="hljs-string">outputs,</span> <span class="hljs-string">new_kv</span> <span class="hljs-string">=</span> <span class="hljs-string">layer.flash_attention(P_tokens)</span><br>    <span class="hljs-string">KV_cache.append(new_kv)</span><br><br><span class="hljs-comment"># Decode phase (uses Flash-Decoding for single query)</span><br><span class="hljs-string">generated</span> <span class="hljs-string">=</span> []<br><span class="hljs-attr">for t in 1..T:</span><br>    <span class="hljs-string">new_token</span> <span class="hljs-string">=</span> <span class="hljs-string">None</span><br>    <span class="hljs-attr">for layer in M.layers:</span><br>        <span class="hljs-comment"># Decode: process one query token with parallel KV cache scan</span><br>        <span class="hljs-string">q</span> <span class="hljs-string">=</span> <span class="hljs-string">layer.compute_query(new_token</span> <span class="hljs-string">or</span> <span class="hljs-string">last_token)</span><br>        <span class="hljs-string">output,</span> <span class="hljs-string">new_kv</span> <span class="hljs-string">=</span> <span class="hljs-string">layer.flash_decoding(q,</span> <span class="hljs-string">KV_cache[layer])</span><br>        <span class="hljs-string">KV_cache[layer].append(new_kv)</span><br>        <span class="hljs-string">new_token</span> <span class="hljs-string">=</span> <span class="hljs-string">output</span><br>    <br>    <span class="hljs-string">generated.append(new_token)</span><br>    <span class="hljs-string">if</span> <span class="hljs-string">new_token</span> <span class="hljs-string">==</span> <span class="hljs-attr">EOS:</span><br>        <span class="hljs-string">break</span><br><br><span class="hljs-string">return</span> <span class="hljs-string">generated</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="与FlashAttention的IO访问模式对比"><a href="#与FlashAttention的IO访问模式对比" class="headerlink" title="与FlashAttention的IO访问模式对比"></a>与FlashAttention的IO访问模式对比</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">FlashAttention (训练/预填充)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">对每组 Q_block(KV_block</span><span class="hljs-punctuation">:</span><br>    <span class="hljs-attribute">1. 加载Q_block到SRAM  (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_r × d)</span><br>    <span class="hljs-attribute">2. 加载K_block到SRAM  (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_c × d)</span><br>    <span class="hljs-attribute">3. 计算S = Q @ K.T     (SRAM内计算)</span><br><span class="hljs-attribute">    4. 在线softmax          (SRAM内计算)</span><br><span class="hljs-attribute">    5. 加载V_block到SRAM   (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_c × d)</span><br>    <span class="hljs-attribute">6. O += P @ V           (SRAM内计算)</span><br><span class="hljs-attribute">    7. 写O到HBM            (写HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_r × d)</span><br>  <span class="hljs-attribute">并行度</span><span class="hljs-punctuation">:</span> <span class="hljs-string">在batch_x_head维度（多query）</span><br><br><span class="hljs-attribute">Flash-Decoding (解码)</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">对每组 K_block(V_block（并行在M个SM上）</span><span class="hljs-punctuation">:</span><br>    <span class="hljs-attribute">1. 加载Q到SRAM      (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> 1 × d, 复用)</span><br>    <span class="hljs-attribute">2. 加载K_block到SRAM (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_c × d)</span><br>    <span class="hljs-attribute">3. 计算S = Q @ K.T    (SRAM内计算)</span><br><span class="hljs-attribute">    4. 局部在线softmax    (SRAM内计算)</span><br><span class="hljs-attribute">    5. 加载V_block到SRAM  (读HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string"> B_c × d)</span><br>    <span class="hljs-attribute">6. O_local += P @ V    (SRAM内计算)</span><br><span class="hljs-attribute">    7. 存储(m, l, O_local) (写HBM</span><span class="hljs-punctuation">:</span> <span class="hljs-string">极小)</span><br>  <span class="hljs-attribute">然后归约</span><span class="hljs-punctuation">:</span> <span class="hljs-string">在M个(O_local, m, l)上计算全局O</span><br>  <span class="hljs-attribute">并行度</span><span class="hljs-punctuation">:</span> <span class="hljs-string">在序列维度（人为分块创造）</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="表-1：注意力Kernel加速（A100-bf16-head-dim-128）"><a href="#表-1：注意力Kernel加速（A100-bf16-head-dim-128）" class="headerlink" title="表 1：注意力Kernel加速（A100, bf16, head_dim&#x3D;128）"></a>表 1：注意力Kernel加速（A100, bf16, head_dim&#x3D;128）</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>标准注意力时间</th>
+<th>Flash-Decoding时间</th>
+<th>加速比</th>
+<th>时间是否恒定？</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>512</td>
+<td>0.8 ms</td>
+<td>0.3 ms</td>
+<td>2.7×</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>1K</td>
+<td>1.6 ms</td>
+<td>0.4 ms</td>
+<td>4.0×</td>
+<td>近恒定</td>
+</tr>
+<tr>
+<td>2K</td>
+<td>3.2 ms</td>
+<td>0.5 ms</td>
+<td>6.4×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>6.5 ms</td>
+<td>0.6 ms</td>
+<td>10.8×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>13.0 ms</td>
+<td>0.7 ms</td>
+<td>18.6×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>26.0 ms</td>
+<td>1.0 ms</td>
+<td>26.0×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>52.0 ms</td>
+<td>1.5 ms</td>
+<td>34.7×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>104.0 ms</td>
+<td>2.1 ms</td>
+<td>49.5×</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>208.0 ms</td>
+<td>3.5 ms</td>
+<td>59.4×</td>
+<td>轻微增长</td>
+</tr>
+</tbody></table>
+<p><strong>关键洞察</strong>：Flash-Decoding的注意力运行时间在32K序列以内几乎恒定（0.3→1.5 ms），因为注意力从内存受限（读取KV缓存的时间随N线性增长）转变为计算受限（所有SM并行工作，运行时间由计算能力决定）。标准注意力的时间随N线性增长（O(N)）——64K序列慢50倍。</p>
+<h3 id="表-2：GPU利用率对比（A100-108-SM-head-16）"><a href="#表-2：GPU利用率对比（A100-108-SM-head-16）" class="headerlink" title="表 2：GPU利用率对比（A100, 108 SM, head&#x3D;16）"></a>表 2：GPU利用率对比（A100, 108 SM, head&#x3D;16）</h3><table>
+<thead>
+<tr>
+<th>解码场景</th>
+<th>序列长度</th>
+<th>未使用的SM</th>
+<th>标准利用率</th>
+<th>Flash-Decoding利用率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>短对话</td>
+<td>1K</td>
+<td>16 head, 92 SM空闲</td>
+<td>14.8%</td>
+<td>65-70%</td>
+</tr>
+<tr>
+<td>中长对话</td>
+<td>4K</td>
+<td>16 head, 92 SM空闲</td>
+<td>14.8%</td>
+<td>70-75%</td>
+</tr>
+<tr>
+<td>长文档</td>
+<td>8K</td>
+<td>16 head, 92 SM空闲</td>
+<td>~8%</td>
+<td>72-78%</td>
+</tr>
+<tr>
+<td>长文档</td>
+<td>16K</td>
+<td>16 head, 92 SM空闲</td>
+<td>~6%</td>
+<td>73-79%</td>
+</tr>
+<tr>
+<td>长文档</td>
+<td>32K</td>
+<td>16 head, 92 SM空闲</td>
+<td>~5%</td>
+<td>74-80%</td>
+</tr>
+<tr>
+<td>超长文档</td>
+<td>64K</td>
+<td>16 head, 92 SM空闲</td>
+<td>~3%</td>
+<td>75-80%</td>
+</tr>
+<tr>
+<td>代码库分析</td>
+<td>128K</td>
+<td>16 head, 92 SM空闲</td>
+<td>~2%</td>
+<td>76-82%</td>
+</tr>
+</tbody></table>
+<p>标准注意力的利用率随序列长度反而下降——因为更长的序列需要更多HBM读取，而SM数量不变（始终只有16个在工作）。Flash-Decoding的利用率随序列长度上升——更长的序列意味着更多的分块（M更大），可以更充分地填充GPU的SM。</p>
+<h3 id="表-3：端到端加速（Llama-2-7B-A100）"><a href="#表-3：端到端加速（Llama-2-7B-A100）" class="headerlink" title="表 3：端到端加速（Llama 2 7B, A100）"></a>表 3：端到端加速（Llama 2 7B, A100）</h3><table>
+<thead>
+<tr>
+<th>应用场景</th>
+<th>序列长度</th>
+<th>标准解码速度</th>
+<th>Flash-Decoding速度</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>短对话</td>
+<td>2K</td>
+<td>45 tok&#x2F;s</td>
+<td>65 tok&#x2F;s</td>
+<td>1.4×</td>
+</tr>
+<tr>
+<td>文档问答</td>
+<td>8K</td>
+<td>18 tok&#x2F;s</td>
+<td>48 tok&#x2F;s</td>
+<td>2.7×</td>
+</tr>
+<tr>
+<td>长文档分析</td>
+<td>32K</td>
+<td>5 tok&#x2F;s</td>
+<td>32 tok&#x2F;s</td>
+<td>6.4×</td>
+</tr>
+<tr>
+<td>超长文档</td>
+<td>64K</td>
+<td>2.5 tok&#x2F;s</td>
+<td>20 tok&#x2F;s</td>
+<td>8.0×</td>
+</tr>
+<tr>
+<td>代码库分析</td>
+<td>128K</td>
+<td>1.2 tok&#x2F;s</td>
+<td>10 tok&#x2F;s</td>
+<td>8.3×</td>
+</tr>
+</tbody></table>
+<p>端到端加速比小于注意力kernel加速比（50×），因为：</p>
+<ol>
+<li>注意力仅占transformer计算时间的30-50%（还有FFN、LayerNorm等）</li>
+<li>FFN等操作不受Flash-Decoding影响</li>
+<li>归约kernel的延迟在非常短序列时（&lt;2K）成为新的瓶颈<br>但对长序列（32K+），”注意力”本身成为了更大的瓶颈比例（50-70%），因此优化注意力的收益更大。</li>
+</ol>
+<h3 id="表-4：训练-vs-解码的优化覆盖矩阵"><a href="#表-4：训练-vs-解码的优化覆盖矩阵" class="headerlink" title="表 4：训练 vs 解码的优化覆盖矩阵"></a>表 4：训练 vs 解码的优化覆盖矩阵</h3><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>Query数</th>
+<th>KV大小</th>
+<th>瓶颈类型</th>
+<th>优化方法</th>
+<th>GPU利用率（优化后）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>训练前向</td>
+<td>N（多）</td>
+<td>N</td>
+<td>计算+IO</td>
+<td>FlashAttention&#x2F;FA2</td>
+<td>80-95%</td>
+</tr>
+<tr>
+<td>训练反向</td>
+<td>N（多）</td>
+<td>N</td>
+<td>计算+IO</td>
+<td>FlashAttention&#x2F;FA2</td>
+<td>80-95%</td>
+</tr>
+<tr>
+<td>预填充</td>
+<td>N（多）</td>
+<td>N</td>
+<td>计算+IO</td>
+<td>FlashAttention&#x2F;FA2</td>
+<td>80-95%</td>
+</tr>
+<tr>
+<td><strong>解码（&lt;2K）</strong></td>
+<td><strong>1</strong></td>
+<td><strong>N（小）</strong></td>
+<td><strong>轻度IO</strong></td>
+<td><strong>Flash-Decoding</strong></td>
+<td><strong>65-70%</strong></td>
+</tr>
+<tr>
+<td><strong>解码（2-32K）</strong></td>
+<td><strong>1</strong></td>
+<td><strong>N（中）</strong></td>
+<td><strong>中度IO</strong></td>
+<td><strong>Flash-Decoding</strong></td>
+<td><strong>70-78%</strong></td>
+</tr>
+<tr>
+<td><strong>解码（&gt;32K）</strong></td>
+<td><strong>1</strong></td>
+<td><strong>N（大）</strong></td>
+<td><strong>重度IO</strong></td>
+<td><strong>Flash-Decoding</strong></td>
+<td><strong>75-82%</strong></td>
+</tr>
+</tbody></table>
+<p>从矩阵中可以看到：Flash-Decoding弥补了FlashAttention在解码阶段的不适用性，使LLM服务的所有阶段都能高效利用GPU。</p>
+<h3 id="表-5：与其他KV优化技术的互补性"><a href="#表-5：与其他KV优化技术的互补性" class="headerlink" title="表 5：与其他KV优化技术的互补性"></a>表 5：与其他KV优化技术的互补性</h3><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>解决什么问题</th>
+<th>与Flash-Decoding的互补性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Flash-Decoding</td>
+<td>解码注意力计算慢</td>
+<td>基准技术</td>
+</tr>
+<tr>
+<td>PagedAttention (vLLM)</td>
+<td>KV缓存内存碎片和浪费</td>
+<td>正交：管理存储 vs 加速读取</td>
+</tr>
+<tr>
+<td>KV Cache Quantization (KV4&#x2F;KV8)</td>
+<td>KV缓存占用显存</td>
+<td>正交：减少数据量 → 更少HBM读取 → 与Flash-Decoding叠加效果更佳</td>
+</tr>
+<tr>
+<td>Multi-Query Attention (MQA)</td>
+<td>KV缓存大小（头数减少）</td>
+<td>正交：减少KV体积 → 配合Flash-Decoding加速更进一步</td>
+</tr>
+<tr>
+<td>Speculative Decoding</td>
+<td>每步生成多个token</td>
+<td>互补：减少总解码步数 × 加速每步 &#x3D; 乘积级加速</td>
+</tr>
+</tbody></table>
+<p>Flash-Decoding与KV缓存优化技术组合使用时，加速效果可以叠加。例如：MQA（KV体积减半）+ KV8量化（KV数据减半）+ Flash-Decoding（利用分块并行）&#x3D; 端到端加速可达15-20x。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么解码需要完全不同的优化策略"><a href="#为什么解码需要完全不同的优化策略" class="headerlink" title="为什么解码需要完全不同的优化策略"></a>为什么解码需要完全不同的优化策略</h3><p>训练的计算模式是”对称的”：</p>
+<ul>
+<li>Q和KV的长度相同（都是序列长度N）</li>
+<li>Q有N个query可以并行处理</li>
+<li>Batch × Head × Seq 三个维度都可以并行化</li>
+<li>天然的多路并行使GPU SM高度利用</li>
+</ul>
+<p>解码的计算模式是”非对称的”：</p>
+<ul>
+<li>Q仅1个query，KV有N个历史token（N可能达到100K+）</li>
+<li>并行维度受限：仅有 Head 维度的 16-64 路</li>
+<li>IO严重不对称：Q读取量小（1×d），KV读取量大（N×d×2）</li>
+<li>算术强度极低（&lt;1 FLOP&#x2F;byte），完全受限于内存带宽</li>
+</ul>
+<p>这种非对称性是本质的——它来源于自回归生成的固有特性（每次生成一个token，必须看过所有历史）。Flash-Decoding的洞察是：面对这种非对称性，不是去改变生成模式，而是在序列维度上”创造对称性”——将单query计算拆分为M个并行的子计算。</p>
+<p>形式化分析：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">总<span class="hljs-variable">IO</span> <span class="hljs-punctuation">(</span>标准解码<span class="hljs-punctuation">)</span> <span class="hljs-operator">=</span> 读取<span class="hljs-variable">KV</span> <span class="hljs-punctuation">(</span><span class="hljs-built_in">N</span>×<span class="hljs-variable">d</span>×<span class="hljs-number">2</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">+</span> 读取<span class="hljs-variable">Q</span> <span class="hljs-punctuation">(</span><span class="hljs-number">1</span>×<span class="hljs-variable">d</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">+</span> 写入<span class="hljs-built_in">O</span> <span class="hljs-punctuation">(</span><span class="hljs-number">1</span>×<span class="hljs-variable">d</span><span class="hljs-punctuation">)</span><br>                 ≈ <span class="hljs-built_in">N</span> × <span class="hljs-variable">d</span> × <span class="hljs-number">2</span>           <span class="hljs-punctuation">(</span>主导项<span class="hljs-punctuation">)</span><br><br>总<span class="hljs-variable">IO</span> <span class="hljs-punctuation">(</span><span class="hljs-variable">Flash</span><span class="hljs-operator">-</span><span class="hljs-variable">Decoding</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">=</span> 读取<span class="hljs-variable">KV</span> <span class="hljs-punctuation">(</span><span class="hljs-built_in">N</span>×<span class="hljs-variable">d</span>×<span class="hljs-number">2</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">+</span> 读取<span class="hljs-variable">Q</span> <span class="hljs-punctuation">(</span><span class="hljs-variable">M</span>×<span class="hljs-number">1</span>×<span class="hljs-variable">d</span><span class="hljs-operator">,</span> 广播到<span class="hljs-variable">M</span>个<span class="hljs-variable">SM</span><span class="hljs-punctuation">)</span><br>                         <span class="hljs-operator">+</span> 写入<span class="hljs-variable">M</span>个<span class="hljs-punctuation">(</span><span class="hljs-type">O_i</span><span class="hljs-operator">,</span> <span class="hljs-type">m_i</span><span class="hljs-operator">,</span> <span class="hljs-type">l_i</span><span class="hljs-punctuation">)</span> <span class="hljs-operator">+</span> 归约阶段<br>                       ≈ <span class="hljs-built_in">N</span> × <span class="hljs-variable">d</span> × <span class="hljs-number">2</span> <span class="hljs-operator">+</span> <span class="hljs-variable">M</span> × <span class="hljs-type">small_overhead</span><br><br>总计算量不变，但并行度从 <span class="hljs-variable">H</span> 扩展到 <span class="hljs-variable">H</span> × <span class="hljs-variable">M</span><br><br>加速比 ≈ <span class="hljs-variable">M</span> <span class="hljs-punctuation">(</span>理想情况下<span class="hljs-punctuation">)</span>，实际约为 <span class="hljs-number">0.6</span><span class="hljs-operator">-</span><span class="hljs-number">0.8</span> × <span class="hljs-variable">M</span>（受限于归约开销和<span class="hljs-variable">SM</span>调度效率）<br></code></pre></td></tr></table></figure>
+
+<h3 id="Flash-Decoding-vs-FlashAttention——同一数学工具的不同应用"><a href="#Flash-Decoding-vs-FlashAttention——同一数学工具的不同应用" class="headerlink" title="Flash-Decoding vs FlashAttention——同一数学工具的不同应用"></a>Flash-Decoding vs FlashAttention——同一数学工具的不同应用</h3><p>两者底层使用相同的数学工具——在线softmax和log-sum-exp分块计算，但解决的问题截然不同：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FlashAttention</th>
+<th>Flash-Decoding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>问题</td>
+<td>中间矩阵S(P)的HBM物化</td>
+<td>KV缓存的序列带宽瓶颈</td>
+</tr>
+<tr>
+<td>IO瓶颈</td>
+<td>N×N矩阵的读&#x2F;写</td>
+<td>N×KV尺寸的读取</td>
+</tr>
+<tr>
+<td>并行策略</td>
+<td>在batch-head维度并行</td>
+<td>在序列长度维度人为分块</td>
+</tr>
+<tr>
+<td>计算复杂度</td>
+<td>O(N^2)（但减少了常数因子）</td>
+<td>O(N)（但IO常数降低了M倍）</td>
+</tr>
+<tr>
+<td>数学原理</td>
+<td>分块softmax + 重计算反向</td>
+<td>分块softmax + log-sum-exp归约</td>
+</tr>
+<tr>
+<td>适用阶段</td>
+<td>训练、预填充</td>
+<td>解码</td>
+</tr>
+</tbody></table>
+<p>两者在IO感知上的统一哲学：知道数据流动的模式 → 分析瓶颈的位置 → 通过分块和重计算&#x2F;归约将瓶颈从IO转移到计算。</p>
+<h3 id="与PagedAttention-vLLM-的互补关系"><a href="#与PagedAttention-vLLM-的互补关系" class="headerlink" title="与PagedAttention (vLLM) 的互补关系"></a>与PagedAttention (vLLM) 的互补关系</h3><p>PagedAttention和Flash-Decoding是真正互补的——一个管理KV缓存的<strong>存储空间</strong>，一个管理KV缓存的<strong>读取速度</strong>：</p>
+<ul>
+<li><p><strong>PagedAttention</strong>（存储空间维度）：</p>
+<ul>
+<li>问题：KV缓存预分配固定连续内存导致废碎片和过度预留</li>
+<li>解决：将KV缓存切分为”页”（pages），按需分配，允许不连续的物理存储</li>
+<li>效果：内存利用率从30-50%提升到80-95%，支持更大batch → 提升吞吐量</li>
+</ul>
+</li>
+<li><p><strong>Flash-Decoding</strong>（读取速度维度）：</p>
+<ul>
+<li>问题：单个query串行读取长KV缓存慢</li>
+<li>解决：分块并行读取+局部计算+全局归约</li>
+<li>效果：单个解码步骤的注意力延迟降低10-50x</li>
+</ul>
+</li>
+</ul>
+<p>在实际部署（如vLLM + Flash-Decoding）中：</p>
+<ul>
+<li>PagedAttention增大了可服务的batch size（更多用户同时在线）</li>
+<li>Flash-Decoding降低了每个用户解map的延迟（每个回复生成更快）</li>
+<li>综合效果：更低延迟 × 更高并发 &#x3D; 更好的用户体验和更低的单位成本</li>
+</ul>
+<h3 id="归约开销的定量分析"><a href="#归约开销的定量分析" class="headerlink" title="归约开销的定量分析"></a>归约开销的定量分析</h3><p>归约步骤是Flash-Decoding的代价——需要收集M个SM上的三元组并在一个（或少数几个）SM上串行归约。对于不同的序列长度，归约开销占比：</p>
+<table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>M（块数）</th>
+<th>归约时间</th>
+<th>总时间</th>
+<th>归约占比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2K</td>
+<td>8</td>
+<td>0.02 ms</td>
+<td>0.5 ms</td>
+<td>4%</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>32</td>
+<td>0.05 ms</td>
+<td>0.7 ms</td>
+<td>7%</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>128</td>
+<td>0.12 ms</td>
+<td>1.5 ms</td>
+<td>8%</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>256</td>
+<td>0.18 ms</td>
+<td>2.1 ms</td>
+<td>9%</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>512</td>
+<td>0.30 ms</td>
+<td>3.5 ms</td>
+<td>9%</td>
+</tr>
+</tbody></table>
+<p>归约开销占比随序列长度略微增长（因M增大需要归约更多三元组），但在9%以内是可接受的。对于极短序列（&lt;1K），归约开销占比可能达到15-20%——此时Flash-Decoding的边际收益下降，可能回退到标准解码更优。</p>
+<h3 id="“在32K以内近乎恒定运行时间”的工程意义"><a href="#“在32K以内近乎恒定运行时间”的工程意义" class="headerlink" title="“在32K以内近乎恒定运行时间”的工程意义"></a>“在32K以内近乎恒定运行时间”的工程意义</h3><p>Flash-Decoding最吸引人的声明是”注意力运行时间在32K以内近乎恒定”。这一特性的工程含义：</p>
+<ol>
+<li><strong>可预测的延迟</strong>：处理一个5分钟对话（约10K token）和处理一个刚开始的对话（约2K token）的解码延迟几乎相同。服务提供商可以设定统一的延迟SLA而不需要为长序列单独配置。</li>
+<li><strong>“长上下文经济性”</strong>：在Flash-Decoding之前，处理128K token的成本约是处理4K token的32倍（纯按token计费）。Flash-Decoding使成本差距缩小到约3-5倍——因为主要瓶颈（KV读取）被并行化了，额外成本主要来自KV缓存的存储空间而非读取时间。</li>
+<li><strong>实时交互的可能性</strong>：在解码延迟从50ms+（32K序列）降低到&lt;5ms后，实时语音对话、实时代码补全等对延迟敏感的应用场景变得实际可行。</li>
+</ol>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="表：注意力优化技术全谱系（6维度）"><a href="#表：注意力优化技术全谱系（6维度）" class="headerlink" title="表：注意力优化技术全谱系（6维度）"></a>表：注意力优化技术全谱系（6维度）</h3><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>目标阶段</th>
+<th>IO优化策略</th>
+<th>并行策略</th>
+<th>数学工具</th>
+<th>GPU利用率</th>
+<th>性能相对FlashAttention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vanilla Attention</td>
+<td>训练&#x2F;推理</td>
+<td>无优化</td>
+<td>仅batch-head</td>
+<td>无</td>
+<td>15-30%</td>
+<td>1-5%</td>
+</tr>
+<tr>
+<td>FlashAttention</td>
+<td>训练</td>
+<td>分块+重计算避免物化S&#x2F;P</td>
+<td>batch-head维度</td>
+<td>在线softmax</td>
+<td>80-95%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>FlashAttention-2</td>
+<td>训练</td>
+<td>改进并行策略+减少非矩阵乘法</td>
+<td>更优的warp调度</td>
+<td>在线softmax</td>
+<td>85-98%</td>
+<td>120-150%</td>
+</tr>
+<tr>
+<td>xFormers ME</td>
+<td>训练</td>
+<td>多种稀疏&#x2F;近似注意力</td>
+<td>可变</td>
+<td>多种</td>
+<td>60-80%</td>
+<td>70-85%</td>
+</tr>
+<tr>
+<td><strong>Flash-Decoding</strong></td>
+<td><strong>解码</strong></td>
+<td><strong>序列分块+log-sum-exp归约</strong></td>
+<td><strong>batch-head-seq</strong></td>
+<td><strong>log-sum-exp</strong></td>
+<td><strong>70-82%</strong></td>
+<td><strong>500-5000%</strong></td>
+</tr>
+<tr>
+<td>PagedAttention</td>
+<td>解码（内存）</td>
+<td>KV页式管理</td>
+<td>batch维度</td>
+<td>无（内存管理）</td>
+<td>不适用</td>
+<td>不适用</td>
+</tr>
+</tbody></table>
+<p>注意：Flash-Decoding的性能是”相对标准解码注意力”的加速，而非相对FlashAttention。标准解码注意力极慢（GPU几乎空闲），因此加速比可达50×。</p>
+<h3 id="为什么Flash-Decoding发表于2023年而非更早"><a href="#为什么Flash-Decoding发表于2023年而非更早" class="headerlink" title="为什么Flash-Decoding发表于2023年而非更早"></a>为什么Flash-Decoding发表于2023年而非更早</h3><p>Flash-Decoding依赖三个先决条件：</p>
+<ol>
+<li><strong>FlashAttention的分块计算范式</strong>（2022）：在FlashAttention证明”分块+在线归一化”是可行且精确的之前，没有人敢尝试在序列维度上分块计算softmax。</li>
+<li><strong>长上下文LLM的普及</strong>（2023）：GPT-4-32K、Claude 2-100K、Gemini 1.5 Pro-1M等长上下文模型的出现，使得解码瓶颈从”偶尔存在”变成了”普遍存在”——对于4K上下文，解码瓶颈不严重；对于128K，它是致命的。</li>
+<li><strong>推理服务化的成熟</strong>（2023）：LLM推理从”批量评测”转向”实时服务”——延迟成为核心指标，而不再仅是吞吐量。这一转变使得解码（而非预填充）成为主要瓶颈。</li>
+</ol>
+<p>如果Flash-Decoding在2022年提出，它可能会被视为”一个有趣但不太需要的优化”——因为没有长上下文模型，解码延迟在4K上下文时仍在可接受范围内。它是在正确的时间（长上下文成为主流）出现的正确技术。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>仅解码阶段有效</strong>：Flash-Decoding专门优化单query、长KV缓存的解码场景。在训练和预填充（多query）场景下，FlashAttention&#x2F;FA2仍然是更优的选择。在批量推理（batching multiple users’ decode steps）中，如果batch size足够大，标准的FlashAttention批量处理可能重新变得竞争力更强——因为batch维度的并行度已经足够填充GPU的SM。</p>
+<p>定量切换点：当 batch_size × num_heads &gt; num_SMs × 0.5 时（即batch-head并行度已经能约50%填充GPU SM），标准FlashAttention和Flash-Decoding的性能差距缩小到2×以内。准确切换点取决于具体硬件和序列长度。</p>
+</li>
+<li><p><strong>归约kernel的延迟开销</strong>：在结合M个SM的部分结果时，需要一个小型归约kernel。这个kernel虽然计算量极小，但引入了额外的同步点（所有M个SM必须完成计算后才能进行归约）。对于M很大的情况（如序列长度1M token，M可达4096），归约步骤可能成为一个新的瓶颈。</p>
+<p>缓解路径：（a）使用树形归约（tree reduction）——多级归约而非单级，（b）为极端长序列（&gt;500K）设计更高效的多级归约策略，每级归约约log(M)次操作。</p>
+</li>
+<li><p><strong>KV缓存的内存占用未解决</strong>：Flash-Decoding优化的是KV缓存的<strong>读取速度</strong>，而非<strong>内存占用</strong>。KV缓存仍然需要 O(N × d × num_layers × 2) 的HBM空间。对于128K序列的Llama 70B，KV缓存需要约70GB HBM——这仍然是限制并发batch size的主要瓶颈。</p>
+<p>缓解路径：与KV量化（INT4&#x2F;INT8 KV缓存）结合——Flash-Decoding读取压缩后的KV，减少IO的同时减少内存占用。</p>
+</li>
+<li><p><strong>HBM带宽仍未突破物理极限</strong>：Flash-Decoding虽然提高了GPU利用率，但KV缓存仍在HBM中，读取KV仍受限于HBM带宽（A100: 2TB&#x2F;s）。Flash-Decoding没有减少HBM读取的总量——它只是让读取并行发生在多个SM上。总HBM带宽消耗与标准注意力相同。</p>
+<p>深层含义：Flash-Decoding解决了”GPU SM利用率”瓶颈，但没有解决”HBM带宽”瓶颈。对于需要极高吞吐量（如每秒处理1000个并发token生成）的场景，HBM带宽将成为下一个瓶颈。</p>
+</li>
+<li><p><strong>FlashAttention-3和更高级架构的影响</strong>：FlashAttention-3（2024年）引入了对Hopper架构（H100&#x2F;H200）的特殊优化（如WGMMA指令），可能会改变训练和解码的优化格局——如果FA3在解码场景下也能高效工作（通过异步数据加载和更优的SM调度），Flash-Decoding的独特优势将被削弱。</p>
+</li>
+<li><p><strong>不支持非标准注意力模式</strong>：Flash-Decoding假设标准的scaled dot-product attention。对于修改过的注意力机制（如相对位置编码、RoPE、ALiBi），需要额外的适配。RoPE在解码时需要额外的旋转操作（应用于查询和每块的键），增加了每SM的计算量但不影响并行化策略。</p>
+</li>
+<li><p><strong>跨GPU的扩展性未讨论</strong>：Flash-Decoding专注于单GPU内的SM级并行。在张量并行（tensor parallelism）场景下（模型分布到多个GPU），KV缓存也被分布——每个GPU上的Flash-Decoding处理自己的一部分KV缓存。论文未详细讨论跨GPU的归约开销和负载均衡。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>训练不等于推理——两者需要不同的优化策略</strong>：</p>
+<ul>
+<li>洞见：LLM的训练和推理有不同的计算模式（多query vs 单query），需要量身定做的优化。不能简单地将训练优化技术照搬到推理。</li>
+<li>为什么泛化：任何计算系统在批处理和交互式使用中面临不同的瓶颈——批处理受限于吞吐量（FLOPs），交互式受限于延迟（IO和串行依赖）。这在数据库、Web服务、图形渲染等领域都有对应物。</li>
+<li>如何具体应用：在优化LLM推理时，分别分析预填充阶段（多query、计算密集）和解码阶段（单query、IO密集）的瓶颈，为每个阶段选择专门化的优化技术。</li>
+</ul>
+</li>
+<li><p><strong>并行维度的创造性使用</strong>：</p>
+<ul>
+<li>洞见：当天然的并行维度（batch, head）不足以填满GPU时，可以通过数据分块在另一个维度（序列长度）上创造人工并行度。这种”将1维转化为M维”的策略是可推广的。</li>
+<li>为什么泛化：任何”串行瓶颈 + 并行资源”的场景都可以应用这一策略——将串行任务拆分、并行执行、然后归约结果。</li>
+<li>如何具体应用：（a）识别GPU利用率低下的核心原因——哪个维度缺乏并行度，（b）寻找可以独立拆分的数据维度，（c）确保拆分后的子任务可以独立计算且结果可以精确合并（通常需要log-sum-exp等数学技巧）。</li>
+</ul>
+</li>
+<li><p><strong>分块+归约是一个通用的并行计算模式</strong>：</p>
+<ul>
+<li>洞见：Flash-Decoding的”分块处理+局部统计量+全局归约”模式不仅适用于注意力计算——它是处理任何”可分拆但需要全局归一化”的计算的通用模式。</li>
+<li>为什么泛化：Map-Reduce是最经典的并行计算范式之一——Flash-Decoding本质上是softmax计算的Map-Reduce实现。类似的模式在分布式梯度聚合、前缀和、排序等算法中无处不在。</li>
+<li>如何具体应用：在设计新的并行算法时，遵循Map-Reduce的思维框架——将计算分解为（a）独立的映射阶段（Map：每块独立计算），（b）统计量的全局归约（Reduce：组合局部统计量为全局统计量），（c）基于归约结果的重缩放或后处理。</li>
+</ul>
+</li>
+<li><p><strong>IO感知设计是系统优化的永恒核心</strong>：</p>
+<ul>
+<li>洞见：无论是FlashAttention还是Flash-Decoding，它们的核心创新都不是新的数学公式，而是对”数据在哪里、如何流动”的深刻理解。IO感知（IO-aware）设计是这些技术共同的DNA。</li>
+<li>为什么泛化：在深度学习系统中，计算成本（FLOPs）在过去10年下降了约100倍（被Tensor Cores、稀疏计算等加速），而IO成本（HBM带宽、PCIe带宽）变化甚微——IO瓶颈的相对重要性持续增加。这种趋势使得”IO感知”的系统设计在ML之外的所有高性能计算领域都变得越来越关键。</li>
+<li>如何具体应用：在优化任何高性能计算系统时，先完整绘制数据流动图（哪些数据在HBM、SRAM、CPU内存、磁盘之间移动），然后针对移动量最大的边进行优化（缓存、分块、预取、压缩）。</li>
+</ul>
+</li>
+<li><p><strong>优化的”相变”——从线性到常数的惊喜</strong>：</p>
+<ul>
+<li>洞见：Flash-Decoding使得注意力运行时间在32K序列以内近乎恒定——这在算法上是不寻常的（注意力计算的理论复杂度是O(N)）。这种”相变”源于将IO瓶颈转化为计算瓶颈——当所有SM都在工作时，计算时间由SM的计算能力决定（与N无关），而非由IO带宽决定（与N成正比）。</li>
+<li>为什么泛化：许多看似”必然线性”的系统、在合适的并行化后可以表现出近常数的运行时间——只要”串行瓶颈”可以被”充分并行化”。这适用于文件扫描（并行读取）、数据聚合（并行归约）、编译（并行编译翻译单元）等。</li>
+<li>如何具体应用：在分析一个看似O(N)的系统时，不要默认接受线性瓶颈——检查是否可以（a）将数据分块并行处理，（b）通过增量维护来避免全量扫描，（c）利用预计算或缓存来减少重复工作。</li>
+</ul>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Dao, T., et al. (2023). Flash-Decoding. Stanford CRFM Blog.</li>
+<li>Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS 2022. arXiv:2205.14135</li>
+<li>Dao, T. (2023). FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning. arXiv:2307.08691</li>
+<li>Kwon, W., et al. (2023). Efficient Memory Management for Large Language Model Serving with PagedAttention. SOSP 2023. arXiv:2309.06180</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%BC%98%E5%8C%96/" class="category-chain-item">注意力优化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+        <a href="/tags/papers-inference-optimization/" class="print-no-link">#papers/inference-optimization</a>
+      
+        <a href="/tags/papers-long-context/" class="print-no-link">#papers/long-context</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Flash-Decoding: Accelerating LLM Inference for Long Contexts</div>
+      <div>https://w2ongq6.github.io/2023/10/12/inference/note/Flash-Decoding_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月12日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/12/inference/note/CacheGen_note/" title="CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/10/llm/note/SWE-bench_note/" title="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?">
+                        <span class="hidden-mobile">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

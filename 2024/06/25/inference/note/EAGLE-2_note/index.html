@@ -1,0 +1,1518 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="EAGLE-2: 基于动态草稿树的语言模型快速推理核心信息 标题: EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees 标题翻译: EAGLE-2：基于动态草稿树的语言模型快速推理 作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang 机构: Univers">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/06/25/inference/note/EAGLE-2_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="EAGLE-2: 基于动态草稿树的语言模型快速推理核心信息 标题: EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees 标题翻译: EAGLE-2：基于动态草稿树的语言模型快速推理 作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang 机构: Univers">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-06-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.344Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;deep-learning">
+<meta property="article:tag" content="papers&#x2F;inference">
+<meta property="article:tag" content="papers&#x2F;speculative-decoding">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-06-25 00:00" pubdate>
+          2024年6月25日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          103 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="EAGLE-2-基于动态草稿树的语言模型快速推理"><a href="#EAGLE-2-基于动态草稿树的语言模型快速推理" class="headerlink" title="EAGLE-2: 基于动态草稿树的语言模型快速推理"></a>EAGLE-2: 基于动态草稿树的语言模型快速推理</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees</li>
+<li>标题翻译: EAGLE-2：基于动态草稿树的语言模型快速推理</li>
+<li>作者: Yuhui Li, Fangyun Wei, Chao Zhang, Hongyang Zhang</li>
+<li>机构: University of Waterloo（滑铁卢大学）, Microsoft Research（微软研究院）</li>
+<li>发表时间: 2024年6月25日</li>
+<li>发表渠道: EMNLP 2024</li>
+<li>arXiv: 2406.16858</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.16858">https://arxiv.org/abs/2406.16858</a></li>
+<li>论文类型: AI推理系统方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>投机解码和其变体（如Medusa、EAGLE）通过生成草稿token再并行验证来加速大语言模型的推理。现有方法通常使用固定结构的草稿树，在每一步使用相同的树拓扑。本文指出，草稿token的接受率不仅依赖于其在树中的位置，更依赖于具体的上下文。我们提出EAGLE-2，一种使用动态草稿树的改进框架。EAGLE-2利用EAGLE草稿模型良好的校准性——其置信度分数与实际接受率高度相关——在每一步动态调整树结构：将置信度最高的草稿token选为树节点，并在高置信度路径上分配更多候选。实验表明，EAGLE-2在三个LLM系列（Vicuna、LLaMA2-Chat、LLaMA3-Instruct）的六种任务类型上实现3.05至4.26倍加速，比EAGLE v1提升20-40%。每个草稿-验证周期的平均接受长度达到4至5.5个token。在某些配置下，EAGLE-2在RTX 3060消费级GPU上的生成速度可与A100数据中心GPU上的标准解码相媲美。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-动态草稿树（Dynamic-Draft-Tree）"><a href="#1-动态草稿树（Dynamic-Draft-Tree）" class="headerlink" title="1. 动态草稿树（Dynamic Draft Tree）"></a>1. 动态草稿树（Dynamic Draft Tree）</h3><p><strong>核心思想</strong>: 传统投机解码及其变体使用固定结构的草稿树——树拓扑（每层的宽度和深度）在所有生成步骤中保持不变。EAGLE-2的核心创新是认识到接受率不仅依赖位置（即草稿树中的级别），更依赖上下文（当前生成的具体内容），因此在每一步根据草稿模型自身的置信度分数动态调整树结构。</p>
+<p><strong>为什么重要</strong>: 这是对投机解码中”草稿树”概念的重要深化。早期方法（包括EAGLE-1）假设固定树结构足够有效，但忽略了不同上下文中草稿质量的巨大差异。在创造性写作场景中，更多候选路径有用；在模板化生成中，少数路径即可。动态调整使得草稿资源（计算和候选）精准分配到最有希望的位置，实现了20-40%的额外加速。这一洞察为”上下文感知推理加速”开辟了新方向。</p>
+<h3 id="2-置信度引导的节点选择（Confidence-Guided-Node-Selection）"><a href="#2-置信度引导的节点选择（Confidence-Guided-Node-Selection）" class="headerlink" title="2. 置信度引导的节点选择（Confidence-Guided Node Selection）"></a>2. 置信度引导的节点选择（Confidence-Guided Node Selection）</h3><p><strong>核心思想</strong>: EAGLE-2发现其草稿模型具有良好的校准性（calibration）——模型为每个预测分配的概率分数与实际被目标模型接受的概率高度相关。基于这一发现，EAGLE-2在构建每步的草稿树时，将置信度最高的草稿token选为树节点，并在高置信度路径上分配更多的子节点（即更宽的子分支）。</p>
+<p><strong>为什么重要</strong>: 这是一个优雅且几乎没有额外成本的优化。不需要训练额外的置信度估计器或元模型——直接使用草稿模型自身的softmax输出作为置信度信号。校准性好的模型天然地知道自己的预测哪些更可靠，EAGLE-2只是将这个信号用于草稿树的结构决策。</p>
+<h3 id="3-上下文感知的资源分配"><a href="#3-上下文感知的资源分配" class="headerlink" title="3. 上下文感知的资源分配"></a>3. 上下文感知的资源分配</h3><p><strong>核心思想</strong>: 与固定宽度树不同，EAGLE-2根据每条路径上的累积置信度动态分配子节点预算。高置信度路径（草稿模型”确信”的token序列）获得更多子节点以探索更多延续可能性；低置信度路径减少子节点以节省计算。</p>
+<p><strong>为什么重要</strong>: 这保证了验证计算（树中节点越多，前向传播越慢）被主要分配到有希望产出有效token的路径上。上下文感知的资源分配是EAGLE-2在保持甚至降低平均节点数的同时提高有效接受长度的关键。</p>
+<h3 id="4-校准性作为元能力"><a href="#4-校准性作为元能力" class="headerlink" title="4. 校准性作为元能力"></a>4. 校准性作为元能力</h3><p><strong>核心思想</strong>: EAGLE-2不仅利用了草稿模型预测的准确性，还利用了其校准性——草稿模型对自身预测的置信度是实际正确率的良好估计。这个元能力使得草稿树可以从”结构优先”转变为”置信度优先”。</p>
+<p><strong>为什么重要</strong>: 模型的校准性通常被研究用于可信AI和不确定性估计，EAGLE-2展示了校准性在系统效率优化中的实际应用价值。这建立了模型可信度与推理效率之间的桥梁。</p>
+<h3 id="5-跨模型系列的泛化验证"><a href="#5-跨模型系列的泛化验证" class="headerlink" title="5. 跨模型系列的泛化验证"></a>5. 跨模型系列的泛化验证</h3><p><strong>核心思想</strong>: EAGLE-2在三个代表性LLM系列（Vicuna、LLaMA2-Chat、LLaMA3-Instruct）和六种任务类型上进行了全面的评估，证明了方法在不同架构、不同训练方式、不同规模模型上的泛化性。</p>
+<p><strong>为什么重要</strong>: 跨系列的泛化验证是方法成熟度的关键标志。EAGLE-2对LLaMA3-Instruct的良好表现说明该方法可以适应最新的模型架构和训练范式，而不是仅适用于特定模型系列。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>EAGLE-2在EAGLE特征级预测的基础上引入动态草稿树，利用草稿模型良好的置信度校准性，在每步根据上下文自适应地选择高置信度路径、分配更多探索预算，在不增加额外复杂机制的情况下将加速比从EAGLE-1的2.7-3.5倍提升至3.05-4.26倍（+20-40%），使消费级GPU的生成速度可与数据中心GPU相媲美，代表了2024年中投机解码的最高水平。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>EAGLE-1在特征级预测上取得了显著突破，但存在一个关键的结构性限制：草稿树的结构是静态的。这个限制基于一个不准确的假设：</p>
+<p><strong>错误假设</strong>: 草稿token的接受率仅依赖于其在草稿树中的位置（第k级预测），与上下文无关。</p>
+<p><strong>真实情况</strong>: 接受率高度依赖于当前上下文。例如：</p>
+<ul>
+<li>在”首都北京是”之后预测”城市”——高接受率（几乎确定）</li>
+<li>在”我最喜欢的电影是”之后预测”《肖申克的救赎》”——低接受率（高度不确定）</li>
+<li>静态树在这两种情况下分配相同的资源，导致资源浪费或资源不足</li>
+</ul>
+<h3 id="现有方法的局限"><a href="#现有方法的局限" class="headerlink" title="现有方法的局限"></a>现有方法的局限</h3><ol>
+<li><p><strong>EAGLE-1的静态树</strong>: 所有生成步骤使用相同的树拓扑(s1, s2, …, sK)，不区分上下文难度。在简单上下文中浪费计算，在困难上下文中探索不足。</p>
+</li>
+<li><p><strong>Medusa的固定宽度</strong>: 每个头的候选数固定，同样忽略了上下文的entropy变化。</p>
+</li>
+<li><p><strong>原始投机解码的线性候选</strong>: 只探索单条路径，错过了通过并行路径探索来提高总体接受率的机会。</p>
+</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>校准性赋予模型自知的元能力</strong>: 一个校准良好的模型不仅能给出预测，还能给出该预测正确率的可靠估计。这意味着模型”知道”自己在哪些预测上更确定、在哪些上更不确定。利用这种元认知能力来动态分配推理资源——在模型自信的地方多探索（宽分支），在不自信的地方少探索或跳过——可以在不增加总计算量的情况下显著提高有效接受长度。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练设置"><a href="#训练设置" class="headerlink" title="训练设置"></a>训练设置</h3><p>与EAGLE-1相同，EAGLE-2使用特征预测草稿模块：</p>
+<ul>
+<li>训练数据：ShareGPT或通用对话语料</li>
+<li>训练方式：自回归特征预测，Smooth L1损失</li>
+<li>草稿模块架构：1-3层轻量级Transformer</li>
+</ul>
+<h3 id="评估设置"><a href="#评估设置" class="headerlink" title="评估设置"></a>评估设置</h3><p><strong>模型系列</strong>:</p>
+<ul>
+<li>Vicuna-7B&#x2F;13B（基于LLaMA-1的对话模型）</li>
+<li>LLaMA2-Chat-7B&#x2F;13B&#x2F;70B</li>
+<li>LLaMA3-Instruct-8B（新增，代表最新模型系列）</li>
+</ul>
+<p><strong>任务类型</strong>（六种）:</p>
+<ul>
+<li>对话（MT-bench）</li>
+<li>代码生成（HumanEval）</li>
+<li>数学推理（GSM8K）</li>
+<li>翻译（WMT）</li>
+<li>摘要（CNN&#x2F;DailyMail）</li>
+<li>问答（Natural Questions）</li>
+</ul>
+<p><strong>评估指标</strong>:</p>
+<ul>
+<li>墙钟加速比</li>
+<li>平均接受长度（每个草稿-验证周期接受的token数）</li>
+<li>接受率</li>
+<li>tokens&#x2F;s（绝对生成速度）</li>
+<li>质量保持度（对比原始模型输出）</li>
+</ul>
+<h3 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h3><ul>
+<li>主要测试：NVIDIA RTX 3090 24GB, RTX 3060 12GB</li>
+<li>大模型测试：NVIDIA A100 80GB</li>
+<li>对比基线：EAGLE-1（静态树）、Medusa、标准自回归解码</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><p>EAGLE-2在EAGLE-1的特征预测基础上，引入了三步动态树构建流程：置信度排序、贪心节点选择、自适应宽度分配。</p>
+<h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 特征预测与置信度获取</strong></p>
+<p><strong>步骤输入</strong>: 当前上下文的目标模型特征 $f_t$，已确认token embedding $e(x_t)$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>使用EAGLE草稿模块自回归预测K个未来特征向量 ${\hat{f}<em>{t+1}, \ldots, \hat{f}</em>{t+K}}$</li>
+<li>通过目标模型输出层将每个预测特征解码为token概率分布：<ul>
+<li>$p_{\text{draft}}^{(k)}(x) &#x3D; \text{softmax}(W_{\text{lm_head}} \cdot \hat{f}_{t+k} + b)$</li>
+</ul>
+</li>
+<li>对每个分布提取top-$s_{\max}$个候选及其置信度分数</li>
+<li>置信度分数 &#x3D; 草稿模型为该候选分配的softmax概率<br><strong>步骤输出</strong>: K组候选token，每组包含$s_{\max}$个候选，每个候选附带置信度分数$c$</li>
+</ul>
+<p><strong>步骤2: 基于置信度的动态树构建</strong></p>
+<p><strong>步骤输入</strong>: K组候选token及置信度分数，总节点预算 $N_{\max}$（通常200-400）<br><strong>步骤操作</strong>:<br>  <strong>步骤第1步（全局置信度排序）</strong>:<br>    - 将所有$K \times s_{\max}$个候选按其置信度分数降序排列<br>    - 从排名最高的候选开始，逐一遍历候选列表<br>  <strong>步骤第2步（贪心树节点选择）</strong>:<br>    - 维护一个”已选节点”集合（初始包含根节点）<br>    - 按置信度降序遍历候选列表：<br>      - 如果该候选的父节点已选入树中，且添加该候选后总节点数不超过$N_{\max}$，则将其选为树节点<br>      - 否则跳过<br>    - 这保证树总是连通的且拓扑有效<br>  <strong>步骤第3步（自适应深度分配）</strong>:<br>    - 在已选节点集合中，计算每个节点的”下游置信度”——从该节点到所有叶子的路径上的最小置信度<br>    - 下游置信度高的节点自然获得更多的子节点（因为其子候选置信度也高）<br>    - 下游置信度低的节点自然获得较少的子节点<br><strong>步骤输出</strong>: 一棵拓扑不固定的草稿树，节点总数不超过$N_{\max}$</p>
+<p><strong>步骤3: 树注意力并行验证</strong></p>
+<p><strong>步骤输入</strong>: 动态构建的草稿树，前缀序列，目标模型参数<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>将动态草稿树序列化（DFS或BFS顺序）</li>
+<li>构造树注意力掩码（每个节点只能注意到其祖先）</li>
+<li>目标模型一次前向传播，计算树中所有候选token的精确条件概率</li>
+<li>执行投机采样验证（与EAGLE-1相同）<br><strong>步骤输出</strong>: 被接受的token序列</li>
+</ul>
+<h3 id="动态树-vs-静态树的对比分析"><a href="#动态树-vs-静态树的对比分析" class="headerlink" title="动态树 vs 静态树的对比分析"></a>动态树 vs 静态树的对比分析</h3><p><strong>静态树（EAGLE-1）</strong>:</p>
+<ul>
+<li>树结构：$(s_1, s_2, s_3, s_4) &#x3D; (8, 4, 2, 1)$ 对所有步骤固定</li>
+<li>节点总数：$1 + 8 + 32 + 64 + 64 &#x3D; 169$</li>
+<li>特点：<ul>
+<li>结构是”形状优先”的——前几层宽，后几层窄</li>
+<li>不区分上下文难度</li>
+<li>深层候选（k&gt;3）的分配固定，即使置信度很低</li>
+</ul>
+</li>
+</ul>
+<p><strong>动态树（EAGLE-2）</strong>:</p>
+<ul>
+<li>树结构：${s_k}$ 每步变化，受置信度驱动</li>
+<li>节点总数：控制在$N_{\max} \approx 200$以内</li>
+<li>特点：<ul>
+<li>在简单上下文中：深层节点也获得候选分配（因为置信度持续高）</li>
+<li>在困难上下文中：深层节点减少或消失（因为置信度快速衰减）</li>
+<li>整体接受长度从4.2提升至5.0+</li>
+</ul>
+</li>
+</ul>
+<p><strong>可视化示例</strong>:</p>
+<ul>
+<li>简单上下文（如”1+1&#x3D;”）: 树深度大，每层候选少但置信度高<figure class="highlight lsl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs lsl">根 → <span class="hljs-string">&quot;2&quot;</span>(<span class="hljs-number">0.99</span>) → <span class="hljs-string">&quot;.&quot;</span>(<span class="hljs-number">0.95</span>) → <span class="hljs-string">&quot;<span class="hljs-subst">\n</span>&quot;</span>(<span class="hljs-number">0.92</span>)<br></code></pre></td></tr></table></figure></li>
+<li>困难上下文（如”最好的城市是”）: 树浅层宽，深层极窄<figure class="highlight 1c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs 1c">根 → <span class="hljs-string">&quot;纽&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.3</span><span class="hljs-punctuation">)</span>→<span class="hljs-string">&quot;约&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.25</span><span class="hljs-punctuation">)</span>→<span class="hljs-string">&quot;约&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.22</span><span class="hljs-punctuation">)</span><br>    → <span class="hljs-string">&quot;伦&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.2</span><span class="hljs-punctuation">)</span>→<span class="hljs-string">&quot;敦&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.18</span><span class="hljs-punctuation">)</span><br>    → <span class="hljs-string">&quot;东&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.15</span><span class="hljs-punctuation">)</span>→<span class="hljs-string">&quot;京&quot;</span><span class="hljs-punctuation">(</span><span class="hljs-number">0.10</span><span class="hljs-punctuation">)</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="校准性的量化分析"><a href="#校准性的量化分析" class="headerlink" title="校准性的量化分析"></a>校准性的量化分析</h3><p><strong>EAGLE草稿模型的校准性验证</strong>:</p>
+<p>论文通过可靠性图（Reliability Diagram）和预期校准误差（ECE）验证了草稿模型的校准性：</p>
+<table>
+<thead>
+<tr>
+<th>置信度区间</th>
+<th>期望接受率</th>
+<th>实际接受率</th>
+<th>偏差</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0.0-0.2</td>
+<td>~10%</td>
+<td>12%</td>
+<td>+2%</td>
+</tr>
+<tr>
+<td>0.2-0.4</td>
+<td>~30%</td>
+<td>28%</td>
+<td>-2%</td>
+</tr>
+<tr>
+<td>0.4-0.6</td>
+<td>~50%</td>
+<td>51%</td>
+<td>+1%</td>
+</tr>
+<tr>
+<td>0.6-0.8</td>
+<td>~70%</td>
+<td>72%</td>
+<td>+2%</td>
+</tr>
+<tr>
+<td>0.8-1.0</td>
+<td>~90%</td>
+<td>88%</td>
+<td>-2%</td>
+</tr>
+</tbody></table>
+<p>**ECE（预期校准误差）**约2-3%，说明草稿模型的置信度分数与实际接受率高度一致。</p>
+<p><strong>为什么EAGLE草稿模型校准性好</strong>:</p>
+<ol>
+<li>特征预测是一个回归任务（连续），避免了分类任务中过拟合的倾向</li>
+<li>Smooth L1损失鼓励conservative预测，不鼓励极端概率</li>
+<li>Token-Advanced策略提供了额外的定位信息，减少了灾难性错误</li>
+</ol>
+<h3 id="动态节点预算分配算法"><a href="#动态节点预算分配算法" class="headerlink" title="动态节点预算分配算法"></a>动态节点预算分配算法</h3><p><strong>伪代码</strong>:</p>
+<figure class="highlight excel"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs excel">Inp<span class="hljs-symbol">ut:</span> K组候选&#123;(candidates_k, confidences_k) for k=<span class="hljs-number">1</span>..K&#125;, 总预算N_max<br>Outp<span class="hljs-symbol">ut:</span> 树节点集合<span class="hljs-built_in">T</span><br><br><span class="hljs-number">1</span>. 初始化<span class="hljs-symbol">:</span> <span class="hljs-built_in">T</span> = &#123;root&#125;, budget_used = <span class="hljs-number">1</span><br><span class="hljs-number">2</span>. 计算每个候选的<span class="hljs-string">&quot;路径置信度&quot;</span><span class="hljs-symbol">:</span><br>   path_conf(candidate) = <span class="hljs-built_in">min</span>(conf(candidate), <span class="hljs-built_in">min</span>(path_conf along ancestors))<br><span class="hljs-number">3</span>. 按路径置信度降序排列所有候选<br><span class="hljs-number">4</span>. for candidate in sorted_candidat<span class="hljs-symbol">es:</span><br>     <span class="hljs-built_in">if</span> candidate.parent in <span class="hljs-built_in">T</span> <span class="hljs-built_in">and</span> budget_used &lt; N_m<span class="hljs-symbol">ax:</span><br>       T.add(candidate)<br>       budget_used += <span class="hljs-number">1</span><br><span class="hljs-number">5</span>. return <span class="hljs-built_in">T</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>关键性质</strong>:</p>
+<ul>
+<li>贪心算法保证选出置信度最高的连通子树</li>
+<li>时间复杂度 $O(K \cdot s_{\max} \log(K \cdot s_{\max}))$（排序主导），可忽略不计</li>
+<li>不需要超参数调优（N_max是唯一的超参数）</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="主要加速结果（六任务-x-三模型系列）"><a href="#主要加速结果（六任务-x-三模型系列）" class="headerlink" title="主要加速结果（六任务 x 三模型系列）"></a>主要加速结果（六任务 x 三模型系列）</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>任务</th>
+<th>EAGLE-1</th>
+<th>EAGLE-2</th>
+<th>Medusa</th>
+<th>提升(E2 vs E1)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vicuna-7B</td>
+<td>对话</td>
+<td>2.95x</td>
+<td>3.43x</td>
+<td>2.12x</td>
+<td>+16%</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>EAGLE-2在所有模型和任务上一致超越EAGLE-1，提升12-31%</li>
+<li>在LLaMA3-Instruct上提升最大(+31%)，因为该模型的特征空间更适合置信度驱动的树分配</li>
+<li>代码生成任务提升最大(+23-25%)，因为代码的token可预测性使得置信度信号特别有效</li>
+<li>数学推理提升最小(+12-13%)，因为推理的不确定性大，置信度信号的区分力减弱</li>
+</ul>
+<h3 id="平均接受长度对比"><a href="#平均接受长度对比" class="headerlink" title="平均接受长度对比"></a>平均接受长度对比</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>平均接受长度</th>
+<th>每周期有效token推进</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标准投机解码</td>
+<td>2.8</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>Medusa</td>
+<td>3.5</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td>EAGLE-1</td>
+<td>4.2</td>
+<td>4.2</td>
+</tr>
+<tr>
+<td><strong>EAGLE-2</strong></td>
+<td><strong>5.0-5.5</strong></td>
+<td><strong>5.0-5.5</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>EAGLE-2的平均接受长度比EAGLE-1提升19-31%（4.2→5.0-5.5）</li>
+<li>意味着每次完整前向传播后，序列向前推进更多token</li>
+<li>5.5个token的接受长度意味着在约57%的步骤中，整个草稿序列被完全接受</li>
+</ul>
+<h3 id="动态树-vs-静态树的消融实验"><a href="#动态树-vs-静态树的消融实验" class="headerlink" title="动态树 vs 静态树的消融实验"></a>动态树 vs 静态树的消融实验</h3><table>
+<thead>
+<tr>
+<th>树类型</th>
+<th>加速比</th>
+<th>平均接受长度</th>
+<th>平均树节点数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>静态树 (EAGLE-1配置)</td>
+<td>3.05x</td>
+<td>4.2</td>
+<td>169</td>
+</tr>
+<tr>
+<td>动态树 (N_max&#x3D;150)</td>
+<td>3.28x</td>
+<td>4.6</td>
+<td>145</td>
+</tr>
+<tr>
+<td>动态树 (N_max&#x3D;200)</td>
+<td>3.43x</td>
+<td>5.0</td>
+<td>192</td>
+</tr>
+<tr>
+<td>动态树 (N_max&#x3D;300)</td>
+<td>3.38x</td>
+<td>5.2</td>
+<td>278</td>
+</tr>
+<tr>
+<td>动态树 (N_max&#x3D;400)</td>
+<td>3.25x</td>
+<td>5.4</td>
+<td>365</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>动态树即使在更少节点下(150 vs 169)也能取得更高接受长度(4.6 vs 4.2)</li>
+<li>这说明节点质量的提升远超数量的影响</li>
+<li>N_max&#x3D;200时达到最佳平衡（加速比3.43x），继续增加节点产生递减回报</li>
+<li>节点数从200增至400仅带来0.2的接受长度提升，但前向传播时间增加约50%</li>
+</ul>
+<h3 id="RTX-3060-vs-A100性能对比"><a href="#RTX-3060-vs-A100性能对比" class="headerlink" title="RTX 3060 vs A100性能对比"></a>RTX 3060 vs A100性能对比</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>GPU</th>
+<th>方法</th>
+<th>tokens&#x2F;s</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vicuna-7B</td>
+<td>A100 80GB</td>
+<td>标准解码</td>
+<td>95.2</td>
+</tr>
+<tr>
+<td>Vicuna-7B</td>
+<td>RTX 3060 12GB</td>
+<td>标准解码</td>
+<td>35.1</td>
+</tr>
+<tr>
+<td>Vicuna-7B</td>
+<td>RTX 3060 12GB</td>
+<td>EAGLE-2</td>
+<td>105.3</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>在消费级RTX 3060上使用EAGLE-2（105 tokens&#x2F;s），超越了A100上的标准解码（95 tokens&#x2F;s）</li>
+<li>这是极具冲击力的结果：$300的消费级GPU通过投机解码达到了$10000+数据中心GPU的生成速度</li>
+<li>证明了投机解码在”民主化”大模型推理方面的巨大潜力</li>
+</ul>
+<h3 id="置信度引导的节点选择-vs-随机选择的对比"><a href="#置信度引导的节点选择-vs-随机选择的对比" class="headerlink" title="置信度引导的节点选择 vs 随机选择的对比"></a>置信度引导的节点选择 vs 随机选择的对比</h3><table>
+<thead>
+<tr>
+<th>节点选择策略</th>
+<th>加速比</th>
+<th>接受长度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>随机选择</td>
+<td>2.85x</td>
+<td>4.0</td>
+</tr>
+<tr>
+<td>按位置优先（静态）</td>
+<td>3.05x</td>
+<td>4.2</td>
+</tr>
+<tr>
+<td>按置信度引导（EAGLE-2）</td>
+<td>3.43x</td>
+<td>5.0</td>
+</tr>
+<tr>
+<td>Oracle（完美选择）</td>
+<td>3.82x</td>
+<td>5.6</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>:</p>
+<ul>
+<li>置信度引导（3.43x, 5.0 token）显著优于位置优先（3.05x, 4.2 token）和随机选择（2.85x, 4.0 token）</li>
+<li>距离Oracle上界（3.82x, 5.6 token）还有约11%的提升空间</li>
+<li>证明置信度信号虽然不是完美的，但是一个非常强的节点选择启发式</li>
+</ul>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么动态树能比静态树多接受0-8-1-3个token"><a href="#为什么动态树能比静态树多接受0-8-1-3个token" class="headerlink" title="为什么动态树能比静态树多接受0.8-1.3个token"></a>为什么动态树能比静态树多接受0.8-1.3个token</h3><p>这是理解EAGLE-2核心价值的关键问题：</p>
+<p><strong>静态树的低效之处</strong>:</p>
+<ul>
+<li>在所有上下文中使用相同的(8,4,2,1)分配</li>
+<li>第3层和第4层只有2个和1个候选，无论置信度多高</li>
+<li>在简单上下文中限制深层探索（浪费了接受更多token的机会）</li>
+<li>在困难上下文中浅层分配过多（浪费了树节点）</li>
+</ul>
+<p><strong>动态树的高效之处</strong>:</p>
+<ul>
+<li>简单上下文：高置信度路径获得深层节点→接受长度可达5-6个token<ul>
+<li>例如：代码中的<code>import torch.nn as nn</code>，每个token预测置信度都很高</li>
+</ul>
+</li>
+<li>困难上下文：低置信度路径浅层终止→节省节点用于其他有希望的方向<ul>
+<li>例如：对话中的开放性回答，深层预测变得不可靠</li>
+</ul>
+</li>
+</ul>
+<p><strong>量化分解</strong>:</p>
+<ul>
+<li>来自”简单上下文深度扩展”的增益：约+0.4-0.6 token&#x2F;周期</li>
+<li>来自”困难上下文资源节省”的增益：约+0.2-0.4 token&#x2F;周期</li>
+<li>来自”置信度优先排序”的增益：约+0.2-0.3 token&#x2F;周期</li>
+<li>总增益：约+0.8-1.3 token&#x2F;周期</li>
+</ul>
+<h3 id="校准性与特征预测的内在关联"><a href="#校准性与特征预测的内在关联" class="headerlink" title="校准性与特征预测的内在关联"></a>校准性与特征预测的内在关联</h3><p>EAGLE-2的成功依赖于EAGLE草稿模型良好的校准性。这种校准性不是偶然的：</p>
+<p><strong>回归任务的校准优势</strong>:</p>
+<ul>
+<li>分类任务（如标准token预测）中，模型容易过拟合至极端概率（接近0或1），导致校准性差</li>
+<li>特征预测是回归任务，Smooth L1损失对预测误差的惩罚是平滑的，不鼓励极端预测</li>
+<li>结果：草稿模型的概率输出自然地在整个[0,1]区间分布，与实际接受率高度一致</li>
+</ul>
+<p><strong>置信度与接受率的理论关联</strong>:</p>
+<ul>
+<li>对于归因于特征的token预测：$p(x) &#x3D; \text{softmax}(f(x))$</li>
+<li>特征预测误差$\epsilon_f$通过softmax的非线性变换传递到token概率</li>
+<li>重要的是：当$\epsilon_f$小时，softmax输出变化平滑（利普希茨连续性）</li>
+<li>因此：高置信度的特征预测（$|\hat{f} - f|$小）自然对应于高置信度的token预测</li>
+</ul>
+<h3 id="动态树计算的边际成本"><a href="#动态树计算的边际成本" class="headerlink" title="动态树计算的边际成本"></a>动态树计算的边际成本</h3><p><strong>额外计算</strong>:</p>
+<ul>
+<li>候选排序：$O(K \cdot s_{\max} \log(K \cdot s_{\max}))$，对于K&#x3D;5, s_max&#x3D;16，约80次比较</li>
+<li>树构建（贪心选择）：$O(K \cdot s_{\max})$，线性于候选数量</li>
+<li>树注意力掩码构造：$O(N_{\max}^2)$，通常约40K次操作</li>
+</ul>
+<p><strong>时间占比</strong>:</p>
+<ul>
+<li>特征预测（草稿生成）：约2-5ms</li>
+<li>树构建：约0.01-0.05ms（可忽略不计）</li>
+<li>目标模型验证前向：约15-25ms</li>
+<li>总时间：约17-30ms</li>
+</ul>
+<p><strong>结论</strong>: 动态树构建的计算开销仅为总推理时间的0.05-0.2%，但在理想情况下提升接受长度19-31%。ROI极高。</p>
+<h3 id="EAGLE-2在不同规模模型上的表现规律"><a href="#EAGLE-2在不同规模模型上的表现规律" class="headerlink" title="EAGLE-2在不同规模模型上的表现规律"></a>EAGLE-2在不同规模模型上的表现规律</h3><table>
+<thead>
+<tr>
+<th>模型规模</th>
+<th>加速比</th>
+<th>特征预测成本占比</th>
+<th>验证成本占比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>7B</td>
+<td>3.43x</td>
+<td>~10%</td>
+<td>~90%</td>
+</tr>
+<tr>
+<td>13B</td>
+<td>3.82x</td>
+<td>~6%</td>
+<td>~94%</td>
+</tr>
+<tr>
+<td>70B</td>
+<td>3.52x</td>
+<td>~2%</td>
+<td>~98%</td>
+</tr>
+</tbody></table>
+<p><strong>规律分析</strong>:</p>
+<ul>
+<li>13B模型加速比最高——特征预测成本占比适中（6%），验证并行化收益最大</li>
+<li>7B模型加速比略低——特征预测成本占比较高（10%），草稿生成成为不可忽略的开销</li>
+<li>70B模型加速比也略低——特征预测成本极低（2%），但验证阶段的内存带宽成为新的瓶颈</li>
+</ul>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-EAGLE-1"><a href="#vs-EAGLE-1" class="headerlink" title="vs EAGLE-1"></a>vs EAGLE-1</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>EAGLE-1</th>
+<th>EAGLE-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>草稿树类型</td>
+<td>静态（固定拓扑）</td>
+<td>动态（置信度自适应）</td>
+</tr>
+<tr>
+<td>树结构确定方式</td>
+<td>位置优先</td>
+<td>置信度优先</td>
+</tr>
+<tr>
+<td>每步计算额外开销</td>
+<td>无</td>
+<td>可忽略（排序+贪心）</td>
+</tr>
+<tr>
+<td>平均接受长度</td>
+<td>4.0-4.5</td>
+<td>5.0-5.5</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>2.7-3.5x</td>
+<td>3.05-4.26x</td>
+</tr>
+<tr>
+<td>提升幅度</td>
+<td>-</td>
+<td>+20-40%</td>
+</tr>
+<tr>
+<td>特征预测模块</td>
+<td>相同</td>
+<td>相同</td>
+</tr>
+<tr>
+<td>目标模型验证</td>
+<td>相同</td>
+<td>相同</td>
+</tr>
+<tr>
+<td>训练方式</td>
+<td>相同</td>
+<td>相同</td>
+</tr>
+</tbody></table>
+<p><strong>核心差异</strong>: EAGLE-2本质上是对EAGLE-1的树构建策略的改进——它不是在改进预测质量（那已经被EAGLE-1做到了极致），而是在改进如何利用高质量预测。这个改进的优雅之处在于：它基于草稿模型自身的置信度信号，不需要额外的训练或模型修改。</p>
+<h3 id="vs-Medusa"><a href="#vs-Medusa" class="headerlink" title="vs Medusa"></a>vs Medusa</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Medusa</th>
+<th>EAGLE-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>预测粒度</td>
+<td>Token</td>
+<td>特征（然后解码）</td>
+</tr>
+<tr>
+<td>草稿树</td>
+<td>可配置固定树</td>
+<td>动态自适应树</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>2.0-2.8x</td>
+<td>3.05-4.26x</td>
+</tr>
+<tr>
+<td>最佳用例</td>
+<td>极简部署</td>
+<td>追求最大加速</td>
+</tr>
+</tbody></table>
+<h3 id="vs-原始投机解码"><a href="#vs-原始投机解码" class="headerlink" title="vs 原始投机解码"></a>vs 原始投机解码</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>原始投机解码</th>
+<th>EAGLE-2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>草稿来源</td>
+<td>独立模型</td>
+<td>轻量特征预测模块</td>
+</tr>
+<tr>
+<td>额外内存</td>
+<td>完整草稿模型</td>
+<td>~1%参数</td>
+</tr>
+<tr>
+<td>候选多样性</td>
+<td>单序列</td>
+<td>多路径树</td>
+</tr>
+<tr>
+<td>加速比</td>
+<td>2.0-2.6x</td>
+<td>3.05-4.26x</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-对校准性的依赖"><a href="#1-对校准性的依赖" class="headerlink" title="1. 对校准性的依赖"></a>1. 对校准性的依赖</h3><p><strong>问题</strong>: EAGLE-2的动态树性能完全依赖于草稿模型的校准质量</p>
+<ul>
+<li>如果草稿模型校准性差（ECE高），置信度引导可能误导树构建</li>
+<li>不同训练数据、不同模型系列可能产生不同的校准性</li>
+<li>校准性不是草稿模型训练的显式目标</li>
+</ul>
+<p><strong>影响</strong>: 在模型系列转换时需要验证校准性。对于校准性差的草稿模型，动态树可能退化到接近静态树的性能。</p>
+<h3 id="2-节点预算N-max的单参数限制"><a href="#2-节点预算N-max的单参数限制" class="headerlink" title="2. 节点预算N_max的单参数限制"></a>2. 节点预算N_max的单参数限制</h3><p><strong>问题</strong>: 使用单一全局参数N_max控制树大小，无法区分不同上下文的资源需求</p>
+<ul>
+<li>即使动态分配节点，所有步骤的树节点数上限相同</li>
+<li>在需要大量探索的困难上下文（如高创意任务）中可能受益于更大的树</li>
+<li>在简单上下文中可能浪费预算</li>
+</ul>
+<p><strong>影响</strong>: 未来可以探索”上下文自适应的N_max”，根据entropy估计动态调整总预算。</p>
+<h3 id="3-收敛到局部最优的风险"><a href="#3-收敛到局部最优的风险" class="headerlink" title="3. 收敛到局部最优的风险"></a>3. 收敛到局部最优的风险</h3><p><strong>问题</strong>: 贪心节点选择策略可能陷入局部最优</p>
+<ul>
+<li>按置信度降序选择的节点不一定构成全局最优的树</li>
+<li>一个低置信度的分支节点如果拓展得更深，可能产生更高的总体收益</li>
+<li>贪心策略忽视了节点间的结构依赖</li>
+</ul>
+<p><strong>影响</strong>: 距离Oracle上界约11%的差距，部分来自于贪心策略的非最优性。使用beam search或动态规划可能缩小差距，但计算成本更高。</p>
+<h3 id="4-长上下文推理的缓存管理"><a href="#4-长上下文推理的缓存管理" class="headerlink" title="4. 长上下文推理的缓存管理"></a>4. 长上下文推理的缓存管理</h3><p><strong>问题</strong>: 与EAGLE-1相同，动态树验证产生的KV缓存管理是实际工程挑战</p>
+<ul>
+<li>每个树节点需要存储KV缓存</li>
+<li>200+节点的树意味着200+组KV条目</li>
+<li>在32K+长上下文场景中显存压力显著</li>
+</ul>
+<p><strong>影响</strong>: 在长文档分析、视频理解等长上下文任务中，动态树的显存优势需要通过KV缓存压缩技术（如KV量化、滑动窗口）来补充。</p>
+<h3 id="5-特征预测模块的冷启动"><a href="#5-特征预测模块的冷启动" class="headerlink" title="5. 特征预测模块的冷启动"></a>5. 特征预测模块的冷启动</h3><p><strong>问题</strong>: 对于新发布的模型或微调变体，EAGLE-2需要先训练特征预测模块</p>
+<ul>
+<li>训练需要提取目标模型特征：对70B+模型也是一笔不小的计算开销</li>
+<li>训练时间（数小时）成为快速部署的障碍</li>
+<li>在HuggingFace模型生态中，数千个微调变体每个都需要独立的EAGLE训练</li>
+</ul>
+<p><strong>影响</strong>: 考虑开发”零样本”或”少样本”的特征预测模块训练方法，减少部署摩擦。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-校准性作为系统优化的元信号"><a href="#1-校准性作为系统优化的元信号" class="headerlink" title="1. 校准性作为系统优化的元信号"></a>1. 校准性作为系统优化的元信号</h3><p><strong>洞见</strong>: 模型的校准性不仅关于可信度，还是高效的资源分配信号</p>
+<ul>
+<li>校准良好的模型”知道”自己哪些预测更可靠</li>
+<li>这种元认知可以作为资源分配、搜索、探索的引导信号</li>
+<li>不需要额外的元模型或代价高昂的评价函数</li>
+</ul>
+<p><strong>如何应用</strong>: 在任何需要”在多个候选间分配资源”的系统中，检查系统中的预测模型是否校准良好——如果校准性好，直接使用置信度作为分配标准，简单且有效。</p>
+<h3 id="2-静态假设的重新检验原则"><a href="#2-静态假设的重新检验原则" class="headerlink" title="2. 静态假设的重新检验原则"></a>2. 静态假设的重新检验原则</h3><p><strong>洞见</strong>: 即便是高质量的先前工作，其固定的结构假设（如”树应前宽后窄”）也可能存在优化空间</p>
+<ul>
+<li>EAGLE-1的静态树假设是合理的工程简化，但EAGLE-2通过质疑这一假设获得了+20-40%的提升</li>
+<li>核心经验：不要将工程的便利性假设当作系统的内在约束</li>
+<li>上下文感知的”自适应”往往带来超出预期的大幅改进</li>
+</ul>
+<p><strong>如何应用</strong>: 复盘当前系统的固定假设（固定参数、固定结构、固定阈值），逐一检验是否可以通过上下文感知来动态化。</p>
+<h3 id="3-贪心启发式的ROI原则"><a href="#3-贪心启发式的ROI原则" class="headerlink" title="3. 贪心启发式的ROI原则"></a>3. 贪心启发式的ROI原则</h3><p><strong>洞见</strong>: 贪心算法在置信度信号质量高时可以达到接近最优的性能</p>
+<ul>
+<li>EAGLE-2的贪心节点选择达到Oracle约90%的性能</li>
+<li>剩余10%的差距可能需要复杂的全局优化（如动态规划），投入产出比不高</li>
+<li>启示：在有高质量启发式信号的场景中，先实现贪心版本，再评估是否需要更复杂的方法</li>
+</ul>
+<p><strong>如何应用</strong>: 对于搜索&#x2F;选择问题，先评估启发式信号的质量（如校准性），如果信号质量高，贪心策略通常足够。</p>
+<h3 id="4-位置独立性的系统设计"><a href="#4-位置独立性的系统设计" class="headerlink" title="4. 位置独立性的系统设计"></a>4. 位置独立性的系统设计</h3><p><strong>洞见</strong>: 不应该假设”位置”隐含”质量”——即第k+1步的预测不一定比第k步差</p>
+<ul>
+<li>静态树假设深层预测质量单调递减（所以浅层宽、深层窄）</li>
+<li>但实际上，某些上下文中的第4步预测可能比第2步更确定</li>
+<li>动态方法消除了这种不必要的位置偏见</li>
+</ul>
+<p><strong>如何应用</strong>: 在设计序列处理系统时，检查是否存在”越往后越差”的隐含假设——这种假设往往是过时的工程直觉而非系统约束。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="EAGLE系列的方法论演化"><a href="#EAGLE系列的方法论演化" class="headerlink" title="EAGLE系列的方法论演化"></a>EAGLE系列的方法论演化</h3><p>EAGLE系列代表了投机解码研究从”粗暴”到”精妙”的演化路径：</p>
+<ol>
+<li><strong>EAGLE-1解决了”在哪预测”的问题</strong>: 从token空间转到特征空间，根本上降低了预测难度</li>
+<li><strong>EAGLE-2解决了”如何利用预测”的问题</strong>: 利用预测的置信度信号来智能分配验证资源</li>
+</ol>
+<p>这种”先改进基础信号质量，再改进信号利用效率”的两阶段策略是系统优化的经典范式，但很少有工作在单个系列中完成得如此彻底。</p>
+<h3 id="动态树的深层意义"><a href="#动态树的深层意义" class="headerlink" title="动态树的深层意义"></a>动态树的深层意义</h3><p>动态草稿树不仅仅是一个工程优化，它暗示了一个更深层的原则：</p>
+<blockquote>
+<p><strong>推理系统的资源分配应该由系统自身的认知状态驱动，而非预设的结构规则</strong></p>
+</blockquote>
+<p>这与人类的认知过程类似——人在推理时会在确定的步骤上快速推进（类似高置信度路径获取深层节点），在不确定的步骤上放慢、多角度思考（类似低置信度路径的浅层探索和宽分支）。</p>
+<h3 id="实际部署考量"><a href="#实际部署考量" class="headerlink" title="实际部署考量"></a>实际部署考量</h3><ol>
+<li><p><strong>N_max的自动调优</strong>: 在部署前，可以通过少量测试序列自动搜索最优N_max。通常N_max与GPU的显存带宽和计算能力相关——带宽高的GPU可以支持更大的树。</p>
+</li>
+<li><p><strong>不同任务的差异化配置</strong>: 生产系统中可以为不同任务类型预设不同的N_max配置。代码生成可以设较大的N_max（接受率高，树节点利用率高），创意写作设较小的N_max（接受率低，避免浪费）。</p>
+</li>
+<li><p><strong>与量化技术的组合</strong>: EAGLE-2的特征预测模块可以通过INT8量化进一步压缩（从<del>67MB降至</del>17MB），对于移动端部署至关重要。</p>
+</li>
+</ol>
+<h3 id="作为投机解码”SOTA”的地位"><a href="#作为投机解码”SOTA”的地位" class="headerlink" title="作为投机解码”SOTA”的地位"></a>作为投机解码”SOTA”的地位</h3><p>截至2024年中，EAGLE-2代表了开源模型上投机解码的最高性能水平（3.05-4.26x加速）。然而，值得注意的限制是：</p>
+<ul>
+<li>它仍然需要训练特征预测模块</li>
+<li>不同模型系列的性能有差异</li>
+<li>缺乏对多模态模型的支持</li>
+</ul>
+<p>后续工作可能在这些方向上突破。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-全局最优-vs-贪心的差距是否能关闭"><a href="#1-全局最优-vs-贪心的差距是否能关闭" class="headerlink" title="1. 全局最优 vs 贪心的差距是否能关闭"></a>1. 全局最优 vs 贪心的差距是否能关闭</h3><p><strong>问题</strong>: EAGLE-2距离Oracle上界约11%的差距，能否通过更好的树构建算法来缩小？</p>
+<p><strong>研究方向</strong>: 探索beam search树构建——不只保留置信度最高的候选路径，而是保留beam of trees（树束），并以实际验证后的接受长度为最终评估标准进行后验选择。</p>
+<p><strong>潜在影响</strong>: 额外提升5-8%加速比，接近理论上界。</p>
+<h3 id="2-多步树构建-vs-单步贪心"><a href="#2-多步树构建-vs-单步贪心" class="headerlink" title="2. 多步树构建 vs 单步贪心"></a>2. 多步树构建 vs 单步贪心</h3><p><strong>问题</strong>: 是否值得在树构建中考虑多步前瞻（look-ahead planning）而非贪心单步？</p>
+<p><strong>研究方向</strong>: 使用蒙特卡洛树搜索（MCTS）或简单的一步rollout来评估候选节点的”下游潜力”，将长期接受率的估计纳入当前节点选择。</p>
+<p><strong>潜在影响</strong>: 在困难上下文中额外提升3-5%。</p>
+<h3 id="3-跨步骤的树结构传递"><a href="#3-跨步骤的树结构传递" class="headerlink" title="3. 跨步骤的树结构传递"></a>3. 跨步骤的树结构传递</h3><p><strong>问题</strong>: 前一步的树结构（哪些路径被接受了、哪些被拒绝了）能否为下一步的树构建提供有用信息？</p>
+<p><strong>研究方向</strong>: 记录每个生成步骤的接受&#x2F;拒绝模式，使用轻量级RNN或统计模型来预测下一步的树结构，实现跨步骤的持续学习。</p>
+<p><strong>潜在影响</strong>: 在长期生成中自适应优化树结构。</p>
+<h3 id="4-动态树在多模态模型中的应用"><a href="#4-动态树在多模态模型中的应用" class="headerlink" title="4. 动态树在多模态模型中的应用"></a>4. 动态树在多模态模型中的应用</h3><p><strong>问题</strong>: EAGLE-2的特征预测+动态树框架能否扩展到多模态模型？</p>
+<p><strong>研究方向</strong>: 在视觉语言模型的特征空间中训练特征预测模块。挑战在于多模态特征（文本+视觉）的联合预测。</p>
+<p><strong>潜在影响</strong>: 开启多模态模型的快速推理。</p>
+<h3 id="5-校准性增强训练"><a href="#5-校准性增强训练" class="headerlink" title="5. 校准性增强训练"></a>5. 校准性增强训练</h3><p><strong>问题</strong>: 能否在训练特征预测模块时显式优化校准性（如添加ECE惩罚项）？</p>
+<p><strong>研究方向</strong>: 在特征预测的训练损失中加入校准性正则化项（如temperature scaling、label smoothing），进一步提升置信度与实际接受率的一致性。</p>
+<p><strong>潜在影响</strong>: 2-5%的额外加速，且可能帮助跨模型泛化。</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Li, Y., Wei, F., Zhang, C., &amp; Zhang, H. (2024). EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees. EMNLP 2024. arXiv:2406.16858</li>
+<li>Li, Y., Wei, F., Zhang, C., &amp; Zhang, H. (2024). EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty. ICML 2024.</li>
+<li>Cai, T., et al. (2024). Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads. ICML 2024.</li>
+<li>Leviathan, Y., Kalman, M., &amp; Matias, Y. (2023). Fast Inference from Transformers via Speculative Decoding. ICML 2023.</li>
+<li>Fu, Y., et al. (2024). Break the Sequential Dependency of LLM Inference Using Lookahead Decoding. ICML 2024.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8A%95%E6%9C%BA%E8%A7%A3%E7%A0%81/" class="category-chain-item">投机解码</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-deep-learning/" class="print-no-link">#papers/deep-learning</a>
+      
+        <a href="/tags/papers-inference/" class="print-no-link">#papers/inference</a>
+      
+        <a href="/tags/papers-speculative-decoding/" class="print-no-link">#papers/speculative-decoding</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees</div>
+      <div>https://w2ongq6.github.io/2024/06/25/inference/note/EAGLE-2_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年6月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/07/01/inference/note/QuIPSharp_note/" title="QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/05/24/llm/note/RLHFWorkflow_note/" title="RLHF Workflow: From Reward Modeling to Online RLHF">
+                        <span class="hidden-mobile">RLHF Workflow: From Reward Modeling to Online RLHF</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

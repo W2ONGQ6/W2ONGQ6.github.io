@@ -1,0 +1,1349 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Stable Diffusion 3: 基于 Rectified Flow Transformer 的文生图规模化核心信息 标题: Scaling Rectified Flow Transformers for High-Resolution Image Synthesis 标题翻译: 规模化整流流 Transformer 用于高分辨率图像合成 作者: Patrick Esser, Sumith">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scaling Rectified Flow Transformers for High-Resolution Image Synthesis">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/03/05/aigc/note/StableDiffusion3_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Stable Diffusion 3: 基于 Rectified Flow Transformer 的文生图规模化核心信息 标题: Scaling Rectified Flow Transformers for High-Resolution Image Synthesis 标题翻译: 规模化整流流 Transformer 用于高分辨率图像合成 作者: Patrick Esser, Sumith">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_img_01.jpeg">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="article:published_time" content="2024-03-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:26.535Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;diffusion-transformers">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta property="article:tag" content="papers&#x2F;text-to-image">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Scaling Rectified Flow Transformers for High-Resolution Image Synthesis - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Scaling Rectified Flow Transformers for High-Resolution Image Synthesis"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-03-05 00:00" pubdate>
+          2024年3月5日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          68 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Scaling Rectified Flow Transformers for High-Resolution Image Synthesis</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Stable-Diffusion-3-基于-Rectified-Flow-Transformer-的文生图规模化"><a href="#Stable-Diffusion-3-基于-Rectified-Flow-Transformer-的文生图规模化" class="headerlink" title="Stable Diffusion 3: 基于 Rectified Flow Transformer 的文生图规模化"></a>Stable Diffusion 3: 基于 Rectified Flow Transformer 的文生图规模化</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Scaling Rectified Flow Transformers for High-Resolution Image Synthesis</li>
+<li>标题翻译: 规模化整流流 Transformer 用于高分辨率图像合成</li>
+<li>作者: Patrick Esser, Sumith Kulal, Andreas Blattmann, Robin Rombach 等</li>
+<li>机构: Stability AI</li>
+<li>发表时间: 2024 年 3 月</li>
+<li>发表渠道: ICML 2024 (Best Paper Award)</li>
+<li>arXiv: 2403.03206</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.03206">https://arxiv.org/abs/2403.03206</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/Stability-AI/generative-models">https://github.com/Stability-AI/generative-models</a></li>
+<li>论文类型: 生成式 AI 基础架构（Diffusion Transformer + Rectified Flow）</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>扩散模型在图像和视频数据上创建数据时已经达到了新的高度。尽管它们已经取得了成功，但这些模型仍然通用的 U-Net 骨干网络长期以来一直是文生图的默认选择。本文探索了 Transformer 架构在文本到图像生成中的规模化应用，提出了一种新的多模态 Diffusion Transformer（MMDiT），它使用独立的权重集合来处理图像标记和文本标记，但允许两者通过联合注意力机制进行信息交换。我们使用 Rectified Flow 生成模型，该模型将数据和噪声连接为直线，因此可以使用直线轨迹进行更高效的推理。通过创新的噪声采样策略将训练集中在感知上相关的尺度上，结果形成了一个系统，其验证损失在不同参数规模和训练步数上遵循可预测的缩放规律。最终我们展示了从 800M 到 8B 参数的各种模型基准结果，验证了该架构的有效性。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-从-U-Net-到-DiT：Transformer-架构的范式迁移"><a href="#1-从-U-Net-到-DiT：Transformer-架构的范式迁移" class="headerlink" title="1. 从 U-Net 到 DiT：Transformer 架构的范式迁移"></a>1. 从 U-Net 到 DiT：Transformer 架构的范式迁移</h3><p><strong>核心思想</strong>: 用基于 Transformer 的多模态 DiT（MMDiT）取代传统的 U-Net 扩散骨干。MMDiT 对图像 token 和文本 token 使用各自独立的权重路径，但通过联合注意力机制实现双向信息交互——这是扩散模型从”CNN 时代”正式进入”Transformer 时代”的标志性工作。</p>
+<p><strong>为什么重要</strong>: 这是文生图模型架构史上的一个重要拐点。U-Net 此前统治扩散模型长达 4 年（从 DDPM 2020 到 SDXL 2023），SD3 首次在大规模文生图中验证了 Transformer 架构的可行性。更重要的是，Transformer 的可扩展性与 LLM 的经验一致——这使得文生图模型也可以像 GPT 一样通过规模化持续提升。</p>
+<h3 id="2-Rectified-Flow-替代传统扩散"><a href="#2-Rectified-Flow-替代传统扩散" class="headerlink" title="2. Rectified Flow 替代传统扩散"></a>2. Rectified Flow 替代传统扩散</h3><p><strong>核心思想</strong>: 将生成过程建模为从噪声到数据的直线路径（而非随机扩散过程的随机路径）。训练目标从”预测噪声”（epsilon-prediction）改为”预测速度场”（velocity field）：v &#x3D; x_1 - x_0。这意味着在推理时，模型沿着几乎直线的轨迹从噪声走向数据，可以用更少的步骤完成采样。</p>
+<p><strong>为什么重要</strong>: Rectified Flow 提供了比传统 DDPM&#x2F;DDIM 更简洁的理论框架和更高效的训练。直线路径意味着：（1）采样步骤可以更少（因为路径更短、更直）；（2）训练目标更简单（直接预测速度而非预测噪声）；（3）天然支持从数据到噪声和从噪声到数据的双向变换。这个选择也被 Flux 继承。</p>
+<h3 id="3-创新的噪声采样策略"><a href="#3-创新的噪声采样策略" class="headerlink" title="3. 创新的噪声采样策略"></a>3. 创新的噪声采样策略</h3><p><strong>核心思想</strong>: 训练时对噪声水平 t 进行非均匀采样——倾向于感知相关的中间尺度——使模型更多地在”人类视觉最敏感”的噪声范围内进行训练。具体来说，使用对数正态分布采样来偏置中间噪声水平。</p>
+<p><strong>为什么重要</strong>: 在传统扩散模型中，去噪前期（高噪声、几乎纯随机）和后期（极低噪声、几乎无变化）的训练对最终生成质量的贡献相对较小。将训练集中在中噪声区域等同于将计算资源分配到最关键的生成阶段，在固定训练预算下显著提升生成质量。</p>
+<h3 id="4-可预测的-Scaling-Law"><a href="#4-可预测的-Scaling-Law" class="headerlink" title="4. 可预测的 Scaling Law"></a>4. 可预测的 Scaling Law</h3><p><strong>核心思想</strong>: SD3 验证了文生图领域中清晰的 scaling law——从 800M 到 8B 参数，验证损失（validation loss）随模型规模呈现规律的幂律下降，且验证损失与文生图质量（FID、CLIP Score）之间存在稳定的对应关系。</p>
+<p><strong>为什么重要</strong>: 这是 SD3 获得 ICML 2024 Best Paper Award 的核心原因之一。它证明文生图模型的规模化是可预测的（而非撞大运），给模型投资提供了科学依据。在 LLM 领域，scaling law 已经是标准操作（从 Kaplan et al. 2020 开始）；SD3 将这一范式完整地迁移到了视觉生成领域。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>SD3 通过将文生图模型从 U-Net 切换到基于 Rectified Flow 的 MMDiT Transformer 架构，验证了清晰的 scaling law——随着参数从 800M 扩展到 8B，模型性能持续、可预测地提升，标志着文生图从”U-Net 工程改进”时代正式进入”Transformer 规模化”时代。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>截至 2024 年初，文生图模型面临两个根本性的架构问题：</p>
+<ol>
+<li><strong>U-Net 扩展性差</strong>: U-Net 架构的参数量扩展无法像 Transformer 那样呈现稳定的幂律收益，在某个规模后性能提升趋于平坦</li>
+<li><strong>模态融合不够自然</strong>: U-Net 中文本条件通过交叉注意力注入，文本和图像信息之间的流动是单向的（文本 -&gt; 图像），缺少双向交互</li>
+</ol>
+<h3 id="关键假设"><a href="#关键假设" class="headerlink" title="关键假设"></a>关键假设</h3><blockquote>
+<p><strong>Transformer 架构 + Rectified Flow + 创新的噪声采样 &#x3D; 文生图的 LLM 式 scaling law</strong>。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><ul>
+<li><strong>规模</strong>: 大规模图文对数据集（具体细节未完全公开，但暗示在数亿级别）</li>
+<li><strong>来源</strong>: 互联网大规模图文对，经过美学和内容质量筛选</li>
+<li><strong>文本输入</strong>: 支持最长 77 token 的文本编码（CLIP）和更长文本（T5）</li>
+</ul>
+<h3 id="评估基准"><a href="#评估基准" class="headerlink" title="评估基准"></a>评估基准</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>指标</th>
+<th>测量维度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MS-COCO</td>
+<td>零样本 FID</td>
+<td>图像真实感</td>
+</tr>
+<tr>
+<td>人类评估</td>
+<td>ELO 评分</td>
+<td>综合质量比较</td>
+</tr>
+<tr>
+<td>GenEval</td>
+<td>多维度准确率</td>
+<td>文本跟随度</td>
+</tr>
+<tr>
+<td>DrawBench</td>
+<td>结构化 prompt 准确率</td>
+<td>语义理解</td>
+</tr>
+</tbody></table>
+<h3 id="关键设计选择"><a href="#关键设计选择" class="headerlink" title="关键设计选择"></a>关键设计选择</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>设计考量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>骨干架构</td>
+<td>MMDiT (Transformer)</td>
+<td>多模态联合注意力</td>
+</tr>
+<tr>
+<td>生成框架</td>
+<td>Rectified Flow</td>
+<td>直线路径，高效采样</td>
+</tr>
+<tr>
+<td>训练目标</td>
+<td>v-prediction (velocity)</td>
+<td>简洁且与路径对应</td>
+</tr>
+<tr>
+<td>模型规模范围</td>
+<td>800M - 8B</td>
+<td>验证 scaling law</td>
+</tr>
+<tr>
+<td>图像 token 化</td>
+<td>8x 下采样 patch</td>
+<td>类似 ViT 的 patchify</td>
+</tr>
+<tr>
+<td>文本 token 化</td>
+<td>CLIP + T5 embeddings</td>
+<td>双编码器语义融合</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>SD3 的 MMDiT 架构将文生图建模为：</p>
+<ol>
+<li><strong>图像 Patch 编码</strong>: 图像潜变量切成 patch，线性投影为图像 token</li>
+<li><strong>文本编码</strong>: 双编码器（CLIP + T5）提取文本 token</li>
+<li><strong>MMDiT 处理</strong>: 图像 token 和文本 token 通过各自独立的注意力权重路径 + 联合注意力层进行双向交互</li>
+<li><strong>Rectified Flow 采样</strong>: 沿直线路径从噪声恢复到数据</li>
+</ol>
+<h3 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h3><p><img src="/images/page_001_img_01.jpeg" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤 1: 图像 Patch 化与 Token 化</strong></p>
+<p><strong>步骤输入</strong>: VAE 编码后的潜变量 z（32x32x4 或更多通道）<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>将潜变量按 2x2 的 patch 切分（与 ViT 的 patch embedding 类似）</li>
+<li>每个 patch 通过线性投影转换为 d_model 维的 token</li>
+<li>加上位置编码（使用 2D RoPE 或可学习的位置嵌入）<br><strong>步骤输出</strong>: N_img 个图像 token（如 16x16 &#x3D; 256 个 token，每个维度 d_model）</li>
+</ul>
+<p><strong>步骤 2: 文本 Token 化</strong></p>
+<p><strong>步骤输入</strong>: 文本 prompt<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>CLIP 编码器：提取全局文本嵌入（pooled）和 token 级嵌入</li>
+<li>T5 编码器：提取 token 级嵌入（提供深度语义理解）</li>
+<li>通过小型投影网络将文本嵌入映射到 Transformer 的 d_model 维度<br><strong>步骤输出</strong>: N_txt 个文本 token（每个维度 d_model）</li>
+</ul>
+<p><strong>步骤 3: MMDiT 联合注意力处理</strong></p>
+<p><strong>步骤输入</strong>: 图像 token 序列和文本 token 序列<br><strong>步骤操作</strong>:<br>  <strong>步骤图像自注意力</strong>: 图像 token 之间进行自注意力（使用图像专属的 W_Q, W_K, W_V）<br>  <strong>步骤文本自注意力</strong>: 文本 token 之间进行自注意力（使用文本专属的 W_Q, W_K, W_V）<br>  <strong>步骤联合注意力</strong>: 图像 token 作为 Query，文本 token 作为 Key 和 Value——实现文本到图像的信息注入；同时文本 token 也关注图像 token——实现双向信息流<br>  <strong>步骤FFN</strong>: 独立的图像 FFN 和文本 FFN</p>
+<ul>
+<li>重复多个 Transformer 块（约 24-32 层）</li>
+<li>注入时间步 t 和噪声水平信息<br><strong>步骤输出</strong>: 处理后的图像 token 和文本 token</li>
+</ul>
+<p><strong>步骤 4: Rectified Flow 采样</strong></p>
+<p><strong>步骤输入</strong>: 纯噪声 z_T ~ N(0, I) 和文本条件 c<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>Rectified Flow 定义：z_t &#x3D; (1-t) * z_0 + t * z_1（线性插值）</li>
+<li>速度场：v_t &#x3D; z_1 - z_0（从噪声到数据的直线速度）</li>
+<li>训练目标：MMDiT 预测 v_θ(z_t, t, c)，最小化 E[||v_θ(z_t, t, c) - (z_1 - z_0)||^2]</li>
+<li>推理时使用 ODE solver（如 Euler 或 Heun 方法），沿直线方向积分</li>
+<li>因为路径是直的，只需少量步数（如 20-50 步）即可达到高质量</li>
+<li>Classifier-free guidance 在速度场空间中计算<br><strong>步骤输出</strong>: 解码后的 RGB 图像</li>
+</ul>
+<h3 id="Rectified-Flow-与传统扩散的对比"><a href="#Rectified-Flow-与传统扩散的对比" class="headerlink" title="Rectified Flow 与传统扩散的对比"></a>Rectified Flow 与传统扩散的对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>传统扩散 (DDPM)</th>
+<th>Rectified Flow (SD3)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正向路径</td>
+<td>随机（SDE）</td>
+<td>直线（ODE）</td>
+</tr>
+<tr>
+<td>训练目标</td>
+<td>预测噪声 ε</td>
+<td>预测速度 v &#x3D; x_1 - x_0</td>
+</tr>
+<tr>
+<td>采样路径</td>
+<td>非直线（弯曲）</td>
+<td>接近直线</td>
+</tr>
+<tr>
+<td>所需步数</td>
+<td>50-1000</td>
+<td>20-50</td>
+</tr>
+<tr>
+<td>理论简洁性</td>
+<td>较复杂（需推导 score）</td>
+<td>较简洁（直接速度场）</td>
+</tr>
+</tbody></table>
+<h3 id="噪声采样策略的细节"><a href="#噪声采样策略的细节" class="headerlink" title="噪声采样策略的细节"></a>噪声采样策略的细节</h3><p>SD3 采用对数正态（log-normal）采样来偏置训练噪声水平：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-attribute">t</span> <span class="hljs-regexp">~ LogNormal(P_mean,</span> P_std)<br></code></pre></td></tr></table></figure>
+
+<p>这样噪声水平 t 的分布集中在中间区域（0.1~0.9），而非均匀分布在整个 [0, 1] 区间。动机：</p>
+<ul>
+<li><strong>t 接近 0</strong>: 几乎无噪声，去噪任务是平凡的</li>
+<li><strong>t 接近 1</strong>: 几乎纯噪声，去噪任务几乎无信息</li>
+<li><strong>t 在 0.2-0.8</strong>: 感知上最重要的去噪区域</li>
+</ul>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="Scaling-Law-验证"><a href="#Scaling-Law-验证" class="headerlink" title="Scaling Law 验证"></a>Scaling Law 验证</h3><p>SD3 最关键的结果是验证了清晰的 scaling law：</p>
+<table>
+<thead>
+<tr>
+<th>模型规模</th>
+<th>验证损失 (越低越好)</th>
+<th>相对改进</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>800M</td>
+<td>baseline_loss</td>
+<td>基准</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p>验证损失与文生图质量的对应关系（通过 FID 和人类偏好验证）：</p>
+<table>
+<thead>
+<tr>
+<th>验证损失下降</th>
+<th>FID 改善</th>
+<th>人类偏好提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>每下降 0.01</td>
+<td>持续改善</td>
+<td>持续提升</td>
+</tr>
+</tbody></table>
+<h3 id="与基线方法的比较"><a href="#与基线方法的比较" class="headerlink" title="与基线方法的比较"></a>与基线方法的比较</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>FID (COCO)</th>
+<th>GenEval (准确率)</th>
+<th>人类偏好 (ELO)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SDXL</td>
+<td>基准</td>
+<td>基准</td>
+<td>基准</td>
+</tr>
+<tr>
+<td>DALL-E 3</td>
+<td>更好</td>
+<td>更好</td>
+<td>更好</td>
+</tr>
+<tr>
+<td>Midjourney v6</td>
+<td>更好</td>
+<td>更好</td>
+<td>更好</td>
+</tr>
+<tr>
+<td><strong>SD3 (8B)</strong></td>
+<td><strong>最优或接近最优</strong></td>
+<td><strong>最优或接近最优</strong></td>
+<td><strong>最优或接近最优</strong></td>
+</tr>
+</tbody></table>
+<h3 id="Rectified-Flow-vs-DDPM-采样效率"><a href="#Rectified-Flow-vs-DDPM-采样效率" class="headerlink" title="Rectified Flow vs DDPM 采样效率"></a>Rectified Flow vs DDPM 采样效率</h3><table>
+<thead>
+<tr>
+<th>采样步数</th>
+<th>DDPM&#x2F;DDIM 质量</th>
+<th>Rectified Flow 质量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>5</td>
+<td>差</td>
+<td>可接受</td>
+</tr>
+<tr>
+<td>10</td>
+<td>中等</td>
+<td>良好</td>
+</tr>
+<tr>
+<td>25</td>
+<td>良好</td>
+<td>很好</td>
+</tr>
+<tr>
+<td>50</td>
+<td>很好</td>
+<td>极好</td>
+</tr>
+<tr>
+<td>100</td>
+<td>极好</td>
+<td>极好</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: Rectified Flow 在少步数（5-25 步）采样时质量显著优于 DDPM&#x2F;DDIM，因为直线路径天然适合大步长积分。</p>
+<h3 id="不同模型规模的训练效率"><a href="#不同模型规模的训练效率" class="headerlink" title="不同模型规模的训练效率"></a>不同模型规模的训练效率</h3><table>
+<thead>
+<tr>
+<th>规模</th>
+<th>达到相同质量所需训练步数比例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>800M</td>
+<td>1.0x (基准)</td>
+</tr>
+<tr>
+<td>2B</td>
+<td>~0.6x</td>
+</tr>
+<tr>
+<td>8B</td>
+<td>~0.4x</td>
+</tr>
+</tbody></table>
+<p><strong>结果解读</strong>: 更大的模型不仅最终性能更好，而且”学得更快”——需要更少的训练步数即可达到相同的质量水平。这是 scaling law 在数据效率维度的体现。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么-MMDiT-是”双流”而非”单流”"><a href="#为什么-MMDiT-是”双流”而非”单流”" class="headerlink" title="为什么 MMDiT 是”双流”而非”单流”"></a>为什么 MMDiT 是”双流”而非”单流”</h3><p>MMDiT 的关键设计选择是为文本和图像维护各自独立的权重路径（双流），而非完全统一的单流 Transformer：</p>
+<ol>
+<li><strong>模态差异</strong>: 文本 token 和图像 token 承载的信息类型不同——文本是抽象语义，图像是空间-视觉信息</li>
+<li><strong>序列长度不对称</strong>: 文本序列（~77-512 tokens）远短于图像序列（256-1024 tokens），统一处理会导致文本被稀释</li>
+<li><strong>训练稳定性</strong>: 独立权重路径避免了模态间不均衡的梯度干扰</li>
+</ol>
+<p>这一设计与 Flux 的混合架构（19 个双流 + 38 个单流块）形成对比——Flux 认为一定量的单流融合是必要的，而 SD3 保留了完整的双流设计。</p>
+<h3 id="Scaling-Law-的深层含义"><a href="#Scaling-Law-的深层含义" class="headerlink" title="Scaling Law 的深层含义"></a>Scaling Law 的深层含义</h3><p>SD3 验证的 scaling law 有几个实用洞见：</p>
+<ol>
+<li><p><strong>可预测性</strong>: 在投资训练 8B 模型之前，可以从 800M 模型的验证损失可靠地预测 8B 模型的损失——大幅降低了大规模训练的风险</p>
+</li>
+<li><p><strong>数据效率</strong>: 更大的模型需要更少的训练数据即可达到相同质量——这对训练预算分配有直接指导</p>
+</li>
+<li><p><strong>计算最优分配</strong>: 在给定的计算预算下，可以优化模型规模和训练数据量的分配——类似 Chinchilla 定律在文生图领域的对应</p>
+</li>
+</ol>
+<h3 id="Rectified-Flow-的理论优势"><a href="#Rectified-Flow-的理论优势" class="headerlink" title="Rectified Flow 的理论优势"></a>Rectified Flow 的理论优势</h3><p>Rectified Flow 提供的不只是工程加速——它改变了扩散模型的底层数学框架：</p>
+<ul>
+<li><strong>DDPM</strong>: 学习 score function（对数概率密度的梯度），需要通过复杂的 SDE 和 ODE 等价来建立</li>
+<li><strong>Rectified Flow</strong>: 直接学习速度场——从噪声到数据的直线位移。目标函数更直接，理论更清晰</li>
+</ul>
+<p>这种简洁性在 v-prediction 目标上特别明显：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">v_t</span> = x_1 - x_0 （常数速度，与 t 无关）<br></code></pre></td></tr></table></figure>
+<p>而 epsilon-prediction 中，目标与 t 的关系复杂得多。</p>
+<h3 id="MMDiT-vs-U-Net-的注意力机制差异"><a href="#MMDiT-vs-U-Net-的注意力机制差异" class="headerlink" title="MMDiT vs U-Net 的注意力机制差异"></a>MMDiT vs U-Net 的注意力机制差异</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>U-Net 交叉注意力</th>
+<th>MMDiT 联合注意力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>信息流向</td>
+<td>文本 -&gt; 图像（单向）</td>
+<td>文本 &lt;-&gt; 图像（双向）</td>
+</tr>
+<tr>
+<td>文本 token</td>
+<td>作为 K, V 注入</td>
+<td>作为独立的 token 序列</td>
+</tr>
+<tr>
+<td>文本互注意力</td>
+<td>无（文本间无注意力）</td>
+<td>有（文本 token 间可以交互）</td>
+</tr>
+<tr>
+<td>模态权重</td>
+<td>共享</td>
+<td>独立</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>受限（U-Net 结构）</td>
+<td>好（标准 Transformer blocks）</td>
+</tr>
+</tbody></table>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-SDXL-前代"><a href="#vs-SDXL-前代" class="headerlink" title="vs SDXL (前代)"></a>vs SDXL (前代)</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SDXL</th>
+<th>SD3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>骨干</td>
+<td>U-Net</td>
+<td>MMDiT (Transformer)</td>
+</tr>
+<tr>
+<td>参数量上限</td>
+<td>~2.6B</td>
+<td>8B+</td>
+</tr>
+<tr>
+<td>生成框架</td>
+<td>DDPM</td>
+<td>Rectified Flow</td>
+</tr>
+<tr>
+<td>文本编码器</td>
+<td>双 CLIP</td>
+<td>CLIP + T5</td>
+</tr>
+<tr>
+<td>模态交互</td>
+<td>交叉注意力 (单向)</td>
+<td>联合注意力 (双向)</td>
+</tr>
+<tr>
+<td>Scaling Law</td>
+<td>未验证</td>
+<td>已验证</td>
+</tr>
+<tr>
+<td>架构哲学</td>
+<td>进化（改进 U-Net）</td>
+<td>革命（切换到 Transformer）</td>
+</tr>
+</tbody></table>
+<h3 id="vs-DALL-E-3"><a href="#vs-DALL-E-3" class="headerlink" title="vs DALL-E 3"></a>vs DALL-E 3</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DALL-E 3</th>
+<th>SD3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构</td>
+<td>未知（闭源）</td>
+<td>MMDiT (开源)</td>
+</tr>
+<tr>
+<td>文本编码器</td>
+<td>推测为强大的 LLM</td>
+<td>CLIP + T5</td>
+</tr>
+<tr>
+<td>开源</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>API</td>
+<td>开源权重</td>
+</tr>
+</tbody></table>
+<h3 id="vs-Flux"><a href="#vs-Flux" class="headerlink" title="vs Flux"></a>vs Flux</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SD3</th>
+<th>Flux</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数量</td>
+<td>8B</td>
+<td>12B</td>
+</tr>
+<tr>
+<td>混合架构</td>
+<td>纯双流</td>
+<td>双流+单流混合</td>
+</tr>
+<tr>
+<td>VAE 通道</td>
+<td>4</td>
+<td>16</td>
+</tr>
+<tr>
+<td>T5 编码器</td>
+<td>是</td>
+<td>T5-v1.1-XXL (更大)</td>
+</tr>
+<tr>
+<td>发布策略</td>
+<td>开源权重</td>
+<td>开源 + 闭源变体</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-架构复杂度增加"><a href="#1-架构复杂度增加" class="headerlink" title="1. 架构复杂度增加"></a>1. 架构复杂度增加</h3><p><strong>问题</strong>: MMDiT 的训练和推理比 U-Net 更复杂——需要处理两种模态的独立权重路径、联合注意力计算、位置编码管理等。</p>
+<p><strong>影响</strong>: 对推理速度、内存开销和部署优化提出了新挑战。</p>
+<h3 id="2-对长文本的理解仍然有限"><a href="#2-对长文本的理解仍然有限" class="headerlink" title="2. 对长文本的理解仍然有限"></a>2. 对长文本的理解仍然有限</h3><p><strong>问题</strong>: 虽然使用了 T5 编码器，但长文本场景（如详细场景描述、复杂指令）的文本跟随度仍然有提升空间。</p>
+<p><strong>影响</strong>: 在专业设计工作流中仍需要人工后处理。</p>
+<h3 id="3-Rectified-Flow-的样本多样性"><a href="#3-Rectified-Flow-的样本多样性" class="headerlink" title="3. Rectified Flow 的样本多样性"></a>3. Rectified Flow 的样本多样性</h3><p><strong>问题</strong>: 直线路径虽然高效，但可能会限制生成样本的多样性——在更窄的路径空间中探索。</p>
+<p><strong>影响</strong>: 在需要高度多样化输出的创意场景中可能不如传统 SDE-based 扩散。</p>
+<h3 id="4-训练成本"><a href="#4-训练成本" class="headerlink" title="4. 训练成本"></a>4. 训练成本</h3><p><strong>问题</strong>: 8B 参数的 Transformer 训练需要巨大的计算资源——远超学术研究团队的预算。</p>
+<p><strong>影响</strong>: 限制了学术界的独立验证和改进。</p>
+<h3 id="5-评估指标的限制"><a href="#5-评估指标的限制" class="headerlink" title="5. 评估指标的限制"></a>5. 评估指标的限制</h3><p><strong>问题</strong>: FID、CLIP Score、人类偏好 ELO 等指标虽然常用，但无法全面反映”语义理解深度”和”创意质量”等维度。</p>
+<p><strong>影响</strong>: 可能存在指标与真实用户体验之间的 gap。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-Transformer-的通用性"><a href="#1-Transformer-的通用性" class="headerlink" title="1. Transformer 的通用性"></a>1. Transformer 的通用性</h3><p><strong>洞见</strong>: Transformer 不仅是 NLP 的最佳架构，也是视觉生成的最佳架构成分之一。其可扩展性（scaling law）使得性能提升变得可预测和可投资。</p>
+<p><strong>后续应用</strong>: Sora 使用 DiT 架构进行视频生成，进一步验证了 Transformer 在视频域的适用性。</p>
+<h3 id="2-Rectified-Flow-的通用价值"><a href="#2-Rectified-Flow-的通用价值" class="headerlink" title="2. Rectified Flow 的通用价值"></a>2. Rectified Flow 的通用价值</h3><p><strong>洞见</strong>: 将生成过程建模为直线路径而非随机扩散具有理论和工程双重优势——训练目标更简洁、采样更高效。</p>
+<p><strong>后续应用</strong>: Flux 完整继承了 Rectified Flow，许多后续工作（如视频生成中的 Flow Matching）也采用了类似思路。</p>
+<h3 id="3-噪声水平感知训练"><a href="#3-噪声水平感知训练" class="headerlink" title="3. 噪声水平感知训练"></a>3. 噪声水平感知训练</h3><p><strong>洞见</strong>: 对训练样本（噪声水平）进行有意识的重加权是一个简单但有效的技巧——与课程学习（curriculum learning）的思想一致。</p>
+<p><strong>后续应用</strong>: 可以推广到任何使用扩散&#x2F;Flow 模式的生成任务。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="SD3-的里程碑意义"><a href="#SD3-的里程碑意义" class="headerlink" title="SD3 的里程碑意义"></a>SD3 的里程碑意义</h3><p>SD3 获得 ICML 2024 Best Paper Award 不仅是对其技术贡献的认可，更有象征意义——它标志着学术界对文生图研究达到了最高级别的重视。从 DALL-E 2021 的”这能行吗”到 SD3 2024 的 ICML 最佳论文，文生图领域用了不到 4 年完成了从工程demo到顶级学术认可的跨越。</p>
+<h3 id="U-Net-时代的终结"><a href="#U-Net-时代的终结" class="headerlink" title="U-Net 时代的终结"></a>U-Net 时代的终结</h3><p>SD3 的发表正式宣告了 U-Net 在文生图模型中的”退位”。但这不意味着 U-Net 失去了价值——在嵌入、低预算、快速推理等场景中，U-Net 仍有不可替代的优势。SD3 的意义在于它为文生图的未来提供了一个与 LLM 共享基础设施的技术路线：同样的 Transformer 蓝色图、同样的 scaling law 思维、同样的规模化训练经验。</p>
+<h3 id="下一步是什么"><a href="#下一步是什么" class="headerlink" title="下一步是什么"></a>下一步是什么</h3><p>SD3 将文生图带入了 Transformer 时代，但这只是开始。接下来的问题包括：</p>
+<ul>
+<li>能否实现端到端的文本-视觉联合预训练（类似 GPT-4V 的思路）？</li>
+<li>能否将 LLM 的知识直接注入文生图（而不仅仅是 T5 文本编码）？</li>
+<li>视觉生成和视觉理解能否在同一个架构中统一？</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-MMDiT-的最佳模块分配"><a href="#1-MMDiT-的最佳模块分配" class="headerlink" title="1. MMDiT 的最佳模块分配"></a>1. MMDiT 的最佳模块分配</h3><p><strong>问题</strong>: 双流块和单流块的最优比例是多少？SD3 使用 100% 双流，Flux 使用 33% 双流 + 67% 单流。哪种更好？是否与任务相关？</p>
+<h3 id="2-Scaling-Law-的上限"><a href="#2-Scaling-Law-的上限" class="headerlink" title="2. Scaling Law 的上限"></a>2. Scaling Law 的上限</h3><p><strong>问题</strong>: SD3 验证了从 800M 到 8B 的 scaling law。继续扩展到 80B 或 800B，scaling law 还能保持吗？是否存在视觉生成特有的规模瓶颈？</p>
+<h3 id="3-文本理解的下一步"><a href="#3-文本理解的下一步" class="headerlink" title="3. 文本理解的下一步"></a>3. 文本理解的下一步</h3><p><strong>问题</strong>: T5 已经提供了很强的文本理解。进一步提升文本跟随度的方向是什么？使用更大的 LLM？微调 LLM？还是改进交叉注意力机制？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Esser, P., et al. (2024). Scaling Rectified Flow Transformers for High-Resolution Image Synthesis. ICML 2024. arXiv:2403.03206</li>
+<li>Peebles, W., &amp; Xie, S. (2023). Scalable Diffusion Models with Transformers. ICCV 2023. (DiT 基础)</li>
+<li>Liu, X., et al. (2023). Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow. ICLR 2023.</li>
+<li>Lipman, Y., et al. (2023). Flow Matching for Generative Modeling. ICLR 2023.</li>
+<li>Raffel, C., et al. (2020). Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer. JMLR 2020. (T5)</li>
+<li>Kaplan, J., et al. (2020). Scaling Laws for Neural Language Models. arXiv:2001.08361.</li>
+<li>Rombach, R., et al. (2022). High-Resolution Image Synthesis with Latent Diffusion Models. CVPR 2022.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E6%96%87%E7%94%9F%E5%9B%BE/" class="category-chain-item">文生图</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-text-to-image/" class="print-no-link">#papers/text-to-image</a>
+      
+        <a href="/tags/papers-diffusion-transformers/" class="print-no-link">#papers/diffusion-transformers</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Scaling Rectified Flow Transformers for High-Resolution Image Synthesis</div>
+      <div>https://w2ongq6.github.io/2024/03/05/aigc/note/StableDiffusion3_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年3月5日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/03/06/llm/note/Chatbot_Arena_note/" title="Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/02/22/inference/note/LongRoPE_note/" title="LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens">
+                        <span class="hidden-mobile">LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

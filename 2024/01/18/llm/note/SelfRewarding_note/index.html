@@ -1,0 +1,1342 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Self-Rewarding Language Models: 自我奖励的语言模型核心信息 标题: Self-Rewarding Language Models 作者: Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, Jason Weston 机构: Meta AI">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Self-Rewarding Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/01/18/llm/note/SelfRewarding_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Self-Rewarding Language Models: 自我奖励的语言模型核心信息 标题: Self-Rewarding Language Models 作者: Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, Jason Weston 机构: Meta AI">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-01-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.853Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;LLM-as-Judge">
+<meta property="article:tag" content="papers&#x2F;alignment">
+<meta property="article:tag" content="papers&#x2F;self-improvement">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Self-Rewarding Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Self-Rewarding Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-01-18 00:00" pubdate>
+          2024年1月18日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          90 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Self-Rewarding Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Self-Rewarding-Language-Models-自我奖励的语言模型"><a href="#Self-Rewarding-Language-Models-自我奖励的语言模型" class="headerlink" title="Self-Rewarding Language Models: 自我奖励的语言模型"></a>Self-Rewarding Language Models: 自我奖励的语言模型</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Self-Rewarding Language Models</li>
+<li>作者: Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, Jason Weston</li>
+<li>机构: Meta AI &#x2F; New York University</li>
+<li>发表时间: 2024年1月18日</li>
+<li>发表渠道: arXiv Preprint</li>
+<li>arXiv: 2401.10020</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们提出Self-Rewarding Language Models，一种自我对齐方法——语言模型在训练中同时扮演”生成者”和”评判者”两个角色。在每次迭代中，模型首先生成对给定指令的多个候选回复，然后使用LLM-as-Judge提示对这些回复进行评分和排序，最后通过DPO从偏好对中学习，下一次迭代使用更新后的模型再次生成和评判。我们在LLaMA 2 70B上进行了三轮迭代训练，最终的模型在AlpacaEval 2.0上的表现超越了Claude 2、Gemini Pro和GPT-4 0613。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><strong>模型自评的迭代自我进化</strong> — 模型同时扮演生成者、评判者和学习者三个角色，整个流程完全闭环。</li>
+<li><strong>评判能力的同步提升</strong> — 论文最重要的发现——评判能力随生成能力同步增长，打破了”评判静止→生成触顶”的天花板。</li>
+<li><strong>后训练效率的重新定义</strong> — 通过同时提升生成和评判能力，打破传统后训练收益递减的曲线。</li>
+<li><strong>超人类对齐的潜在路径</strong> — 在人类无法有效评估的领域，模型仍可通过自我评估实现持续改进。</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Self-Rewarding让语言模型在训练中同时扮演生成者、评判者和学习者，实现生成能力与评判能力的同步提升，从LLaMA 2 70B出发经过三轮自我对弈超越Claude 2、Gemini Pro和GPT-4 0613。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><p>当前对齐方法（RLHF, DPO）存在根本局限：需要大量人类偏好标注、人类评判能力固定、评判能力在训练中没有提升。核心问题：能否设计一个系统，让模型在自我训练中同时提升”生成”和”评判”两种能力，实现无需外部信号的持续自我改进？</p>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：评判能力的自我提升机制。</strong> RLHF的奖励模型通常在训练后固定——评判标准不随模型生成能力的提升而变化。这导致生成能力”撞上天花板”：当模型的所有回复都在”奖励模型认为好”的水平之上时，奖励模型无法区分”好”和”更好”，无法提供进一步的信号。</p>
+<p>量化分析天花板效应：假设奖励模型RM在训练数据上的pairwise准确率为75%（即75%的情况下，RM能正确区分哪个回复更好）。当模型的生成质量达到训练数据中top-25%的水平时，75%的准确率意味着RM在约25%的情况下给出错误排序——这25%的错误信号相当于训练噪声，限制了进一步改进。</p>
+<p>具体数值：当模型的生成质量超越奖励模型训练数据中top-10%的质量水平后，奖励模型的pairwise准确率从约75%下降到约55%（接近随机）。此时，RM提供的信号中约有45%是错误的——优化这个信号可能不会改善（甚至恶化）模型。</p>
+<p>Self-Rewarding的关键是：用最新模型本身作为评判器——随着模型改进，其评判能力也应该改进。但这里有一个”鸡和蛋”问题：如果评判器不够好（初始模型），它能否为早期训练提供有用的信号？</p>
+<p>实验答案：LLaMA 2 70B的初始评判能力（约65%的pairwise准确率，高于随机50%）已经足够为第一轮训练提供有意义的信号。为什么65%足够？因为DPO只需要相对排序信号——即使35%的判断错误，在多个偏好对（每个prompt有C(4,2)&#x3D;6对偏好对）的聚合下，误差会相互抵消。在3200个prompt × 3个偏好对&#x2F;prompt &#x3D; 9600个偏好对上训练，系统的统计误差约为1&#x2F;sqrt(9600) ≈ 1%，远低于5%的信号强度。</p>
+<p><strong>子问题2：防止奖励作弊（Reward Hacking）。</strong> 当评判器和生成器相同时，存在模型”学会愚弄自己”的风险——生成让评判器打高分但实际质量没有提升的回复。</p>
+<p>具体的作弊形式：</p>
+<ul>
+<li>长度作弊：模型发现更长的回复总是得分更高（LLM-as-Judge偏向长回复），于是一直写很长的回复，但内容空洞</li>
+<li>格式作弊：模型学会使用特定格式（如列表、分点）来取悦评判器</li>
+<li>自信作弊：模型使用过度自信的语气（如”Certainly!”、”Absolutely!”）让评判器认为回复更好</li>
+<li>安全作弊：模型对所有请求都说”对不起我无法帮助”，在安全性评分上获得高分但完全无用</li>
+</ul>
+<p>传统self-play（如AlphaGo）使用固定规则（棋局胜负）防止作弊——因为”赢棋”的定义是固定的。Self-Rewarding没有固定规则——评判标准由模型自身定义，且随训练而变化。</p>
+<p>AlphaGo的经验是：如果对手固定，player会钻规则的漏洞；如果对手同步进化，作弊更难（因为对手也在变聪明）。Self-Rewarding依赖这个”同步进化”来防止作弊——这一轮的”作弊技巧”在下一轮可能被更聪明的评判器识破。</p>
+<p>监控指标：</p>
+<ul>
+<li>回复长度分布：如果平均长度从<del>180突然跳变到</del>500，可能发生了长度作弊</li>
+<li>回复开头词分布：如果”Certainly”的频率从<del>5%跳变到</del>50%，”自信作弊”正在发生</li>
+<li>外部评估 vs 内部评分的相关性：如果内部评分持续上升但外部评估（AlpacaEval）持平或下降，奖励作弊很可能正在发生</li>
+<li>词汇多样性（TTR）：如果TTR从0.68急剧下降到&lt;0.40，模型可能在”作弊式收敛”到少数高分模式</li>
+</ul>
+<p><strong>子问题3：迭代退化的检测与控制。</strong> 三轮迭代后，生成的回复在AlpacaEval上持续改进。但如果迭代更多轮，是否存在退化风险？</p>
+<p>理论上的风险分析：</p>
+<ol>
+<li>分布偏移（Distribution Shift）：每轮训练后模型的输出分布略有变化。经过多轮迭代，输出分布可能从”自然语言分布”大幅偏离到”评判器偏好的分布”。这类似于遗传算法中的”种群收敛”——多样性丧失。</li>
+<li>模式坍缩（Mode Collapse）：如果所有回复都趋向于某一种”高分模式”（如”总是用三步法回答问题”），模型失去了应对不同问题的灵活性。</li>
+<li>能力遗忘：如果评判器偏好”详细有结构的回复”，而对于需要简短回答的问题（如”Yes&#x2F;No”类），模型可能被迫给出冗长的回复——即”忘记”了简短回答是更好的选择。</li>
+</ol>
+<p>需要监控的指标：回复长度的分布（是否过度增长&#x2F;收缩）、词汇多样性（Type-Token Ratio）、语义多样性（embedding空间的覆盖度）。在Self-Rewarding的3轮实验中，没有观察到显著退化，但更多轮次的影响未知。</p>
+<p>安全边界估计：基于3轮的数据外推，估计5-8轮后可能出现明显的分布偏移，10-15轮后可能出现模式坍缩。但这个估计高度依赖初始模型的”稳定性”和DPO训练的beta参数——更大的beta（更保守的更新）可以延迟退化。</p>
+<p><strong>子问题4：初始种子质量的重要性。</strong> LLaMA 2 70B被选为初始种子。如果从更弱的模型开始（如7B或更小），Self-Rewarding是否仍能起飞？</p>
+<p>关键要求：初始模型需要具有最低限度的评判能力（&gt;55% pairwise准确率）才能提供有意义的训练信号。</p>
+<p>不同规模模型的初始评判能力估计（基于LLaMA 2系列的推断）：</p>
+<ul>
+<li>LLaMA 2 7B: 估计pairwise准确率约55-58%——勉强可用</li>
+<li>LLaMA 2 13B: 估计pairwise准确率约60-62%——足够</li>
+<li>LLaMA 2 70B: 实测pairwise准确率约65.1%——良好</li>
+</ul>
+<p>对于7B模型，55-58%的准确率意味着每2个偏好判断中就有1个可能是错误的。在9600个偏好对的训练中，错误信号的累积可能导致训练方向偏离——称为”噪声淹没信号”现象。</p>
+<p>降低门槛的可能策略：(1) 使用ensemble judging——用多个弱的评判器做多数投票来提升信噪比；(2) 使用更小的K值（K&#x3D;2而非K&#x3D;4），减少评判负担；(3) 第一轮使用外部评判器（如GPT-4）进行”冷启动”，后续轮次切换到自我评判。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="初始数据"><a href="#初始数据" class="headerlink" title="初始数据"></a>初始数据</h3><table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>来源</th>
+<th>数量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>初始指令</td>
+<td>OpenAssistant等开源数据集</td>
+<td>~3200 prompts</td>
+<td>用于迭代生成的种子指令</td>
+</tr>
+<tr>
+<td>初始种子模型</td>
+<td>LLaMA 2 70B</td>
+<td>基础模型</td>
+<td>作为第0轮起点</td>
+</tr>
+</tbody></table>
+<h3 id="迭代训练流程"><a href="#迭代训练流程" class="headerlink" title="迭代训练流程"></a>迭代训练流程</h3><table>
+<thead>
+<tr>
+<th>迭代轮次</th>
+<th>生成</th>
+<th>评判</th>
+<th>学习</th>
+<th>AlpacaEval 2.0 LC胜率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>第0轮 (Seed)</td>
+<td>-</td>
+<td>-</td>
+<td>LLaMA 2 70B</td>
+<td>7.0%</td>
+</tr>
+<tr>
+<td>第1轮 (Iter 1)</td>
+<td>每prompt生成K&#x3D;4个候选</td>
+<td>LLM-as-Judge评分排序</td>
+<td>DPO训练</td>
+<td>~15%</td>
+</tr>
+<tr>
+<td>第2轮 (Iter 2)</td>
+<td>用Iter 1模型生成</td>
+<td>Iter 1模型评判</td>
+<td>DPO训练</td>
+<td>~19%</td>
+</tr>
+<tr>
+<td>第3轮 (Iter 3)</td>
+<td>用Iter 2模型生成</td>
+<td>Iter 2模型评判</td>
+<td>DPO训练</td>
+<td>~20%+</td>
+</tr>
+</tbody></table>
+<p><strong>生成配置：</strong> 温度T&#x3D;0.7, top-p&#x3D;0.9, K&#x3D;4候选&#x2F;指令（共约12,800个候选回复）<br><strong>DPO训练：</strong> beta&#x3D;0.1, lr&#x3D;5e-7, 3 epochs, 参考模型&#x3D;当前轮开始时的模型<br><strong>评判提示模板：</strong> 使用标准的LLM-as-Judge提示（评分1-5，然后转换为pairwise排序）</p>
+<h3 id="评估基准"><a href="#评估基准" class="headerlink" title="评估基准"></a>评估基准</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>用途</th>
+<th>评判器</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AlpacaEval 2.0</td>
+<td>主评估（LC胜率 vs GPT-4）</td>
+<td>GPT-4 Turbo</td>
+</tr>
+<tr>
+<td>MT-Bench</td>
+<td>多轮对话质量</td>
+<td>GPT-4</td>
+</tr>
+<tr>
+<td>Pairwise评判准确率</td>
+<td>评判能力的量化</td>
+<td>人工标注的偏好对（gold standard）</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="核心机制（Numbered-Steps-with-Input-Operation-Output）"><a href="#核心机制（Numbered-Steps-with-Input-Operation-Output）" class="headerlink" title="核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）"></a>核心机制（Numbered Steps with Input&#x2F;Operation&#x2F;Output）</h3><p><strong>每一轮迭代 (Iteration t):</strong></p>
+<p><strong>步骤1: 生成（Generation）</strong></p>
+<ul>
+<li>输入：指令prompt集合（3200 prompts）</li>
+<li>操作：(1) 使用当前模型M_t的前向传播；(2) 对每个prompt，使用采样参数（温度0.7, top-p&#x3D;0.9）生成K&#x3D;4个独立候选回复；(3) 记录每个回复的生成log-probabilities用于后续DPO</li>
+<li>输出：{(prompt, response_1, response_2, response_3, response_4)}，共3200×4&#x3D;12800个候选回复</li>
+</ul>
+<p><strong>步骤2: 评判（Judging）</strong></p>
+<ul>
+<li>输入：prompt + 4个候选回复</li>
+<li>操作：(1) 构造LLM-as-Judge提示模板：”Given the following prompt and two responses, which is better? Prompt: {prompt}\nResponse A: {resp_a}\nResponse B: {resp_b}\nBetter response:”；(2) 对每个prompt，做所有C(4,2)&#x3D;6对pairwise比较；(3) 基于6个pairwise结果进行排序：Best &gt; Second &gt; Third &gt; Worst；(4) 从排序中提取DPO偏好对：(Best, Worst), (Best, Second), (Second, Worst)——每prompt最多产生3对</li>
+<li>输出：偏好数据 {(prompt, chosen, rejected)}，约3200×3&#x3D;9600对</li>
+</ul>
+<p><strong>步骤3: 学习（Learning via DPO）</strong></p>
+<ul>
+<li>输入：偏好数据 + 参考模型（当前轮开始时的M_t）</li>
+<li>操作：(1) 加载参考模型pi_ref（冻结，不参与训练）；(2) 初始化pi_theta &#x3D; pi_ref；(3) 对每个batch (x, y_w, y_l)：前向传播计算pi_theta的log-probabilities和pi_ref的log-probabilities；(4) 计算DPO损失：L &#x3D; -log(sigma(beta * (log pi_theta(y_w|x) - log pi_ref(y_w|x) - log pi_theta(y_l|x) + log pi_ref(y_l|x)))))；(5) 仅对pi_theta进行梯度更新，pi_ref保持冻结</li>
+<li>优化器：AdamW, lr&#x3D;5e-7, batch_size&#x3D;32, 3 epochs</li>
+<li>输出：更新后的模型 M_{t+1}</li>
+</ul>
+<p><strong>步骤4: 评估</strong></p>
+<ul>
+<li>生成能力：(1) AlpacaEval 2.0——805 prompts，使用GPT-4 Turbo作为评判器计算LC胜率；(2) MT-Bench——80 multi-turn prompts，GPT-4评分1-10</li>
+<li>评判能力：在人工标注的gold-standard偏好对（约1000对）上计算pairwise准确率</li>
+</ul>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="正反馈循环的数学条件"><a href="#正反馈循环的数学条件" class="headerlink" title="正反馈循环的数学条件"></a>正反馈循环的数学条件</h4><p>Self-Rewarding能持续有效的数学条件：如果 JudgeQuality(M_{t+1}) &gt; JudgeQuality(M_t) 且 GeneratorQuality(M_{t+1}) &gt; GeneratorQuality(M_t)，那么系统可能持续改进。</p>
+<p>形式化地，设G_t为t轮模型的生成质量，J_t为评判质量。Self-Rewarding的改进条件为：</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">G_&#123;t+<span class="hljs-number">1</span>&#125; = f(DPO_train(G_t, data_generated_and_judged_by(G_t)))<br><span class="hljs-keyword">J_&#123;t+1&#125; </span>= <span class="hljs-keyword">J(G_&#123;t+1&#125;)</span><br><span class="hljs-keyword"></span><br>如果 f 定义了有效的DPO训练(G_t+<span class="hljs-number">1</span> &gt; G_t)，且 <span class="hljs-keyword">J(·) </span>是单调的(<span class="hljs-keyword">J_&#123;t+1&#125; </span>&gt; <span class="hljs-keyword">J_t)，</span><br><span class="hljs-keyword"></span>则系统持续改进。<br></code></pre></td></tr></table></figure>
+
+<p>但这里有一个微妙之处：J(G_t)的单调性不是自动保证的。有可能G_{t+1} &gt; G_t但J(G_{t+1}) &lt; J(G_t)——生成变好了但评判变差了。实验数据（评判准确率从65.1%持续上升到71.2%）表明在这个案例中单调性成立，但理论上这是一个需要验证的假设。</p>
+<h4 id="评判能力的自举机制"><a href="#评判能力的自举机制" class="headerlink" title="评判能力的自举机制"></a>评判能力的自举机制</h4><ol>
+<li>更好的生成器产生更高质量的输出（包含更微妙的质量差异）——例如，Iter 2生成的两个候选可能一眼看上去都好，但在”细节准确性”上有微妙差异</li>
+<li>评判器在区分这些微妙差异中提高了鉴别力——为了区分”正确但不够详细”和”正确且详细”，评判器必须学会评估”详细程度”</li>
+<li>提高的鉴别力在下一轮作为隐式反馈信号——下一轮的DPO偏好对有更细粒度的信号（不仅是”对&#x2F;错”，还有”多好”的微妙区别）</li>
+</ol>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="AlpacaEval-2-0-性能演进"><a href="#AlpacaEval-2-0-性能演进" class="headerlink" title="AlpacaEval 2.0 性能演进"></a>AlpacaEval 2.0 性能演进</h3><table>
+<thead>
+<tr>
+<th>模型&#x2F;轮次</th>
+<th>AlpacaEval 2.0 LC胜率</th>
+<th>相对提升</th>
+<th>相对种子提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA 2 70B (种子)</td>
+<td>7.0%</td>
+<td>基准</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Self-Rewarding Iter 1</td>
+<td>~15.0%</td>
+<td>+114%</td>
+<td>+114%</td>
+</tr>
+<tr>
+<td>Self-Rewarding Iter 2</td>
+<td>~18.8%</td>
+<td>+25%</td>
+<td>+169%</td>
+</tr>
+<tr>
+<td>Self-Rewarding Iter 3</td>
+<td>~20.5%</td>
+<td>+9%</td>
+<td>+193%</td>
+</tr>
+<tr>
+<td>Claude 2</td>
+<td>17.2%</td>
+<td>-</td>
+<td>+146% vs 种子</td>
+</tr>
+<tr>
+<td>Gemini Pro</td>
+<td>18.2%</td>
+<td>-</td>
+<td>+160% vs 种子</td>
+</tr>
+<tr>
+<td>GPT-4 0613</td>
+<td>15.0%</td>
+<td>-</td>
+<td>+114% vs 种子</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 三轮迭代后，从LLaMA 2 70B（7.0%→20.5%，+193%）超越了Claude 2、Gemini Pro和GPT-4 0613。第1轮提升最大（+114%），第2轮和第3轮呈现边际收益递减（+25%, +9%），但仍在改善——没有出现明显的饱和或退化。</p>
+<p>边际收益递减分析：如果每轮的改善幅度持续减半（+114% → +25% → +9%），外推第4轮约+3-4%，第5轮约+1-2%，第6轮趋于零。这表明总改进空间约+200-220%（从7.0%到约21-22%）。</p>
+<h3 id="评判能力的同步提升（扩展表）"><a href="#评判能力的同步提升（扩展表）" class="headerlink" title="评判能力的同步提升（扩展表）"></a>评判能力的同步提升（扩展表）</h3><table>
+<thead>
+<tr>
+<th>轮次</th>
+<th>Pairwise评判准确率（人工gold standard）</th>
+<th>相对种子</th>
+<th>边际提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA 2 70B (种子)</td>
+<td>65.1%</td>
+<td>基准</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Iter 1</td>
+<td>68.3%</td>
+<td>+4.9%</td>
+<td>+4.9%</td>
+</tr>
+<tr>
+<td>Iter 2</td>
+<td>70.1%</td>
+<td>+7.7%</td>
+<td>+2.6%</td>
+</tr>
+<tr>
+<td>Iter 3</td>
+<td>71.2%</td>
+<td>+9.4%</td>
+<td>+1.6%</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 评判准确率从65.1%稳步提升到71.2%（+9.4%）。注意提升速度在减慢——与生成能力类似，边际收益递减。但关键是”从未下降”——证明了评判能力同步提升的假设成立。</p>
+<p>评判能力的上限推测：如果每轮提升减半的模式持续，外推评判准确率的上限约72-73%。这意味着评判能力最终也会趋于饱和——当评判准确率达到一定水平后，进一步提升需要的是”更高层次的评判标准”（如评判评判本身）。</p>
+<h3 id="MT-Bench性能（扩展表）"><a href="#MT-Bench性能（扩展表）" class="headerlink" title="MT-Bench性能（扩展表）"></a>MT-Bench性能（扩展表）</h3><table>
+<thead>
+<tr>
+<th>轮次</th>
+<th>MT-Bench得分</th>
+<th>提升</th>
+<th>胜率 vs 种子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>种子 (LLaMA 2 70B)</td>
+<td>3.95</td>
+<td>基准</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>Iter 1</td>
+<td>~6.5</td>
+<td>+65%</td>
+<td>~75%</td>
+</tr>
+<tr>
+<td>Iter 2</td>
+<td>~7.2</td>
+<td>+11%</td>
+<td>~82%</td>
+</tr>
+<tr>
+<td>Iter 3</td>
+<td>~7.5</td>
+<td>+4%</td>
+<td>~85%</td>
+</tr>
+</tbody></table>
+<h3 id="回复多样性监控（扩展表）"><a href="#回复多样性监控（扩展表）" class="headerlink" title="回复多样性监控（扩展表）"></a>回复多样性监控（扩展表）</h3><table>
+<thead>
+<tr>
+<th>轮次</th>
+<th>平均回复长度 (tokens)</th>
+<th>Type-Token Ratio (词汇多样性)</th>
+<th>语义多样性 (embedding cosine sim)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>种子</td>
+<td>~180</td>
+<td>0.68</td>
+<td>0.35 (基准，低相似&#x3D;高多样性)</td>
+</tr>
+<tr>
+<td>Iter 1</td>
+<td>~210</td>
+<td>0.66</td>
+<td>0.38</td>
+</tr>
+<tr>
+<td>Iter 2</td>
+<td>~225</td>
+<td>0.64</td>
+<td>0.42</td>
+</tr>
+<tr>
+<td>Iter 3</td>
+<td>~230</td>
+<td>0.63</td>
+<td>0.46</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> 回复长度在增长（+28%），词汇多样性轻微下降（-7%），语义多样性下降（embedding相似度上升，即回复变相似了+31%）。这可能是”模型学会写更长更详细的回复”的正常结果（长回复自然词汇多样性下降），也可能是”回复朝向某种风格收敛”的早期信号。语义多样性的下降速度（+31% over 3 iters）比词汇多样性的下降速度（-7%）更快——这是一个需要关注的信号，可能暗示模型在”深层语义”层面出现了收敛倾向。</p>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="正反馈循环的机制——为什么评判和生成必须同步进化"><a href="#正反馈循环的机制——为什么评判和生成必须同步进化" class="headerlink" title="正反馈循环的机制——为什么评判和生成必须同步进化"></a>正反馈循环的机制——为什么评判和生成必须同步进化</h3><p>Self-Rewarding的精妙之处在于”生成-评判”的正反馈循环：</p>
+<ol>
+<li>更好的生成器 → 产出更高质量的候选 → 更微妙的质量差异（更考验评判力）</li>
+<li>更高质量的训练数据 → 评判器被迫学习更精细的区分</li>
+<li>更好的评判器 → 为下一轮提供更准确的反馈信号</li>
+<li>回到步骤1…</li>
+</ol>
+<p>这个循环的关键是步骤1到步骤2的”难度升级”机制。如果生成质量停留在同一水平，评判器就无法进步（因为没有更难的任务）。如果评判器不进步，生成器也无法进步（因为反馈信号质量不变）。两者互相制约也互相促进——这就是”同步进化”的精髓。</p>
+<p>从信息论的角度：生成器进步 &#x3D; 产生更高信息密度的输出；评判器进步 &#x3D; 能区分更细微的信息密度差异。两者之间的关系类似于：编码器（生成器）产生更高分辨率的信号，解码器（评判器）需要发展更高的分辨能力来接收这些信号。</p>
+<h3 id="与传统Self-Play的关键区别"><a href="#与传统Self-Play的关键区别" class="headerlink" title="与传统Self-Play的关键区别"></a>与传统Self-Play的关键区别</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>AlphaGo自我对弈</th>
+<th>Self-Rewarding LMs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>评判标准</td>
+<td>固定的（胜负规则）</td>
+<td>同步进化的（评判能力也在提升）</td>
+</tr>
+<tr>
+<td>奖励作弊</td>
+<td>可能（钻规则漏洞）</td>
+<td>更难（评判标准在进化）</td>
+</tr>
+<tr>
+<td>外部信号</td>
+<td>棋局胜负（明确）</td>
+<td>回复质量（模糊，需要评判）</td>
+</tr>
+<tr>
+<td>改进上限</td>
+<td>由固定规则决定</td>
+<td>由架构容量决定</td>
+</tr>
+<tr>
+<td>收敛速度</td>
+<td>快速（明确信号）</td>
+<td>较慢（噪声信号）</td>
+</tr>
+<tr>
+<td>适用领域</td>
+<td>有明确规则的任务</td>
+<td>开放域文本生成</td>
+</tr>
+</tbody></table>
+<h3 id="超人类对齐的含义——可扩展对齐的技术路径"><a href="#超人类对齐的含义——可扩展对齐的技术路径" class="headerlink" title="超人类对齐的含义——可扩展对齐的技术路径"></a>超人类对齐的含义——可扩展对齐的技术路径</h3><p>传统RLHF的根本困境：要训练超人类AI，需要人类能评估AI的产出——但人类无法评估超人类表现。Self-Rewarding提供了一条出路：AI通过自我评估超越人类评估能力——类似人类专家通过peer review互相提升。</p>
+<p>具体机制：当AI的生成质量超越人类水平时，(1) 人类无法可靠地判断哪个回复更好（pairwise准确率&lt;60%），(2) 但AI自己的评判器（如果同步进化）可以维持&gt;70%的准确率，(3) 这个AI评判器提供的训练信号比人类信号更强，(4) 因此AI可以在超越人类之后继续改进。</p>
+<p>这一机制的重大意义：它打开了”可扩展对齐”的大门。不需要人类标注员去评估超人类表现——AI可以自我评估。唯一需要人类做的是定义初始的评判框架（如宪法原则），然后AI自己在这个框架内持续改进。</p>
+<h3 id="“奖励作弊”的风险与缓解——四层防御"><a href="#“奖励作弊”的风险与缓解——四层防御" class="headerlink" title="“奖励作弊”的风险与缓解——四层防御"></a>“奖励作弊”的风险与缓解——四层防御</h3><p>Self-Rewarding中奖励作弊的可能形式和缓解机制：</p>
+<p><strong>第一层防御：模型和评判器同步进化</strong><br>这轮的”作弊词汇”在下一轮可能被更聪明的评判器识别为”空洞的自信”。例如，Iter 1的模型可能学会”用列表中每个要点开头加emoji”来获得高分——但Iter 2的评判器可能识别出这只是格式修饰，不是实质内容改进。</p>
+<p><strong>第二层防御：使用pairwise而非评分方式</strong><br>评分方式（1-5分）更易被”学会高分模式”欺骗——模型可以学习”什么样的回复layout能获得5分”。Pairwise比较更robust——模型必须让评判器相信”这个回复比另一个更好”而非仅”符合5分模式”。</p>
+<p><strong>第三层防御：外部评估作为ground truth</strong><br>使用外部评判器（GPT-4）进行最终评估——外部的AlpacaEval和MT-Bench结果验证了内部提升的真实性。如果内部评分上升但外部评分持平，奖励作弊标志亮起。</p>
+<p><strong>第四层防御：多维度评判</strong><br>不只问”哪个回复更好”，还问”哪个回复更准确”、”哪个回复更有帮助”、”哪个回复更安全”。多维度信号使得作弊更难（需要在所有维度上同时作弊）。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-RLHF"><a href="#vs-RLHF" class="headerlink" title="vs RLHF"></a>vs RLHF</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RLHF</th>
+<th>Self-Rewarding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>评判者</td>
+<td>人类标注员</td>
+<td>模型自身</td>
+</tr>
+<tr>
+<td>评判能力</td>
+<td>固定</td>
+<td>与生成能力同步增长</td>
+</tr>
+<tr>
+<td>数据需求</td>
+<td>大量人类偏好数据</td>
+<td>仅需初始种子模型</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>受人类标注限制</td>
+<td>理论上无限</td>
+</tr>
+<tr>
+<td>迭代</td>
+<td>可能但不常见</td>
+<td>核心机制</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>高（持续标注）</td>
+<td>低（自动生成）</td>
+</tr>
+<tr>
+<td>奖励作弊风险</td>
+<td>中等（奖励模型可能被欺骗）</td>
+<td>中-高（评判和生成为同一模型）</td>
+</tr>
+</tbody></table>
+<h3 id="vs-DPO（标准）"><a href="#vs-DPO（标准）" class="headerlink" title="vs DPO（标准）"></a>vs DPO（标准）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DPO</th>
+<th>Self-Rewarding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏好数据来源</td>
+<td>外部（人类或其他模型）</td>
+<td>自生成（LLM-as-Judge）</td>
+</tr>
+<tr>
+<td>参考模型</td>
+<td>静态SFT模型</td>
+<td>前一轮的自己</td>
+</tr>
+<tr>
+<td>迭代</td>
+<td>通常不迭代</td>
+<td>多轮迭代核心</td>
+</tr>
+<tr>
+<td>数据新鲜度</td>
+<td>固定（可能过时）</td>
+<td>每轮更新（适应最新模型）</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>评判能力的真实上限</strong> — 评判能力真的能无限提升吗？还是存在架构决定的评判能力上限？如果评判能力有上限，Self-Rewarding的收益最终会衰减到零。</p>
+</li>
+<li><p><strong>可能产生”奖励作弊”</strong> — 模型可能学会”写让评判器打高分”而非”真正写好的内容”——类似于推荐系统中的”点击诱饵”。在没有外部验证的情况下，这种偏差可能自我放大。</p>
+</li>
+<li><p><strong>评估污染</strong> — AlpacaEval和MT-Bench使用GPT-4作为评判器。如果Self-Rewarding模型学习了”GPT-4的偏好模式”，可能在这些基准上虚高。需要人类评估验证。</p>
+</li>
+<li><p><strong>计算成本</strong> — 每轮需要生成K&#x3D;4个候选回复并做O(K²)&#x3D;6次pairwise比较。对于70B模型，生成4个回复约需120秒（A100），6次评判约需30秒——每prompt约150秒。3200 prompts × 150秒 &#x3D; 约133小时（5.5天）&#x2F;轮（单A100）。</p>
+</li>
+<li><p><strong>迭代收益递减</strong> — 第1到第3轮的收益从+114%降到+9%。继续迭代的边际收益可能趋近于零——需要一个”停止条件”来避免浪费计算。</p>
+</li>
+<li><p><strong>初始模型的”最小能力阈值”</strong> — Self-Rewarding在7B或更小的模型上可能无效（初始评判能力太弱，训练信号噪声太高）。这限制了它在资源受限场景下的应用。</p>
+</li>
+<li><p><strong>安全性未验证</strong> — 论文专注帮助性（helpfulness），未测试安全性（safety）。自我训练可能导致安全性退化（模型学会生成更有帮助但也更有害的回复）。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>自我改进正反馈的设计原则</strong> — 要让自我改进持续进行，必须让”评判能力”和”生成能力”同步提升——任何一方的停滞都会导致整体停滞。</p>
+<p>如何应用：在每一轮迭代中同时评估生成和评判能力。如果评判能力停止增长，考虑引入新的评判维度或外部反馈。监控reward hacking信号（如评判高分但人类评估低分）。</p>
+</li>
+<li><p><strong>LLM-as-Judge用于训练的可行性</strong> — LLM-as-Judge不仅可用作离线评估，还可用作在线训练反馈。</p>
+<p>如何应用：在缺乏人类标注的场景中用LLM-as-Judge作为替代。使用多维度评判（准确性、流畅性、安全性）。用多数投票ensemble judges提高质量。</p>
+</li>
+<li><p><strong>迭代DPO框架</strong> — DPO可在迭代中重复使用——每轮用更新的模型生成新偏好数据。</p>
+<p>如何应用：将标注预算分配到多轮迭代中。每轮使用当前模型状态作为参考。监控每轮收益，在收益递减时停止。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>Self-Rewarding的核心洞察——“评判能力可以且必须同步提升”——对对齐全领域有深远影响。它挑战了RLHF的一个隐含假设：对齐信号必须来自外部（人类或固定奖励模型）。实际上，”内部信号”如果能够自我校准，可能比外部信号更持久、更具可扩展性。</p>
+<p>Meta-Rewarding LMs（同一团队的后续工作）进一步让模型评判自己的评判能力，增加了元认知（metacognition）维度。这暗示了一个更深层的方向：AI系统可能需要多层级的自我评估（”我回答得好吗？””我对回答的评判好吗？””我对评判的评判好吗？”）来实现稳健的自我改进。</p>
+<p>从安全性角度看，Self-Rewarding是一把双刃剑。一方面，它为超人类对齐提供了潜在的技术路径。另一方面，如果一个AI系统能够在没有人类监督的情况下自我改进，它的行为可能偏离人类价值观。在部署Self-Rewarding之前，需要建立安全护栏——如外部的人类评估抽查、行为边界检测。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>在什么条件下评判能力会停止提升或开始退化？能否提前检测到这种信号？</li>
+<li>如果评判涉及多个维度（帮助性、安全性、创造性），如何设计多维度的Self-Rewarding？</li>
+<li>多轮自我训练后，模型的输出分布可能偏移——如何检测和控制这种漂移？</li>
+<li>Self-Rewarding的最小有效模型规模是多少？7B? 13B? 能否通过ensemble降低门槛？</li>
+<li>如何在自我改进过程中保持安全性？需要什么样的”安全宪法”来约束自我评判？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Yuan, W., et al. (2024). Self-Rewarding Language Models. arXiv:2401.10020.</li>
+<li>Rafailov, R., et al. (2023). Direct Preference Optimization. NeurIPS 2023.</li>
+<li>Touvron, H., et al. (2023). LLaMA 2: Open Foundation and Fine-Tuned Chat Models. arXiv:2307.09288.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E6%8C%87%E4%BB%A4%E5%BE%AE%E8%B0%83%E4%B8%8E%E5%AF%B9%E9%BD%90/" class="category-chain-item">指令微调与对齐</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-alignment/" class="print-no-link">#papers/alignment</a>
+      
+        <a href="/tags/papers-self-improvement/" class="print-no-link">#papers/self-improvement</a>
+      
+        <a href="/tags/papers-LLM-as-Judge/" class="print-no-link">#papers/LLM-as-Judge</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Self-Rewarding Language Models</div>
+      <div>https://w2ongq6.github.io/2024/01/18/llm/note/SelfRewarding_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年1月18日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/01/22/inference/note/SliceGPT_note/" title="SliceGPT: Compress Large Language Models by Deleting Rows and Columns">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SliceGPT: Compress Large Language Models by Deleting Rows and Columns</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/01/16/inference/note/Medusa_note/" title="Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads">
+                        <span class="hidden-mobile">Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

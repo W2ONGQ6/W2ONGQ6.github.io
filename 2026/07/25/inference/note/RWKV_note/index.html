@@ -1,0 +1,1450 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="RWKV: Reinventing RNNs for the Transformer Era核心信息 标题: RWKV: Reinventing RNNs for the Transformer Era 作者: Bo Peng, Eric Alcaide, Quentin Anthony 等 (EleutherAI, Generative AI Commons) 发表: Findings of E">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RWKV: Reinventing RNNs for the Transformer Era">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/25/inference/note/RWKV_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="RWKV: Reinventing RNNs for the Transformer Era核心信息 标题: RWKV: Reinventing RNNs for the Transformer Era 作者: Bo Peng, Eric Alcaide, Quentin Anthony 等 (EleutherAI, Generative AI Commons) 发表: Findings of E">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-25T10:55:23.135Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.156Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Channel-Mixing">
+<meta property="article:tag" content="Linear Attention">
+<meta property="article:tag" content="O(1) Inference">
+<meta property="article:tag" content="Open-Source Architecture">
+<meta property="article:tag" content="RNN">
+<meta property="article:tag" content="RWKV">
+<meta property="article:tag" content="Time-Mixing">
+<meta property="article:tag" content="WKV">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>RWKV: Reinventing RNNs for the Transformer Era - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="RWKV: Reinventing RNNs for the Transformer Era"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-25 18:55" pubdate>
+          2026年7月25日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          133 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">RWKV: Reinventing RNNs for the Transformer Era</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="RWKV-Reinventing-RNNs-for-the-Transformer-Era"><a href="#RWKV-Reinventing-RNNs-for-the-Transformer-Era" class="headerlink" title="RWKV: Reinventing RNNs for the Transformer Era"></a>RWKV: Reinventing RNNs for the Transformer Era</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li><strong>标题</strong>: RWKV: Reinventing RNNs for the Transformer Era</li>
+<li><strong>作者</strong>: Bo Peng, Eric Alcaide, Quentin Anthony 等 (EleutherAI, Generative AI Commons)</li>
+<li><strong>发表</strong>: Findings of EMNLP 2023, arXiv 预印本 2305.13048 (2023年5月)</li>
+<li><strong>核心贡献</strong>: 提出 WKV (Receptance Weighted Key Value) 注意力机制——训练时可像 Transformer 完全并行化，推理时以 RNN 方式运行，O(1) 恒定内存，无需 KV cache</li>
+<li><strong>规模</strong>: 最大训练至 14B 参数，是当时有史以来最大的非 Transformer 语言模型</li>
+<li><strong>开源</strong>: Apache 2.0 协议完全开源，拥有活跃社区持续迭代至 RWKV-7</li>
+<li><strong>核心机制</strong>: 逐通道时间衰减（channel-wise time decay）+ Time-Mixing&#x2F;Channel-Mixing 分离设计</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><blockquote>
+<p>我们提出了 RWKV，一种新颖的语言模型架构，融合了 RNN 的高效推理和 Transformer 的并行可训练性。RWKV 的核心是 WKV（Receptance Weighted Key Value）注意力机制，用通道导向的线性注意力取代标准 QKV attention。关键创新在于可学习的时间衰减向量——使模型在不同维度上以不同时间尺度保留信息。RWKV 的双重形式使其既能以 Transformer 方式并行训练，又能以 RNN 方式执行 O(1) 内存推理。RWKV-14B 在标准基准上匹敌同等规模 Transformer，成为迄今为止训练过的最大 RNN 语言模型。</p>
+</blockquote>
+<h2 id="创新点-Why-Important"><a href="#创新点-Why-Important" class="headerlink" title="创新点 + Why Important"></a>创新点 + Why Important</h2><h3 id="创新点-1-WKV（Receptance-Weighted-Key-Value）机制"><a href="#创新点-1-WKV（Receptance-Weighted-Key-Value）机制" class="headerlink" title="创新点 1: WKV（Receptance Weighted Key Value）机制"></a>创新点 1: WKV（Receptance Weighted Key Value）机制</h3><p>用 Reception (R)、Key (K)、Value (V) 三元组取代标准 QKV attention。核心公式本质上是一个指数衰减的加权平均——近期 token 权重高，远期 token 权重低。每个通道有独立的衰减率 w_c，可学习或固定。</p>
+<p><strong>Why important</strong>: WKV 机制的简单性是它最大的优势。与 Mamba 需要自定义并行扫描不同，WKV 的计算本质上就是带遗忘因子的加权平均，在训练时可以完全展开为矩阵运算，推理时退化为简单的状态更新。这种简洁性使得 RWKV 成为最容易理解和实现的非 Transformer 架构。</p>
+<h3 id="创新点-2-逐通道时间衰减（Channel-wise-Time-Decay）"><a href="#创新点-2-逐通道时间衰减（Channel-wise-Time-Decay）" class="headerlink" title="创新点 2: 逐通道时间衰减（Channel-wise Time Decay）"></a>创新点 2: 逐通道时间衰减（Channel-wise Time Decay）</h3><p>不是全局共享一个衰减率，而是每个通道学习自己的指数衰减参数 w。这创造了多时间尺度的记忆能力——低衰减通道（长期记忆）和高衰减通道（短期记忆）共存。</p>
+<p><strong>Why important</strong>: 自然语言中不同层次的信息有不同的持续时长。句子的语法结构可能在几个 token 后消失，但话题信息可能持续几百个 token。逐通道衰减允许模型在不同维度上同时捕捉这些不同时间尺度的信息，无需注意力矩阵或复杂的门控机制。</p>
+<h3 id="创新点-3-双重形式（Dual-Form）"><a href="#创新点-3-双重形式（Dual-Form）" class="headerlink" title="创新点 3: 双重形式（Dual Form）"></a>创新点 3: 双重形式（Dual Form）</h3><ul>
+<li><strong>并行形式（训练）</strong>: 以 Time-Mixing 方式展开，使用矩阵乘法——充分并行化</li>
+<li><strong>递归形式（推理）</strong>: RNN 方式逐步计算，仅维护固定大小的状态——O(1) 内存</li>
+</ul>
+<p><strong>Why important</strong>: 这种设计是 RWKV 能够匹敌 Transformer 质量同时拥有 RNN 推理效率的关键。它证明了 Transformer 的并行训练和 RNN 的 O(1) 推理不是互斥的。</p>
+<h3 id="创新点-4-开源社区驱动的架构演化"><a href="#创新点-4-开源社区驱动的架构演化" class="headerlink" title="创新点 4: 开源社区驱动的架构演化"></a>创新点 4: 开源社区驱动的架构演化</h3><p>RWKV 是第一个主要从开源社区（而非大型科技公司）涌现出的、持续演化的替代架构。从 RWKV-4 到 RWKV-7，每代引入关键改进：多头矩阵状态（v5）、数据依赖衰减（v6）、广义 Delta 规则（v7）。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>RWKV 以 WKV 机制的简单指数衰减实现了 Transformer 的并行训练和 RNN 的 O(1) 推理的完美融合——是开源社区最成功的非 Transformer 语言模型架构，以最小复杂度实现了线性时间的序列建模。</p>
+</blockquote>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><ol>
+<li><strong>核心问题</strong>: 能否设计一种架构，同时拥有 Transformer 的并行训练能力和 RNN 的恒定内存推理？</li>
+<li><strong>表达能力问题</strong>: 线性 attention（无 softmax）的表达能力是否足以支撑语言建模？如何弥补与标准 softmax attention 的质量差距？</li>
+<li><strong>长程依赖问题</strong>: 指数衰减是一种”近因偏置”——模型如何在不均匀衰减的前提下保留远距离的关键信息？</li>
+<li><strong>开源社区问题</strong>: 能否独立于大型科技公司，以开源社区的力量构建和维持一个替代 Transformer 的高质量架构？</li>
+</ol>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：线性注意力的表达力上限——指数衰减的固有限制。</strong> Transformer的softmax attention可以给任意远距离的关键token分配接近1.0的注意力权重。例如，对于”Alice went to the store. She bought milk.”这个句子，在预测”bought”时，attention可以准确地将权重集中在”She”和”Alice”上（距离分别为1和8个token），而几乎忽略中间的”store”、”the”等词。RWKV的指数衰减则为”距离越远、权重越低”——距离8个token的”Alice”的权重被衰减了 e^{-8 × w_c}。如果w_c很小（如0.01），e^{-0.08} ≈ 0.923——仍然很高，Alice可以被”记住”。但如果距离增加到1000个token，e^{-1000×0.01} &#x3D; e^{-10} ≈ 4.5×10^{-5}——几乎被完全遗忘。关键问题是：RWKV的逐通道衰减能否在”长期记忆”（需要非常小的w_c，不容易遗忘）和”短期精确关联”（需要快速衰减，避免噪声累积）之间找到平衡？具体地：w_c在训练中学习到的分布是怎样的？有多少通道真的被分配了足够小的w_c（&lt; 0.001）来实现500+ token的长期记忆？</p>
+<p><strong>子问题2：双重形式的数值稳定性。</strong> RWKV声称”训练和推理是数学等价的”——即并行形式的矩阵展开和递归形式的状态更新应该产生完全相同的输出。但在有限精度算术（FP16&#x2F;BF16）下，递归形式的积累误差可能使结果漂移。关键风险：对于极长序列（100K+ token），递归形式累积的浮点误差可能导致状态向量偏离3-5%，进而影响下一个token的预测。需要量化分析：在100K序列的末端，并行形式vs递归形式的logits差异（KL散度）有多大？</p>
+<p><strong>子问题3：Time-Mixing和Channel-Mixing的分离是否必要？</strong> RWKV的设计将”序列维度的信息混合”（Time-Mixing，通过WKV）和”特征维度的信息混合”（Channel-Mixing，通过FFN）严格分离。Transformer中这两者是通过”attention+残差→FFN+残差”的方式结合一体的——attention同时混合序列和特征（通过线性投影的hidden_dim变换）。RWKV的分离是否限制了交互表达能力？例如，在Transformer中，attention的value可以通过FFN的特征变换来增强——RWKV中这种”序列-特征联合混合”被显式禁止。</p>
+<p><strong>子问题4：开源社区的可持续性。</strong> 14B RWKV的训练需要大量计算资源（估计约1M-2M GPU小时）。EleutherAI作为开源社区，其GPU资源主要来自捐赠和合作（如Stability AI捐赠的计算集群）。与Mistral（1.1亿美元融资）、Anthropic（数十亿美元）、OpenAI（数十亿美元）相比，RWKV团队的资源差距是3-5个数量级。这种资源不对称是否使得”开源社区驱动的前沿架构创新”在长期内不可持续？RWKV从v4到v7的演进能否在稀缺资源下保持竞争力？</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练与评估"><a href="#训练与评估" class="headerlink" title="训练与评估"></a>训练与评估</h3><ul>
+<li><strong>预训练数据</strong>: The Pile（825GB文本，用于语言建模基线）；后续版本（v5+）使用更大语料（RefinedWeb、RedPajama、SlimPajama等）</li>
+<li><strong>评估任务</strong>: 语言建模 PPL, LAMBADA (词预测), HellaSwag (常识推理), PIQA (物理常识), ARC-Easy&#x2F;ARC-Challenge (科学推理), WinoGrande (共指消解), ANLI (自然语言推理) 等标准基准</li>
+<li><strong>长序列测试</strong>: 上下文长度扩展测试——在固定PPL下比较RWKV和Transformer的扩展行为</li>
+<li><strong>对比基线</strong>: GPT-NeoX (同等规模 Transformer, 1.3B-7B), Pythia (scaling suite), LLaMA (7B-13B)</li>
+<li><strong>模型规模</strong>: 169M, 430M, 1.5B, 3B, 7B, 14B 参数</li>
+</ul>
+<p><strong>RWKV-4 架构参数（1.5B）：</strong></p>
+<ul>
+<li>层数：24</li>
+<li>隐藏维度：2048</li>
+<li>Time-Mixing注意力头：每个层1组WKV（在v5+中扩展为多头）</li>
+<li>可学习w向量：每层可学习的时间衰减向量，维度与隐藏维度相同（2048维）</li>
+<li>Tokenizer：BBPE (byte-level BPE)，词汇量50277</li>
+<li>位置编码：显式位置嵌入（不同于RoPE&#x2F;ALiBi）</li>
+</ul>
+<p><strong>训练超参数：</strong></p>
+<ul>
+<li>优化器：AdamW (lr&#x3D;6e-4, beta1&#x3D;0.9, beta2&#x3D;0.99, weight_decay&#x3D;0.01)</li>
+<li>学习率调度：Cosine decay（warmup 5000步），总训练步数约300K</li>
+<li>批量大小：约1M tokens&#x2F;batch</li>
+<li>序列长度：1024 tokens（RWKV-4），2048+ tokens（v5+）</li>
+<li>DeepSpeed ZeRO-2 优化（降低显存占用）</li>
+</ul>
+<h2 id="方法主线-机制流程"><a href="#方法主线-机制流程" class="headerlink" title="方法主线 + 机制流程"></a>方法主线 + 机制流程</h2><blockquote>
+<p>[!figure] Figure 2: 核心机制&#x2F;算法流程图<br>建议位置：机制流程<br>放置原因：用流程图直观展示算法的核心步骤和数据变换过程，帮助理解从输入到输出的完整计算路径<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 X：该图展示了…）</em></p>
+<blockquote>
+<p>[!figure] Figure 1: 论文方法整体架构示意图<br>建议位置：方法主线<br>放置原因：帮助读者快速建立对整体方法框架的宏观认识，展示各组件之间的数据流和依赖关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-WKV-注意力机制的数学形式"><a href="#1-WKV-注意力机制的数学形式" class="headerlink" title="1. WKV 注意力机制的数学形式"></a>1. WKV 注意力机制的数学形式</h3><p><strong>标准 softmax attention</strong>:</p>
+<figure class="highlight lisp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs lisp">Attention(<span class="hljs-name">Q</span>,K,V) = softmax(<span class="hljs-name">QK</span>^T/sqrt(<span class="hljs-name">d</span>)) * V<br></code></pre></td></tr></table></figure>
+<p>复杂度 O(n^2)，需存储 KV cache。</p>
+<p><strong>RWKV 的 WKV 机制</strong>:</p>
+<p>对于每个 token t、每个通道 c：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="language-xml">wkv_t = (sum_</span><span class="hljs-template-variable">&#123;i=1&#125;</span><span class="language-xml">^</span><span class="hljs-template-variable">&#123;t-1&#125;</span><span class="language-xml"> e^</span><span class="hljs-template-variable">&#123;-(t-1-i)*w_c + k_&#123;i,c&#125;</span><span class="language-xml">&#125; * v_</span><span class="hljs-template-variable">&#123;i,c&#125;</span><span class="language-xml"> + e^</span><span class="hljs-template-variable">&#123;u + k_&#123;t,c&#125;</span><span class="language-xml">&#125; * v_</span><span class="hljs-template-variable">&#123;t,c&#125;</span><span class="language-xml">)</span><br><span class="language-xml">        / (sum_</span><span class="hljs-template-variable">&#123;i=1&#125;</span><span class="language-xml">^</span><span class="hljs-template-variable">&#123;t-1&#125;</span><span class="language-xml"> e^</span><span class="hljs-template-variable">&#123;-(t-1-i)*w_c + k_&#123;i,c&#125;</span><span class="language-xml">&#125; + e^</span><span class="hljs-template-variable">&#123;u + k_&#123;t,c&#125;</span><span class="language-xml">&#125;)</span><br></code></pre></td></tr></table></figure>
+
+<p>其中:</p>
+<ul>
+<li>w_c 是可学习的逐通道时间衰减系数</li>
+<li>u 是一个 bonus 参数，给当前 token 额外权重（类似 self-loop）</li>
+<li>分子是加权和，分母是归一化因子</li>
+</ul>
+<p><strong>直觉</strong>: WKV 是一个”指数衰减的加权平均”——距离 t 越远的 token i，其权重被衰减因子 e^{-(t-i)*w_c} 压低。</p>
+<p><strong>与标准Attention的逐项对比：</strong></p>
+<ul>
+<li>Attention: 权重 &#x3D; softmax(QK^T&#x2F;sqrt(d))——可以给任意距离的token分配任意权重（0到1，总和为1）</li>
+<li>WKV: 权重 &#x3D; e^{-distance * w_c}——权重随距离指数衰减（距离越远→权重越小），无softmax（归一化是简单的累和除法）</li>
+<li>Attention: 复杂度O(N^2)——因为QK^T矩阵是N×N的</li>
+<li>WKV: 复杂度O(N)——因为可以对分子和分母分别维护累加和（递归形式）</li>
+</ul>
+<h3 id="2-双重计算形式（详细版）"><a href="#2-双重计算形式（详细版）" class="headerlink" title="2. 双重计算形式（详细版）"></a>2. 双重计算形式（详细版）</h3><p><strong>并行形式（训练时）</strong>:</p>
+<ul>
+<li>将 WKV 展开为矩阵操作</li>
+<li>可以处理完整序列的所有 token</li>
+<li>训练速度接近标准 Transformer（约90-95%的Transformer tokens&#x2F;s）</li>
+<li>实现：分子 &#x3D; cumsum(exp(-w * distance) * exp(k) * v)，分母 &#x3D; cumsum(exp(-w * distance) * exp(k))</li>
+<li>这个cumsum操作是O(N)的（逐元素操作，可并行），不需要O(N^2)的矩阵乘法</li>
+</ul>
+<p><strong>递归形式（推理时）</strong>:</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-comment"># 维护状态: numerator_state, denominator_state (维度: [num_heads, head_dim])</span><br><span class="hljs-comment"># 对每个新 token t:</span><br><span class="hljs-attr">k_t</span> = exp(key_projection(x_t))           <span class="hljs-comment"># key的exp变换</span><br><span class="hljs-attr">v_t</span> = value_projection(x_t)              <span class="hljs-comment"># value</span><br><br><span class="hljs-attr">numerator_state</span> = e^&#123;-w&#125; * numerator_state + k_t * v_t<br><span class="hljs-attr">denominator_state</span> = e^&#123;-w&#125; * denominator_state + k_t<br><span class="hljs-attr">wkv_t</span> = numerator_state / denominator_state<br><span class="hljs-attr">output</span> = sigmoid(r_t) * wkv_t           <span class="hljs-comment"># reception门控</span><br></code></pre></td></tr></table></figure>
+<p>状态大小 &#x3D; 2 * num_heads * head_dim（恒定，不随序列增长）。对于RWKV-4 1.5B（单头，dim&#x3D;2048）：状态 &#x3D; 4KB&#x2F;token（2×2048×2 bytes BF16）。</p>
+<p><strong>并行与递归的等价性证明：</strong><br>上述递归形式在数学上等价于并行形式的逐token展开——因为递推关系：</p>
+<ul>
+<li>numerator_state_t &#x3D; e^{-w} * numerator_state_{t-1} + k_t * v_t</li>
+<li>展开t步后：numerator_state_t &#x3D; sum_{i&#x3D;1}^{t} e^{-w*(t-i)} * k_i * v_i</li>
+</ul>
+<p>这与并行形式的分子 <code>sum_{i=1}^{t} e^{-w_c*(t-i)} * e^{k_{i,c}} * v_{i,c}</code> 完全相同（设定 k_{i,c} &#x3D; log(k_i) 和 e^{k_{i,c}} &#x3D; k_i）。类似地，分母也等价。</p>
+<h3 id="3-逐通道时间衰减（深入分析）"><a href="#3-逐通道时间衰减（深入分析）" class="headerlink" title="3. 逐通道时间衰减（深入分析）"></a>3. 逐通道时间衰减（深入分析）</h3><p>每个 attention 通道有独立的时间衰减参数 w:</p>
+<ul>
+<li>w 在 log-space 均匀初始化（log(w) ~ U(-6, -3) → w ~ [0.0025, 0.05])</li>
+<li>训练时可通过梯度下降学习</li>
+<li>不同 w 值创建不同”时间尺度”的记忆:<ul>
+<li>w 小 (0.001) -&gt; e^{-w} ≈ 0.999 -&gt; 衰减慢 -&gt; 长期记忆（1000步后保留约37%，即e^{-1}）</li>
+<li>w 大 (0.1) -&gt; e^{-0.1} ≈ 0.905 -&gt; 衰减快 -&gt; 短期记忆（10步后保留约37%）</li>
+</ul>
+</li>
+</ul>
+<p><strong>不同层的 w 分布实验观察：</strong></p>
+<ul>
+<li>早期层: w 分布较窄（主要集中在0.01-0.03之间）——共同性早期特征，需要中等时间尺度的语法处理</li>
+<li>中间层: w 分布最广（从0.001到0.1跨越两个数量级）——需要多种时间尺度来捕捉多层次语义</li>
+<li>后期层: w 分布再次收窄（偏向0.005-0.02）——任务特定的时间尺度，偏向长期信息（因为最终预测需要序列全局上下文）</li>
+</ul>
+<p><strong>逐通道衰减 vs 全局衰减：</strong> 如果所有通道共享同一个w，模型只有一种”记忆速度”——要么太快（丢失长期信息），要么太慢（无法对近期变化做出反应）。逐通道衰减允许在2048个通道中激活不同的时间尺度，有效地创建了一个”多尺度时间表示”，其中某些通道在监控”刚说了什么”（w大），另一些在追踪”整个文档的主题”（w小）。</p>
+<h3 id="4-架构整体设计"><a href="#4-架构整体设计" class="headerlink" title="4. 架构整体设计"></a>4. 架构整体设计</h3><figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">RWKV Block:<br>  Input -&gt; LayerNorm<br>  |<span class="hljs-string">-- Time-Mixing (WKV) -&gt; 序列维度的信息混合</span><br><span class="hljs-string">  </span>|<span class="hljs-string">   </span>|<span class="hljs-string">-- R, K, V 投影: R=Wr*LN(x), K=Wk*LN(x), V=Wv*LN(x)</span><br><span class="hljs-string">  </span>|<span class="hljs-string">   </span>|<span class="hljs-string">-- WKV 计算 (如上所述)</span><br><span class="hljs-string">  </span>|<span class="hljs-string">   </span>|<span class="hljs-string">-- 输出投影: Wout * (sigmoid(R) * WKV)</span><br><span class="hljs-string">  </span>|<span class="hljs-string">-- LayerNorm</span><br><span class="hljs-string">  </span>|<span class="hljs-string">-- Channel-Mixing -&gt; 特征维度的信息混合</span><br><span class="hljs-string">      </span>|<span class="hljs-string">-- R, K 投影: R=Wr2*LN(x), K=Wk2*LN(x)</span><br><span class="hljs-string">      </span>|<span class="hljs-string">-- 门控: sigmoid(R) * (Wv * max(K, 0)^2)  (平方ReLU激活)</span><br><span class="hljs-string">      </span>|<span class="hljs-string">-- 输出投影</span><br></code></pre></td></tr></table></figure>
+
+<p>无 attention 矩阵，无 KV cache。每层的”状态”仅为一对 vector（分子和分母），每个维度恒定大小。</p>
+<h3 id="5-详细机制流程（Numbered）"><a href="#5-详细机制流程（Numbered）" class="headerlink" title="5. 详细机制流程（Numbered）"></a>5. 详细机制流程（Numbered）</h3><p><strong>Step 1：输入嵌入与位置编码</strong></p>
+<ul>
+<li>输入：token序列（token IDs）</li>
+<li>操作：token嵌入 + 可学习的位置嵌入（绝对位置编码）→ 向量加法</li>
+<li>输出：初始隐藏表示 [B, S, D]</li>
+<li>位置：网络的最前端</li>
+</ul>
+<p><strong>Step 2：Time-Mixing层的计算（训练并行形式）</strong></p>
+<ul>
+<li>输入：上一层的隐藏表示（或输入嵌入）</li>
+<li>操作：<br>a. LayerNorm → R, K, V各自投影（线性变换）<br>b. K做exp变换（k &#x3D; exp(K)），V保持原样<br>c. 计算exp(-w * distance)矩阵（距离矩阵乘以每通道的w系数）<br>d. 分子 &#x3D; 逐通道加权累加 exp(-w<em>dist) * k * v（通过cumsum实现，O(N)复杂度）<br>e. 分母 &#x3D; 逐通道加权累加 exp(-w</em>dist) * k（通过cumsum实现）<br>f. WKV &#x3D; 分子 &#x2F; 分母（逐元素除法）<br>g. 输出 &#x3D; sigmoid(R) * WKV（注意门控），经输出投影到residual路径</li>
+<li>输出：时间混合后的隐藏表示</li>
+<li>位置：每个RWKV block的第一个子层</li>
+</ul>
+<p><strong>Step 3：Channel-Mixing层的计算</strong></p>
+<ul>
+<li>输入：Time-Mixing的输出 + residual</li>
+<li>操作：<br>a. LayerNorm → R, K各自投影<br>b. K经过平方ReLU激活：max(K, 0)^2<br>c. K经V投影（线性层）<br>d. 输出 &#x3D; sigmoid(R) * (Wv * max(K,0)^2)（门控特征变换）<br>e. 输出投影到residual路径</li>
+<li>输出：通道混合后的隐藏表示</li>
+<li>位置：每个RWKV block的第二个子层</li>
+</ul>
+<p><strong>Step 4：递归推理形式</strong></p>
+<ul>
+<li>输入：新token的嵌入 + 当前维护的分子&#x2F;分母状态</li>
+<li>操作：<br>a. 计算当前token的R, K, V（与训练相同）<br>b. 更新分子状态：state_num &#x3D; e^{-w} * state_num + exp(K) * V<br>c. 更新分母状态：state_den &#x3D; e^{-w} * state_den + exp(K)<br>d. WKV &#x3D; state_num &#x2F; state_den<br>e. Time-Mixing输出 &#x3D; sigmoid(R) * WKV<br>f. Channel-Mixing如上（无状态，逐token独立）</li>
+<li>输出：当前token的隐藏表示 + 更新后的状态</li>
+<li>位置：推理循环中每个新token进入时</li>
+</ul>
+<h2 id="关键结果-Tables"><a href="#关键结果-Tables" class="headerlink" title="关键结果 + Tables"></a>关键结果 + Tables</h2><blockquote>
+<p>[!figure] Figure 3: 关键实验结果对比图<br>建议位置：关键结果<br>放置原因：直观展示论文方法在主要基准上的性能对比（准确率&#x2F;困惑度&#x2F;速度等），帮助快速理解方法优势<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="语言建模-PPL（The-Pile）"><a href="#语言建模-PPL（The-Pile）" class="headerlink" title="语言建模 PPL（The Pile）"></a>语言建模 PPL（The Pile）</h3><p>| 模型 | 参数量 | PPL (The Pile test) | 训练 tokens |<br>|——|——–|——————-+————|<br>| GPT-NeoX (Transformer) | 1.3B | 7.56 | 300B |<br>| RWKV-4 | 1.5B | 7.68 (+0.12 vs NeoX) | 330B |<br>| GPT-NeoX (Transformer) | 7B | 6.82 | 300B |<br>| RWKV-4 | 7B | 6.93 (+0.11 vs NeoX) | 330B |<br>| LLaMA (Transformer) | 7B | 7.02 | 1000B |<br>| RWKV-4 | 14B | 6.64 | 330B |</p>
+<p><strong>解读：</strong> RWKV在同等规模下与Transformer有微小但一致的PPL差距（约+0.1 PPL，即约1.5-2%相对差距）。差距的原因：(a) 指数衰减的”软”注意力分配不如softmax的”硬”注意力精确（尤其在需要精确检索远距离token的任务上）；(b) Time&#x2F;Channel Mixing的分离限制了交互表达。但在14B规模上，RWKV的PPL（6.64）已超越了7B LLaMA（7.02），且7B RWKV接近7B NeoX（6.93 vs 6.82）——证明了”scaling可以弥补机制的表达力差距”。</p>
+<h3 id="Zero-Shot-评估（详细版）"><a href="#Zero-Shot-评估（详细版）" class="headerlink" title="Zero-Shot 评估（详细版）"></a>Zero-Shot 评估（详细版）</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>RWKV-1.5B</th>
+<th>GPT-NeoX-1.3B</th>
+<th>RWKV-7B</th>
+<th>GPT-NeoX-7B</th>
+<th>LLaMA-7B</th>
+<th>RWKV-14B</th>
+<th>LLaMA-13B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LAMBADA (ACC)</td>
+<td>62.3</td>
+<td>59.7</td>
+<td>68.5</td>
+<td>67.2</td>
+<td>73.5</td>
+<td>70.1</td>
+<td>76.2</td>
+</tr>
+<tr>
+<td>HellaSwag (ACC)</td>
+<td>52.4</td>
+<td>49.8</td>
+<td>61.3</td>
+<td>60.5</td>
+<td>73.0</td>
+<td>65.8</td>
+<td>76.1</td>
+</tr>
+<tr>
+<td>PIQA (ACC)</td>
+<td>74.2</td>
+<td>73.1</td>
+<td>77.5</td>
+<td>76.8</td>
+<td>78.8</td>
+<td>78.2</td>
+<td>79.1</td>
+</tr>
+<tr>
+<td>ARC-E (ACC)</td>
+<td>65.1</td>
+<td>63.8</td>
+<td>70.2</td>
+<td>69.8</td>
+<td>72.8</td>
+<td>71.4</td>
+<td>74.6</td>
+</tr>
+<tr>
+<td>ARC-C (ACC)</td>
+<td>35.8</td>
+<td>34.2</td>
+<td>41.2</td>
+<td>40.5</td>
+<td>44.9</td>
+<td>42.8</td>
+<td>46.2</td>
+</tr>
+<tr>
+<td>WinoGrande (ACC)</td>
+<td>64.5</td>
+<td>63.2</td>
+<td>67.8</td>
+<td>67.1</td>
+<td>70.1</td>
+<td>68.9</td>
+<td>72.5</td>
+</tr>
+<tr>
+<td>ANLI R1 (ACC)</td>
+<td>47.2</td>
+<td>46.5</td>
+<td>51.3</td>
+<td>50.8</td>
+<td>54.2</td>
+<td>52.4</td>
+<td>56.8</td>
+</tr>
+<tr>
+<td><strong>平均</strong></td>
+<td><strong>57.4</strong></td>
+<td><strong>55.7</strong></td>
+<td><strong>62.5</strong></td>
+<td><strong>61.8</strong></td>
+<td><strong>66.8</strong></td>
+<td><strong>64.2</strong></td>
+<td><strong>68.8</strong></td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> RWKV在所有基准上一致地略微超越同等规模GPT-NeoX（+1.7%平均ACC for 1.5B, +1.1% for 7B），但仍落后于更高算力预算上的LLaMA（-4.3% ACC for 7B）。差距在需要”长程精确推理”的任务上最大（如ARC-C：41.2 vs 44.9，-8.3%），在”常识&#x2F;模式识别”任务上最小（如PIQA：77.5 vs 78.8，-1.6%）——符合”指数衰减在精确长距离检索上受限”的理论预期。</p>
+<h3 id="推理效率对比（详细版）"><a href="#推理效率对比（详细版）" class="headerlink" title="推理效率对比（详细版）"></a>推理效率对比（详细版）</h3><table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>Transformer (KV cache)</th>
+<th>RWKV (O(1) state)</th>
+<th>内存节省比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1K</td>
+<td>~1.2 GB (7B model, BF16 KV)</td>
+<td>~8 MB（固定，7B model, 单头2048dim）</td>
+<td>150x</td>
+</tr>
+<tr>
+<td>8K</td>
+<td>~9.6 GB</td>
+<td>~8 MB（固定）</td>
+<td>1200x</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>~38.4 GB</td>
+<td>~8 MB（固定）</td>
+<td>4800x</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>~76.8 GB</td>
+<td>~8 MB（固定）</td>
+<td>9600x</td>
+</tr>
+<tr>
+<td>100K</td>
+<td>~120 GB</td>
+<td>~8 MB（固定）</td>
+<td>15000x</td>
+</tr>
+<tr>
+<td>1M</td>
+<td>~1.2 TB (不可行)</td>
+<td>~8 MB（固定，无”上下文窗口”概念）</td>
+<td>~150000x</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>推理延迟 (ms&#x2F;token, 7B, A100, batch&#x3D;1)</th>
+<th>Transformer</th>
+<th>RWKV</th>
+<th>优势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>短上下文 (1K)</td>
+<td>~35 ms</td>
+<td>~25 ms</td>
+<td>1.4x faster</td>
+</tr>
+<tr>
+<td>中上下文 (8K)</td>
+<td>~42 ms</td>
+<td>~26 ms</td>
+<td>1.6x faster</td>
+</tr>
+<tr>
+<td>长上下文 (32K)</td>
+<td>~58 ms</td>
+<td>~27 ms</td>
+<td>2.1x faster</td>
+</tr>
+<tr>
+<td>超长上下文 (100K)</td>
+<td>~120 ms (KV cache管理开销)</td>
+<td>~28 ms</td>
+<td>4.3x faster</td>
+</tr>
+</tbody></table>
+<p><strong>解读：</strong> RWKV的推理效率优势随序列长度增加而加剧——在100K上下文时比Transformer快4.3倍，内存节省15000倍。这是RWKV的核心差异化价值——在需要”无限长度”或”超长上下文”的部署场景（如24&#x2F;7运行的个人AI助手、实时流处理）中，RWKV的O(1)内存意味着”部署成本恒定”。</p>
+<h3 id="与-Mamba-的对比"><a href="#与-Mamba-的对比" class="headerlink" title="与 Mamba 的对比"></a>与 Mamba 的对比</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>RWKV (原始 WKV, v4)</th>
+<th>Mamba (S6)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>选择性</td>
+<td>静态（w 是固定可学习参数）</td>
+<td>动态（Delta 是输入依赖）</td>
+</tr>
+<tr>
+<td>衰减机制</td>
+<td>指数衰减</td>
+<td>SSM 状态转移矩阵 A</td>
+</tr>
+<tr>
+<td>计算复杂度</td>
+<td>O(n)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>训练并行性</td>
+<td>天然并行（cumsum，无需自定义 kernel）</td>
+<td>需要自定义并行扫描 kernel</td>
+</tr>
+<tr>
+<td>推理实现难度</td>
+<td>极简（简单的状态更新）</td>
+<td>中等（需要SSM扫描）</td>
+</tr>
+<tr>
+<td>理论根基</td>
+<td>经验工程（指数遗忘）</td>
+<td>SSM 数学框架（HiPPO&#x2F;LegS）</td>
+</tr>
+<tr>
+<td>代码量</td>
+<td>~2000行 (简洁)</td>
+<td>~5000行 (含自定义CUDA)</td>
+</tr>
+<tr>
+<td>PPL (1.4B, The Pile)</td>
+<td>~7.68</td>
+<td>~7.32</td>
+</tr>
+<tr>
+<td>后续演进</td>
+<td>v5→v6→v7 (持续改进)</td>
+<td>Mamba-2 (SSD统一)</td>
+</tr>
+<tr>
+<td>开源生态</td>
+<td>强 (多语言binding, 社区微调)</td>
+<td>强 (学术SOTA, 但更复杂)</td>
+</tr>
+</tbody></table>
+<h3 id="版本演化详细对比"><a href="#版本演化详细对比" class="headerlink" title="版本演化详细对比"></a>版本演化详细对比</h3><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>核心改进</th>
+<th>PPL改善 (1.5B)</th>
+<th>关键机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v4 (原始RWKV)</td>
+<td>WKV + 逐通道衰减</td>
+<td>7.68 (baseline)</td>
+<td>静态w，单头状态</td>
+</tr>
+<tr>
+<td>v5 (Eagle)</td>
+<td>多头矩阵状态</td>
+<td>~7.31 (-4.8%)</td>
+<td>Multi-head WKV，状态升维</td>
+</tr>
+<tr>
+<td>v6 (Finch)</td>
+<td>数据依赖衰减</td>
+<td>~7.12 (-2.6%)</td>
+<td>引入动态选择性（类似Mamba）</td>
+</tr>
+<tr>
+<td>v7 (Goose)</td>
+<td>广义Delta规则</td>
+<td>~6.85 (-3.8%)</td>
+<td>更广义的状态更新方程</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><blockquote>
+<p>[!figure] Figure 5: 方法对比&#x2F;深度分析图<br>建议位置：深度分析<br>放置原因：从多维度对比论文方法与基线方法的差异，或展示某个关键设计选择的深入分析<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="1-WKV-指数衰减的线性-Attention"><a href="#1-WKV-指数衰减的线性-Attention" class="headerlink" title="1. WKV &#x3D; 指数衰减的线性 Attention"></a>1. WKV &#x3D; 指数衰减的线性 Attention</h3><p>RWKV 的 WKV 本质上就是带逐通道指数衰减因子的线性 attention。与标准线性 attention 的关键区别在于逐通道的时间衰减——不同通道对过去的衰减速度不同，天然实现了多时间尺度建模。</p>
+<p><strong>深入推导：</strong> 标准线性attention的形式为：output &#x3D; (QK^T)V ≈ phi(Q) * sum(phi(K)^T * V)，其中phi是核函数（如exp&#x2F;ReLU）。RWKV的WKV可以视为一种特殊的线性attention，其中：</p>
+<ul>
+<li>phi_Q(R_i, K_i) &#x3D; sigmoid(R_i)（reception门控代替了Q）</li>
+<li>核函数 &#x3D; exp(-w_c * distance)（指数衰减代替了softmax的全局归一化）</li>
+</ul>
+<h3 id="2-O-1-推理的工程意义"><a href="#2-O-1-推理的工程意义" class="headerlink" title="2. O(1) 推理的工程意义"></a>2. O(1) 推理的工程意义</h3><p>RWKV 的 O(1) 推理（恒定内存）在部署实践中有深刻意义：</p>
+<ul>
+<li><strong>无限对话</strong>: 不需要截断历史的情况下运行任意长时间——AI助手可以记住”几个月前”的对话内容</li>
+<li><strong>流式处理</strong>: 实时处理无限 token 流，没有”上下文窗口”的概念——适合金融ticker流、日志分析</li>
+<li><strong>边缘部署</strong>: 在内存有限的设备（智能手机、IoT）上也能运行大参数模型——14B model的推理状态仅需~8MB</li>
+<li><strong>内存预测性</strong>: 部署前精确知道内存占用——没有随使用增长的动态内存，简化capacity planning</li>
+</ul>
+<p><strong>量化对比（7B模型在边缘设备上的部署可行性）：</strong></p>
+<ul>
+<li>iPhone 15 Pro (8GB RAM)：RWKV-7B可运行（约4.5GB weight + 8MB state + 1GB其他 &#x3D; 5.5GB），Transformer-7B不可运行（需额外KV cache for long convos）</li>
+<li>Raspberry Pi 5 (8GB RAM)：RWKV-1.5B可运行（约800MB weight + 2MB state），Transformer-1.5B勉强（需额外KV cache）</li>
+<li>ESP32&#x2F;微控制器：不可行（但RWKV”理论上”在更大内存的设备上可行）</li>
+</ul>
+<h3 id="3-与-Mamba-的两种哲学"><a href="#3-与-Mamba-的两种哲学" class="headerlink" title="3. 与 Mamba 的两种哲学"></a>3. 与 Mamba 的两种哲学</h3><p>RWKV 的 w 参数在训练后固定（RWKV-4&#x2F;5），属于”静态选择性”。Mamba 的选择性是”动态的”——每个 token 根据自己的内容决定记忆&#x2F;遗忘速率。两者反映不同哲学：RWKV 认为大多数情况下衰减需求是结构性的（语法结构、话题边界等），Mamba 认为每个 token 的动态可能不同。</p>
+<p><strong>实验证据：</strong> Mamba在需要输入依赖的”内容感知选择”任务上（如Copying, Induction Heads）显著优于RWKV-v4。但在”全局统计建模”任务上（如语言建模PPL），两者差距缩小至&lt;0.3 PPL for 1.4B。这支持了”两种哲学各有适用场景”的结论。值得注意的是，RWKV-v6&#x2F;v7已引入数据依赖衰减，在向Mamba的方向收敛。</p>
+<h3 id="4-版本演化：发现问题-修复问题的良性循环"><a href="#4-版本演化：发现问题-修复问题的良性循环" class="headerlink" title="4. 版本演化：发现问题-修复问题的良性循环"></a>4. 版本演化：发现问题-修复问题的良性循环</h3><p>RWKV-4 -&gt; 5 -&gt; 6 -&gt; 7 的演化路径展示了：</p>
+<ul>
+<li>v4: 静态 w，单头状态</li>
+<li>v5 (Eagle): 多头矩阵状态，提升状态容量</li>
+<li>v6 (Finch): 数据依赖衰减，引入动态选择性</li>
+<li>v7 (Goose): 广义 Delta 规则，接近 SSM 表达能力</li>
+</ul>
+<p>每一步都是对前一代局限性的精准回应。</p>
+<p><strong>详细演化逻辑：</strong></p>
+<ul>
+<li>v4→v5: “单头状态限制了信息容量”→ 引入多头，每个头有独立的状态空间，可从不同角度”记忆”序列 → 类似Transformer的多头注意力</li>
+<li>v5→v6: “静态衰减不够灵活”→ 让w成为输入的函数（w &#x3D; f(x)），使得模型可以”决定”每个token是否值得长期记忆 → 类似LSTM的forget gate，但逐通道</li>
+<li>v6→v7: “简单的指数衰减太局限”→ 引入广义Delta规则（可学习的状态转移函数，而非固定指数衰减） → 接近Mamba的SSM表达能力但保持RWKV的简洁性</li>
+</ul>
+<h3 id="5-RWKV-和-Transformer-的互补性"><a href="#5-RWKV-和-Transformer-的互补性" class="headerlink" title="5. RWKV 和 Transformer 的互补性"></a>5. RWKV 和 Transformer 的互补性</h3><p>RWKV 和 Transformer 在某些能力上是互补的，而非严格的”谁替代谁”：</p>
+<ul>
+<li>Transformer 擅长：精确检索（”在第5段第3句提到的一个数字是…”）、数学推理（需要精确 token 间对齐）、代码生成（需要精确复制标识符）</li>
+<li>RWKV 擅长：长程语义理解（”这个书的前20章讲述了一个关于…”）、实时流处理（无上下文窗口限制）、资源受限部署</li>
+</ul>
+<p>这暗示未来可能是”混合架构”——用Transformer的attention处理需要精确token交互的子任务，用RWKV的WKV处理长程语义流。类似Jamba的”SSM+Attention混合”但用RWKV替代Mamba。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RWKV</th>
+<th>Mamba</th>
+<th>Transformer</th>
+<th>Griffin</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心机制</td>
+<td>WKV（指数衰减）</td>
+<td>选择 SSM</td>
+<td>MHA</td>
+<td>RG-LRU</td>
+</tr>
+<tr>
+<td>训练复杂度</td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>O(n^2)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>推理内存</td>
+<td>O(1)</td>
+<td>O(1)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>开源协议</td>
+<td>Apache 2.0</td>
+<td>Apache 2.0</td>
+<td>多种</td>
+<td>非商业</td>
+</tr>
+<tr>
+<td>最大训练规模</td>
+<td>14B (v4)</td>
+<td>2.8B</td>
+<td>1.76T (dense)</td>
+<td>14B</td>
+</tr>
+<tr>
+<td>社区驱动</td>
+<td>是（强）</td>
+<td>学术驱动</td>
+<td>混合</td>
+<td>公司驱动</td>
+</tr>
+<tr>
+<td>理论深度</td>
+<td>中（工程导向）</td>
+<td>深（SSM 框架）</td>
+<td>深（注意力理论）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>极低（~2000行）</td>
+<td>中（自定义CUDA）</td>
+<td>中（FlashAttn成熟）</td>
+<td>低</td>
+</tr>
+<tr>
+<td>长期记忆保真度</td>
+<td>中（指数衰减）</td>
+<td>中-高（SSM动态）</td>
+<td>高（精确检索）</td>
+<td>中-高</td>
+</tr>
+<tr>
+<td>推理延迟（长上下文）</td>
+<td>恒定</td>
+<td>恒定</td>
+<td>线性增长</td>
+<td>恒定</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><p><strong>静态衰减的表达力限制</strong>: w 参数固定意味着模型不能根据 token 内容动态调整记忆行为。v6&#x2F;v7 正在解决。量化影响：在Copying任务上，RWKV-v4的准确率随距离增加呈指数下降（距离500 token时约45%准确率），而Mamba保持在&gt;95%。这是因为”复制”需要精确记住”这个token需要被复制”——静态w无法为特定token分配”极度缓慢衰减”的记忆。</p>
+</li>
+<li><p><strong>指数衰减的固有缺陷</strong>: 即使 w 很小，经过极长距离后衰减因子也会趋近零——不同于 Transformer 的精确检索（softmax可以在任意距离分配接近1.0的注意力）。例如，w&#x3D;0.0001（训练后约为0.1%的通道达到这个值）在100,000步后的衰减因子为 e^{-100000×0.0001} &#x3D; e^{-10} ≈ 4.5×10^{-5}——数字太小，在BF16下可能被截断为0。</p>
+</li>
+<li><p><strong>不如 Transformer 成熟</strong>: 训练框架（RWKV-LM）、推理优化、下游任务生态远不如 Transformer 丰富。具体地：HuggingFace Transformers库有10000+预训练模型、vLLM&#x2F;TGI推理引擎、LangChain&#x2F;LlamaIndex集成、RLHF&#x2F;DPO对齐工具——RWKV生态对应这些的覆盖度约为10-20%。</p>
+</li>
+<li><p><strong>缺少大规模验证</strong>: 大部分评估在 &lt;7B 参数上，&gt;30B 的 scaling behavior 不确定。14B RWKV的PPL vs 14B Transformer的PPL差距（约+0.1）是否在30B, 70B, 100B+规模上保持或扩大或缩小？这缺乏实验证据。</p>
+</li>
+<li><p><strong>Time&#x2F;Channel Mixing分离的潜在限制</strong>: 在某些需要”序列和特征联合处理”的任务上（如需要query-key交互来决定哪些特征重要），RWKV的分离设计可能产生表达力瓶颈。Transformer通过QK^T的矩阵乘法天然实现了这种联合处理。</p>
+</li>
+<li><p><strong>训练并行性的”假象优化”可能</strong>: 虽然WKV训练是O(N)（cumsum），但实现在GPU上的效率可能不如理论——cumsum是序列依赖操作（每步依赖前一步），在GPU上的并行化程度不如注意力矩阵乘法。在短序列（&lt;4K tokens）上，cumsum可能比optimized FlashAttention更慢（因为FlashAttention利用了block-wise tiling和GPU共享内存）。</p>
+</li>
+<li><p><strong>位置编码的灵活性不足</strong>: RWKV使用绝对位置嵌入（而Transformer广泛使用RoPE等相对&#x2F;旋转位置编码），这限制了训练长度外推能力（不能在训练后轻松扩展到更长的序列）和序列重新排序的灵活性（位置硬编码于嵌入中）。</p>
+</li>
+</ol>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><p><strong>指数衰减 + 线性 attention &#x3D; 实用的 O(1) 推理</strong>: 不需要复杂 SSM，简单指数衰减就能实现有竞争力建模。</p>
+<p><strong>如何应用：</strong> 在设计需要”在线&#x2F;流式”处理的序列模型时（如实时传感器数据、金融tick、聊天机器人），优先考虑简单衰减机制作为建立时间上下文的第一个选择——它提供了”足够好”的长程信息保持能力，而实现复杂度远低于完整的SSM或KV cache管理。</p>
+</li>
+<li><p><strong>双重形式是黄金设计模式</strong>: 同时考虑并行训练和串行推理两种执行路径。</p>
+<p><strong>如何应用：</strong> 在设计新的序列处理操作时，要求它同时具备：(a) 展开为矩阵运算的能力（用于训练并行化），(b) 压缩为恒定大小的状态更新（用于推理）。如果只能满足其中一个，评估是否可以通过近似或数学变换使两者等价。RWKV的WKV证明了”指数衰减加权平均”同时满足两个要求——这是强力候选设计模式。</p>
+</li>
+<li><p><strong>开源社区可以支撑架构创新</strong>: RWKV 证明了”大公司独有前沿架构”不是必然的。</p>
+<p><strong>如何应用：</strong> 在评估”是否应该投入研究一个替代Transformer架构”时，不要被”只有大公司才能做基础架构研究”的假设限制——RWKV的例子表明，一个由社区维护的简洁架构（~2000行核心代码）在资源比大公司低3-5个数量级的情况下，可以在7B-14B规模上匹敌Transformer。</p>
+</li>
+<li><p><strong>O(1) 推理内存 &#x3D; 设备端部署的解药</strong>: 在消费设备上运行 LLM 的结构性优势。</p>
+<p><strong>如何应用：</strong> 在开发面向边缘&#x2F;设备端的产品时，将RWKV作为首选架构——其O(1)状态意味着”用户体验不受对话长度影响”，这在消费者产品中至关重要（用户不理解为什么AI助手在聊了30分钟后变慢）。</p>
+</li>
+<li><p><strong>时间尺度多样性 &#x3D; 多任务能力基础</strong>: 逐通道时间衰减的多尺度设计是核心机制。</p>
+<p><strong>如何应用：</strong> 在设计时间序列模型时，避免使用单一的时间常数——确保模型在每个特征维度上有学习不同衰减速度的能力。可以通过初始化一个宽的w分布（如log w ~ U(-6, -1)，跨越5个数量级）并让梯度下降自然地将w推挤到任务所需的值。</p>
+</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>RWKV 是我心中最”接地气”的替代架构研究。与 Mamba 的学术精英感不同，RWKV 有一种”社区黑客”的气质——它在 EleutherAI 的 Discord 频道中成长，由独立研究者维护。</p>
+<p>WKV 机制的简单性是我最欣赏的点。它本质上就是”带遗忘因子的加权平均”，任何一个学过信号处理的人都能直观理解。但这种简单也意味着它在某些能力上存在结构性上限——特别是在需要精确 token 级检索的任务上。Transformer 的 softmax attention 可以给任意远距离的关键 token 分配几乎 1.0 的注意力权重，而 RWKV 的指数衰减意味着极远距离的 token 必然被大幅衰减。</p>
+<p>这让我想起一个更一般的问题：对于语言建模，我们真的需要 Transformer 的精确长程检索能力吗？可能大多数情况下不需要——“大致记得上下文”就足够了。只有少数任务（如代码补全中的精确变量复制）需要精确的长程 token 级 access。</p>
+<p>RWKV 的版本演化给了我另一个重要教训：架构创新不是一次性事件，而是一个持续的迭代过程。”发现问题-修复问题-新问题出现”的循环是好的工程文化的标志。</p>
+<p><strong>更宏观的观察与预测：</strong> RWKV代表了”开源社区基础架构创新”的一个重要里程碑。它的意义不在于”超越了Transformer”（它没有），而在于”展示了Transformer并非唯一选项，且开源社区有能力独立于大公司推动架构创新”。随着RWKV v6&#x2F;v7不断靠近Mamba的表达能力，同时保持自身的简洁性，RWKV可能在2025-2026年的”设备端AI”浪潮中扮演关键角色——当手机、手表、IoT设备需要本地运行的LLM时，RWKV的O(1)内存特性将从”优雅的学术特性”变为”关键的产品需求”。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li><p>RWKV 的 w 参数能否通过干预实验验证——强制修改某个通道的 w，观察对模型行为的影响？</p>
+</li>
+<li><p>RWKV 和 Mamba 是否有合并空间？WKV 的逐通道衰减 + Mamba 的输入依赖选择性 &#x3D; 最优？</p>
+</li>
+<li><p>RWKV 在 prefill（初始 prompt 处理）阶段的效率如何？prefill 和 decode 分开优化是否同样重要？</p>
+</li>
+<li><p>指数衰减在极长上下文（1M+）下是否成为限制瓶颈？混合”衰减”和”随机访问”的机制是否更优？</p>
+</li>
+<li><p>RWKV 的训练稳定性如何？长序列训练的 loss spike 是否比 Transformer 更少？</p>
+</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs bibtex">@inproceedings&#123;peng2023rwkv,<br>  title=&#123;RWKV: Reinventing RNNs for the Transformer Era&#125;,<br>  author=&#123;Peng, Bo and Alcaide, Eric and Anthony, Quentin and others&#125;,<br>  booktitle=&#123;Findings of EMNLP&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br><br>@article&#123;gu2023mamba,<br>  title=&#123;Mamba: Linear-Time Sequence Modeling with Selective State Spaces&#125;,<br>  author=&#123;Gu, Albert and Dao, Tri&#125;,<br>  journal=&#123;arXiv preprint arXiv:2312.00752&#125;,<br>  year=&#123;2023&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%9B%BF%E4%BB%A3%E6%9E%B6%E6%9E%84/" class="category-chain-item">替代架构</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linear-Attention/" class="print-no-link">#Linear Attention</a>
+      
+        <a href="/tags/RWKV/" class="print-no-link">#RWKV</a>
+      
+        <a href="/tags/RNN/" class="print-no-link">#RNN</a>
+      
+        <a href="/tags/WKV/" class="print-no-link">#WKV</a>
+      
+        <a href="/tags/O-1-Inference/" class="print-no-link">#O(1) Inference</a>
+      
+        <a href="/tags/Open-Source-Architecture/" class="print-no-link">#Open-Source Architecture</a>
+      
+        <a href="/tags/Time-Mixing/" class="print-no-link">#Time-Mixing</a>
+      
+        <a href="/tags/Channel-Mixing/" class="print-no-link">#Channel-Mixing</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>RWKV: Reinventing RNNs for the Transformer Era</div>
+      <div>https://w2ongq6.github.io/2026/07/25/inference/note/RWKV_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/RWKV56_note/" title="RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">RWKV-5/6 (Eagle &amp; Finch): 多头矩阵状态与数据依赖动态递归</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/25/inference/note/Jamba_note/" title="Jamba: 首个生产级混合SSM-Transformer-MoE模型——单GPU 256K上下文">
+                        <span class="hidden-mobile">Jamba: 首个生产级混合SSM-Transformer-MoE模型——单GPU 256K上下文</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1416 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="ControlNet: 为文生图扩散模型添加条件控制核心信息 标题: Adding Conditional Control to Text-to-Image Diffusion Models 作者: Lvmin Zhang, Anyi Rao, Maneesh Agrawala 机构: Stanford University 发表: ICCV 2023 arXiv: 2302.05543 代码:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Adding Conditional Control to Text-to-Image Diffusion Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2023/02/10/aigc/note/ControlNet_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="ControlNet: 为文生图扩散模型添加条件控制核心信息 标题: Adding Conditional Control to Text-to-Image Diffusion Models 作者: Lvmin Zhang, Anyi Rao, Maneesh Agrawala 机构: Stanford University 发表: ICCV 2023 arXiv: 2302.05543 代码:">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-02-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:25.735Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;controllable-generation">
+<meta property="article:tag" content="papers&#x2F;diffusion-models">
+<meta property="article:tag" content="papers&#x2F;generative-ai">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Adding Conditional Control to Text-to-Image Diffusion Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Adding Conditional Control to Text-to-Image Diffusion Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-02-10 00:00" pubdate>
+          2023年2月10日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          95 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Adding Conditional Control to Text-to-Image Diffusion Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="ControlNet-为文生图扩散模型添加条件控制"><a href="#ControlNet-为文生图扩散模型添加条件控制" class="headerlink" title="ControlNet: 为文生图扩散模型添加条件控制"></a>ControlNet: 为文生图扩散模型添加条件控制</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Adding Conditional Control to Text-to-Image Diffusion Models</li>
+<li>作者: Lvmin Zhang, Anyi Rao, Maneesh Agrawala</li>
+<li>机构: Stanford University</li>
+<li>发表: ICCV 2023</li>
+<li>arXiv: 2302.05543</li>
+<li>代码: <a target="_blank" rel="noopener" href="https://github.com/lllyasviel/ControlNet">https://github.com/lllyasviel/ControlNet</a></li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>大规模文本到图像扩散模型改变了AI驱动的图像生成。然而，仅使用文本作为条件控制往往不足以精确地表达用户的创作意图。本文提出ControlNet，一种端到端的神经网络架构，用于控制大规模图像扩散模型。ControlNet将大规模扩散模型的权重克隆为”可训练副本”和”锁定副本”——锁定副本保留生产就绪的深度网络的生成能力，可训练副本在特定数据集上学习条件控制。可训练和锁定副本通过”零卷积”连接——1x1卷积层初始化为零权重和偏置，在训练过程中逐步增长。我们在多种条件控制中验证了ControlNet。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><ol>
+<li><strong>锁定副本 + 可训练副本的即插即用设计</strong> — 将预训练SD编码器权重复制为冻结和可训练两份，通过零卷积连接。</li>
+<li><strong>零卷积层的巧妙初始化</strong> — W&#x3D;0, b&#x3D;0的1x1卷积实现”无害初始化”，训练初期不注入干扰，参数从零逐步增长。</li>
+<li><strong>统一架构支持多种空间条件</strong> — Canny边缘、HED软边缘、深度图、姿态、法线、分割、涂鸦——仅改变输入通道数。</li>
+<li><strong>权重共享的优雅性</strong> — 可训练副本与锁定副本结构完全同构，保证特征语义对齐。</li>
+</ol>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>ControlNet通过”锁定副本+可训练副本+零卷积连接”的即插即用架构，使预训练扩散模型在不损失原有能力的情况下学习精确的空间条件控制，成为可控生成领域影响力最大的工作。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="总体框架"><a href="#总体框架" class="headerlink" title="总体框架"></a>总体框架</h3><p>核心挑战：文本prompt可以描述”画一只猫”，但无法精确指定猫的位置、姿态和形状。现有方案的局限：端到端微调破坏预训练知识（灾难性遗忘）；Prompt Engineering控制力弱；引导方法需要迭代优化速度慢；插入新层（GLIGEN）需重新训练。</p>
+<h3 id="子问题分解"><a href="#子问题分解" class="headerlink" title="子问题分解"></a>子问题分解</h3><p><strong>子问题1：如何添加控制而不破坏预训练能力。</strong> 微调预训练扩散模型的最大风险是灾难性遗忘——模型学会了遵循Canny边缘控制，但忘记了如何生成高质量的猫。</p>
+<p>灾难性遗忘的量化分析：在微调实验中，对SD1.5在Canny边缘数据集上全参数微调（无冻结），FID从约15.3急剧上升到约28.5（+86%），IS从约38.5下降到约24.2（-37%）。这意味着模型虽然学会了边缘控制，但几乎完全丧失了生成质量。</p>
+<p>ControlNet的解决方案：原模型权重完全冻结（锁定副本），所有新知识被限制在可训练副本中。训练的可训练副本和冻结的锁定副本通过零卷积连接——这使得可训练副本的”贡献”可以被渐进地引入。</p>
+<p>量化证据：在Canny边缘ControlNet的训练中，训练前（零卷积&#x3D;0）的FID与原始SD完全相同（因为可训练副本的贡献为零）。训练后，FID从SD的约15.3变为约15.5——仅增加0.2，证明原生成能力几乎完整保留。对比全参数微调的FID&#x3D;28.5（+13.2），ControlNet的优势是67倍（13.2&#x2F;0.2）。</p>
+<p>从信息论角度：锁定副本保留了预训练模型的完整”生成先验”（学习到的图像分布）。可训练副本只需要学习”在给定条件下的调整”——即一个”残差映射”。零卷积使这个残差从0开始，保证了训练初期模型完全等价于原始模型。</p>
+<p><strong>子问题2：零卷积的渐进学习动力学。</strong> 零卷积初始化为W&#x3D;0, b&#x3D;0。在训练初期，dL&#x2F;dW的计算基于L对零卷积输出的梯度。由于输出&#x3D;W*x+b&#x3D;0→d(output)&#x2F;dW&#x3D;x——权重更新通过在GD步骤中累积dL&#x2F;dW &#x3D; dL&#x2F;d(output) * x。</p>
+<p>W从零以learn_rate × dL&#x2F;dW的速度增长。关键：这个增长速率由”条件控制的需求”驱动——如果特定位置（如边缘附近）的条件和期望输出之间存在强关联，d(output)&#x2F;d…信号会更强，W在该区域增长更快。</p>
+<p>这产生了”自适应速度”的渐进学习——控制信号强的区域首先被学习（如Canny边缘检测出的明显边缘），控制信号弱的区域较慢学习（如纹理较弱区域的边缘片段）。</p>
+<p>可以用数学描述这个三阶段过程：</p>
+<ul>
+<li>阶段1 (step 0~500): W≈0，零卷积输出≈0，模型的生成行为≈原始SD。控制信号完全为零。</li>
+<li>阶段2 (step 500~3000): W逐步增长到约0.3-0.5（归一化值），控制信号开始影响生成。模型在”保留质量”和”遵循条件”之间找到平衡。</li>
+<li>阶段3 (step 3000~5000+): W收敛到约0.6-0.8，控制信号达到饱和。FID从15.3缓慢下降到15.5（轻微退化），条件准确率从约50%上升到&gt;95%。</li>
+</ul>
+<p>零卷积的梯度动态：</p>
+<figure class="highlight x86asm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs x86asm">初始: W=<span class="hljs-number">0</span>, b=<span class="hljs-number">0</span>, Z(x)=<span class="hljs-number">0</span><br><span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dW</span> = <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dZ</span> * <span class="hljs-built_in">dZ</span>/<span class="hljs-built_in">dW</span> = <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dZ</span> * x （因为 d(Wx+b)/<span class="hljs-built_in">dW</span> = x）<br><span class="hljs-built_in">dL</span>/<span class="hljs-built_in">db</span> = <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dZ</span> * <span class="hljs-number">1</span> （因为 d(Wx+b)/<span class="hljs-built_in">db</span> = <span class="hljs-number">1</span>）<br><br>W(t+<span class="hljs-number">1</span>) = W(t) - lr * <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dW</span> = <span class="hljs-number">0</span> - lr * <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dZ</span> * x = -lr * <span class="hljs-built_in">dL</span>/<span class="hljs-built_in">dZ</span> * x<br></code></pre></td></tr></table></figure>
+
+<p>如果dL&#x2F;dZ * x &gt; 0（即条件信号在这个通道有帮助）：W向负方向增长（绝对值增大），条件信号增强。<br>如果dL&#x2F;dZ * x ≈ 0（条件信号无帮助）：W保持在0附近，条件信号保持弱。</p>
+<p>这种”需求驱动”的自适应学习是零卷积的核心优势——相比随机初始化（可能在训练初期注入噪声），零卷积保证了”不产生任何不必要的影响”。</p>
+<p><strong>子问题3：空间条件的表示与注入方式。</strong> ControlNet支持多种空间条件（Canny边缘、深度图、姿态关键点、语义分割图等）。这些条件的信息密度截然不同：Canny边缘是二值图（256×256×1，信息量约8KB），语义分割是RGB彩色标签图（256×256×3，信息量约192KB）。</p>
+<p>ControlNet的统一处理方式：所有条件都resize到潜在空间分辨率（如32×32或64×64），通过零卷积映射到特征维度，然后在encode的每个分辨率级别注入条件特征。这种”分辨率无关”的统一处理是架构简洁性的来源。</p>
+<p>具体注入方式（以SD1.5的潜空间64x64为例）：</p>
+<ol>
+<li>输入条件图（H×W×C_cond）→ resize到64×64 → 零卷积1（64×64×320 latent dim）→ 与潜变量z_t（64×64×4）拼接 → [64×64×(320+4)]作为可训练副本的输入</li>
+<li>在每个编码器块的输出：可训练副本的输出 → 零卷积n（匹配锁定副本该块输出的维度）→ 加到锁定副本的对应输出上</li>
+</ol>
+<p>为什么在编码器的每个级别注入？因为U-Net的编码器在不同分辨率处理不同粒度的特征——低分辨率处理全局结构（64×64→32×32→16×16→8×8），条件也需要在对应的粒度级别上影响生成。例如，Canny边缘在64×64级别提供了精细的边缘信息，在8×8级别提供了整体的结构约束。</p>
+<p><strong>子问题4：ControlNet与社区微调模型的兼容性。</strong> 一个关键的产品问题：用户经常用DreamBooth&#x2F;LoRA&#x2F;Textual Inversion微调基础SD模型来生成”特定的狗”或”特定的人”。ControlNet能否与这些微调模型兼容？</p>
+<p>答案是：是的——因为ControlNet仅修改可训练副本（它是一个”插件”而非模型修改）。用户只需加载：被微调的SD模型权重到锁定副本 + 训练好的ControlNet权重到可训练副本。两者独立加载、联合推理。</p>
+<p>这个”正交性”是ControlNet被社区广泛采用的根本原因——它不需要”ControlNet版本的每个微调模型”。</p>
+<p>技术细节：DreamBooth微调修改了UNet的全部权重（包括编码器和解码器），而ControlNet的锁定副本就是完整的UNet。当加载DreamBooth模型时，用户简单地将DreamBooth权重放入锁定副本——可训练副本的零卷积曾见过的是原始SD编码器的输出模式，而现在接收到的是DreamBooth编码器的输出模式。由于DreamBooth和原始SD的输出在语义上是相似的（都是”图像特征”），ControlNet的可训练副本能够很好地泛化。实验表明，DreamBooth + ControlNet的组合成功率超过95%——在所有测试案例中，ControlNet的边缘&#x2F;深度&#x2F;姿态控制都能正常传递到DreamBooth的个性化生成结果中。</p>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="条件类型及训练数据"><a href="#条件类型及训练数据" class="headerlink" title="条件类型及训练数据"></a>条件类型及训练数据</h3><table>
+<thead>
+<tr>
+<th>条件类型</th>
+<th>训练数据量</th>
+<th>每张图的条件</th>
+<th>训练时间 (A100)</th>
+<th>训练时间 (RTX 3090)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Canny边缘</td>
+<td>~3K-100K</td>
+<td>Canny边缘检测 (低阈值50, 高阈值150)</td>
+<td>~3-5小时</td>
+<td>~8-12小时</td>
+</tr>
+<tr>
+<td>HED软边缘</td>
+<td>~3K-100K</td>
+<td>HED边界检测</td>
+<td>~3-5小时</td>
+<td>~8-12小时</td>
+</tr>
+<tr>
+<td>深度图</td>
+<td>~20K</td>
+<td>MiDaS深度估计 (逆深度归一化)</td>
+<td>~6-8小时</td>
+<td>~15-20小时</td>
+</tr>
+<tr>
+<td>法线图</td>
+<td>~20K</td>
+<td>法线估计 (表面朝向，RGB编码)</td>
+<td>~6-8小时</td>
+<td>~15-20小时</td>
+</tr>
+<tr>
+<td>人体姿态</td>
+<td>~60K</td>
+<td>OpenPose 18关键点 + 肢体连接</td>
+<td>~1-2天</td>
+<td>~3-4天</td>
+</tr>
+<tr>
+<td>语义分割</td>
+<td>ADE20K (~20K)</td>
+<td>150类语义分割标注</td>
+<td>~6-8小时</td>
+<td>~15-20小时</td>
+</tr>
+<tr>
+<td>涂鸦 (Scribble)</td>
+<td>~3K-100K</td>
+<td>合成涂鸦（Canny→随机删除90%边缘）</td>
+<td>~3-5小时</td>
+<td>~8-12小时</td>
+</tr>
+</tbody></table>
+<p><strong>训练通用配置：</strong></p>
+<ul>
+<li>基础模型：Stable Diffusion 1.5</li>
+<li>优化器：Adam (lr&#x3D;1e-5, betas&#x3D;(0.9, 0.999))</li>
+<li>批量大小：4-8 (根据GPU显存，A100使用8，3090使用4)</li>
+<li>图像分辨率：512x512 (训练和推理)</li>
+<li>训练步数：通常3K-10K步即可收敛（极低数据需求）</li>
+<li>数据增强：随机水平翻转（概率0.5）；条件图和RGB图同步翻转</li>
+</ul>
+<h3 id="评估方式"><a href="#评估方式" class="headerlink" title="评估方式"></a>评估方式</h3><table>
+<thead>
+<tr>
+<th>评估维度</th>
+<th>方法</th>
+<th>指标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>条件保真度</td>
+<td>生成图与输入条件的相似度</td>
+<td>LoRA distance to condition, edge recall</td>
+</tr>
+<tr>
+<td>图像质量</td>
+<td>FID (vs MS-COCO 30K)</td>
+<td>越低越好</td>
+</tr>
+<tr>
+<td>用户研究</td>
+<td>人工判断条件跟随准确性</td>
+<td>两两比较偏好率</td>
+</tr>
+<tr>
+<td>与社区模型叠加</td>
+<td>DreamBooth + ControlNet的质量</td>
+<td>主观评估</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><h3 id="机制流程（扩展详细版-with-Input-Operation-Output）"><a href="#机制流程（扩展详细版-with-Input-Operation-Output）" class="headerlink" title="机制流程（扩展详细版 with Input&#x2F;Operation&#x2F;Output）"></a>机制流程（扩展详细版 with Input&#x2F;Operation&#x2F;Output）</h3><p><strong>步骤1：权重复制与冻结</strong></p>
+<ul>
+<li>输入：预训练的Stable Diffusion U-Net编码器（12个下采样块 + 1个中间块），每个块包含ResBlock + SpatialTransformer + Downsample</li>
+<li>操作：(1) 遍历U-Net encoder的所有12个块（从input_blocks.1到input_blocks.11 + middle_block）；(2) 对每个块，创建一份深拷贝作为”可训练副本”（参数的requires_grad&#x3D;True）；(3) 将原始块的权重标记为”锁定副本”（冻结，requires_grad&#x3D;False）；(4) 注意：解码器（output_blocks）不被复制——ControlNet仅复制编码器</li>
+<li>输出：两份结构完全相同的编码器（可训练+锁定），锁定副本的参数不再改变</li>
+</ul>
+<p><strong>步骤2：条件编码与注入</strong></p>
+<ul>
+<li>输入：空间条件图像（如Canny边缘图 H×W×1）</li>
+<li>操作：(1) 将条件图像resize为与潜变量相同的空间分辨率（SD1.5为64×64）；(2) 通过零卷积1（1×1 Conv, W&#x3D;0, b&#x3D;0, in_channels&#x3D;C_cond, out_channels&#x3D;320）映射为潜在特征；(3) 将映射后的条件特征与噪声潜变量z_t（64×64×4）在通道维度拼接→ [B, 324, 64, 64]；(4) 拼接后的张量作为可训练副本每个编码器块的输入</li>
+<li>输出：每层可训练副本的特征（与锁定副本对应层输出同维度）</li>
+</ul>
+<p><strong>步骤3：零卷积连接（锁定↔可训练）</strong></p>
+<ul>
+<li>在每个下采样块的输出位置：(1) 将可训练副本该块的输出通过零卷积_n（1×1 Conv, W&#x3D;0, b&#x3D;0, in_channels&#x3D;C_feat, out_channels&#x3D;C_feat）映射；(2) 将零卷积的输出加到锁定副本对应层的输出上：locked_output[i] &#x3D; locked_feat[i] + ZC( trainable_feat[i] )；(3) 训练初期零卷积输出为0→locked_output&#x3D;locked_feat，控制信号不影响生成；(4) 训练中W逐步增长→条件信号逐步加入生成过程</li>
+<li>零卷积的数量：等于编码器块的数量+1（输入和中间层各需要一次零卷积），总共约13个零卷积层</li>
+</ul>
+<p><strong>步骤4：训练与推理</strong></p>
+<ul>
+<li>训练：(1) 损失函数为标准扩散噪声预测损失 L_simple &#x3D; E[|ε - ε_θ(z_t, t, c_text, c_control)|²]；(2) 仅更新可训练副本+零卷积参数（约360M），锁定副本冻结（约860M, SD1.5 UNet）；(3) 梯度从锁定副本的输出反向传播，通过零卷积进入可训练副本</li>
+<li>推理：(1) 加载社区模型（如DreamBooth微调后的SD）→ 锁定副本；(2) 加载对应ControlNet（如Canny ControlNet）→ 可训练副本；(3) 用户提供文本prompt + 空间条件图 → UNet同时接收文本（通过交叉注意力）和条件（通过零卷积来自可训练副本）；(4) CFG（Classifier-Free Guidance）同样适用——引导scale增加条件跟随强度</li>
+</ul>
+<h3 id="零卷积的数学"><a href="#零卷积的数学" class="headerlink" title="零卷积的数学"></a>零卷积的数学</h3><p>零卷积定义：Z(x) &#x3D; W*x + b, 其中W&#x3D;0, b&#x3D;0（所有初始值为0）。<br>训练初期 dL&#x2F;dx &#x3D; W^T * dL&#x2F;dZ &#x3D; 0（因为W&#x3D;0），锁定副本完全不受可训练副本影响。</p>
+<p>训练中W的增长速率的数学推导：</p>
+<figure class="highlight inform7"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs inform7">dL/dW<span class="hljs-comment">[i,j]</span> = sum_over_spatial( dL/dZ * x )  <br>其中Z<span class="hljs-comment">[i,j]</span> = sum_k( W<span class="hljs-comment">[i,k]</span> * x<span class="hljs-comment">[k]</span> ) + b<span class="hljs-comment">[i]</span>  (标准1×1 conv)<br>初始: W=0 → dL/dx<span class="hljs-comment">[i]</span> = sum_j( W<span class="hljs-comment">[j,i]</span> * dL/dZ<span class="hljs-comment">[j]</span> ) = 0<br><br>因此锁定副本的梯度= dL/d(locked_feat<span class="hljs-comment">[i]</span>) = original_grad + 0 (不受零卷积影响)<br></code></pre></td></tr></table></figure>
+
+<p>关键：dL&#x2F;d(locked_feat[i]) &#x3D; original_grad——锁定副本收到的梯度与原始SD完全相同。这保证了训练初期，模型的行为完全等价于原始SD。</p>
+<h3 id="关键技术洞察：为何复制编码器而非解码器？"><a href="#关键技术洞察：为何复制编码器而非解码器？" class="headerlink" title="关键技术洞察：为何复制编码器而非解码器？"></a>关键技术洞察：为何复制编码器而非解码器？</h3><p>ControlNet仅复制了U-Net的编码器（12个下采样块），而非整个U-Net（编码器+解码器）。原因：(a) 编码器负责”理解”输入图像的结构——这正是条件控制需要影响的（从”给定条件下的特征提取”角度）；(b) 解码器负责”合成”图像（将特征上采样到像素），其合成规则是通用的——不受条件类型影响；(c) 仅复制编码器将可训练参数减半（约360M vs 约720M），训练更快、更稳定。</p>
+<p>更深入的解释：U-Net的编码器通过逐层下采样将输入转换为越来越抽象的特征表示。解码器通过skip connection获取编码器的多尺度特征，并进行上采样重建。ControlNet在编码器层面注入条件信号，意味着条件影响了所有抽象级别的特征——从低级边缘（浅层）到高级语义（深层）。解码器不需要额外条件，因为它已经通过skip connection接收了被条件影响过的编码器特征。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><h3 id="多种条件类型的生成质量"><a href="#多种条件类型的生成质量" class="headerlink" title="多种条件类型的生成质量"></a>多种条件类型的生成质量</h3><table>
+<thead>
+<tr>
+<th>条件类型</th>
+<th>条件保真度</th>
+<th>图像质量 (FID)</th>
+<th>样本多样性</th>
+<th>训练收敛步数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Canny边缘</td>
+<td>极高（&gt;95%边缘准确率）</td>
+<td>15.5 (基SD: 15.3)</td>
+<td>高</td>
+<td>~5K步</td>
+</tr>
+<tr>
+<td>HED软边缘</td>
+<td>极高</td>
+<td>15.8</td>
+<td>高</td>
+<td>~5K步</td>
+</tr>
+<tr>
+<td>深度图</td>
+<td>高</td>
+<td>16.2</td>
+<td>高</td>
+<td>~8K步</td>
+</tr>
+<tr>
+<td>人体姿态</td>
+<td>高</td>
+<td>16.8</td>
+<td>中-高</td>
+<td>~15K步</td>
+</tr>
+<tr>
+<td>语义分割</td>
+<td>高</td>
+<td>17.1</td>
+<td>中</td>
+<td>~10K步</td>
+</tr>
+<tr>
+<td>涂鸦 (Scribble)</td>
+<td>中-高（输入极稀疏）</td>
+<td>15.9</td>
+<td>极高（输入约束少）</td>
+<td>~5K步</td>
+</tr>
+</tbody></table>
+<h3 id="不同训练数据量下的性能"><a href="#不同训练数据量下的性能" class="headerlink" title="不同训练数据量下的性能"></a>不同训练数据量下的性能</h3><table>
+<thead>
+<tr>
+<th>训练数据量</th>
+<th>Canny FID</th>
+<th>Canny 边缘准确率</th>
+<th>训练时间</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3K 图像</td>
+<td>16.8</td>
+<td>88%</td>
+<td>~2小时</td>
+<td>快速原型</td>
+</tr>
+<tr>
+<td>10K 图像</td>
+<td>15.9</td>
+<td>93%</td>
+<td>~4小时</td>
+<td>一般用途</td>
+</tr>
+<tr>
+<td>50K 图像</td>
+<td>15.5</td>
+<td>95%</td>
+<td>~6小时</td>
+<td>高质量生产</td>
+</tr>
+<tr>
+<td>100K 图像</td>
+<td>15.4</td>
+<td>95%</td>
+<td>~8小时</td>
+<td>边际收益递减</td>
+</tr>
+</tbody></table>
+<p>关键发现：3K图像已经达到88%的边缘准确率——ControlNet的数据效率极高。从3K到50K，FID改善约1.3，边缘准确率改善约7%——大部分收益在前3K-10K内获得。</p>
+<h3 id="与GLIGEN的详细比较"><a href="#与GLIGEN的详细比较" class="headerlink" title="与GLIGEN的详细比较"></a>与GLIGEN的详细比较</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GLIGEN</th>
+<th>ControlNet</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构方法</td>
+<td>在U-Net中插入新层（门控自注意力）</td>
+<td>复制编码器（不修改原模型）</td>
+</tr>
+<tr>
+<td>可训练参数</td>
+<td>新插入层的参数（约200M）</td>
+<td>编码器副本+零卷积（约360M）</td>
+</tr>
+<tr>
+<td>与社区模型兼容</td>
+<td>需为每个微调模型重新训练GLIGEN层</td>
+<td>即插即用，无需重新训练</td>
+</tr>
+<tr>
+<td>支持条件类型</td>
+<td>边界框、关键点（稀疏空间条件）</td>
+<td>任意图像类型条件（密集空间条件）</td>
+</tr>
+<tr>
+<td>空间精度</td>
+<td>高（区域级）</td>
+<td>极高（像素级）</td>
+</tr>
+<tr>
+<td>训练数据量</td>
+<td>较多（10万+ for grounding）</td>
+<td>极少（3K-60K）</td>
+</tr>
+<tr>
+<td>多条件同时使用</td>
+<td>不支持</td>
+<td>支持（多个ControlNet叠加）</td>
+</tr>
+<tr>
+<td>推理开销</td>
+<td>插入层的前向计算（+10-15%时间）</td>
+<td>编码器副本前向（+50-80%时间）</td>
+</tr>
+<tr>
+<td>架构侵入性</td>
+<td>侵入（修改了UNet结构）</td>
+<td>非侵入（UNet结构不变）</td>
+</tr>
+</tbody></table>
+<h3 id="ControlNet叠加实验"><a href="#ControlNet叠加实验" class="headerlink" title="ControlNet叠加实验"></a>ControlNet叠加实验</h3><p>研究”同时使用多个ControlNet”的效果：</p>
+<table>
+<thead>
+<tr>
+<th>叠加组合</th>
+<th>单一FID</th>
+<th>叠加FID</th>
+<th>单一准确率</th>
+<th>叠加准确率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Canny + Depth</td>
+<td>Canny: 15.5, Depth: 16.2</td>
+<td>15.8</td>
+<td>Canny: 95%, Depth: 90%</td>
+<td>Canny: 92%, Depth: 87%</td>
+</tr>
+<tr>
+<td>Canny + Pose</td>
+<td>Canny: 15.5, Pose: 16.8</td>
+<td>16.2</td>
+<td>Canny: 95%, Pose: 85%</td>
+<td>Canny: 90%, Pose: 82%</td>
+</tr>
+<tr>
+<td>Canny + Depth + Pose</td>
+<td>如上</td>
+<td>16.9</td>
+<td>如上</td>
+<td>各降3-5%</td>
+</tr>
+</tbody></table>
+<p>关键：叠加使每个单一条件的准确率下降约3-5%，但整体保持了合理的平衡——两个ControlNet的权重可以手动调alpha来平衡优先级。</p>
+<h3 id="与社区工具的叠加效果"><a href="#与社区工具的叠加效果" class="headerlink" title="与社区工具的叠加效果"></a>与社区工具的叠加效果</h3><table>
+<thead>
+<tr>
+<th>组合</th>
+<th>效果</th>
+<th>用途</th>
+<th>社区采用率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ControlNet + DreamBooth</td>
+<td>主体一致性+姿态控制</td>
+<td>生成”特定狗在特定姿势”</td>
+<td>极高</td>
+</tr>
+<tr>
+<td>ControlNet + LoRA</td>
+<td>风格一致性+边缘控制</td>
+<td>生成”水墨画风格的建筑”</td>
+<td>极高</td>
+</tr>
+<tr>
+<td>ControlNet + Textual Inversion</td>
+<td>概念一致性+深度控制</td>
+<td>生成”特定角色的3D视角”</td>
+<td>高</td>
+</tr>
+<tr>
+<td>Canny ControlNet + Depth ControlNet</td>
+<td>边缘+深度双重条件</td>
+<td>更强的空间约束</td>
+<td>高</td>
+</tr>
+<tr>
+<td>ControlNet + IP-Adapter</td>
+<td>边缘控制+参考图风格</td>
+<td>图像prompt+精确布局</td>
+<td>中-高</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><h3 id="为什么复制编码器而非微调——灾难性遗忘的完整解释"><a href="#为什么复制编码器而非微调——灾难性遗忘的完整解释" class="headerlink" title="为什么复制编码器而非微调——灾难性遗忘的完整解释"></a>为什么复制编码器而非微调——灾难性遗忘的完整解释</h3><p>ControlNet的”复制编码器”设计创建了一个与预训练模型完全同构的”影子网络”——特征语义天然对齐、天然残差学习、训练稳定性保证。</p>
+<p>理解为什么这比微调好：全参数微调的问题是条件信号和生成信号的梯度共享同一组参数。条件相关的梯度可能覆盖生成相关的梯度——导致”条件学好了，生成变差了”。</p>
+<p>具体机制：在微调中，dL&#x2F;dW &#x3D; dL_text&#x2F;dW + dL_condition&#x2F;dW（文本生成梯度+条件跟随梯度）。这两个梯度可能指向不同的方向（在W的高维空间中）。当条件梯度很强时（如在边缘附近需要大幅改变生成结果），它会主导更新方向，将W拉离文本生成的最优区域。</p>
+<p>ControlNet通过分离参数空间避免了这个问题：W_locked的梯度不受条件信号影响（因为零卷积初始化，训练初期梯度为零；训练后期梯度也有限）。W_trainable的梯度仅来自条件信号——它与W_locked分离，”条件学习和生成保持”两个目标不再竞争同一组参数。</p>
+<h3 id="零卷积的”渐进学习”效应——学习动力学的三阶段"><a href="#零卷积的”渐进学习”效应——学习动力学的三阶段" class="headerlink" title="零卷积的”渐进学习”效应——学习动力学的三阶段"></a>零卷积的”渐进学习”效应——学习动力学的三阶段</h3><p>零卷积产生的三阶段训练课程：</p>
+<ul>
+<li>阶段1 (W≈0): 模型&#x3D;原始SD，控制信号为0→不破坏原有能力。验证：此时FID&#x3D;15.3（完全等于原始SD），边缘准确率≈随机（~30%，因为生成不受控制）</li>
+<li>阶段2 (W逐步增长): 控制信号增强，模型学习在保持质量的同时引入条件。验证：FID缓慢上升到15.5（仅+1.3%），边缘准确率快速上升到&gt;85%。这是”找到平衡”的关键时期</li>
+<li>阶段3 (W收敛): 条件控制能力达到饱和。验证：FID稳定在约15.5，边缘准确率约95%。进一步训练不再显著改善</li>
+</ul>
+<p>这个三阶段是”安全学习”的核心——模型不会经历”先破坏再重建”的过程（微调中常见的现象），而是”从完美起点逐步引入新能力”。</p>
+<p>零卷积的W增长曲线可以形象化理解：</p>
+<ul>
+<li>Step 0: W的L2范数 &#x3D; 0</li>
+<li>Step 500: W的L2范数 ≈ 0.05-0.1（开始有微弱影响）</li>
+<li>Step 1000: W的L2范数 ≈ 0.2-0.3（影响逐渐明显）</li>
+<li>Step 3000: W的L2范数 ≈ 0.5-0.7（接近收敛）</li>
+<li>Step 5000+: W的L2范数 ≈ 0.6-0.8（稳定）</li>
+</ul>
+<h3 id="ControlNet与Prompt-to-Prompt的互补"><a href="#ControlNet与Prompt-to-Prompt的互补" class="headerlink" title="ControlNet与Prompt-to-Prompt的互补"></a>ControlNet与Prompt-to-Prompt的互补</h3><table>
+<thead>
+<tr>
+<th>控制维度</th>
+<th>ControlNet</th>
+<th>Prompt-to-Prompt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>控制方式</td>
+<td>显式空间条件（输入另一张图）</td>
+<td>文本注意力操控（prompt修改）</td>
+</tr>
+<tr>
+<td>精度级别</td>
+<td>像素级</td>
+<td>词级（区域级）</td>
+</tr>
+<tr>
+<td>需要训练</td>
+<td>是（但数据量极少）</td>
+<td>否（纯推理时操控）</td>
+</tr>
+<tr>
+<td>任务范围</td>
+<td>生成控制</td>
+<td>编辑控制</td>
+</tr>
+<tr>
+<td>可组合性</td>
+<td>多个ControlNet可叠加</td>
+<td>多个prompt token可独立操控</td>
+</tr>
+<tr>
+<td>使用门槛</td>
+<td>需要条件图像</td>
+<td>仅需文本描述</td>
+</tr>
+</tbody></table>
+<p>两者解决的实际上是不同问题：ControlNet是”生成时控制”（从零开始创建一个特定布局的图像），P2P是”编辑时控制”（修改已有图像中的特定部分）。在实际应用中，通常先用ControlNet生成满足空间约束的初稿，再用P2P或其他编辑方法进行微调。</p>
+<h3 id="ControlNet的成功因素——技术、时机和社区的完美结合"><a href="#ControlNet的成功因素——技术、时机和社区的完美结合" class="headerlink" title="ControlNet的成功因素——技术、时机和社区的完美结合"></a>ControlNet的成功因素——技术、时机和社区的完美结合</h3><p>ControlNet的爆发出乎意料地广泛——GitHub 30K+星标、被集成到所有主流工具中。这不是仅靠技术优秀能解释的。分析其成功因素：</p>
+<ol>
+<li><strong>技术因素</strong>: “即插即用”设计完美适配SD社区的使用习惯。用户不需要重新训练任何东西——下载ControlNet权重，加载自己喜欢的SD模型，立即获得控制能力。</li>
+<li><strong>时机因素</strong>: 发布在2023年2月——恰逢SD1.5社区生态最活跃的时期。ComfyUI、Automatic1111等工具刚刚成熟，为ControlNet提供了现成的分发渠道。</li>
+<li><strong>社区因素</strong>: ControlNet的”插件”性质完美契合了社区modding文化。用户可以将ControlNet与其他社区模型（DreamBooth、LoRA、Textual Inversion）自由组合——这种”乐高式”的模块化是社区创造的催化剂。</li>
+<li><strong>门槛因素</strong>: 训练一个ControlNet仅需3K-60K图像、在RTX3090上数小时——学术实验室和个人开发者都能承受。不像某些需要数百A100的方法。</li>
+</ol>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>端到端微调</th>
+<th>引导方法</th>
+<th>GLIGEN</th>
+<th>ControlNet</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>预训练知识保留</td>
+<td>可能丧失</td>
+<td>完整保留</td>
+<td>完整保留</td>
+<td>完整保留</td>
+</tr>
+<tr>
+<td>与社区模型兼容</td>
+<td>否</td>
+<td>是</td>
+<td>部分</td>
+<td>是</td>
+</tr>
+<tr>
+<td>训练数据需求</td>
+<td>较大</td>
+<td>0（但效果差）</td>
+<td>10万+</td>
+<td>极小（数千张）</td>
+</tr>
+<tr>
+<td>控制精度</td>
+<td>高</td>
+<td>低</td>
+<td>区域级</td>
+<td>像素级</td>
+</tr>
+<tr>
+<td>推理开销</td>
+<td>无增加</td>
+<td>额外梯度计算</td>
+<td>+10-15%</td>
+<td>+50-80%</td>
+</tr>
+<tr>
+<td>条件类型</td>
+<td>任意</td>
+<td>仅文本</td>
+<td>边界框&#x2F;关键点</td>
+<td>任意密集条件</td>
+</tr>
+<tr>
+<td>多条件叠加</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td>是</td>
+</tr>
+</tbody></table>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><ol>
+<li><strong>每种条件类型需要单独训练</strong> — Canny、深度、姿态各需一个ControlNet。多条件需加载多个模型并组合。</li>
+<li><strong>推理开销增加约50-100%</strong> — 可训练副本增加了额外前向传播计算。多个ControlNet叠加时开销更大（2个约+100%，3个约+150%）。</li>
+<li><strong>对输入条件图的质量敏感</strong> — 劣质条件图（边缘检测不完整、深度估计噪声大）直接影响生成质量。Canny阈值设置不当会导致边缘过密或过稀。</li>
+<li><strong>极少量训练数据的泛化局限</strong> — 3K张图像虽然够用，但在极端条件（非常规姿态、复杂光照）下可能泛化不足。在”倒立行走的人”这一罕见姿态上，Pose ControlNet的成功率仅约60%。</li>
+<li><strong>U-Net架构特定</strong> — 最初为U-Net设计，在SD3&#x2F;Flux的DiT（Diffusion Transformer）架构中需要重新适配（ControlNet-XS等工作解决了这个问题）。</li>
+<li><strong>空间条件的局限性</strong> — ControlNet擅长空间条件（边缘、深度、姿态），但对”非空间条件”（如情感、风格、复杂度级别）效果不佳——这些仍然需要文本prompt。</li>
+<li><strong>组合多个ControlNet时权重的平衡</strong> — 当同时使用Canny+Depth ControlNet时，两个控制信号可能冲突——哪个优先？需要手动调权重。权重的选择约0.5-1.5之间，需要在”控制精度”和”生成质量”之间反复试验。</li>
+</ol>
+<h3 id="不同条件类型的失败模式分析"><a href="#不同条件类型的失败模式分析" class="headerlink" title="不同条件类型的失败模式分析"></a>不同条件类型的失败模式分析</h3><table>
+<thead>
+<tr>
+<th>条件类型</th>
+<th>主要失败模式</th>
+<th>频率</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Canny边缘</td>
+<td>过度拟合边缘（生成”线稿感”）</td>
+<td>~5%</td>
+<td>边缘图过密或W增长过快</td>
+</tr>
+<tr>
+<td>深度图</td>
+<td>远景模糊（缺乏细节纹理）</td>
+<td>~10%</td>
+<td>深度估计本身对远景分辨率低</td>
+</tr>
+<tr>
+<td>姿态</td>
+<td>肢体比例异常</td>
+<td>~15%</td>
+<td>OpenPose检测误差传递</td>
+</tr>
+<tr>
+<td>语义分割</td>
+<td>对象边界模糊（混合类别）</td>
+<td>~10%</td>
+<td>分割边界不精确</td>
+</tr>
+</tbody></table>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><ol>
+<li><strong>“复制而非修改”的即插即用范式</strong> — 对预训练模型，复制架构并在副本上学习新能力，比修改原模型更安全更高效（后续IP-Adapter、AnimateDiff、LoRA都遵循此哲学）。</li>
+<li><strong>零初始化的平稳学习</strong> — 新模块权重初始化为零，从”不做任何事情”开始学习，比随机初始化更稳定（LoRA的B矩阵、GLIGEN的门控都使用类似技巧）。</li>
+<li><strong>空间条件的通用注入框架</strong> — 任何空间条件都可通过”编码器副本+零卷积”的统一框架处理，只需改变输入通道数。</li>
+</ol>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><p>ControlNet是”论文即产品”的经典案例。在Stable Diffusion社区中，”ControlNet”已成为动词（”我ControlNet了一个姿势”）——这种语言层面的渗透极少数学术论文能达到。”最小侵入性”设计哲学是成功的核心——“做好一件事，不破坏任何事”的模块化设计比单体设计更具生命力。GitHub上超过30K星标，被集成到ComfyUI、Automatic1111、Diffusers等所有主流SD工具中。ControlNet的发表（2023年2月）恰逢SD 1.5社区爆发的关键时期——它为社区提供了从”随机生成”到”精确控制”的缺失拼图。</p>
+<p>从技术哲学角度，ControlNet体现了”约束即自由”的悖论——为模型添加更多的条件约束，反而让用户的创造力得到了更大的释放。这在创意工具设计中是一个反复出现的主题：精确定义”限制”使得”可能性空间”变得可导航。</p>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><ol>
+<li>能否训练统一ControlNet处理多种条件类型？联合训练是否带来能力互补？</li>
+<li>视频扩散模型中如何实现类似的空间条件控制？时间一致性如何保证？</li>
+<li>在DiT架构（SD3&#x2F;Flux）中，ControlNet式的方案是否仍最优？</li>
+<li>零卷积是否可以被更高级的初始化策略（如基于条件的注意力门控）替代？</li>
+</ol>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Zhang, L., et al. (2023). Adding Conditional Control to Text-to-Image Diffusion Models. ICCV 2023.</li>
+<li>Rombach, R., et al. (2022). High-Resolution Image Synthesis with Latent Diffusion Models. CVPR 2022.</li>
+<li>Li, Y., et al. (2023). GLIGEN: Open-Set Grounded Text-to-Image Generation. CVPR 2023.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AIGC/" class="category-chain-item">AIGC</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/AIGC/%E5%8F%AF%E6%8E%A7%E7%94%9F%E6%88%90%E4%B8%8E%E7%BC%96%E8%BE%91/" class="category-chain-item">可控生成与编辑</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-diffusion-models/" class="print-no-link">#papers/diffusion-models</a>
+      
+        <a href="/tags/papers-generative-ai/" class="print-no-link">#papers/generative-ai</a>
+      
+        <a href="/tags/papers-controllable-generation/" class="print-no-link">#papers/controllable-generation</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Adding Conditional Control to Text-to-Image Diffusion Models</div>
+      <div>https://w2ongq6.github.io/2023/02/10/aigc/note/ControlNet_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年2月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/02/14/aigc/note/Glaze_note/" title="Glaze: Protecting Artists from Style Mimicry by Text-to-Image Models">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Glaze: Protecting Artists from Style Mimicry by Text-to-Image Models</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/02/09/llm/note/Toolformer_note/" title="Toolformer: Language Models Can Teach Themselves to Use Tools">
+                        <span class="hidden-mobile">Toolformer: Language Models Can Teach Themselves to Use Tools</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

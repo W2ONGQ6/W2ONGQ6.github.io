@@ -1,0 +1,1240 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="AQLM: 基于加性量化的LLM极致压缩方法核心信息 标题: AQLM: Extreme Compression of Large Language Models via Additive Quantization 标题翻译: AQLM：基于加性量化的LLM极致压缩 作者: Vage Egiazarian, Andrei Panferov, Denis Kuznedelev, Elias Fran">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AQLM: Extreme Compression of Large Language Models via Additive Quantization">
+<meta property="og:url" content="https://w2ongq6.github.io/2024/07/01/inference/note/AQLM_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="AQLM: 基于加性量化的LLM极致压缩方法核心信息 标题: AQLM: Extreme Compression of Large Language Models via Additive Quantization 标题翻译: AQLM：基于加性量化的LLM极致压缩 作者: Vage Egiazarian, Andrei Panferov, Denis Kuznedelev, Elias Fran">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_005_full.png">
+<meta property="article:published_time" content="2024-06-30T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:24.177Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;model-compression">
+<meta property="article:tag" content="papers&#x2F;quantization">
+<meta property="article:tag" content="papers&#x2F;systems">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>AQLM: Extreme Compression of Large Language Models via Additive Quantization - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="AQLM: Extreme Compression of Large Language Models via Additive Quantization"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-07-01 00:00" pubdate>
+          2024年7月1日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          82 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">AQLM: Extreme Compression of Large Language Models via Additive Quantization</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="AQLM-基于加性量化的LLM极致压缩方法"><a href="#AQLM-基于加性量化的LLM极致压缩方法" class="headerlink" title="AQLM: 基于加性量化的LLM极致压缩方法"></a>AQLM: 基于加性量化的LLM极致压缩方法</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: AQLM: Extreme Compression of Large Language Models via Additive Quantization</li>
+<li>标题翻译: AQLM：基于加性量化的LLM极致压缩</li>
+<li>作者: Vage Egiazarian, Andrei Panferov, Denis Kuznedelev, Elias Frantar, Artem Babenko, Dan-Adrian Alistarh</li>
+<li>机构: IST Austria, Yandex Research, HSE University</li>
+<li>发表时间: 2024年1月提交, 2024年7月发表</li>
+<li>发表渠道: ICML 2024 (PMLR Vol. 235, pp. 12284-12303)</li>
+<li>arXiv: 2401.06118</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.06118">https://arxiv.org/abs/2401.06118</a></li>
+<li>代码 &#x2F; 项目: <a target="_blank" rel="noopener" href="https://github.com/Vahe1994/AQLM">https://github.com/Vahe1994/AQLM</a></li>
+<li>论文类型: AI系统优化与模型压缩方法</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们提出加性量化语言模型（AQLM），一种面向LLM的极致压缩方法。AQLM将信息检索领域的经典加性量化（AQ）框架泛化到LLM权重压缩中。具体而言，每个权重向量被表示为学习得到的码本中多个向量的和，这比传统的标量量化提供了更丰富的表示能力。我们通过三个关键创新使AQ适应LLM压缩：我们将AQ扩展到输入自适应的权重编码、跨整个Transformer块联合优化码本参数，以及使用专门的微调步骤进一步恢复质量。在Llama 2 70B上，AQLM以2位精度达到的压缩效果仅比FP16退化0.22 perplexity，一致优于所有已知的后训练量化方法。此外，我们提供高效的GPU和CPU推理内核，使得在显著减少内存的同时能够匹配甚至超越FP16的推理速度。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-将加性量化从信息检索推广到LLM权重量化"><a href="#1-将加性量化从信息检索推广到LLM权重量化" class="headerlink" title="1. 将加性量化从信息检索推广到LLM权重量化"></a>1. 将加性量化从信息检索推广到LLM权重量化</h3><p><strong>核心思想</strong>: 加性量化（Additive Quantization, AQ）是信息检索中压缩高维向量的经典技术。其核心思想是：一个高维向量$w \in \mathbb{R}^d$不是被量化到单个最近的码本向量，而是被表示为$M$个来自不同码本的向量的和：<br>$$w \approx \sum_{m&#x3D;1}^{M} c_m(i_m)$$<br>其中$c_m$是第$m$个码本，$i_m$是从该码本中选择的索引。$M$个码本，每个码本$K$个码字，可表示$K^M$种不同的组合——指数级增长的表示空间。</p>
+<p><strong>为什么重要</strong>: 标量量化每权重独立决策，$d$个权重需$d$个索引。向量量化（如E8格）一次处理$g$个权重，但表示能力有限。加性量化位于两者之间：用多个码本的组合来表示一个权重向量组，提供了指数级的表示空间，同时保持了较低的索引存储开销。</p>
+<h3 id="2-输入自适应权重量化"><a href="#2-输入自适应权重量化" class="headerlink" title="2. 输入自适应权重量化"></a>2. 输入自适应权重量化</h3><p><strong>核心思想</strong>: 传统的权重量化假设特定权重的”重要性”是固定的。AQLM发现这是次优的——权重的重要性取决于其输入上下文（即激活模式）。因此AQLM使码本查找依赖于输入：对于输入$x$，权重$w$在不同上下文中的重要程度不同，码本索引的选择应以最小化输出误差（而非重构误差）为目标。</p>
+<p><strong>为什么重要</strong>: 这是从”重构优化”到”功能优化”的范式转变——不是在重建原权重，而是在优化网络的实际输出行为。输入自适应的量化更好地保护了对最终输出更关键的网络路径。</p>
+<h3 id="3-跨Transformer块的联合码本优化"><a href="#3-跨Transformer块的联合码本优化" class="headerlink" title="3. 跨Transformer块的联合码本优化"></a>3. 跨Transformer块的联合码本优化</h3><p><strong>核心思想</strong>: 逐层量化（每层独立优化重构误差）在LLM中可能次优——一层的小误差可能在经过多层后被放大。AQLM将优化范围从单层扩展到整个Transformer块（一个自注意力子块 + 一个FFN子块），通过反向传播联合优化该块内所有层的码本参数。</p>
+<p><strong>为什么重要</strong>: 这解决了”误差累积”问题——如果注意力层的输出有0.01的小偏差，经FFN层后可能被放大为0.1的偏差。通过跨层联合优化，误差可以在一层内被另一层”补偿”，就像GPTQ在权重列间补偿误差的跨层版本。</p>
+<h3 id="4-PV-Tuning专门的微调方案"><a href="#4-PV-Tuning专门的微调方案" class="headerlink" title="4. PV-Tuning专门的微调方案"></a>4. PV-Tuning专门的微调方案</h3><p><strong>核心思想</strong>: 在量化完成后，AQLM执行PV-Tuning（基于投影和值的微调）：冻结量化权重（仅更新码本向量，不改变索引分配），使用重构损失和教师-学生蒸馏损失的组合在标定数据上微调码本内容。</p>
+<p><strong>为什么重要</strong>: 这是量化后的”软着陆”——索引分配（哪个权重用哪个码字）保持不变，但码字本身的向量值可以微调以减少剩余误差。PV-Tuning的成本远低于全模型微调，但在2位精度下贡献了有意义的perplexity改善（通常0.1-0.2 ppl）。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>AQLM通过将信息检索的加性量化泛化到LLM权重、引入输入自适应编码和跨Transformer块联合优化，在2位极致压缩下为Llama 2 70B达到仅退化0.22 perplexity的最优结果，并提供了可匹敌FP16推理速度的高效运行内核。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>在2-3位的极致压缩范围内，传统的标量量化（GPTQ、AWQ）面临信息论瓶颈：</p>
+<ul>
+<li>每权重2位 &#x3D; 仅4个不同值</li>
+<li>即使有分组缩放和误差补偿，4值的表达能力本质上限制了精度</li>
+</ul>
+<p>加性量化的核心问题是：<strong>能否在保持较低索引存储开销的同时，指数级地增加有效表示容量？</strong></p>
+<h3 id="AQ的LLM适配挑战"><a href="#AQ的LLM适配挑战" class="headerlink" title="AQ的LLM适配挑战"></a>AQ的LLM适配挑战</h3><p>经典AQ是为高维空间最近邻搜索设计的，直接应用于LLM权重面临三个问题：</p>
+<ol>
+<li><strong>维度不匹配</strong>: LLM权重矩阵的行或列通常为$d_{model}$维（4096-8192），但AQ在1024-2048维的空间中效果最好</li>
+<li><strong>计算效率</strong>: AQ解码（索引-&gt;码字-&gt;求和）需要多路内存访问和加法，在GPU上的延迟可能抵消内存节省</li>
+<li><strong>优化目标</strong>: AQ优化重构误差，但LLM需要的是功能等价（输出误差最小化）</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p><strong>加性量化的$K^M$指数表示空间天然适合LLM权重的结构化冗余：极少数比特可以表示大量不同的模式，而网络功能仅依赖于部分模式的有效组合。</strong></p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="实验设置"><a href="#实验设置" class="headerlink" title="实验设置"></a>实验设置</h3><ul>
+<li><strong>模型</strong>: Llama 2系列（7B、13B、70B）、Llama 1系列（7B、13B、30B、65B）</li>
+<li><strong>标定数据</strong>: WikiText-2和C4的随机序列</li>
+<li><strong>量化位宽</strong>: 2位和3位（主要）、4位</li>
+<li><strong>码本配置</strong>: 码本数$M &#x3D; 2$（主要），码本大小$K &#x3D; 2^{16}$，组大小$g &#x3D; 8$</li>
+<li><strong>硬件</strong>: NVIDIA A100 80GB、H100 80GB</li>
+</ul>
+<h3 id="评估任务"><a href="#评估任务" class="headerlink" title="评估任务"></a>评估任务</h3><ul>
+<li><strong>语言建模</strong>: WikiText-2和C4 perplexity</li>
+<li><strong>零样本常识推理</strong>: 7项标准任务平均分数</li>
+<li><strong>推理速度</strong>: GPU (A100&#x2F;H100) 和 CPU (Intel Xeon) 的tokens&#x2F;sec对比</li>
+</ul>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="加性量化基础"><a href="#加性量化基础" class="headerlink" title="加性量化基础"></a>加性量化基础</h3><p>传统AQ表示：给定向量$x \in \mathbb{R}^d$和$M$个码本${C_m}<em>{m&#x3D;1}^{M}$（每个码本有$K$个$d$维码字），<br>$$x \approx \sum</em>{m&#x3D;1}^{M} C_m[i_m]$$<br>其中$i_m$是第$m$个码本中最佳码字的索引。存储需求：$M \cdot \log_2 K$ bits（索引）+ $M \cdot K \cdot d \cdot b$ bits（码本本身，在组间共享）。</p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>步骤1: 权重分组与码本初始化</strong></p>
+<p><strong>步骤输入</strong>: 预训练权重矩阵$W$（如FFN down_projection），标定输入$X$<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>将权重按每组$g&#x3D;8$个连续权重划分为向量组（与E8格的8维一致）</li>
+<li>对每个组中的$d_{in}$维权重向量，将其划分为$M&#x3D;2$个子空间（每个子空间处理一半的维度）</li>
+<li>初始化$M&#x3D;2$个码本，每个码本大小$K&#x3D;2^{16}$（通过K-means聚类在对应子空间的权重样本上初始化）</li>
+<li>码本在组间共享（即同一层内所有组使用相同的$M$个码本），码本的存储开销在各组间摊销<br><strong>步骤输出</strong>: 初始化的码本${C_1, C_2}$和组划分</li>
+</ul>
+<p><strong>步骤2: 输入自适应的码字分配</strong></p>
+<p><strong>步骤输入</strong>: 各组权重向量，标定激活$X$，当前码本<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>对每个权重组，不是通过重构误差选择码字索引，而是通过功能误差：<br>$$i_m^* &#x3D; \text{argmin}<em>{i} |X(W_g - \sum</em>{m} C_m[i_m])|_2^2$$</li>
+<li>展开来说：将候选加性表示$\hat{W}_g &#x3D; C_1[i_1] + C_2[i_2]$应用到网络的对应位置，选择使输出激活误差最小的$(i_1, i_2)$对</li>
+<li>由于穷举搜索($K^M &#x3D; (2^{16})^2 &#x3D; 2^{32} &#x3D; 4\text{B}$种组合太大)，采用beam search或迭代优化：固定一个码本的索引，优化另一个</li>
+<li>最终每个权重组被编码为$(i_1, i_2)$——两个16位索引<br><strong>步骤输出</strong>: 每组的索引对$(i_1, i_2)$，以及优化后的码本</li>
+</ul>
+<p><strong>步骤3: 跨Transformer块联合优化</strong></p>
+<p><strong>步骤输入</strong>: 当前Transformer块所有层的量化索引和码本，标定数据<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>构建该块的完整前向计算图（例如：Attention QKV投影 + Attention Output投影 + FFN Up + Gate + Down投影）</li>
+<li>冻结索引分配（$i_1, i_2$不变），将码本向量视为可训练参数</li>
+<li>优化目标：最小化该块输出与原始FP16块输出的均方误差<br>$$\text{min}<em>{{C}} \mathbb{E}</em>{X} \left[ |f_{\text{block}}^{\text{FP16}}(X) - f_{\text{block}}^{\text{AQLM}}(X) |^2 \right]$$</li>
+<li>反向传播更新所有层的码本向量</li>
+<li>关键优势：如果自注意力输出的量化误差可以被FFN输入层的码本”吸收”，联合优化会自然地调整码本来实现这一点<br><strong>步骤输出</strong>: 联合优化后的码本向量</li>
+</ul>
+<p><strong>步骤4: PV-Tuning质量恢复</strong></p>
+<p><strong>步骤输入</strong>: 量化模型、优化后的码本、标定数据<br><strong>步骤操作</strong>:</p>
+<ul>
+<li>保持索引分配不变（不重新搜索最佳码字），仅微调码本向量的数值</li>
+<li>使用两个损失：<ul>
+<li>重构损失：$L_{\text{rec}} &#x3D; |X(W - \hat{W})|^2$（使码字更好地重建原始权重行为）</li>
+<li>蒸馏损失：$L_{\text{distill}} &#x3D; D_{\text{KL}}(p_{\text{FP16}} | p_{\text{AQLM}})$（使量化模型的输出分布匹配原始模型的输出分布）</li>
+</ul>
+</li>
+<li>在少量标定数据上微调若干epoch，学习率极低（通常1e-5到1e-6）</li>
+<li>PV-Tuning比块联合优化更昂贵（需多次前向+反向），但质量恢复效果更好<br><strong>步骤输出</strong>: 最终微调后的码本和量化模型</li>
+</ul>
+<h3 id="位宽分析"><a href="#位宽分析" class="headerlink" title="位宽分析"></a>位宽分析</h3><p>对于AQLM 2位、$M&#x3D;2$码本、$K&#x3D;2^{16}$、组大小$g&#x3D;8$：<br>$$ \text{bits&#x2F;weight} &#x3D; \frac{M \cdot \log_2 K}{g} &#x3D; \frac{2 \cdot 16}{8} &#x3D; 4 \text{ bits?} $$</p>
+<p>等等，这是4 bits而非2 bits。AQLM实际通过以下技巧实现有效2位：</p>
+<ul>
+<li>小$g$（组大小）时使用码本共享策略：相邻组使用相同码本但不同索引</li>
+<li>更重要的：使用$K&#x3D;2^{8}$（8位索引）和更小的组大小$g&#x3D;8$：<br>$$\text{bits&#x2F;weight} &#x3D; \frac{2 \cdot 8}{8} &#x3D; 2 \text{ bits}$$</li>
+<li>或者$M&#x3D;1$单码本、$K&#x3D;2^{16}$、$g&#x3D;8$：$\frac{1 \cdot 16}{8} &#x3D; 2$ bits</li>
+</ul>
+<p>也可通过增加组大小$g&#x3D;16$和$K&#x3D;2^{16}$保持2位：$\frac{2 \cdot 16}{16} &#x3D; 2$ bits。</p>
+<h3 id="GPU推理内核设计"><a href="#GPU推理内核设计" class="headerlink" title="GPU推理内核设计"></a>GPU推理内核设计</h3><p>AQLM的推理面临一个特殊挑战：加性量化解码需要从码本加载码字向量（随机访问模式），并将它们相加。论文设计了融合内核：</p>
+<ol>
+<li>从group index查找两级码本索引</li>
+<li>从GPU shared memory（存储码本向量）加载对应码字</li>
+<li>将$M$个码字相加形成反量化权重向量</li>
+<li>与激活矩阵相乘</li>
+</ol>
+<p>关键优化：码本存储在shared memory中（大小约$M \cdot K \cdot d&#x2F;M \cdot 2\text{B} \approx 2 \cdot 65536 \cdot 4 \cdot 2\text{B} \approx 1\text{MB}$），避免从HBM读取码字，使解码延迟远低于HBM访问延迟。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="语言建模Perplexity（2位量化）"><a href="#语言建模Perplexity（2位量化）" class="headerlink" title="语言建模Perplexity（2位量化）"></a>语言建模Perplexity（2位量化）</h3><h4 id="Llama-2系列在WikiText-2上"><a href="#Llama-2系列在WikiText-2上" class="headerlink" title="Llama 2系列在WikiText-2上"></a>Llama 2系列在WikiText-2上</h4><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FP16</th>
+<th>GPTQ 2-bit</th>
+<th>AWQ 2-bit</th>
+<th>QuIP 2-bit</th>
+<th>AQLM 2-bit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Llama 2 7B</td>
+<td>5.47</td>
+<td>6.98 (+1.51)</td>
+<td>27.01 (+21.54)</td>
+<td>6.53 (+1.06)</td>
+<td><strong>5.92 (+0.45)</strong></td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>AWQ在2位下完全崩溃</strong>（27.01 ppl on 7B），证明了缩放保护在极端位宽下不够。AQLM在70B上追平QuIP#（两者均为+0.22 ppl），是当时2位量化的并列最佳结果。</p>
+<h4 id="各方法的帕累托前沿（Llama-2-70B，WikiText-2）"><a href="#各方法的帕累托前沿（Llama-2-70B，WikiText-2）" class="headerlink" title="各方法的帕累托前沿（Llama 2 70B，WikiText-2）"></a>各方法的帕累托前沿（Llama 2 70B，WikiText-2）</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>位宽</th>
+<th>Perplexity</th>
+<th>模型大小 (GB)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16</td>
+<td>16</td>
+<td>3.32</td>
+<td>140.0</td>
+</tr>
+<tr>
+<td>GPTQ</td>
+<td>4</td>
+<td>3.40 (+0.08)</td>
+<td>35.0</td>
+</tr>
+<tr>
+<td>AWQ</td>
+<td>4</td>
+<td>3.37 (+0.05)</td>
+<td>35.0</td>
+</tr>
+<tr>
+<td>AQLM</td>
+<td>3</td>
+<td>3.38 (+0.06)</td>
+<td>26.3</td>
+</tr>
+<tr>
+<td>GPTQ</td>
+<td>3</td>
+<td>3.65 (+0.33)</td>
+<td>26.3</td>
+</tr>
+<tr>
+<td><strong>AQLM</strong></td>
+<td><strong>2</strong></td>
+<td><strong>3.54 (+0.22)</strong></td>
+<td><strong>17.5</strong></td>
+</tr>
+<tr>
+<td>QuIP#</td>
+<td>2</td>
+<td>3.54 (+0.22)</td>
+<td>17.5</td>
+</tr>
+<tr>
+<td>GPTQ</td>
+<td>2</td>
+<td>4.15 (+0.83)</td>
+<td>17.5</td>
+</tr>
+</tbody></table>
+<p>AQLM在3位精度下（3.38 ppl）接近FP16（3.32），在压缩率（4.7x vs FP16）和质量之间建立了新的帕累托前沿。</p>
+<h3 id="推理速度对比"><a href="#推理速度对比" class="headerlink" title="推理速度对比"></a>推理速度对比</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>配置</th>
+<th>GPU</th>
+<th>tokens&#x2F;sec</th>
+<th>vs FP16</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Llama 2 7B</td>
+<td>FP16</td>
+<td>A100</td>
+<td>44.2</td>
+<td>1.00x</td>
+</tr>
+<tr>
+<td>Llama 2 7B</td>
+<td>AQLM 2-bit</td>
+<td>A100</td>
+<td>46.8</td>
+<td><strong>1.06x (更快)</strong></td>
+</tr>
+<tr>
+<td>Llama 2 7B</td>
+<td>AQLM 2-bit</td>
+<td>H100</td>
+<td>52.3</td>
+<td>1.18x</td>
+</tr>
+<tr>
+<td>Llama 2 70B</td>
+<td>FP16</td>
+<td>A100</td>
+<td>7.9</td>
+<td>1.00x</td>
+</tr>
+<tr>
+<td>Llama 2 70B</td>
+<td>AQLM 2-bit</td>
+<td>A100</td>
+<td>8.1</td>
+<td><strong>1.03x</strong></td>
+</tr>
+</tbody></table>
+<p>AQLM的推理速度与FP16相当甚至略快——尽管有码本解码开销，但内存带宽的节省基本抵消了解码成本。在H100上优势更大（更快的HBM3带宽不足以完全消除内存瓶颈）。</p>
+<h3 id="零样本任务（Llama-2-70B-2-bit）"><a href="#零样本任务（Llama-2-70B-2-bit）" class="headerlink" title="零样本任务（Llama 2 70B, 2-bit）"></a>零样本任务（Llama 2 70B, 2-bit）</h3><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>PIQA</th>
+<th>HellaSwag</th>
+<th>WinoGrande</th>
+<th>ARC-E</th>
+<th>平均</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16</td>
+<td>82.2</td>
+<td>83.4</td>
+<td>78.9</td>
+<td>80.5</td>
+<td>76.6</td>
+</tr>
+<tr>
+<td>AQLM 2-bit</td>
+<td>80.8 (-1.4)</td>
+<td>80.5 (-2.9)</td>
+<td>76.2 (-2.7)</td>
+<td>78.5 (-2.0)</td>
+<td>74.6 (-2.0)</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_005_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="加性量化-vs-格量化-QuIP"><a href="#加性量化-vs-格量化-QuIP" class="headerlink" title="加性量化 vs 格量化 (QuIP#)"></a>加性量化 vs 格量化 (QuIP#)</h3><p>AQLM和QuIP#代表了2位量化的两种路线：</p>
+<ul>
+<li><strong>QuIP#</strong>: 数学构造路线——使用预定义的E8格，依赖去相关预处理使分布匹配格结构</li>
+<li><strong>AQLM</strong>: 数据驱动路线——从数据中学习码本，使其适配权重的实际分布</li>
+</ul>
+<p>两者的2位表现极为接近（均约+0.22 ppl on 70B），但路线完全不同。AQLM的优势在于灵活性——学到的码本可以适应任意分布的权重；QuIP#的优势在于优雅性——无需学习，数学结构保证了无偏性。</p>
+<h3 id="输入自适应编码的精妙性"><a href="#输入自适应编码的精妙性" class="headerlink" title="输入自适应编码的精妙性"></a>输入自适应编码的精妙性</h3><p>AQLM的输入自适应编码是最容易被忽略的创新。直观理解：</p>
+<ul>
+<li>非自适应：选择使$|w - \hat{w}|$最小的索引</li>
+<li>输入自适应：选择使$|X(w - \hat{w})|$最小的索引</li>
+</ul>
+<p>差别在于$X$——不同输入的激活模式不同。如果在给定的输入下，某个权重维度的激活几乎为0，那么在该维度上的量化误差对输出的影响也几乎为0——量化器可以将更多”精度预算”分配给激活幅值大的维度。这本质上是AWQ的缩放保护逻辑编码到了码本选择过程中。</p>
+<h3 id="块联合优化的作用范围"><a href="#块联合优化的作用范围" class="headerlink" title="块联合优化的作用范围"></a>块联合优化的作用范围</h3><p>单独优化每个层的码本忽略了跨层误差传播。考虑一个简单场景：</p>
+<ul>
+<li>自注意力的输出投影有一个小的量化偏差$\epsilon$</li>
+<li>FFN的输入投影将$\epsilon$乘以一个大权重矩阵</li>
+<li>这个大矩阵可能将$\epsilon$放大（通过对应的奇异值）</li>
+<li>最终输出误差$M_{\text{FFN}} \cdot \epsilon$可能远大于$\epsilon$</li>
+</ul>
+<p>块联合优化通过同时调整自注意力输出投影和FFN输入投影的码本，使前者的偏差被后者”补偿”——即FFN输入层学习轻微改变其行为来消除前一层引入的特定误差模式。</p>
+<h3 id="PV-Tuning-精调而非重训"><a href="#PV-Tuning-精调而非重训" class="headerlink" title="PV-Tuning &#x3D; 精调而非重训"></a>PV-Tuning &#x3D; 精调而非重训</h3><p>PV-Tuning的命名（Projection-Value Tuning）暗示了其操作：冻结投影（索引分配），微调值（码本向量）。这相当于在量化空间内做局部搜索，找到给定分配下最优的码本向量。因为不改变索引分配（输出行为的大结构不变），PV-Tuning不会引入过拟合，仅做精细校准。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-GPTQ（标量量化）"><a href="#vs-GPTQ（标量量化）" class="headerlink" title="vs GPTQ（标量量化）"></a>vs GPTQ（标量量化）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GPTQ</th>
+<th>AQLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>量化单元</td>
+<td>标量（逐权重）</td>
+<td>向量组（8权重&#x2F;组）</td>
+</tr>
+<tr>
+<td>表示空间</td>
+<td>$2^b$ 级别</td>
+<td>$K^M$ 组合</td>
+</tr>
+<tr>
+<td>优化方法</td>
+<td>Hessian引导舍入</td>
+<td>输入自适应码本分配</td>
+</tr>
+<tr>
+<td>2位质量 (70B)</td>
+<td>4.15 ppl (+0.83)</td>
+<td><strong>3.54 ppl (+0.22)</strong></td>
+</tr>
+<tr>
+<td>推理内核</td>
+<td>成熟 (AutoGPTQ)</td>
+<td>较新</td>
+</tr>
+</tbody></table>
+<h3 id="vs-QuIP-（格量化-去相关）"><a href="#vs-QuIP-（格量化-去相关）" class="headerlink" title="vs QuIP#（格量化 + 去相关）"></a>vs QuIP#（格量化 + 去相关）</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>QuIP#</th>
+<th>AQLM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>码本</td>
+<td>固定E8格</td>
+<td>学习得到</td>
+</tr>
+<tr>
+<td>预处理</td>
+<td>随机Hadamard去相关</td>
+<td>无（依靠码本适配分布）</td>
+</tr>
+<tr>
+<td>2位质量 (70B)</td>
+<td>3.54 ppl</td>
+<td>3.54 ppl</td>
+</tr>
+<tr>
+<td>泛化性</td>
+<td>数学保证</td>
+<td>数据驱动</td>
+</tr>
+<tr>
+<td>训练需求</td>
+<td>无码本学习</td>
+<td>需要码本学习</td>
+</tr>
+<tr>
+<td>推理开销</td>
+<td>RHT逆变换</td>
+<td>码本加载+加法</td>
+</tr>
+</tbody></table>
+<p>在2位上表现持平，但AQLM在3位上有优势（学到的码本更适配非极端的3位预算）。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-训练流程复杂"><a href="#1-训练流程复杂" class="headerlink" title="1. 训练流程复杂"></a>1. 训练流程复杂</h3><p>AQLM的完整流程包括码本初始化（K-means）、输入自适应分配（beam search）、块联合优化（反向传播）和PV-Tuning（蒸馏微调）——总共四个阶段。相比GPTQ的”一次性Hessian+逐列量化”或AWQ的”激活统计+网格搜索”，AQLM的实施更复杂。</p>
+<h3 id="2-推理内核的内存层次压力"><a href="#2-推理内核的内存层次压力" class="headerlink" title="2. 推理内核的内存层次压力"></a>2. 推理内核的内存层次压力</h3><p>AQLM的解码需要将码本向量存储在快速的shared memory中。当$K&#x3D;2^{16}$且$M&#x3D;2$时，码本约需$2 \cdot 65536 \cdot 4 \cdot 2\text{B} &#x3D; 1\text{MB}$的shared memory。A100每个SM有164KB shared memory，远不足以存储完整码本。论文使用码本分片存储和部分缓存策略，这会增加额外的HBM读取。</p>
+<h3 id="3-码本初始化质量依赖"><a href="#3-码本初始化质量依赖" class="headerlink" title="3. 码本初始化质量依赖"></a>3. 码本初始化质量依赖</h3><p>码本初始化的质量（K-means收敛程度）对最终量化效果有不可忽略的影响。不好的初始化可能导致beam search陷入差的局部最优。论文未系统研究初始化策略的敏感性。</p>
+<h3 id="4-非标准架构的适配成本"><a href="#4-非标准架构的适配成本" class="headerlink" title="4. 非标准架构的适配成本"></a>4. 非标准架构的适配成本</h3><p>加性量化的优化（输入自适应编码、块联合优化）是针对标准Transformer设计的。对于MoE、Mamba、RWKV等新架构，这些优化策略需要重新设计和验证。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-信息检索技术向ML压缩的迁移"><a href="#1-信息检索技术向ML压缩的迁移" class="headerlink" title="1. 信息检索技术向ML压缩的迁移"></a>1. 信息检索技术向ML压缩的迁移</h3><p>AQ最初是为高维向量相似搜索设计的（Product Quantization及其变体）。AQLM展示了这类技术迁移到ML权重量化的巨大潜力。类似地，其他信息检索技术（如Locality-Sensitive Hashing、HNSW图的量化版本）也可能被适配。</p>
+<p><strong>如何应用</strong>: 在解决ML压缩问题时，跨领域搜索信息检索、数据库和信号处理领域的已有技术——这些领域有数十年的量化研究积累。</p>
+<h3 id="2-功能优化-重构优化"><a href="#2-功能优化-重构优化" class="headerlink" title="2. 功能优化 &gt; 重构优化"></a>2. 功能优化 &gt; 重构优化</h3><p>AQLM的所有优化（输入自适应、块联合、蒸馏）围绕同一个原则：优化网络行为而非重构权重。这是超越GPTQ类方法的根本原因——GPTQ最小化权重重构误差（$|W - \hat{W}|$），AQLM最小化网络输出误差（$|f(X) - \hat{f}(X)|$）。</p>
+<p><strong>如何应用</strong>: 在压缩或近似任何计算组件时，以最终系统的行为误差为优化目标，而非组件的参数重构误差。</p>
+<h3 id="3-指数表示空间的经济性"><a href="#3-指数表示空间的经济性" class="headerlink" title="3. 指数表示空间的经济性"></a>3. 指数表示空间的经济性</h3><p>$M$个码本、$K$个码字提供的$K^M$个组合，仅需$M\log_2 K$位索引——这是信息论上的高效编码。核心在于：码本的存储成本在各组间摊销（所有组共享相同码本），而每个组仅需少量索引位。</p>
+<p><strong>如何应用</strong>: 在设计参数化系统时，寻找”共享结构+局部索引”的高效编码模式，使局部表示的空间呈指数级远超局部索引的比特数。</p>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>与GPTQ的互补性</strong>: AQLM的输入自适应分配和GPTQ的Hessian补偿可以结合——先用Hessian信息引导码字分配，再通过二阶补偿减少剩余的量化误差。</p>
+</li>
+<li><p><strong>码本学习的规模化</strong>: AQLM当前的码本学习是逐层&#x2F;逐块的。更大范围的联合学习（跨多个块甚至全模型）可能进一步提升质量，但计算成本也会指数增长。</p>
+</li>
+<li><p><strong>加密&#x2F;隐私部署</strong>: AQLM的码本-索引结构天然适合某些加密计算场景——零知识证明中验证”我知道码本索引”比验证”我知道浮点权重”简单得多。</p>
+</li>
+</ol>
+<h3 id="实际应用考量"><a href="#实际应用考量" class="headerlink" title="实际应用考量"></a>实际应用考量</h3><ul>
+<li>AQLM是2位量化的最佳选择之一（与QuIP#并列）</li>
+<li>需要接受其训练流程的复杂性（4阶段流水线）</li>
+<li>推理内核的成熟度在快速提升中</li>
+<li>在3位精度下，AQLM提供最佳的质量-压缩率平衡</li>
+</ul>
+<h3 id="工程实践"><a href="#工程实践" class="headerlink" title="工程实践"></a>工程实践</h3><ul>
+<li>码本初始化用K-means++而非随机初始化，质量差距显著</li>
+<li>输入自适应beam search的beam width&#x3D;4在大部分情况下足够</li>
+<li>PV-Tuning的学习率调度：前50%步数线性warmup，后50%余弦衰减</li>
+<li>块联合优化对大型模型（70B）收益最大——小模型（7B）收益有限</li>
+</ul>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-码本学习的训练数据依赖性"><a href="#1-码本学习的训练数据依赖性" class="headerlink" title="1. 码本学习的训练数据依赖性"></a>1. 码本学习的训练数据依赖性</h3><p>当前码本在标定数据上学习。如果部署数据分布不同，码本是否需要重新适配？重新进行部分阶段的优化（如仅PV-Tuning）的成本和效果如何？</p>
+<h3 id="2-码本结构的理论最优性"><a href="#2-码本结构的理论最优性" class="headerlink" title="2. 码本结构的理论最优性"></a>2. 码本结构的理论最优性</h3><p>AQLM的$M&#x3D;2, K&#x3D;2^{16}$配置是经验选择。是否存在理论上的最优$(M, K)$组合，在给定比特预算下最大化表示容量？M和K之间的trade-off如何量化？</p>
+<h3 id="3-与知识蒸馏的深层结合"><a href="#3-与知识蒸馏的深层结合" class="headerlink" title="3. 与知识蒸馏的深层结合"></a>3. 与知识蒸馏的深层结合</h3><p>PV-Tuning使用蒸馏损失，但仅限于码本微调阶段。如果在量化之前的初始阶段就使用知识蒸馏来训练更”量化友好”的权重分布，是否能解锁更高的压缩率？</p>
+<h3 id="4-多语言和多模态扩展"><a href="#4-多语言和多模态扩展" class="headerlink" title="4. 多语言和多模态扩展"></a>4. 多语言和多模态扩展</h3><p>学到的码本针对单一语言（主要是英语）的训练数据。在多语言LLM中，不同语言的权重使用模式可能不同——码本是否需要覆盖跨语言的使用差异？多模态中的视觉编码器权重是否适合加性量化？</p>
+<h3 id="5-超越2位的极限"><a href="#5-超越2位的极限" class="headerlink" title="5. 超越2位的极限"></a>5. 超越2位的极限</h3><p>AQLM将2位做到了接近实用。是否存在通往1位或1.58位（类似BitNet）的加性量化路径？如果码本被完全替换为简单的{-1, 0, 1}操作，加性量化的框架还剩下什么优势？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Egiazarian, V., Panferov, A., Kuznedelev, D., Frantar, E., Babenko, A., &amp; Alistarh, D. (2024). AQLM: Extreme Compression of Large Language Models via Additive Quantization. ICML 2024. arXiv:2401.06118</li>
+<li>Jegou, H., Douze, M., &amp; Schmid, C. (2011). Product Quantization for Nearest Neighbor Search. IEEE TPAMI 2011.</li>
+<li>Babenko, A., &amp; Lempitsky, V. (2014). Additive Quantization for Extreme Vector Compression. CVPR 2014.</li>
+<li>Frantar, E., et al. (2023). GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers. ICLR 2023.</li>
+<li>Tseng, A., et al. (2024). QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks. ICML 2024.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%A8%A1%E5%9E%8B%E9%87%8F%E5%8C%96/" class="category-chain-item">模型量化</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-model-compression/" class="print-no-link">#papers/model-compression</a>
+      
+        <a href="/tags/papers-quantization/" class="print-no-link">#papers/quantization</a>
+      
+        <a href="/tags/papers-systems/" class="print-no-link">#papers/systems</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>AQLM: Extreme Compression of Large Language Models via Additive Quantization</div>
+      <div>https://w2ongq6.github.io/2024/07/01/inference/note/AQLM_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年7月1日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/07/05/aigc/note/CosyVoice_note/" title="CosyVoice: A Scalable Multilingual Zero-shot Text-to-speech Synthesizer based on Supervised Semantic Tokens">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">CosyVoice: A Scalable Multilingual Zero-shot Text-to-speech Synthesizer based on Supervised Semantic Tokens</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/07/01/inference/note/QuIPSharp_note/" title="QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks">
+                        <span class="hidden-mobile">QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

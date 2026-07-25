@@ -1,0 +1,1304 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Chinchilla: 训练计算最优的大语言模型核心信息 标题: Training Compute-Optimal Large Language Models 标题翻译: 训练计算最优的大语言模型 作者: Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch 等, DeepMind 机构: DeepMind 发表时间: 2022年3月29日 发表渠道">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Training Compute-Optimal Large Language Models">
+<meta property="og:url" content="https://w2ongq6.github.io/2022/03/29/llm/note/Chinchilla_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Chinchilla: 训练计算最优的大语言模型核心信息 标题: Training Compute-Optimal Large Language Models 标题翻译: 训练计算最优的大语言模型 作者: Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch 等, DeepMind 机构: DeepMind 发表时间: 2022年3月29日 发表渠道">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_001_img_01.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_002_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_003_full.png">
+<meta property="og:image" content="https://w2ongq6.github.io/images/page_004_full.png">
+<meta property="article:published_time" content="2022-03-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-25T11:12:23.067Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="papers&#x2F;efficiency">
+<meta property="article:tag" content="papers&#x2F;llm-training">
+<meta property="article:tag" content="papers&#x2F;scaling-laws">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://w2ongq6.github.io/images/page_001_full.png">
+  
+  
+  
+  <title>Training Compute-Optimal Large Language Models - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Training Compute-Optimal Large Language Models"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-03-29 00:00" pubdate>
+          2022年3月29日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          71 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Training Compute-Optimal Large Language Models</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Chinchilla-训练计算最优的大语言模型"><a href="#Chinchilla-训练计算最优的大语言模型" class="headerlink" title="Chinchilla: 训练计算最优的大语言模型"></a>Chinchilla: 训练计算最优的大语言模型</h1><h2 id="核心信息"><a href="#核心信息" class="headerlink" title="核心信息"></a>核心信息</h2><ul>
+<li>标题: Training Compute-Optimal Large Language Models</li>
+<li>标题翻译: 训练计算最优的大语言模型</li>
+<li>作者: Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch 等, DeepMind</li>
+<li>机构: DeepMind</li>
+<li>发表时间: 2022年3月29日</li>
+<li>发表渠道: NeurIPS 2022</li>
+<li>arXiv: 2203.15556</li>
+<li>论文链接: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2203.15556">https://arxiv.org/abs/2203.15556</a></li>
+<li>论文类型: 实证研究 &#x2F; 缩放定律修正</li>
+</ul>
+<h2 id="原文摘要翻译"><a href="#原文摘要翻译" class="headerlink" title="原文摘要翻译"></a>原文摘要翻译</h2><p>我们研究了在给定计算预算下，模型大小和训练token数量之间的最优权衡。基于对400多个训练loss稳定模型的分析，我们的研究覆盖了从7千万到160亿参数的模型，以及从50亿到4000亿token的数据量。我们发现了三大结论：第一，在给定计算预算下，大模型之所以达到最终性能需要更多数据，但同等数据下，大小模型在特定训练计算量之前表现相近。第二，许多已发表的大语言模型严重”欠训练”——给定它们各自的训练计算预算，应该使用更小的模型在更多token上训练才能达到最优。第三，我们在基于280B参数Gopher模型所使用的相同计算预算下，训练了一个新的”计算最优”模型Chinchilla——其参数仅70B，但使用了1.4T token。Chinchilla不仅在大量下游基准上全面且显著超越了Gopher（280B）、GPT-3（175B）、Jurassic-1（178B）和Megatron-Turing NLG（530B），它也在MMLU上超越了Gopher 7.1%。总之，我们呼吁研究者和从业者在训练大语言模型时提升训练数据规模，而非仅仅扩大模型参数规模。</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><h3 id="1-对Kaplan缩放定律的系统性修正"><a href="#1-对Kaplan缩放定律的系统性修正" class="headerlink" title="1. 对Kaplan缩放定律的系统性修正"></a>1. 对Kaplan缩放定律的系统性修正</h3><p><strong>核心思想</strong>: 通过三种独立的估算方法，一致地推翻了Kaplan等（2020年）”模型大小应比数据增长得更快”（N ∝ D^0.73）的结论，证明了两者应该等比增长（N ∝ D^1.0）。</p>
+<p><strong>三种估算方法</strong>:</p>
+<ul>
+<li><strong>方法1（固定计算-改变参数）</strong>: 对9种不同计算预算，每种预算下训练4种不同大小的模型，找到每种预算下的最优参数量。结果: N_opt ∝ C^0.50, D_opt ∝ C^0.50。</li>
+<li><strong>方法2（固定FLOPs-优化分配）</strong>: 在固定FLOPs下，直接在(N, D)空间中搜索最优分配。结果: 等比例增长。</li>
+<li><strong>方法3（参数化拟合帕累托最优边界）</strong>: 使用参数化模型同时拟合所有数据点，从帕累托边界提取最优关系。结果: 再次确认1:1比例。</li>
+</ul>
+<p><strong>为什么重要</strong>: 三种独立方法得出完全一致的结论，这是极为有力的证据。它彻底改变了LLM训练范式——从”大模型+较少数据”转向”中等模型+大量数据”。</p>
+<h3 id="2-计算最优模型Chinchilla的实证验证"><a href="#2-计算最优模型Chinchilla的实证验证" class="headerlink" title="2. 计算最优模型Chinchilla的实证验证"></a>2. 计算最优模型Chinchilla的实证验证</h3><p><strong>核心思想</strong>: 按照自推的缩放定律训练Chinchilla（70B参数，1.4T token），使用与训练280B Gopher完全相同的计算预算。</p>
+<p><strong>压倒性的性能优势</strong>: Chinchilla（70B）在几乎所有下游基准上全面超越Gopher（280B），尽管参数量仅为后者的25%。这以最直接的方式证明了”计算最优”策略的有效性。</p>
+<p><strong>为什么重要</strong>: 用一个可复现的实验”大模型被小模型击败”的震撼反例，直接验证了新理论——比数百页的数学推导更有说服力。</p>
+<h3 id="3-“过参数化、欠训练”的系统性诊断"><a href="#3-“过参数化、欠训练”的系统性诊断" class="headerlink" title="3. “过参数化、欠训练”的系统性诊断"></a>3. “过参数化、欠训练”的系统性诊断</h3><p><strong>核心思想</strong>: 论文指出当时几乎所有大模型都严重”欠训练”——参数量远超计算最优推荐值。</p>
+<p><strong>具体数据</strong>:</p>
+<ul>
+<li>GPT-3 175B: 训练了300B token，但按照Chinchilla定律应匹配约3.7T token（仅达最优的约8%）</li>
+<li>Gopher 280B: 训练了300B token，按照Chinchilla定律应匹配约6T token（仅达最优的约5%）</li>
+<li>MT-NLG 530B: 仍需更多数据</li>
+</ul>
+<p><strong>为什么重要</strong>: 这不是针对某一个模型的批评，而是诊断了整个行业的系统性偏差——所有人都被Kaplan的缩放定律误导到了”大模型优先”的方向。</p>
+<h3 id="4-大规模参数空间的系统实验"><a href="#4-大规模参数空间的系统实验" class="headerlink" title="4. 大规模参数空间的系统实验"></a>4. 大规模参数空间的系统实验</h3><p><strong>核心思想</strong>: 训练了超过400个不同规模的模型（70M到16B参数，5B到400B token），构建了前所未有的密集数据网格。</p>
+<p><strong>为什么重要</strong>: 这种规模的系统实验需要大量计算资源，使其成为当时最全面的缩放实验。密集的数据网格允许精确地定位最优(N, D)组合，避免了数据稀疏区域的外推误差。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><p>Chinchilla论文通过三种独立方法和超过400个模型的系统实验，推翻了Kaplan缩放定律中”N应比D增长得更快”的结论，证明计算最优策略要求模型参数与训练数据等比增长（1:1比例），并在同等计算预算下训练出70B的Chinchilla模型全面超越280B的Gopher、175B的GPT-3等更大模型，从根本上改变了LLM的训练范式。</p>
+<h2 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h2><h3 id="核心挑战"><a href="#核心挑战" class="headerlink" title="核心挑战"></a>核心挑战</h3><p>Kaplan等人（2020年）提出的缩放定律认为，在给定计算预算下应优先扩大模型规模（N ∝ D^0.73）。但这一结论存在方法论缺陷：他们没有在固定计算量下系统性地变化数据量和模型量并观察损失。</p>
+<p>核心问题：</p>
+<ul>
+<li>给定固定的计算预算C，模型参数N和训练数据D的最优比例到底是多少？</li>
+<li>当前的大模型是否真的处于”计算最优”状态？</li>
+<li>重新分配资源（更多数据、更小模型）是否能产生更好的模型？</li>
+</ul>
+<h3 id="前人研究的局限"><a href="#前人研究的局限" class="headerlink" title="前人研究的局限"></a>前人研究的局限</h3><ol>
+<li><strong>Kaplan的方法论缺陷</strong>: 仅在C_min下拟合（即只考虑收敛后的最终损失），未考虑在固定C下变化N和D时损失的响应面</li>
+<li><strong>学习率调度的干扰</strong>: Kaplan等使用余弦退火学习率，衰减步数与训练步数成正比，导致不同大小模型的学习率调度不同，引入了混淆变量</li>
+<li><strong>缺乏大范围的数据密度</strong>: 先前的实验在(N, D)空间中数据点稀疏，无法精确定位最优区域</li>
+</ol>
+<h3 id="关键洞察"><a href="#关键洞察" class="headerlink" title="关键洞察"></a>关键洞察</h3><blockquote>
+<p>前人的结论”大模型样本效率更高”实际上是由于将不同模型训练到不同收敛程度所造成的人为假象。当将每个模型训练到相同程度时，计算最优的模型大小和训练数据大小应该是等比例的。</p>
+</blockquote>
+<h2 id="数据与任务定义"><a href="#数据与任务定义" class="headerlink" title="数据与任务定义"></a>数据与任务定义</h2><h3 id="训练数据"><a href="#训练数据" class="headerlink" title="训练数据"></a>训练数据</h3><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>用途</th>
+<th>规模</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MassiveText</td>
+<td>预训练语料</td>
+<td>约2.35T token（Chinchilla使用1.4T的子集）</td>
+</tr>
+<tr>
+<td>来源包含:</td>
+<td>网页、书籍、新闻、代码、Wikipedia</td>
+<td>多领域混合</td>
+</tr>
+</tbody></table>
+<h3 id="模型配置（方法1的9种计算预算）"><a href="#模型配置（方法1的9种计算预算）" class="headerlink" title="模型配置（方法1的9种计算预算）"></a>模型配置（方法1的9种计算预算）</h3><table>
+<thead>
+<tr>
+<th>计算预算(FLOPs)</th>
+<th>模型参数量范围</th>
+<th>最优模型参数</th>
+<th>最优数据量(tokens)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>6×10^18</td>
+<td>70M - 305M</td>
+<td>~70M</td>
+<td>~6B</td>
+</tr>
+<tr>
+<td>2×10^19</td>
+<td>70M - 305M</td>
+<td>~150M</td>
+<td>~10B</td>
+</tr>
+<tr>
+<td>6×10^19</td>
+<td>70M - 1B</td>
+<td>~300M</td>
+<td>~14B</td>
+</tr>
+<tr>
+<td>2×10^20</td>
+<td>210M - 1B</td>
+<td>~500M</td>
+<td>~30B</td>
+</tr>
+<tr>
+<td>6×10^20</td>
+<td>300M - 1.5B</td>
+<td>~700M</td>
+<td>~60B</td>
+</tr>
+<tr>
+<td>2×10^21</td>
+<td>400M - 4B</td>
+<td>~1B</td>
+<td>~140B</td>
+</tr>
+<tr>
+<td>6×10^21</td>
+<td>700M - 10B</td>
+<td>~2B</td>
+<td>~200B</td>
+</tr>
+<tr>
+<td>2×10^22</td>
+<td>1B - 16B</td>
+<td>~4B</td>
+<td>~350B</td>
+</tr>
+<tr>
+<td>6×10^22</td>
+<td>1B - 16B</td>
+<td>~7B</td>
+<td>~500B</td>
+</tr>
+</tbody></table>
+<h3 id="评估基准"><a href="#评估基准" class="headerlink" title="评估基准"></a>评估基准</h3><table>
+<thead>
+<tr>
+<th>基准类别</th>
+<th>具体数据集</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>语言理解</td>
+<td>MMLU, HellaSwag, PIQA, ARC, Winogrande</td>
+</tr>
+<tr>
+<td>常识推理</td>
+<td>BoolQ, COPA, RACE-h</td>
+</tr>
+<tr>
+<td>阅读理解</td>
+<td>LAMBADA, SQuAD</td>
+</tr>
+<tr>
+<td>数学推理</td>
+<td>GSM8K</td>
+</tr>
+<tr>
+<td>代码生成</td>
+<td>HumanEval</td>
+</tr>
+<tr>
+<td>翻译</td>
+<td>WMT</td>
+</tr>
+</tbody></table>
+<h2 id="方法主线"><a href="#方法主线" class="headerlink" title="方法主线"></a>方法主线</h2><p><img src="/images/page_001_full.png" srcset="/img/loading.gif" lazyload alt="Figure 1"><br><em>Figure 1: 来源—原论文。</em></p>
+<p><em>（见图 X：该图展示了…）</em></p>
+<h3 id="核心机制"><a href="#核心机制" class="headerlink" title="核心机制"></a>核心机制</h3><h4 id="机制流程"><a href="#机制流程" class="headerlink" title="机制流程"></a>机制流程</h4><p><img src="/images/page_001_img_01.png" srcset="/img/loading.gif" lazyload alt="Figure 2"><br><em>Figure 2: 来源—原论文。</em></p>
+<p><strong>方法1: 固定计算-改变模型大小（IsoFLOP Profiles）</strong></p>
+<p><strong>步骤步骤1</strong>: 选择9个不同的计算预算等级（6×10^18到6×10^22 FLOPs），在各等级上训练4种不同大小的模型<br><strong>步骤步骤2</strong>: 对于每种计算预算，绘制 Loss vs 模型大小 的曲线，找到该预算下的最优模型大小<br><strong>步骤步骤3</strong>: 对最优模型大小和对应计算预算进行幂律拟合，得到N_opt(C)和D_opt(C)的关系<br><strong>步骤结果</strong>: N_opt ∝ C^a, D_opt ∝ C^b, 其中 a ≈ 0.50, b ≈ 0.50（即等比例增长）</p>
+<p><strong>方法2: 固定FLOPs-直接优化分配</strong></p>
+<p><strong>步骤步骤1</strong>: 固定总计算量，给定C，直接搜索令损失最小的(N, D)<br><strong>步骤步骤2</strong>: 使用参数化的损失模型L(N, D) &#x3D; E + A&#x2F;N^alpha + B&#x2F;D^beta<br><strong>步骤步骤3</strong>: 在约束C ≈ 6ND下求解最优化问题<br><strong>步骤结果</strong>: N_opt(C) ≈ 0.77 × (C&#x2F;6)^0.50, D_opt(C) ≈ 1.30 × (C&#x2F;6)^0.50</p>
+<p><strong>方法3: 参数化帕累托最优边界</strong></p>
+<p><strong>步骤步骤1</strong>: 将所有400+模型的训练点（包括训练到不同步数的中间点）视为数据，拟合统一参数化损失模型<br><strong>步骤步骤2</strong>: 从损失模型中推导出Pareto前沿——即不同计算量下可达到的最低损失<br><strong>步骤步骤3</strong>: 从前沿中提取最优(N, D)分配关系<br><strong>步骤结果</strong>: 再次确认等比例增长</p>
+<h3 id="理论分析"><a href="#理论分析" class="headerlink" title="理论分析"></a>理论分析</h3><h4 id="核心公式"><a href="#核心公式" class="headerlink" title="核心公式"></a>核心公式</h4><p>三种方法最终拟合的损失模型:</p>
+<p>$$L(N, D) &#x3D; E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}}$$</p>
+<p>其中:</p>
+<ul>
+<li>E ≈ 1.69（不可压缩损失的估计）</li>
+<li>A ≈ 406.4, α ≈ 0.34</li>
+<li>B ≈ 410.7, β ≈ 0.28</li>
+</ul>
+<p>在计算约束C ≈ 6ND下的最优分配:</p>
+<p>$$N_{\text{opt}}(C) &#x3D; \left(\frac{A\alpha}{B\beta} \cdot \frac{C}{6}\right)^{\frac{\beta}{\alpha+\beta}} \approx 0.77 \cdot \left(\frac{C}{6}\right)^{0.50}$$</p>
+<p>$$D_{\text{opt}}(C) &#x3D; \left(\frac{B\beta}{A\alpha} \cdot \frac{C}{6}\right)^{\frac{\alpha}{\alpha+\beta}} \approx 1.30 \cdot \left(\frac{C}{6}\right)^{0.50}$$</p>
+<h4 id="关键关系"><a href="#关键关系" class="headerlink" title="关键关系"></a>关键关系</h4><p>使N_opt &#x3D; D_opt的计算量级:</p>
+<p>$$N_{\text{opt}} \approx D_{\text{opt}} \quad \text{当} \quad C \approx 6 \times 10^{23} \ \text{FLOPs}$$</p>
+<p>对于大多数实际计算预算，最优参数和最优数据量大致相等。</p>
+<h2 id="关键结果"><a href="#关键结果" class="headerlink" title="关键结果"></a>关键结果</h2><p><img src="/images/page_002_full.png" srcset="/img/loading.gif" lazyload alt="Figure 3"><br><em>Figure 3: 来源—原论文。</em></p>
+<h3 id="Chinchilla-vs-大模型的全面对比"><a href="#Chinchilla-vs-大模型的全面对比" class="headerlink" title="Chinchilla vs 大模型的全面对比"></a>Chinchilla vs 大模型的全面对比</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>Chinchilla (70B)</th>
+<th>Gopher (280B)</th>
+<th>GPT-3 (175B)</th>
+<th>Jurassic-1 (178B)</th>
+<th>MT-NLG (530B)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MMLU (5-shot)</td>
+<td><strong>67.6%</strong></td>
+<td>60.5%</td>
+<td>43.9%</td>
+<td>-</td>
+<td>43.8%</td>
+</tr>
+</tbody></table>
+<p><img src="/images/page_003_full.png" srcset="/img/loading.gif" lazyload alt="Figure 4"><br><em>Figure 4: 来源—原论文。</em></p>
+<p><strong>核心数据</strong>: Chinchilla（70B）在MMLU上超越Gopher（280B）7.1个百分点，在GSM8K上是后者的近2倍，在HumanEval上也接近翻倍。而它的参数量仅为Gopher的25%。</p>
+<h3 id="三大方法的一致性验证"><a href="#三大方法的一致性验证" class="headerlink" title="三大方法的一致性验证"></a>三大方法的一致性验证</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>N_opt与C的关系</th>
+<th>D_opt与C的关系</th>
+<th>N&#x2F;D关系</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>方法1 (IsoFLOP)</td>
+<td>N_opt ∝ C^0.50</td>
+<td>D_opt ∝ C^0.50</td>
+<td>N ∝ D^1.0</td>
+</tr>
+<tr>
+<td>方法2 (参数拟合)</td>
+<td>N_opt ∝ C^0.50</td>
+<td>D_opt ∝ C^0.50</td>
+<td>N ∝ D^1.0</td>
+</tr>
+<tr>
+<td>方法3 (前沿)</td>
+<td>N_opt ∝ C^0.50</td>
+<td>D_opt ∝ C^0.50</td>
+<td>N ∝ D^1.0</td>
+</tr>
+</tbody></table>
+<p><strong>核心数据</strong>: 三种独立方法的结论完全一致——等比例增长。这与Kaplan的N ∝ D^0.73形成鲜明对比。</p>
+<h3 id="损失模型的参数估计"><a href="#损失模型的参数估计" class="headerlink" title="损失模型的参数估计"></a>损失模型的参数估计</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>估计值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E</td>
+<td>1.69</td>
+<td>不可压缩损失（贝叶斯误差的估计）</td>
+</tr>
+<tr>
+<td>A</td>
+<td>406.4</td>
+<td>模型规模的损失贡献系数</td>
+</tr>
+<tr>
+<td>α</td>
+<td>0.34</td>
+<td>模型规模的缩放指数</td>
+</tr>
+<tr>
+<td>B</td>
+<td>410.7</td>
+<td>数据量的损失贡献系数</td>
+</tr>
+<tr>
+<td>β</td>
+<td>0.28</td>
+<td>数据量的缩放指数</td>
+</tr>
+</tbody></table>
+<p><strong>核心洞察</strong>: α ≈ 0.34 和 β ≈ 0.28 非常接近（差距小于0.1），这从参数拟合的角度也支持了”等比例”的核心结论。</p>
+<h3 id="“欠训练”程度的量化"><a href="#“欠训练”程度的量化" class="headerlink" title="“欠训练”程度的量化"></a>“欠训练”程度的量化</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数</th>
+<th>实际训练token</th>
+<th>理论最优token（按Chinchilla）</th>
+<th>欠训练程度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-3</td>
+<td>175B</td>
+<td>300B</td>
+<td>~3.7T</td>
+<td>仅达最优8%</td>
+</tr>
+<tr>
+<td>Gopher</td>
+<td>280B</td>
+<td>300B</td>
+<td>~6T</td>
+<td>仅达最优5%</td>
+</tr>
+<tr>
+<td>Chinchilla</td>
+<td>70B</td>
+<td>1.4T</td>
+<td>~1.4T</td>
+<td>计算最优(100%)</td>
+</tr>
+</tbody></table>
+<h2 id="深度分析"><a href="#深度分析" class="headerlink" title="深度分析"></a>深度分析</h2><p><img src="/images/page_004_full.png" srcset="/img/loading.gif" lazyload alt="Figure 5"><br><em>Figure 5: 来源—原论文。</em></p>
+<h3 id="为什么Kaplan会得出错误的结论？"><a href="#为什么Kaplan会得出错误的结论？" class="headerlink" title="为什么Kaplan会得出错误的结论？"></a>为什么Kaplan会得出错误的结论？</h3><p>Kaplan的N ∝ D^0.73（模型应比数据增长得更快）的结论被三种独立方法一致推翻。原因分析：</p>
+<ol>
+<li><p><strong>方法论差异</strong>: Kaplan只分析每个模型在收敛时的最终损失，这相当于在(N, D)空间中只看了每条训练轨迹的终点。而Chinchilla的方法1在看每种计算预算下的”U形曲线”——即固定C，变换N，观察损失的极小值点。这直接显示了最优的N在哪里。</p>
+</li>
+<li><p><strong>学习率调度的混淆</strong>: Kaplan使用余弦退火调度，退火长度正比于训练步数。大模型训练步数多，所以学习率调度更长（更多的小学习率步），这造成了”大模型更好”的人为优势。</p>
+</li>
+<li><p><strong>数据的尽头效应</strong>: Kaplan的数据在参数侧覆盖到很大（到10^9），但在数据侧相对不足。在参数远远超过数据量的区域，增加参数的边际收益确实递减得很慢——但这是因为模型处于严重欠训练状态，而非参数本身更”高效”。</p>
+</li>
+</ol>
+<h3 id="1-1比例的经济学解释"><a href="#1-1比例的经济学解释" class="headerlink" title="1:1比例的经济学解释"></a>1:1比例的经济学解释</h3><p>Chinchilla的核心结论是一个简洁的1:1比例，这从经济学角度也有直观解释：</p>
+<ul>
+<li>每增加一个参数，需要的额外计算量正比于一次前向+后向传递（约6 FLOPs&#x2F;token&#x2F;param）</li>
+<li>每增加一个token，需要的额外计算量正比于模型的所有参数（约6 FLOPs&#x2F;param&#x2F;token）</li>
+<li>在最优分配点，两者的边际收益&#x2F;边际成本应该相等</li>
+<li>当alpha ≈ beta（两个缩放指数近似相等）时，1:1比例自然出现</li>
+</ul>
+<h3 id="Chinchilla的”不可压缩损失”估计"><a href="#Chinchilla的”不可压缩损失”估计" class="headerlink" title="Chinchilla的”不可压缩损失”估计"></a>Chinchilla的”不可压缩损失”估计</h3><p>E ≈ 1.69意味着即使使用无限数据和无限模型，交叉熵损失也不会降到1.69以下。这对应了一个困惑度exp(1.69) ≈ 5.4。</p>
+<p>这个值的含义：在WebText级别的文本质量下，1.69 nats&#x2F;token是语言建模的”绝对下限”——任何模型都无法超越，因为它反映了文本数据本身固有的不确定性（比如：同一个上下文后面既可以跟”好”也可以跟”很好”）。</p>
+<h2 id="对比定位"><a href="#对比定位" class="headerlink" title="对比定位"></a>对比定位</h2><h3 id="vs-Kaplan-Scaling-Laws"><a href="#vs-Kaplan-Scaling-Laws" class="headerlink" title="vs Kaplan Scaling Laws"></a>vs Kaplan Scaling Laws</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Kaplan等 (2020)</th>
+<th>Chinchilla (本文)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心关系</td>
+<td>N ∝ D^0.73</td>
+<td>N ∝ D^1.0</td>
+</tr>
+<tr>
+<td>资源策略</td>
+<td>优先扩大模型</td>
+<td>模型和数据等比增长</td>
+</tr>
+<tr>
+<td>方法论</td>
+<td>单个视角</td>
+<td>三种独立方法</td>
+</tr>
+<tr>
+<td>训练模型数</td>
+<td>~1000个（但范围窄）</td>
+<td>400+个（但范围更系统）</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>余弦退火（引入混淆）</td>
+<td>余弦退火（统一控制）</td>
+</tr>
+<tr>
+<td>代表性模型</td>
+<td>GPT-3 (175B, 300B token)</td>
+<td>Chinchilla (70B, 1.4T token)</td>
+</tr>
+</tbody></table>
+<h3 id="vs-后续LLM实践"><a href="#vs-后续LLM实践" class="headerlink" title="vs 后续LLM实践"></a>vs 后续LLM实践</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参数</th>
+<th>训练token</th>
+<th>Chinchilla理论推荐token</th>
+<th>实际策略</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLaMA 7B</td>
+<td>7B</td>
+<td>1T</td>
+<td>~0.2T</td>
+<td>超token训练</td>
+</tr>
+<tr>
+<td>LLaMA 2 70B</td>
+<td>70B</td>
+<td>2T</td>
+<td>~1.4T</td>
+<td>略超token</td>
+</tr>
+<tr>
+<td>LLaMA 3 70B</td>
+<td>70B</td>
+<td>15T</td>
+<td>~1.4T</td>
+<td>大幅超token</td>
+</tr>
+<tr>
+<td>Mistral 7B</td>
+<td>7B</td>
+<td>(未公开，&gt;2T估计)</td>
+<td>~0.2T</td>
+<td>大幅超token</td>
+</tr>
+</tbody></table>
+<p><strong>关键转变</strong>: LLaMA系列和Mistral等后续模型实际上选择了”超Chinchilla最优”的训练——使用了比1:1比例更多的训练数据。这说明在实践中，推理成本（越小模型推理越便宜）开始影响训练决策，形成了后Chinchilla时代的”推理最优”新范式。</p>
+<h2 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h2><h3 id="1-仅考虑预训练损失，未考虑下游任务"><a href="#1-仅考虑预训练损失，未考虑下游任务" class="headerlink" title="1. 仅考虑预训练损失，未考虑下游任务"></a>1. 仅考虑预训练损失，未考虑下游任务</h3><p><strong>问题</strong>: 缩放定律是在预训练损失上拟合的，但下游任务性能与预训练损失之间的关系并非完全单调。</p>
+<p><strong>影响</strong>: 最优的预训练资源配置可能不是最优的下游任务资源配置。特别是在小数据但高质量的场景中，下游性能可能与预训练损失脱钩。</p>
+<h3 id="2-数据和模型的幂指数可能不是常数"><a href="#2-数据和模型的幂指数可能不是常数" class="headerlink" title="2. 数据和模型的幂指数可能不是常数"></a>2. 数据和模型的幂指数可能不是常数</h3><p><strong>问题</strong>: alpha和beta的估计依赖于所使用的数据和模型范围。在更大规模或不同领域，这些指数可能变化。</p>
+<p><strong>影响</strong>: 将Chinchilla定律直接外推到远超实验范围的计算量级可能不准确。</p>
+<h3 id="3-推理成本未被纳入优化目标"><a href="#3-推理成本未被纳入优化目标" class="headerlink" title="3. 推理成本未被纳入优化目标"></a>3. 推理成本未被纳入优化目标</h3><p><strong>问题</strong>: Chinchilla仅优化训练计算量。但在实际部署中，推理成本往往占总成本的大头（模型可能被调用数百万次）。</p>
+<p><strong>影响</strong>: 在实际工程中（如LLaMA 3训练15T token但参数仍是70B），往往选择比Chinchilla最优更小的模型+更多数据，以节省推理成本。</p>
+<h3 id="4-数据质量的影响未建模"><a href="#4-数据质量的影响未建模" class="headerlink" title="4. 数据质量的影响未建模"></a>4. 数据质量的影响未建模</h3><p><strong>问题</strong>: Chinchilla将所有token视为等价，未区分高质量数据和低质量数据。</p>
+<p><strong>影响</strong>: 如果加入数据质量因子，可能改变最优分配的结论（如高质量的小数据可能等效于低质量的大数据）。</p>
+<h2 id="可复用洞见"><a href="#可复用洞见" class="headerlink" title="可复用洞见"></a>可复用洞见</h2><h3 id="1-三重验证的实验设计"><a href="#1-三重验证的实验设计" class="headerlink" title="1. 三重验证的实验设计"></a>1. 三重验证的实验设计</h3><p><strong>洞见</strong>: 用三种独立的方法验证同一个结论，是排除方法论偏差的最有效策略。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在设计关键实验时，预想多种可能的混淆变量</li>
+<li>设计至少两种互补的方法来验证核心结论</li>
+<li>如果多个方法得出不同结论，需要分析差异来源</li>
+</ul>
+<h3 id="2-缩放定律需要持续修正"><a href="#2-缩放定律需要持续修正" class="headerlink" title="2. 缩放定律需要持续修正"></a>2. 缩放定律需要持续修正</h3><p><strong>洞见</strong>: 缩放定律不是一成不变的真理，而是随着实验范围扩大而不断修正的科学假设。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>对新应用领域的缩放定律保持怀疑</li>
+<li>在小范围验证旧定律是否仍然成立</li>
+<li>当数据覆盖到新的数量级时，重新拟合缩放参数</li>
+</ul>
+<h3 id="3-“欠训练”作为调试工具"><a href="#3-“欠训练”作为调试工具" class="headerlink" title="3. “欠训练”作为调试工具"></a>3. “欠训练”作为调试工具</h3><p><strong>洞见</strong>: 计算模型的”理论最优训练量”并与实际训练量对比，可以快速诊断训练策略是否最优。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在规划训练运行时，先计算理论最优的(N, D)配比</li>
+<li>如果实际训练量远低于理论最优，考虑减模或增数据</li>
+<li>在资源规划文档中包含欠训练程度的估算</li>
+</ul>
+<h3 id="4-损失参数化模型的通用分析工具"><a href="#4-损失参数化模型的通用分析工具" class="headerlink" title="4. 损失参数化模型的通用分析工具"></a>4. 损失参数化模型的通用分析工具</h3><p><strong>洞见</strong>: L(N, D) &#x3D; E + A&#x2F;N^alpha + B&#x2F;D^beta 这种参数化形式可以用于分析任意模型系列的缩放行为。</p>
+<p><strong>如何应用</strong>:</p>
+<ul>
+<li>在训练新系列模型时，拟合损失参数化模型</li>
+<li>使用拟合参数指导后续迭代的资源分配</li>
+<li>跟踪alpha和beta的变化来诊断数据或模型是否遇到了瓶颈</li>
+</ul>
+<h2 id="我的笔记"><a href="#我的笔记" class="headerlink" title="我的笔记"></a>我的笔记</h2><h3 id="对后续研究的启发"><a href="#对后续研究的启发" class="headerlink" title="对后续研究的启发"></a>对后续研究的启发</h3><ol>
+<li><p><strong>科学发现的可修正性</strong>: Chinchilla是科学自我修正的典型案例。Kaplan的结论被广泛接受并使用，但Chinchilla用更严谨的实验设计推翻了它。这提醒我们，即使是经典论文的结论，也值得重新审视。</p>
+</li>
+<li><p><strong>方法学的重要性</strong>: Chinchilla的核心贡献不在于”发现了一个新定律”，而在于”用更正确的方法重新推导了同一定律”。三种独立方法的三角验证是这篇论文最大的方法论贡献。</p>
+</li>
+<li><p><strong>后Chinchilla时代的演进</strong>: 有趣的是，LLaMA 3在70B规模上使用了15T token——是Chinchilla理论最优（约1.4T）的10倍以上。这种”超Chinchilla”策略表明，在推理成本主导的实践中，训练计算最优并非最终答案。</p>
+</li>
+</ol>
+<h3 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h3><ol>
+<li><strong>新模型规划</strong>: 给定目标模型大小，快速估算需要多少训练数据</li>
+<li><strong>资源谈判</strong>: 向决策者量化说明”只增加GPU不增加数据”的边际收益</li>
+<li><strong>学术实验</strong>: 在有限计算预算下，选择最优的(N, D)组合以最大化论文效果</li>
+</ol>
+<h2 id="后续问题"><a href="#后续问题" class="headerlink" title="后续问题"></a>后续问题</h2><h3 id="1-Chinchilla定律在大规模下是否仍然成立？"><a href="#1-Chinchilla定律在大规模下是否仍然成立？" class="headerlink" title="1. Chinchilla定律在大规模下是否仍然成立？"></a>1. Chinchilla定律在大规模下是否仍然成立？</h3><p><strong>问题</strong>: LLaMA 3用15T token训练70B模型，远超Chinchilla推荐的1.4T，而且效果确实更好。Chinchilla定律在更大规模下是否需要修正？</p>
+<h3 id="2-推理最优缩放定律"><a href="#2-推理最优缩放定律" class="headerlink" title="2. 推理最优缩放定律"></a>2. 推理最优缩放定律</h3><p><strong>问题</strong>: 如果考虑”训练成本+推理成本”的总拥有成本（TCO），最优的模型大小和训练数据量关系如何？</p>
+<h3 id="3-数据质量的定量建模"><a href="#3-数据质量的定量建模" class="headerlink" title="3. 数据质量的定量建模"></a>3. 数据质量的定量建模</h3><p><strong>问题</strong>: 如何将数据质量因子纳入缩放定律公式？高质量token与低质量token的”等效缩放系数”是多少？</p>
+<h3 id="4-多轮训练（数据重复）下的缩放定律"><a href="#4-多轮训练（数据重复）下的缩放定律" class="headerlink" title="4. 多轮训练（数据重复）下的缩放定律"></a>4. 多轮训练（数据重复）下的缩放定律</h3><p><strong>问题</strong>: 当数据开始重复使用时（多epoch训练），缩放定律的形式如何变化？</p>
+<h3 id="5-不同架构的缩放行为"><a href="#5-不同架构的缩放行为" class="headerlink" title="5. 不同架构的缩放行为"></a>5. 不同架构的缩放行为</h3><p><strong>问题</strong>: MoE（Mixture of Experts）架构下，总参数和活跃参数各自的缩放关系如何？</p>
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><ol>
+<li>Hoffmann, J., Borgeaud, S., Mensch, A., et al. (2022). Training Compute-Optimal Large Language Models. NeurIPS 2022. arXiv:2203.15556.</li>
+<li>Kaplan, J., McCandlish, S., Henighan, T., et al. (2020). Scaling Laws for Neural Language Models. arXiv:2001.08361.</li>
+<li>Rae, J. W., Borgeaud, S., Cai, T., et al. (2021). Scaling Language Models: Methods, Analysis &amp; Insights from Training Gopher. arXiv:2112.11446.</li>
+<li>Touvron, H., Lavril, T., Izacard, G., et al. (2023). LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971.</li>
+<li>Brown, T. B., Mann, B., Ryder, N., et al. (2020). Language Models are Few-Shot Learners. NeurIPS 2020.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/LLM/" class="category-chain-item">LLM</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/LLM/%E8%A7%84%E6%A8%A1%E5%AE%9A%E5%BE%8B/" class="category-chain-item">规模定律</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/papers-scaling-laws/" class="print-no-link">#papers/scaling-laws</a>
+      
+        <a href="/tags/papers-llm-training/" class="print-no-link">#papers/llm-training</a>
+      
+        <a href="/tags/papers-efficiency/" class="print-no-link">#papers/efficiency</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Training Compute-Optimal Large Language Models</div>
+      <div>https://w2ongq6.github.io/2022/03/29/llm/note/Chinchilla_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年3月29日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/04/05/llm/note/PaLM_note/" title="PaLM: Scaling Language Modeling with Pathways">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">PaLM: Scaling Language Modeling with Pathways</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/03/25/aigc/note/CodeGen_note/" title="CodeGen: An Open Large Language Model for Code with Multi-Turn Program Synthesis">
+                        <span class="hidden-mobile">CodeGen: An Open Large Language Model for Code with Multi-Turn Program Synthesis</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
