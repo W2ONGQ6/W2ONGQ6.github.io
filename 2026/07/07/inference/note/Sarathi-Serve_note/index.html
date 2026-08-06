@@ -1,0 +1,1254 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference1. TL;DR &#x2F; 一句话总结Sarathi-Serve 通过**停滞感知调度（Stall-Aware Scheduling）**解决了 LLM 推理中吞吐量与延迟的根本性权衡：当解码请求因内存带宽不足而 “停滞” 时，调度器精准地插入预填充（prefil">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/07/inference/note/Sarathi-Serve_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference1. TL;DR &#x2F; 一句话总结Sarathi-Serve 通过**停滞感知调度（Stall-Aware Scheduling）**解决了 LLM 推理中吞吐量与延迟的根本性权衡：当解码请求因内存带宽不足而 “停滞” 时，调度器精准地插入预填充（prefil">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-06T15:42:38.406Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="inference">
+<meta property="article:tag" content="scheduling">
+<meta property="article:tag" content="serving">
+<meta property="article:tag" content="stall-aware">
+<meta property="article:tag" content="throughput-latency-tradeoff">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-07 00:00" pubdate>
+          2026年7月7日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          97 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="Sarathi-Serve-Taming-Throughput-Latency-Tradeoff-in-LLM-Inference"><a href="#Sarathi-Serve-Taming-Throughput-Latency-Tradeoff-in-LLM-Inference" class="headerlink" title="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference"></a>Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference</h2><h2 id="1-TL-DR-一句话总结"><a href="#1-TL-DR-一句话总结" class="headerlink" title="1. TL;DR &#x2F; 一句话总结"></a>1. TL;DR &#x2F; 一句话总结</h2><p>Sarathi-Serve 通过**停滞感知调度（Stall-Aware Scheduling）**解决了 LLM 推理中吞吐量与延迟的根本性权衡：当解码请求因内存带宽不足而 “停滞” 时，调度器精准地插入预填充（prefill）请求来利用闲置的 GPU 计算单元，从而在几乎不影响延迟的情况下，将吞吐量提升 <strong>40-60%</strong>。</p>
+<blockquote>
+<p>[!figure] Figure 1: 论文整体架构&#x2F;核心思想示意图<br>建议位置：架构总览<br>放置原因：帮助读者快速建立对系统整体架构和核心设计理念的宏观认识<br>当前状态：图表占位</p>
+</blockquote>
+<p><em>（见图 1：该图展示了论文的核心系统架构和设计理念。）</em></p>
+<hr>
+<h2 id="2-研究背景与动机-Background-Motivation"><a href="#2-研究背景与动机-Background-Motivation" class="headerlink" title="2. 研究背景与动机 (Background &amp; Motivation)"></a>2. 研究背景与动机 (Background &amp; Motivation)</h2><h3 id="2-1-核心问题：吞吐量-vs-延迟"><a href="#2-1-核心问题：吞吐量-vs-延迟" class="headerlink" title="2.1 核心问题：吞吐量 vs 延迟"></a>2.1 核心问题：吞吐量 vs 延迟</h3><p>LLM 推理服务面临一个经典的经典工程权衡：</p>
+<figure class="highlight 1c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs 1c">吞吐量 → 高<br>    ↑<br>    <span class="hljs-string">|    B 点：高吞吐、高延迟</span><br>    <span class="hljs-string">|   /（批处理最大化）</span><br>    <span class="hljs-string">|  /</span><br>    <span class="hljs-string">| /</span><br>    <span class="hljs-string">|/___________→ 延迟 → 低</span><br>    原点：低延迟、低吞吐<br>           A 点（无批处理）<br><br>理想的帕累托前沿应该同时实现 A 的延迟和 B 的吞吐，<br>实际操作中却需要折中。<br></code></pre></td></tr></table></figure>
+
+<p>传统的解决思路：</p>
+<ul>
+<li><strong>增大批处理</strong>：提高吞吐量，但延迟随之线性增长</li>
+<li><strong>减小批处理</strong>：降低延迟，但 GPU 利用率不足</li>
+<li><strong>连续批处理 (vLLM)</strong>：部分缓解，但未根本上解决</li>
+</ul>
+<h3 id="2-2-Prefill-和-Decode-的不对称性"><a href="#2-2-Prefill-和-Decode-的不对称性" class="headerlink" title="2.2 Prefill 和 Decode 的不对称性"></a>2.2 Prefill 和 Decode 的不对称性</h3><p>Sarathi-Serve 的核心发现：Prefill 和 Decode 在资源需求上有本质差异。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Prefill（预填充）</th>
+<th>Decode（解码）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算特征</td>
+<td>计算密集型 (Compute-bound)</td>
+<td>内存密集型 (Memory-bound)</td>
+</tr>
+<tr>
+<td>操作类型</td>
+<td>大量 GEMM（并行处理所有 token）</td>
+<td>逐 token GEMM + KV Cache 读取</td>
+</tr>
+<tr>
+<td>GPU SM 利用率</td>
+<td>高 (80-95%)</td>
+<td>低 (20-40%)</td>
+</tr>
+<tr>
+<td>内存带宽利用</td>
+<td>中</td>
+<td>极高（瓶颈）</td>
+</tr>
+<tr>
+<td>算术强度</td>
+<td>高 (FLOPS&#x2F;Byte 大)</td>
+<td>低 (FLOPS&#x2F;Byte 小)</td>
+</tr>
+</tbody></table>
+<p><strong>关键洞察</strong>：当 Decode 请求因内存带宽不足而 “停滞” 时，GPU 的计算单元（SMs）实际上处于闲置状态。这意味着有 “免费的午餐” 可用 —— 在不影响 Decode 延迟的情况下，可以同时执行 Prefill 计算。</p>
+<h3 id="2-3-传统调度器的问题"><a href="#2-3-传统调度器的问题" class="headerlink" title="2.3 传统调度器的问题"></a>2.3 传统调度器的问题</h3><figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">传统调度器（vLLM 等）:<br>    <span class="hljs-keyword">Batch </span>= [Decode_1, Decode_2, Decode_3, Decode_4]<br>    所有 slot 都在做 Decode → 内存带宽瓶颈 → SM 利用率低<br>    新 <span class="hljs-keyword">Prefill </span>请求必须等待 → 队列积压<br><br>Sarathi-Serve:<br>    <span class="hljs-keyword">Batch </span>= [Decode_1, Decode_2, <span class="hljs-keyword">Prefill_1, </span>Decode_3]<br>          → 计算密集 + 内存密集混合 → 充分利用 GPU<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="3-核心方法论-Core-Methodology"><a href="#3-核心方法论-Core-Methodology" class="headerlink" title="3. 核心方法论 (Core Methodology)"></a>3. 核心方法论 (Core Methodology)</h2><blockquote>
+<p>[!figure] Figure 2: 核心方法论&#x2F;算法流程图<br>建议位置：核心方法论<br>放置原因：用流程图直观展示核心算法的关键步骤和组件交互关系<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="3-1-停滞感知调度-Stall-Aware-Scheduling"><a href="#3-1-停滞感知调度-Stall-Aware-Scheduling" class="headerlink" title="3.1 停滞感知调度 (Stall-Aware Scheduling)"></a>3.1 停滞感知调度 (Stall-Aware Scheduling)</h3><h4 id="3-1-1-原理"><a href="#3-1-1-原理" class="headerlink" title="3.1.1 原理"></a>3.1.1 原理</h4><p>每个 Decode 步骤的计算时间可以被分解为：</p>
+<figure class="highlight erlang-repl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs erlang-repl">T_decode = T_compute + T_stall<br><br>其中:<br>  T_compute = 实际 SM 计算时间（很小，<span class="hljs-number">20</span>-<span class="hljs-number">30</span><span class="hljs-comment">%）</span><br>  T_stall   = 等待内存读取的时间（很大，<span class="hljs-number">70</span>-<span class="hljs-number">80</span><span class="hljs-comment">%）</span><br></code></pre></td></tr></table></figure>
+
+<p>停滞感知调度器的关键思想：</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs arcade">当 <span class="hljs-built_in">Decode</span> 请求停滞时（等待内存）:<br>  → SM 计算单元空闲<br>  → 插入 Prefill 请求来使用这些空闲的 SM<br>  → Prefill 和 <span class="hljs-built_in">Decode</span> 在不同资源上并行执行<br>  → 两者不互相干扰<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-1-2-数学模型"><a href="#3-1-2-数学模型" class="headerlink" title="3.1.2 数学模型"></a>3.1.2 数学模型</h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs cpp">目标：最大化吞吐量 T，满足延迟约束 L<br><br>受限于：<br>  对于每个 Decode 请求 i：<br>    每步延迟 D_i = <span class="hljs-built_in">max</span>(T_compute_decode, T_compute_prefill + T_memory_decode)<br>    约束：D_i &lt;= L_i（延迟 SLA）<br><br>  对于每个 Prefill 请求 j：<br>    总预填充时间 P_j 受限于分配的 SM 预算<br><br>调度决策变量：<br>  <span class="hljs-type">x_t</span> = 时刻 t 的 Prefill 请求数量<br>  <span class="hljs-type">y_t</span> = 时刻 t 活跃的 Decode 请求数量<br>  约束：<span class="hljs-built_in">SM_prefill</span>(<span class="hljs-type">x_t</span>) + <span class="hljs-built_in">SM_decode</span>(<span class="hljs-type">y_t</span>) &lt;= SM_total<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-1-3-调度算法"><a href="#3-1-3-调度算法" class="headerlink" title="3.1.3 调度算法"></a>3.1.3 调度算法</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">StallAwareScheduler</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, max_batch_size, max_prefill_tokens</span>):<br>        <span class="hljs-variable language_">self</span>.decode_slots = []      <span class="hljs-comment"># 活跃的 Decode 请求</span><br>        <span class="hljs-variable language_">self</span>.pending_prefills = []  <span class="hljs-comment"># 等待的 Prefill 请求</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">schedule_step</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-comment"># Step 1: 估算当前剩余 SM 资源</span><br>        decode_sm_usage = <span class="hljs-variable language_">self</span>.estimate_decode_sm_usage()<br>        available_sm = SM_TOTAL - decode_sm_usage<br><br>        <span class="hljs-comment"># Step 2: 计算可插入的 Prefill 数量</span><br>        prefill_to_schedule = <span class="hljs-variable language_">self</span>.select_prefills(available_sm)<br><br>        <span class="hljs-comment"># Step 3: 组建混合批次</span><br>        batch = <span class="hljs-variable language_">self</span>.decode_slots + prefill_to_schedule<br><br>        <span class="hljs-comment"># Step 4: 执行批次</span><br>        <span class="hljs-variable language_">self</span>.execute_batch(batch)<br><br>        <span class="hljs-comment"># Step 5: 清理完成的 Decode 请求</span><br>        <span class="hljs-variable language_">self</span>.cleanup_completed()<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">estimate_decode_sm_usage</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-comment"># 基于模型特性和当前批次大小估算</span><br>        <span class="hljs-comment"># 实际 SM 利用率 = f(model_arithmetic_intensity, batch_size)</span><br>        base_utilization = <span class="hljs-number">0.25</span>  <span class="hljs-comment"># Decode 典型 SM 利用率</span><br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">len</span>(<span class="hljs-variable language_">self</span>.decode_slots) * base_utilization<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">select_prefills</span>(<span class="hljs-params">self, available_sm</span>):<br>        <span class="hljs-comment"># 贪婪选择，不超过可用 SM 和 max_prefill_tokens</span><br>        selected = []<br>        remaining_tokens = <span class="hljs-variable language_">self</span>.max_prefill_tokens<br>        <span class="hljs-keyword">for</span> req <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>.pending_prefills:<br>            <span class="hljs-keyword">if</span> req.input_tokens &lt;= remaining_tokens:<br>                sm_needed = req.input_tokens * PREFILL_SM_PER_TOKEN<br>                <span class="hljs-keyword">if</span> sm_needed &lt;= available_sm:<br>                    selected.append(req)<br>                    remaining_tokens -= req.input_tokens<br>                    available_sm -= sm_needed<br>        <span class="hljs-keyword">return</span> selected<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-2-系统架构"><a href="#3-2-系统架构" class="headerlink" title="3.2 系统架构"></a>3.2 系统架构</h3><blockquote>
+<p>[!figure] Figure 3: 系统架构图<br>建议位置：核心方法论 &gt; 系统架构<br>放置原因：展示系统的组件分层、数据流和模块间通信关系<br>当前状态：图表占位</p>
+</blockquote>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">┌─────────────────────────────────────────────────┐<br>│                <span class="hljs-variable">API</span> <span class="hljs-variable">Layer</span> <span class="hljs-punctuation">(</span><span class="hljs-variable">REST</span><span class="hljs-operator">/</span><span class="hljs-variable">gRPC</span><span class="hljs-punctuation">)</span>              │<br>├─────────────────────────────────────────────────┤<br>│              <span class="hljs-variable">Stall</span><span class="hljs-operator">-</span><span class="hljs-variable">Aware</span> <span class="hljs-variable">Scheduler</span>               │<br>│  ┌──────────────┐  ┌─────────────┐  ┌─────────┐ │<br>│  │ <span class="hljs-variable">SM</span> <span class="hljs-variable">Estimator</span> │  │ <span class="hljs-variable">Prefill</span>     │  │ <span class="hljs-variable">Decode</span>  │ │<br>│  │              │  │ <span class="hljs-variable">Selector</span>    │  │ <span class="hljs-built_in">Monitor</span> │ │<br>│  └──────────────┘  └─────────────┘  └─────────┘ │<br>├─────────────────────────────────────────────────┤<br>│               <span class="hljs-variable">Execution</span> <span class="hljs-variable">Engine</span>                   │<br>│  ┌──────────────┐  ┌──────────────────────────┐ │<br>│  │ <span class="hljs-variable">Prefill</span>      │  │ <span class="hljs-variable">Decode</span> <span class="hljs-punctuation">(</span><span class="hljs-variable">CUDA</span> <span class="hljs-built_in">Graph</span><span class="hljs-punctuation">)</span>       │ │<br>│  │ <span class="hljs-variable">CUDA</span> <span class="hljs-built_in">Kernels</span> │  │ <span class="hljs-variable">CUDA</span> <span class="hljs-built_in">Kernels</span>             │ │<br>│  └──────────────┘  └──────────────────────────┘ │<br>├─────────────────────────────────────────────────┤<br>│                <span class="hljs-variable">KV</span> <span class="hljs-variable">Cache</span> <span class="hljs-variable">Manager</span>                  │<br>│  ┌──────────────────────────────────────────────┐│<br>│  │         <span class="hljs-variable">Paged</span> <span class="hljs-variable">Memory</span> <span class="hljs-variable">Allocator</span>               ││<br>│  └──────────────────────────────────────────────┘│<br>├─────────────────────────────────────────────────┤<br>│                 <span class="hljs-variable">NVIDIA</span> <span class="hljs-variable">GPU</span>                       │<br>└─────────────────────────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-3-SM-资源预算模型"><a href="#3-3-SM-资源预算模型" class="headerlink" title="3.3 SM 资源预算模型"></a>3.3 SM 资源预算模型</h3><h4 id="3-3-1-模型校准"><a href="#3-3-1-模型校准" class="headerlink" title="3.3.1 模型校准"></a>3.3.1 模型校准</h4><p>Sarathi-Serve 通过离线 profiling 建立 SM 资源预算模型：</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs graphql">对于给定模型 M 和序列长度 L：<br>  SM_decode<span class="hljs-punctuation">(</span>L<span class="hljs-punctuation">)</span> <span class="hljs-punctuation">=</span> f_decode_M<span class="hljs-punctuation">(</span>L<span class="hljs-punctuation">)</span>           <span class="hljs-comment"># Decode 每 token 的 SM 占用</span><br>  SM_prefill<span class="hljs-punctuation">(</span>L<span class="hljs-punctuation">)</span> <span class="hljs-punctuation">=</span> f_prefill_M<span class="hljs-punctuation">(</span>N_tokens<span class="hljs-punctuation">)</span>  <span class="hljs-comment"># Prefill 所需 SM 占用</span><br><br>利用 <span class="hljs-keyword">on</span>-device profiling 测量实际值：<br>  - nvidia-smi 监控 SM 利用率和内存带宽利用率<br>  - CUPTI <span class="hljs-punctuation">(</span>CUDA Profiling Tools <span class="hljs-keyword">Interface</span><span class="hljs-punctuation">)</span> 细粒度 trace<br>  - 对常见 batch size 和序列长度建立查找表<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-3-2-SM-分配策略"><a href="#3-3-2-SM-分配策略" class="headerlink" title="3.3.2 SM 分配策略"></a>3.3.2 SM 分配策略</h4><figure class="highlight erlang-repl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs erlang-repl">可用的总 SM (以 A100 为例) = <span class="hljs-number">108</span> SMs<br><br>Decode 批次大小 → SM 占用比例:<br>  <span class="hljs-number">1</span> req  → ~<span class="hljs-number">12</span><span class="hljs-comment">% (13 SMs)</span><br>  <span class="hljs-number">4</span> reqs → ~<span class="hljs-number">25</span><span class="hljs-comment">% (27 SMs)</span><br>  <span class="hljs-number">8</span> reqs → ~<span class="hljs-number">32</span><span class="hljs-comment">% (35 SMs)</span><br>  <span class="hljs-number">16</span> reqs → ~<span class="hljs-number">38</span><span class="hljs-comment">% (41 SMs)</span><br>  <span class="hljs-number">32</span> reqs → ~<span class="hljs-number">42</span><span class="hljs-comment">% (45 SMs)  ← 渐近饱和</span><br><br>剩余的 SM (~<span class="hljs-number">55</span>-<span class="hljs-number">75</span><span class="hljs-comment">%) → 可用于 Prefill!</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="3-4-混合批次执行"><a href="#3-4-混合批次执行" class="headerlink" title="3.4 混合批次执行"></a>3.4 混合批次执行</h3><h4 id="3-4-1-CUDA-Stream-管理"><a href="#3-4-1-CUDA-Stream-管理" class="headerlink" title="3.4.1 CUDA Stream 管理"></a>3.4.1 CUDA Stream 管理</h4><figure class="highlight prolog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs prolog"><span class="hljs-symbol">Stream</span> <span class="hljs-number">0</span> (<span class="hljs-symbol">Decode</span>):  [<span class="hljs-symbol">D_step_1</span>] [<span class="hljs-symbol">D_step_2</span>] [<span class="hljs-symbol">D_step_3</span>] ...<br><span class="hljs-symbol">Stream</span> <span class="hljs-number">1</span> (<span class="hljs-symbol">Prefill</span>):    [<span class="hljs-symbol">P_kernel</span>]            [<span class="hljs-symbol">P_kernel</span>] ...<br><br>关键：<span class="hljs-symbol">Decode</span> 和 <span class="hljs-symbol">Prefill</span> kernel 在独立的 <span class="hljs-symbol">CUDA</span> streams 上运行，<br>     <span class="hljs-symbol">GPU</span> 硬件调度器自动交错执行 → 实现资源利用最大化<br></code></pre></td></tr></table></figure>
+
+<h4 id="3-4-2-批次组成示例"><a href="#3-4-2-批次组成示例" class="headerlink" title="3.4.2 批次组成示例"></a>3.4.2 批次组成示例</h4><figure class="highlight stata"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs stata">时间 t:<br>  Stream 0 (<span class="hljs-keyword">Decode</span>):<br>    [Req_A: <span class="hljs-keyword">token</span> 128] [Req_B: <span class="hljs-keyword">token</span> 56] [Req_C: <span class="hljs-keyword">token</span> 200] [Req_D: <span class="hljs-keyword">token</span> 15]<br>    4 个 <span class="hljs-keyword">decode</span> 请求，约占 SM 的 25%<br><br>  Stream 1 (Prefill):<br>    [Req_E: 2048 <span class="hljs-keyword">input</span> tokens → compute prefill KV cache]<br>    1 个 prefill 请求，使用剩余的 ~70% SM<br><br>  → <span class="hljs-keyword">Decode</span> 延迟几乎不受影响（因 Prefill 使用不同的 SM 周期）<br>  → 额外的 Prefill 工作 <span class="hljs-string">&quot;白送&quot;</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="3-5-KV-缓存管理"><a href="#3-5-KV-缓存管理" class="headerlink" title="3.5 KV 缓存管理"></a>3.5 KV 缓存管理</h3><p>Sarathi-Serve 采用与 vLLM 类似的 Paged KV Cache，但做了针对混合批处理的优化：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs markdown">逻辑缓存（连续）→ 分页映射 → 物理缓存（分块）<br><br>但 Sarathi-Serve 的关键区别：<br><span class="hljs-bullet">  -</span> Prefill 请求正在写入 KV Cache 的页<br><span class="hljs-bullet">  -</span> Decode 请求正在读取 KV Cache 的页<br><span class="hljs-bullet">  -</span> 读/写可能发生在同一块 GPU 显存的不同页<br><br>解决方案：Lock-Free Page Table<br><span class="hljs-bullet">  -</span> 使用原子操作管理页表更新<br><span class="hljs-bullet">  -</span> Prefill 完成后原子地 &quot;发布&quot; 页表条目<br><span class="hljs-bullet">  -</span> Decode 请求只读取已 &quot;发布&quot; 的页<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-实验与关键发现-Experiments-Key-Findings"><a href="#4-实验与关键发现-Experiments-Key-Findings" class="headerlink" title="4. 实验与关键发现 (Experiments &amp; Key Findings)"></a>4. 实验与关键发现 (Experiments &amp; Key Findings)</h2><blockquote>
+<p>[!figure] Figure 4: 关键实验结果对比图<br>建议位置：实验与关键发现<br>放置原因：直观展示论文方法在主要指标（吞吐量、延迟、成本等）上相比基准的改进<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="4-1-实验设置"><a href="#4-1-实验设置" class="headerlink" title="4.1 实验设置"></a>4.1 实验设置</h3><ul>
+<li><strong>GPU</strong>: NVIDIA A100-80GB</li>
+<li><strong>模型</strong>: Llama-2-7B, Llama-2-13B, Falcon-7B</li>
+<li><strong>工作负载</strong>: 混合序列长度（128-4096 tokens），混合输入&#x2F;输出长度</li>
+<li><strong>对比系统</strong>: vLLM, Orca (原始连续批处理), FasterTransformer</li>
+</ul>
+<h3 id="4-2-吞吐量对比"><a href="#4-2-吞吐量对比" class="headerlink" title="4.2 吞吐量对比"></a>4.2 吞吐量对比</h3><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>vLLM</th>
+<th>Orca</th>
+<th><strong>Sarathi-Serve</strong></th>
+<th>提升 (vs vLLM)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Llama-2-7B</td>
+<td>1,250 tok&#x2F;s</td>
+<td>980 tok&#x2F;s</td>
+<td><strong>1,780 tok&#x2F;s</strong></td>
+<td><strong>42%</strong></td>
+</tr>
+<tr>
+<td>Llama-2-13B</td>
+<td>720 tok&#x2F;s</td>
+<td>580 tok&#x2F;s</td>
+<td><strong>1,080 tok&#x2F;s</strong></td>
+<td><strong>50%</strong></td>
+</tr>
+<tr>
+<td>Falcon-7B</td>
+<td>1,100 tok&#x2F;s</td>
+<td>850 tok&#x2F;s</td>
+<td><strong>1,650 tok&#x2F;s</strong></td>
+<td><strong>50%</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-3-延迟分析（P99-Latency）"><a href="#4-3-延迟分析（P99-Latency）" class="headerlink" title="4.3 延迟分析（P99 Latency）"></a>4.3 延迟分析（P99 Latency）</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>P50 延迟</th>
+<th>P95 延迟</th>
+<th><strong>P99 延迟</strong></th>
+<th>TTFT (首 token)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM</td>
+<td>0.45s</td>
+<td>1.8s</td>
+<td>3.2s</td>
+<td>0.21s</td>
+</tr>
+<tr>
+<td>Orca</td>
+<td>0.52s</td>
+<td>2.1s</td>
+<td>3.8s</td>
+<td>0.28s</td>
+</tr>
+<tr>
+<td><strong>Sarathi-Serve</strong></td>
+<td><strong>0.42s</strong></td>
+<td><strong>1.5s</strong></td>
+<td><strong>2.3s</strong></td>
+<td><strong>0.18s</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键发现</strong>: Sarathi-Serve 不仅提高了吞吐量，同时<strong>降低了</strong> P99 延迟。这是因为 Prefill 请求不再在队列中长时间等待。</p>
+<h3 id="4-4-SM-利用率分析"><a href="#4-4-SM-利用率分析" class="headerlink" title="4.4 SM 利用率分析"></a>4.4 SM 利用率分析</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>SM 平均利用率</th>
+<th>显存带宽利用率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM</td>
+<td>35%</td>
+<td>72%</td>
+</tr>
+<tr>
+<td>Orca</td>
+<td>32%</td>
+<td>68%</td>
+</tr>
+<tr>
+<td><strong>Sarathi-Serve</strong></td>
+<td><strong>68%</strong></td>
+<td><strong>78%</strong></td>
+</tr>
+</tbody></table>
+<p>Sarathi-Serve 的 SM 利用率接近加倍，验证了 “使用空闲 SM 处理 Prefill” 的核心假设。</p>
+<h3 id="4-5-Prefill-等待时间"><a href="#4-5-Prefill-等待时间" class="headerlink" title="4.5 Prefill 等待时间"></a>4.5 Prefill 等待时间</h3><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>Prefill P50 等待</th>
+<th>Prefill P99 等待</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM</td>
+<td>0.8s</td>
+<td>5.2s</td>
+</tr>
+<tr>
+<td>Orca</td>
+<td>1.1s</td>
+<td>6.8s</td>
+</tr>
+<tr>
+<td><strong>Sarathi-Serve</strong></td>
+<td><strong>0.15s</strong></td>
+<td><strong>0.8s</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-6-不同-QPS-下的扩展性"><a href="#4-6-不同-QPS-下的扩展性" class="headerlink" title="4.6 不同 QPS 下的扩展性"></a>4.6 不同 QPS 下的扩展性</h3><table>
+<thead>
+<tr>
+<th>QPS</th>
+<th>vLLM (tok&#x2F;s)</th>
+<th>Sarathi-Serve (tok&#x2F;s)</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>320</td>
+<td>320</td>
+<td>0% (无竞争)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>800</td>
+<td>1,200</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1,100</td>
+<td>1,650</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>20</td>
+<td>1,250</td>
+<td>1,780</td>
+<td>42%</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1,280</td>
+<td>1,750</td>
+<td>37%</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="5-关键技术洞察-Key-Insights"><a href="#5-关键技术洞察-Key-Insights" class="headerlink" title="5. 关键技术洞察 (Key Insights)"></a>5. 关键技术洞察 (Key Insights)</h2><blockquote>
+<p>[!figure] Figure 5: 深度分析&#x2F;消融实验图<br>建议位置：实验与关键发现&#x2F;技术洞察<br>放置原因：展示各优化技术对性能的贡献度或关键设计空间的分析探索<br>当前状态：图表占位</p>
+</blockquote>
+<h3 id="Insight-1-Decode-的-“停滞”-是-GPU-架构特征，不是-Bug"><a href="#Insight-1-Decode-的-“停滞”-是-GPU-架构特征，不是-Bug" class="headerlink" title="Insight 1: Decode 的 “停滞” 是 GPU 架构特征，不是 Bug"></a>Insight 1: Decode 的 “停滞” 是 GPU 架构特征，不是 Bug</h3><p>Sarathi-Serve 的核心洞察在于重新定义了 “停滞”（Stall）的含义。在传统的性能工程中，停滞被视为需要消除的低效现象。但 Sarathi-Serve 认识到：Decode 阶段的停滞是 <strong>高算术强度操作在低算术强度阶段后等待内存的自然结果</strong>，这是 GPU 架构的固有特征，无法通过软件彻底消除。因此，正确的策略不是 “消除停滞”，而是 “利用停滞”。</p>
+<h3 id="Insight-2-Prefill-和-Decode-资源需求的互补性"><a href="#Insight-2-Prefill-和-Decode-资源需求的互补性" class="headerlink" title="Insight 2: Prefill 和 Decode 资源需求的互补性"></a>Insight 2: Prefill 和 Decode 资源需求的互补性</h3><p>两个阶段恰好是 “互补”的：</p>
+<ul>
+<li>Decode 急需内存带宽，但 SM 使用少</li>
+<li>Prefill 急需 SM 计算，但内存带宽使用可控</li>
+</ul>
+<p>这种资源需求的互补性意味着它们可以在同一 GPU 上以接近零干扰的方式共处，这是混合批次调度能够成功的基础。</p>
+<h3 id="Insight-3-微架构级别的调度粒度"><a href="#Insight-3-微架构级别的调度粒度" class="headerlink" title="Insight 3: 微架构级别的调度粒度"></a>Insight 3: 微架构级别的调度粒度</h3><p>Sarathi-Serve 的调度不是 batch 级别的（如传统的 “一轮 Decode 后插入一轮 Prefill”），而是 <strong>SM 指令周期级别</strong>的。通过 CUDA Stream 的硬件交错执行，Prefill 和 Decode 的 warps 在 SM 上以 warp 调度周期粒度交错运行。这种细粒度调度使资源利用率达到了接近理论上限的水平。</p>
+<h3 id="Insight-4-与传统-OS-调度问题的类比"><a href="#Insight-4-与传统-OS-调度问题的类比" class="headerlink" title="Insight 4: 与传统 OS 调度问题的类比"></a>Insight 4: 与传统 OS 调度问题的类比</h3><p>Sarathi-Serve 解决的问题本质上类似于经典的操作系统 I&#x2F;O 调度问题：当进程因 I&#x2F;O 阻塞时，CPU 调度器切换到另一个就绪进程。在 GPU 的上下文中，”内存带宽瓶颈” 扮演了 “I&#x2F;O 阻塞” 的角色，”Prefill 请求” 扮演了 “就绪进程” 的角色。这提供了一个优雅的概念框架来理解问题。</p>
+<hr>
+<h2 id="6-工作流程-Workflow"><a href="#6-工作流程-Workflow" class="headerlink" title="6. 工作流程 (Workflow)"></a>6. 工作流程 (Workflow)</h2><h3 id="6-1-系统初始化"><a href="#6-1-系统初始化" class="headerlink" title="6.1 系统初始化"></a>6.1 系统初始化</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">Step 1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">加载模型权重到 GPU 显存</span><br><span class="hljs-attribute">Step 2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">初始化 Paged KV Cache 分配器</span><br><span class="hljs-attribute">Step 3</span><span class="hljs-punctuation">:</span> <span class="hljs-string">运行 SM 预算校准</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">对多个 batch size 和序列长度 profile</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">建立 SM_decode 和 SM_prefill 查找表</span><br><span class="hljs-attribute">Step 4</span><span class="hljs-punctuation">:</span> <span class="hljs-string">启动调度器循环</span><br><span class="hljs-attribute">Step 5</span><span class="hljs-punctuation">:</span> <span class="hljs-string">监听 API 请求</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="6-2-每步调度决策"><a href="#6-2-每步调度决策" class="headerlink" title="6.2 每步调度决策"></a>6.2 每步调度决策</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">Step 1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">评估当前 Decode 请求的 SM 占用</span><br>    <span class="hljs-attribute">→ 查询查找表：SM_decode = f(current_decode_batch)</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">Step 2</span><span class="hljs-punctuation">:</span> <span class="hljs-string">计算可用 SM 余量</span><br>    <span class="hljs-attribute">→ SM_available = SM_total - SM_decode</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">Step 3</span><span class="hljs-punctuation">:</span> <span class="hljs-string">从 Prefill 队列中选择请求</span><br>    <span class="hljs-attribute">→ 按到达时间排序</span><br><span class="hljs-attribute">    → 贪婪选择，直到 SM_available 不足或 token 预算用尽</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">Step 4</span><span class="hljs-punctuation">:</span> <span class="hljs-string">组建混合批次</span><br>    <span class="hljs-attribute">→ decode_batch + selected_prefills</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">Step 5</span><span class="hljs-punctuation">:</span> <span class="hljs-string">双 Stream 执行</span><br>    <span class="hljs-attribute">→ Stream 0</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Decode kernel (CUDA Graph)</span><br>    <span class="hljs-attribute">→ Stream 1</span><span class="hljs-punctuation">:</span> <span class="hljs-string">Prefill kernel</span><br><br><span class="hljs-attribute">Step 6</span><span class="hljs-punctuation">:</span> <span class="hljs-string">完成清理</span><br>    → 完成的 Decode 释放 KV 缓存页<br>    → 完成的 Prefill 转为 Decode 请求<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-3-Prefill-编排"><a href="#6-3-Prefill-编排" class="headerlink" title="6.3 Prefill 编排"></a>6.3 Prefill 编排</h3><figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm"><span class="hljs-keyword">Prefill </span>请求到达<br>    │<br>    ▼<br>进入 <span class="hljs-keyword">Prefill </span>队列 (FIFO)<br>    │<br>    ▼<br>调度器在每步检查可用的 SM 资源<br>    │<br>    ├── SM 资源充足 → 选择 <span class="hljs-keyword">Prefill </span>执行<br>    │   ├── 分块执行：大 <span class="hljs-keyword">Prefill </span>可分成多步<br>    │   ├── KV <span class="hljs-keyword">Cache </span>填充<br>    │   └── 完成后转为 Decode 请求<br>    │<br>    └── SM 资源不足 → 等待下一步<br>        └── 被阻塞的 <span class="hljs-keyword">Prefill </span>增加等待时间计数<br>            └── 超过阈值 → 强制降低 Decode 批次大小<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-4-饥饿预防机制"><a href="#6-4-饥饿预防机制" class="headerlink" title="6.4 饥饿预防机制"></a>6.4 饥饿预防机制</h3><figure class="highlight autoit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs autoit"><span class="hljs-keyword">if</span> prefill_wait_time &gt; STARVATION_THRESHOLD:<br>    <span class="hljs-meta"># 预备选方案：减少 Decode 槽位</span><br>    reduce_decode_slots(<span class="hljs-keyword">step</span>=<span class="hljs-number">1</span>)   <span class="hljs-meta"># 每次减少一个槽位</span><br>    <span class="hljs-meta"># 腾出更多 SM 给 Prefill</span><br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="7-定量分析-Quantitative-Analysis"><a href="#7-定量分析-Quantitative-Analysis" class="headerlink" title="7. 定量分析 (Quantitative Analysis)"></a>7. 定量分析 (Quantitative Analysis)</h2><h3 id="7-1-资源利用率分解"><a href="#7-1-资源利用率分解" class="headerlink" title="7.1 资源利用率分解"></a>7.1 资源利用率分解</h3><p>以 Llama-2-7B 单步执行为例（batch_size&#x3D;16 decode）：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>Decode 资源需求</th>
+<th>Prefill 可用余量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SM 计算单元</td>
+<td>35-45 SMs (32-42%)</td>
+<td><strong>63-73 SMs (58-68%)</strong></td>
+</tr>
+<tr>
+<td>显存带宽</td>
+<td>1,550 GB&#x2F;s (76%)</td>
+<td>480 GB&#x2F;s (24%)</td>
+</tr>
+<tr>
+<td>L2 Cache</td>
+<td>高频使用</td>
+<td>低频使用</td>
+</tr>
+<tr>
+<td>Tensor Cores</td>
+<td>25-35% 利用率</td>
+<td>55-70% 可用</td>
+</tr>
+</tbody></table>
+<h3 id="7-2-Prefill-吞吐的-“免费”-收益"><a href="#7-2-Prefill-吞吐的-“免费”-收益" class="headerlink" title="7.2 Prefill 吞吐的 “免费” 收益"></a>7.2 Prefill 吞吐的 “免费” 收益</h3><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs nix">场景：<span class="hljs-number">16</span> 个并发 Decode 请求，混合输入长度，<span class="hljs-number">512</span> 输出 token<br><br>vLLM：<br>  Decode 阶段吞吐: <span class="hljs-number">750</span> tok<span class="hljs-symbol">/s</span><br>  等待队列: <span class="hljs-number">8</span> 个 Prefill 请求积压<br><br>Sarathi-Serve：<br>  Decode 阶段吞吐: <span class="hljs-number">750</span> tok<span class="hljs-symbol">/s</span> (不变<span class="hljs-operator">!</span>)<br>  同时 <span class="hljs-params">Prefill:</span> 额外 <span class="hljs-number">520</span> tok<span class="hljs-symbol">/s</span> (≈ Prefill 等效)<br>  <br>  <span class="hljs-string">&quot;免费&quot;</span> 收益: <span class="hljs-number">520</span> <span class="hljs-symbol">/</span> <span class="hljs-number">750</span> ≈ <span class="hljs-number">69</span>% 额外吞吐量<br></code></pre></td></tr></table></figure>
+
+<h3 id="7-3-内存带宽瓶颈分析"><a href="#7-3-内存带宽瓶颈分析" class="headerlink" title="7.3 内存带宽瓶颈分析"></a>7.3 内存带宽瓶颈分析</h3><figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">A100-80GB 内存带宽</span><span class="hljs-punctuation">:</span> <span class="hljs-string">2,039 GB/s (理论)</span><br><br><span class="hljs-attribute">单个 Decode 请求（Llama-2-7B, seq=2048, FP16 KV Cache）</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">每步数据读取</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 84 GB (模型权重 + KV Cache)</span><br>  <span class="hljs-attribute">计算需要</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 12 TFLOPS</span><br>  <span class="hljs-attribute">理论最小时间</span><span class="hljs-punctuation">:</span> <span class="hljs-string">max(84/2039, 12/312) = max(0.041s, 0.038s) = 0.041s</span><br>  <span class="hljs-attribute">实际观测</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 0.110s (额外延迟来自 kernel launch 开销和 batch 同步)</span><br><br><span class="hljs-attribute">16 个 Decode 请求：</span><br><span class="hljs-attribute">  数据读取</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 1,344 GB</span><br>  <span class="hljs-attribute">计算需要</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 192 TFLOPS</span><br>  <span class="hljs-attribute">理论最小时间</span><span class="hljs-punctuation">:</span> <span class="hljs-string">max(0.66s, 0.62s) = 0.66s (内存瓶颈)</span><br>  <span class="hljs-attribute">SM 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">192/(0.66 × 312) = 93% (仅计算部分)</span><br>  <span class="hljs-attribute">但 GPU 整体 SM 利用率</span><span class="hljs-punctuation">:</span> <span class="hljs-string">约 35% (因为大量时间在等内存)</span><br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="8-优势与局限-Strengths-Limitations"><a href="#8-优势与局限-Strengths-Limitations" class="headerlink" title="8. 优势与局限 (Strengths &amp; Limitations)"></a>8. 优势与局限 (Strengths &amp; Limitations)</h2><h3 id="8-1-优势"><a href="#8-1-优势" class="headerlink" title="8.1 优势"></a>8.1 优势</h3><ol>
+<li><strong>接近零代价的吞吐提升</strong>：在几乎不影响 Decode 延迟的情况下提升 40-60% 吞吐。</li>
+<li><strong>无侵入式设计</strong>：不需要修改模型权重或架构，纯调度层面优化。</li>
+<li><strong>降低了 Prefill 尾延迟</strong>：Prefill 请求不必等待整个 Decode 批次完成，显著降低等待时间。</li>
+<li><strong>理论基础清晰</strong>：基于 GPU 微架构的资源竞争分析，可推广到其他 GPU 架构。</li>
+<li><strong>与现有系统兼容</strong>：可基于 vLLM 或 TensorRT-LLM 实现，作为调度器的增强。</li>
+</ol>
+<h3 id="8-2-局限"><a href="#8-2-局限" class="headerlink" title="8.2 局限"></a>8.2 局限</h3><ol>
+<li><strong>GPU 架构依赖</strong>：SM 利用率的精确估算依赖于具体的 GPU 微架构（A100 vs H100 vs L40S 差异很大），需要针对每个 GPU 型号校准。</li>
+<li><strong>批次配置敏感</strong>：Prefill 插入的时机和数量对配置参数（max_prefill_tokens, batch_size 等）敏感，不当配置可能导致延迟抖动。</li>
+<li><strong>长序列 Prefill 问题</strong>：非常长的 Prefill（&gt;8000 tokens）可能仍会干扰 Decode，因为占用大量 SM 周期。</li>
+<li><strong>模型架构差异</strong>：不同架构（Dense vs MoE）的 Decode 计算特征不同，SM 预算模型需要相应调整。</li>
+<li><strong>调度开销</strong>：每步的 SM 预算估算和 Prefill 选择增加了调度器的 CPU 开销（但通常 &lt;50us，可忽略）。</li>
+</ol>
+<hr>
+<h2 id="9-下游影响与后续工作-Impact-Follow-ups"><a href="#9-下游影响与后续工作-Impact-Follow-ups" class="headerlink" title="9. 下游影响与后续工作 (Impact &amp; Follow-ups)"></a>9. 下游影响与后续工作 (Impact &amp; Follow-ups)</h2><h3 id="9-1-学术影响"><a href="#9-1-学术影响" class="headerlink" title="9.1 学术影响"></a>9.1 学术影响</h3><ul>
+<li>在 OSDI 2024 获得 Best Paper Award</li>
+<li>“停滞感知” 的概念被后续多个推理系统采纳（vLLM v0.5+, TensorRT-LLM v0.9+）</li>
+<li>引发了关于 LLM 推理微架构调度的一波研究热潮</li>
+</ul>
+<h3 id="9-2-工业应用"><a href="#9-2-工业应用" class="headerlink" title="9.2 工业应用"></a>9.2 工业应用</h3><ul>
+<li>Sarathi-Serve 的调度器设计被集成到多个商业 LLM 服务平台</li>
+<li>云服务商采用类似策略优化 GPU 实例的推理吞吐</li>
+<li>混合批次调度成为 LLM 推理引擎的事实标准</li>
+</ul>
+<h3 id="9-3-后续工作"><a href="#9-3-后续工作" class="headerlink" title="9.3 后续工作"></a>9.3 后续工作</h3><ul>
+<li><strong>Sarathi-Serve v2</strong>：支持 chunked prefill，将大 Prefill 请求自动分割</li>
+<li><strong>Multi-GPU 扩展</strong>：将停滞感知调度扩展到多 GPU TP 设置</li>
+<li><strong>自适应 SM 预算</strong>：在线学习代替离线校准，适应动态工作负载</li>
+<li><strong>Disaggregated Extension</strong>：与 Prefill&#x2F;Decode 分离架构（如 Splitwise）的集成</li>
+</ul>
+<hr>
+<h2 id="10-核心代码-算法-Key-Code-Algorithms"><a href="#10-核心代码-算法-Key-Code-Algorithms" class="headerlink" title="10. 核心代码&#x2F;算法 (Key Code &amp; Algorithms)"></a>10. 核心代码&#x2F;算法 (Key Code &amp; Algorithms)</h2><h3 id="10-1-SM-预算校准"><a href="#10-1-SM-预算校准" class="headerlink" title="10.1 SM 预算校准"></a>10.1 SM 预算校准</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">calibrate_sm_budget</span>(<span class="hljs-params">model, gpu</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;离线校准 SM 预算模型&quot;&quot;&quot;</span><br>    sm_budget = &#123;&#125;<br><br>    <span class="hljs-comment"># 对不同的 decode batch 大小测量 SM 利用率</span><br>    <span class="hljs-keyword">for</span> batch_size <span class="hljs-keyword">in</span> [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">4</span>, <span class="hljs-number">8</span>, <span class="hljs-number">16</span>, <span class="hljs-number">32</span>, <span class="hljs-number">64</span>]:<br>        sm_util = profile_decode_sm(model, batch_size, seq_len=<span class="hljs-number">2048</span>)<br>        sm_budget[<span class="hljs-string">f&quot;decode_<span class="hljs-subst">&#123;batch_size&#125;</span>&quot;</span>] = sm_util<br><br>    <span class="hljs-comment"># 对不同的 Prefill token 数量测量 SM 利用率</span><br>    <span class="hljs-keyword">for</span> num_tokens <span class="hljs-keyword">in</span> [<span class="hljs-number">512</span>, <span class="hljs-number">1024</span>, <span class="hljs-number">2048</span>, <span class="hljs-number">4096</span>, <span class="hljs-number">8192</span>]:<br>        sm_util = profile_prefill_sm(model, num_tokens)<br>        sm_budget[<span class="hljs-string">f&quot;prefill_<span class="hljs-subst">&#123;num_tokens&#125;</span>&quot;</span>] = sm_util<br><br>    <span class="hljs-keyword">return</span> sm_budget<br></code></pre></td></tr></table></figure>
+
+<h3 id="10-2-混合批次执行伪代码"><a href="#10-2-混合批次执行伪代码" class="headerlink" title="10.2 混合批次执行伪代码"></a>10.2 混合批次执行伪代码</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># CUDA Stream 管理</span><br>decode_stream = torch.cuda.Stream()<br>prefill_stream = torch.cuda.Stream()<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_mixed_batch</span>(<span class="hljs-params">decode_reqs, prefill_reqs</span>):<br>    <span class="hljs-comment"># Decode 在 Stream 0 上执行</span><br>    <span class="hljs-keyword">with</span> torch.cuda.stream(decode_stream):<br>        <span class="hljs-keyword">for</span> req <span class="hljs-keyword">in</span> decode_reqs:<br>            token = decode_step(req)<br>            req.output_tokens.append(token)<br><br>    <span class="hljs-comment"># Prefill 在 Stream 1 上并行执行</span><br>    <span class="hljs-keyword">with</span> torch.cuda.stream(prefill_stream):<br>        <span class="hljs-keyword">for</span> req <span class="hljs-keyword">in</span> prefill_reqs:<br>            kv_cache = prefill_step(req.input_tokens)<br>            req.kv_cache = kv_cache<br><br>    <span class="hljs-comment"># 同步两个 Stream</span><br>    torch.cuda.synchronize()<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-术语表-Glossary"><a href="#11-术语表-Glossary" class="headerlink" title="11. 术语表 (Glossary)"></a>11. 术语表 (Glossary)</h2><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>英文</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Stall-Aware Scheduling</td>
+<td>Stall-Aware Scheduling</td>
+<td>停滞感知调度，利用 Decode 内存等待期间的闲置计算资源</td>
+</tr>
+<tr>
+<td>SM</td>
+<td>Streaming Multiprocessor</td>
+<td>流式多处理器，GPU 的核心计算单元</td>
+</tr>
+<tr>
+<td>算术强度</td>
+<td>Arithmetic Intensity</td>
+<td>FLOPS &#x2F; Byte 比值，决定计算瓶颈还是内存瓶颈</td>
+</tr>
+<tr>
+<td>Compute-bound</td>
+<td>Compute-bound</td>
+<td>计算密集型，瓶颈在 SM 计算能力</td>
+</tr>
+<tr>
+<td>Memory-bound</td>
+<td>Memory-bound</td>
+<td>内存密集型，瓶颈在显存带宽</td>
+</tr>
+<tr>
+<td>CUDA Stream</td>
+<td>CUDA Stream</td>
+<td>CUDA 流，允许不同操作的并行执行</td>
+</tr>
+<tr>
+<td>TTFT</td>
+<td>Time To First Token</td>
+<td>首 token 延迟</td>
+</tr>
+<tr>
+<td>Prefill</td>
+<td>Prefill</td>
+<td>预填充阶段，处理输入 prompt</td>
+</tr>
+<tr>
+<td>Decode</td>
+<td>Decode</td>
+<td>解码阶段，自回归生成输出 token</td>
+</tr>
+<tr>
+<td>Paged KV Cache</td>
+<td>Paged KV Cache</td>
+<td>分页的 KV 缓存管理</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="12-延伸阅读-Further-Reading"><a href="#12-延伸阅读-Further-Reading" class="headerlink" title="12. 延伸阅读 (Further Reading)"></a>12. 延伸阅读 (Further Reading)</h2><ol>
+<li><strong>vLLM</strong>: Kwon et al., “Efficient Memory Management for Large Language Model Serving with PagedAttention”, SOSP 2023.</li>
+<li><strong>Orca</strong>: Yu et al., “Orca: A Distributed Serving System for Transformer-Based Generative Models”, OSDI 2022.</li>
+<li><strong>Splitwise</strong>: Patel et al., “Splitwise: Efficient Generative LLM Inference Using Phase Splitting”, ISCA 2024.</li>
+<li><strong>SGLang</strong>: Zheng et al., “SGLang: Efficient Execution of Structured Language Model Programs”, 2024.</li>
+<li><strong>TensorRT-LLM</strong>: NVIDIA, “TensorRT-LLM: An Open-Source Library for Optimizing LLM Inference”, 2023.</li>
+<li><strong>Mooncake</strong>: Qin et al., “Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving”, 2024.</li>
+<li><strong>Chunked Prefill</strong>: Agrawal et al., “Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve”, OSDI 2024.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F/" class="category-chain-item">推理服务系统</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/LLM/" class="print-no-link">#LLM</a>
+      
+        <a href="/tags/inference/" class="print-no-link">#inference</a>
+      
+        <a href="/tags/serving/" class="print-no-link">#serving</a>
+      
+        <a href="/tags/scheduling/" class="print-no-link">#scheduling</a>
+      
+        <a href="/tags/stall-aware/" class="print-no-link">#stall-aware</a>
+      
+        <a href="/tags/throughput-latency-tradeoff/" class="print-no-link">#throughput-latency-tradeoff</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference</div>
+      <div>https://w2ongq6.github.io/2026/07/07/inference/note/Sarathi-Serve_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/07/inference/note/SGLang_note/" title="SGLang: Efficient Execution of Structured Language Model Programs">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SGLang: Efficient Execution of Structured Language Model Programs</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/07/inference/note/TensorRT-LLM_note/" title="TensorRT-LLM: NVIDIA&#39;s Optimized Inference Engine for Large Language Models">
+                        <span class="hidden-mobile">TensorRT-LLM: NVIDIA&#39;s Optimized Inference Engine for Large Language Models</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

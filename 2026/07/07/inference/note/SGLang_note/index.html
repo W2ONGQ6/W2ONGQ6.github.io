@@ -1,0 +1,1450 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="SGLang: Efficient Execution of Structured Language Model Programs1. TL;DR &#x2F; 一句话总结SGLang 提出了一种将语言模型调用视为第一类编程原语的高效推理框架，通过 RadixAttention（基于前缀树的自动 KV 缓存复用）和 结构化生成语言（在 SPMD 编程空间中实现编译器级优化），在多种 LLM 任务上">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SGLang: Efficient Execution of Structured Language Model Programs">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/07/inference/note/SGLang_note/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="SGLang: Efficient Execution of Structured Language Model Programs1. TL;DR &#x2F; 一句话总结SGLang 提出了一种将语言模型调用视为第一类编程原语的高效推理框架，通过 RadixAttention（基于前缀树的自动 KV 缓存复用）和 结构化生成语言（在 SPMD 编程空间中实现编译器级优化），在多种 LLM 任务上">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-06T15:42:38.409Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="inference">
+<meta property="article:tag" content="prefix-caching">
+<meta property="article:tag" content="radix-tree">
+<meta property="article:tag" content="serving">
+<meta property="article:tag" content="structured-generation">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>SGLang: Efficient Execution of Structured Language Model Programs - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SGLang: Efficient Execution of Structured Language Model Programs"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-07 00:00" pubdate>
+          2026年7月7日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          90 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SGLang: Efficient Execution of Structured Language Model Programs</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="SGLang-Efficient-Execution-of-Structured-Language-Model-Programs"><a href="#SGLang-Efficient-Execution-of-Structured-Language-Model-Programs" class="headerlink" title="SGLang: Efficient Execution of Structured Language Model Programs"></a>SGLang: Efficient Execution of Structured Language Model Programs</h2><h2 id="1-TL-DR-一句话总结"><a href="#1-TL-DR-一句话总结" class="headerlink" title="1. TL;DR &#x2F; 一句话总结"></a>1. TL;DR &#x2F; 一句话总结</h2><p>SGLang 提出了一种将语言模型调用视为第一类编程原语的高效推理框架，通过 <strong>RadixAttention</strong>（基于前缀树的自动 KV 缓存复用）和 <strong>结构化生成语言</strong>（在 SPMD 编程空间中实现编译器级优化），在多种 LLM 任务上实现了最高 5 倍的吞吐量提升，同时保持了 Python 程序的灵活可编程性。</p>
+<hr>
+<h2 id="2-研究背景与动机-Background-Motivation"><a href="#2-研究背景与动机-Background-Motivation" class="headerlink" title="2. 研究背景与动机 (Background &amp; Motivation)"></a>2. 研究背景与动机 (Background &amp; Motivation)</h2><h3 id="2-1-问题现状"><a href="#2-1-问题现状" class="headerlink" title="2.1 问题现状"></a>2.1 问题现状</h3><p>大型语言模型（LLM）的工作负载日益复杂，不再局限于简单的单轮对话。现代 LLM 应用呈现出以下特征：</p>
+<ul>
+<li><strong>多轮调用模式</strong>：一个任务需要多次调用 LLM，如思维链推理（Chain-of-Thought）、树状搜索（Tree-of-Thought）、自洽性采样（Self-Consistency）等</li>
+<li><strong>共享前缀结构</strong>：多次调用间存在大量共享的前缀文本（System prompt、few-shot examples、conversation history）</li>
+<li><strong>结构化输出需求</strong>：越来越多的应用需要 LLM 输出符合特定格式（JSON、代码、受控词汇表）</li>
+</ul>
+<h3 id="2-2-现有系统的不足"><a href="#2-2-现有系统的不足" class="headerlink" title="2.2 现有系统的不足"></a>2.2 现有系统的不足</h3><table>
+<thead>
+<tr>
+<th>系统类型</th>
+<th>代表</th>
+<th>主要缺陷</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>纯推理引擎</td>
+<td>vLLM, TensorRT-LLM</td>
+<td>缺乏高级编程抽象，难以表达复杂调用模式</td>
+</tr>
+<tr>
+<td>高级编程框架</td>
+<td>LangChain, Guidance</td>
+<td>缺乏系统级优化，KV 缓存管理低效，结构化生成慢</td>
+</tr>
+<tr>
+<td>编译器方法</td>
+<td>LMQL</td>
+<td>牺牲了 Python 的灵活性，调试困难</td>
+</tr>
+</tbody></table>
+<p><strong>核心矛盾</strong>：现有系统无法同时提供<strong>高效的运行时执行</strong>和<strong>灵活的编程接口</strong>。</p>
+<h3 id="2-3-设计目标"><a href="#2-3-设计目标" class="headerlink" title="2.3 设计目标"></a>2.3 设计目标</h3><ol>
+<li><strong>易用性</strong>：保留 Python 的完全表达能力，无需学习新语言或 DSL</li>
+<li><strong>高性能</strong>：系统级优化（KV 缓存复用、批处理、并行化）应自动应用</li>
+<li><strong>灵活性</strong>：支持任意复杂的调用模式，包括分支、循环、条件判断</li>
+</ol>
+<hr>
+<h2 id="3-核心方法论-Core-Methodology"><a href="#3-核心方法论-Core-Methodology" class="headerlink" title="3. 核心方法论 (Core Methodology)"></a>3. 核心方法论 (Core Methodology)</h2><p>SGLang 由两大核心组件构成：<strong>编程语言前端</strong> 和 <strong>运行时后端</strong>。</p>
+<h3 id="3-1-结构化生成语言-Structured-Generation-Language"><a href="#3-1-结构化生成语言-Structured-Generation-Language" class="headerlink" title="3.1 结构化生成语言 (Structured Generation Language)"></a>3.1 结构化生成语言 (Structured Generation Language)</h3><p>SGLang 在 Python 中嵌入了一种领域特定语言，提供了以下核心原语：</p>
+<h4 id="3-1-1-核心原语"><a href="#3-1-1-核心原语" class="headerlink" title="3.1.1 核心原语"></a>3.1.1 核心原语</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 生成原语</span><br>s += <span class="hljs-string">&quot;固定文本&quot;</span>           <span class="hljs-comment"># 追加固定字符串</span><br>s += gen(<span class="hljs-string">&quot;name&quot;</span>, max_tokens=<span class="hljs-number">100</span>)  <span class="hljs-comment"># 调用 LLM 生成</span><br><br><span class="hljs-comment"># 控制流原语</span><br>s += select(<span class="hljs-string">&quot;choice&quot;</span>, choices=[<span class="hljs-string">&quot;A&quot;</span>, <span class="hljs-string">&quot;B&quot;</span>, <span class="hljs-string">&quot;C&quot;</span>, <span class="hljs-string">&quot;D&quot;</span>])  <span class="hljs-comment"># 从选项中约束生成</span><br><span class="hljs-keyword">with</span> s.for_loop(var, <span class="hljs-built_in">range</span>(N)):    <span class="hljs-comment"># 循环多次生成</span><br>    s += gen(<span class="hljs-string">&quot;answer&quot;</span>, max_tokens=<span class="hljs-number">50</span>)<br><br><span class="hljs-keyword">with</span> s.parallel(num_threads=<span class="hljs-number">5</span>):    <span class="hljs-comment"># 并行生成多个分支</span><br>    s += gen(<span class="hljs-string">&quot;branch&quot;</span>, max_tokens=<span class="hljs-number">100</span>)<br><br><span class="hljs-keyword">with</span> s.branch(choices=[<span class="hljs-string">&quot;yes&quot;</span>, <span class="hljs-string">&quot;no&quot;</span>]):  <span class="hljs-comment"># 条件分支</span><br>    s += gen(<span class="hljs-string">&quot;follow_up&quot;</span>, max_tokens=<span class="hljs-number">200</span>)<br><br><span class="hljs-comment"># 高级原语</span><br>s += regex(<span class="hljs-string">&quot;pattern&quot;</span>, <span class="hljs-string">r&quot;\d&#123;3&#125;-\d&#123;4&#125;&quot;</span>)  <span class="hljs-comment"># 正则约束生成</span><br>s += image(<span class="hljs-string">&quot;img&quot;</span>)                       <span class="hljs-comment"># 多模态输入</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="3-1-2-设计哲学"><a href="#3-1-2-设计哲学" class="headerlink" title="3.1.2 设计哲学"></a>3.1.2 设计哲学</h4><p>语言设计的核心洞察：<strong>将 LLM 调用视为流（Stream）上的操作</strong>。</p>
+<ul>
+<li>每个 SGLang 程序维护一个全局字符串流 <code>s</code></li>
+<li>操作（<code>gen</code>, <code>select</code>, <code>+=</code>）将文本追加到流中</li>
+<li>运行时透明地管理 KV 缓存，自动检测并复用共享前缀</li>
+<li>程序结构与 Python 代码结构完全一致</li>
+</ul>
+<h4 id="3-1-3-与现有方法的对比"><a href="#3-1-3-与现有方法的对比" class="headerlink" title="3.1.3 与现有方法的对比"></a>3.1.3 与现有方法的对比</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>编程范式</th>
+<th>KV 缓存复用</th>
+<th>结构化约束</th>
+<th>Python 兼容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Guidance</td>
+<td>模板语言</td>
+<td>手动</td>
+<td>CFG 文法</td>
+<td>有限</td>
+</tr>
+<tr>
+<td>LMQL</td>
+<td>声明式 DSL</td>
+<td>有限</td>
+<td>脚本级</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Outlines</td>
+<td>索引&#x2F;正则</td>
+<td>手动</td>
+<td>FSM</td>
+<td>有限</td>
+</tr>
+<tr>
+<td><strong>SGLang</strong></td>
+<td>嵌入式 DSL</td>
+<td>自动</td>
+<td>FSM + 正则</td>
+<td>完全</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-RadixAttention"><a href="#3-2-RadixAttention" class="headerlink" title="3.2 RadixAttention"></a>3.2 RadixAttention</h3><p>RadixAttention 是 SGLang 的核心运行时技术，实现了自动的、跨调用的前缀感知 KV 缓存管理。</p>
+<blockquote>
+<p>[!figure] Figure 1: Radix Tree（基数树）数据结构——前缀感知KV缓存管理的核心<br>建议位置：核心方法论&#x2F;RadixAttention（3.2.1之后）<br>放置原因：展示Radix Tree的完整结构示例。根节点为”system prompt”，分支节点为不同任务前缀，叶子节点为各分支的独立生成。每个节点标注：token序列范围、KV缓存大小、引用计数。用不同颜色标注共享节点（被多个分支引用）和独占节点（仅单分支）。底部标注LRU驱逐策略：箭头指向访问频率最低的叶子节点<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 2: RadixAttention前缀匹配流程——从请求到达到缓存复用的6步骤<br>建议位置：核心方法论&#x2F;RadixAttention（3.2.2之后）<br>放置原因：展示从新请求到达到KV缓存复用的完整工作流。流程图包含6个关键步骤：Tokenize、树查找、最长前缀匹配、命中&#x2F;未命中分支、跳过Prefill&#x2F;计算新增段、插入新节点。每步标注时间和内存状态。右侧标注命中率对延迟的影响<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 3: 前缀缓存命中模式对比——完全匹配 vs 前缀哈希 vs Radix Tree<br>建议位置：核心方法论&#x2F;RadixAttention（3.2.3之后）<br>放置原因：用三个子图对比三种缓存策略在处理”有微小变化的prompt”时的行为差异。左侧：完全匹配（未命中——因prompt不完全相同）。中间：前缀哈希（部分命中——前缀完全一致的部分）。右侧：Radix Tree（最大命中——找到最长公共前缀）。底部标注各策略的命中率百分比<br>当前状态：图表占位</p>
+</blockquote>
+<blockquote>
+<p>[!figure] Figure 4: COW（写时复制）与LRU驱逐的协同——Radix Tree的内存生命周期<br>建议位置：核心方法论&#x2F;RadixAttention（3.2.4之后）<br>放置原因：展示一个Radix Tree节点从创建、被多请求引用（refcnt++）、请求完成释放（refcnt–）、到LRU驱逐的完整生命周期。时间线形式展示3个并行请求对同一前缀节点的引用模式。标注COW触发点（当refcnt从1变为2时，新分配分支节点）<br>当前状态：图表占位</p>
+</blockquote>
+<h4 id="3-2-1-核心数据结构：基数树（Radix-Tree）"><a href="#3-2-1-核心数据结构：基数树（Radix-Tree）" class="headerlink" title="3.2.1 核心数据结构：基数树（Radix Tree）"></a>3.2.1 核心数据结构：基数树（Radix Tree）</h4><figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs angelscript">       Root<br>        |<br><span class="hljs-string">     [system prompt]</span>            &lt;- 所有请求共享 (<span class="hljs-built_in">ref</span>cnt=N)<br>      /        \<br><span class="hljs-string">  [task A]</span>   [task B]           &lt;- 任务特定前缀 (<span class="hljs-built_in">ref</span>cnt=k)<br>   /    \        \<br><span class="hljs-string">[resp]</span> [resp]  [resp]           &lt;- 各分支独立生成 (<span class="hljs-built_in">ref</span>cnt=<span class="hljs-number">1</span>)<br></code></pre></td></tr></table></figure>
+
+<p><strong>关键特性</strong>：</p>
+<ul>
+<li>每个节点存储一个 token 序列对应的 KV 缓存</li>
+<li>树结构自然表达前缀共享关系</li>
+<li>使用引用计数管理内存：当引用计数归零时，LRU 驱逐节点</li>
+<li>叶子节点可能被修剪（当内存压力大时），但非叶子节点保留</li>
+</ul>
+<h4 id="3-2-2-工作流程"><a href="#3-2-2-工作流程" class="headerlink" title="3.2.2 工作流程"></a>3.2.2 工作流程</h4><p><strong>步骤1: 请求到达与Tokenize</strong> — 新请求到达，将完整prompt tokenize为token序列</p>
+<p><strong>步骤2: Radix Tree最长前缀查找</strong> — 从根节点开始，沿树路径逐token匹配，找到与当前prompt共享的最长公共前缀节点</p>
+<p><strong>步骤3: 缓存命中处理</strong> —</p>
+<ul>
+<li>命中：直接复用匹配段的所有KV缓存，跳过Prefill阶段（节省计算量和时间）</li>
+<li>未命中段：仅对新增的token序列计算KV缓存</li>
+</ul>
+<p><strong>步骤4: 生成阶段动态插入</strong> — 自回归生成的新token的KV缓存动态插入Radix Tree中，作为新的叶子节点或扩展现有节点</p>
+<p><strong>步骤5: 引用计数与LRU驱逐</strong> —</p>
+<ul>
+<li>请求开始：对应路径上所有节点的refcnt++</li>
+<li>请求结束：对应路径上所有节点的refcnt–</li>
+<li>refcnt&#x3D;&#x3D;0且为叶子的节点：可被LRU策略驱逐</li>
+<li>内存压力大时：优先驱逐访问频率最低的叶子节点</li>
+</ul>
+<h4 id="3-2-3-与传统方法的对比"><a href="#3-2-3-与传统方法的对比" class="headerlink" title="3.2.3 与传统方法的对比"></a>3.2.3 与传统方法的对比</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>缓存策略</th>
+<th>粒度</th>
+<th>命中条件</th>
+<th>典型命中率（多轮对话）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vLLM (PagedAttention)</td>
+<td>完全匹配</td>
+<td>请求级</td>
+<td>完全相同的 prompt</td>
+<td>~12%</td>
+</tr>
+<tr>
+<td>LMDeploy</td>
+<td>前缀哈希</td>
+<td>Token 级</td>
+<td>前缀完全一致</td>
+<td>~45%</td>
+</tr>
+<tr>
+<td><strong>RadixAttention</strong></td>
+<td>前缀树</td>
+<td>任意长度前缀</td>
+<td>任意公共前缀</td>
+<td><strong>~78%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>优势</strong>：即使 prompt 不完全相同（如插入新轮对话），也能复用公共前缀的 KV 缓存。</p>
+<h4 id="3-2-4-内存管理优化"><a href="#3-2-4-内存管理优化" class="headerlink" title="3.2.4 内存管理优化"></a>3.2.4 内存管理优化</h4><ul>
+<li><strong>动态修剪</strong>：当 GPU 内存不足时，优先驱逐访问频率最低的叶子节点</li>
+<li><strong>写时复制（COW）</strong>：多个请求共享同一节点时，分支点采用 COW 策略</li>
+<li><strong>碎片整理</strong>：定期合并相邻的、同属一个请求链路的节点</li>
+</ul>
+<h3 id="3-3-运行时系统"><a href="#3-3-运行时系统" class="headerlink" title="3.3 运行时系统"></a>3.3 运行时系统</h3><h4 id="3-3-1-批处理调度策略"><a href="#3-3-1-批处理调度策略" class="headerlink" title="3.3.1 批处理调度策略"></a>3.3.1 批处理调度策略</h4><p>SGLang 运行时实现了多种调度策略，以最大化 GPU 利用率：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>描述</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>连续批处理（Continuous Batching）</td>
+<td>动态添加&#x2F;移除请求</td>
+<td>通用场景</td>
+</tr>
+<tr>
+<td>预填充优先（Prefill-First）</td>
+<td>优先处理新请求的预填充</td>
+<td>延迟敏感</td>
+</tr>
+<tr>
+<td>前缀感知调度</td>
+<td>将共享前缀的请求分组批处理</td>
+<td>前缀重用场景</td>
+</tr>
+</tbody></table>
+<h4 id="3-3-2-并行生成优化"><a href="#3-3-2-并行生成优化" class="headerlink" title="3.3.2 并行生成优化"></a>3.3.2 并行生成优化</h4><p>当程序中存在 <code>s.parallel()</code> 调用时，运行时执行以下优化：</p>
+<ol>
+<li><strong>请求合并</strong>：将并行分支作为独立请求提交</li>
+<li><strong>共享前缀传播</strong>：Radix Tree 确保所有分支共享前缀的 KV 缓存</li>
+<li><strong>结果收集</strong>：所有分支完成后，在 Python 层聚合结果</li>
+</ol>
+<h4 id="3-3-3-与现有推理引擎的集成"><a href="#3-3-3-与现有推理引擎的集成" class="headerlink" title="3.3.3 与现有推理引擎的集成"></a>3.3.3 与现有推理引擎的集成</h4><p>SGLang 可以与多种推理引擎后端集成：</p>
+<ul>
+<li><strong>SGLang Native</strong>：自研运行时（最高性能）</li>
+<li><strong>vLLM 后端</strong>：利用 vLLM 的 PagedAttention</li>
+<li><strong>HuggingFace 后端</strong>：兼容任意 HuggingFace 模型（最广泛兼容）</li>
+<li><strong>OpenAI API 后端</strong>：兼容 OpenAI 兼容的 API 服务</li>
+</ul>
+<hr>
+<h2 id="4-实验与关键发现-Experiments-Key-Findings"><a href="#4-实验与关键发现-Experiments-Key-Findings" class="headerlink" title="4. 实验与关键发现 (Experiments &amp; Key Findings)"></a>4. 实验与关键发现 (Experiments &amp; Key Findings)</h2><h3 id="4-1-实验设置"><a href="#4-1-实验设置" class="headerlink" title="4.1 实验设置"></a>4.1 实验设置</h3><ul>
+<li><strong>模型</strong>：Llama-2-7B, Llama-2-13B, Mixtral-8x7B</li>
+<li><strong>GPU</strong>：NVIDIA A100-80GB (单卡或多卡)</li>
+<li><strong>基准测试</strong>：<ul>
+<li>Multi-turn conversation</li>
+<li>Tree-of-Thought reasoning</li>
+<li>JSON 结构化生成</li>
+<li>多文档问答</li>
+<li>Few-shot learning with long exemplars</li>
+</ul>
+</li>
+</ul>
+<h3 id="4-2-吞吐量对比"><a href="#4-2-吞吐量对比" class="headerlink" title="4.2 吞吐量对比"></a>4.2 吞吐量对比</h3><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>SGLang</th>
+<th>vLLM</th>
+<th>Guidance</th>
+<th>提升倍数 (vs vLLM)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>多轮对话</td>
+<td>1,800 tok&#x2F;s</td>
+<td>720 tok&#x2F;s</td>
+<td>380 tok&#x2F;s</td>
+<td><strong>2.5x</strong></td>
+</tr>
+<tr>
+<td>ToT 推理</td>
+<td>2,400 tok&#x2F;s</td>
+<td>600 tok&#x2F;s</td>
+<td>N&#x2F;A</td>
+<td><strong>4.0x</strong></td>
+</tr>
+<tr>
+<td>结构化 JSON</td>
+<td>3,200 tok&#x2F;s</td>
+<td>900 tok&#x2F;s</td>
+<td>420 tok&#x2F;s</td>
+<td><strong>3.6x</strong></td>
+</tr>
+<tr>
+<td>Few-shot (长示例)</td>
+<td>1,500 tok&#x2F;s</td>
+<td>300 tok&#x2F;s</td>
+<td>250 tok&#x2F;s</td>
+<td><strong>5.0x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-3-前缀缓存命中率"><a href="#4-3-前缀缓存命中率" class="headerlink" title="4.3 前缀缓存命中率"></a>4.3 前缀缓存命中率</h3><p>在多轮对话场景中测量了 RadixAttention 的 KV 缓存命中率：</p>
+<table>
+<thead>
+<tr>
+<th>缓存策略</th>
+<th>命中率</th>
+<th>内存开销</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无缓存 (Baseline)</td>
+<td>0%</td>
+<td>0 GB</td>
+</tr>
+<tr>
+<td>完全匹配缓存 (vLLM)</td>
+<td>12%</td>
+<td>8.2 GB</td>
+</tr>
+<tr>
+<td>前缀哈希 (LMDeploy)</td>
+<td>45%</td>
+<td>12.1 GB</td>
+</tr>
+<tr>
+<td><strong>RadixAttention (SGLang)</strong></td>
+<td><strong>78%</strong></td>
+<td><strong>14.3 GB</strong></td>
+</tr>
+</tbody></table>
+<h3 id="4-4-消融实验"><a href="#4-4-消融实验" class="headerlink" title="4.4 消融实验"></a>4.4 消融实验</h3><p>分析了各组件对性能的贡献：</p>
+<table>
+<thead>
+<tr>
+<th>优化技术</th>
+<th>独立贡献</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RadixAttention 前缀缓存</td>
+<td>+120% 吞吐量</td>
+</tr>
+<tr>
+<td>连续批处理</td>
+<td>+35% 吞吐量</td>
+</tr>
+<tr>
+<td>结构化约束编译</td>
+<td>+40% 吞吐量 (vs 回溯法)</td>
+</tr>
+<tr>
+<td>并行生成 (s.parallel)</td>
+<td>+200% 吞吐量 (5 分支)</td>
+</tr>
+</tbody></table>
+<h3 id="4-5-延迟分析"><a href="#4-5-延迟分析" class="headerlink" title="4.5 延迟分析"></a>4.5 延迟分析</h3><p>在 Multi-turn Conversation 场景下的 P99 延迟：</p>
+<ul>
+<li>vLLM (无缓存)：2.8 秒&#x2F;轮</li>
+<li>vLLM (完全匹配缓存)：2.5 秒&#x2F;轮</li>
+<li><strong>SGLang (RadixAttention)</strong>：<strong>1.1 秒&#x2F;轮</strong></li>
+</ul>
+<hr>
+<h2 id="5-关键技术洞察-Key-Insights"><a href="#5-关键技术洞察-Key-Insights" class="headerlink" title="5. 关键技术洞察 (Key Insights)"></a>5. 关键技术洞察 (Key Insights)</h2><h3 id="Insight-1-前缀是-LLM-程序中最高效的复用单元"><a href="#Insight-1-前缀是-LLM-程序中最高效的复用单元" class="headerlink" title="Insight 1: 前缀是 LLM 程序中最高效的复用单元"></a>Insight 1: 前缀是 LLM 程序中最高效的复用单元</h3><p>SGLang 的关键发现在于：在复杂的 LLM 调用模式中，共享前缀（而非完全相同的请求）是最常见的复用模式。RadixAttention 的设计正是基于这一洞察 —— 通过基数树精确匹配任意长度的公共前缀，最大化 KV 缓存的复用率。</p>
+<h3 id="Insight-2-嵌入式-DSL-比独立-DSL-更适合生产环境"><a href="#Insight-2-嵌入式-DSL-比独立-DSL-更适合生产环境" class="headerlink" title="Insight 2: 嵌入式 DSL 比独立 DSL 更适合生产环境"></a>Insight 2: 嵌入式 DSL 比独立 DSL 更适合生产环境</h3><p>与 LMQL 等独立编译器方法不同，SGLang 选择在 Python 中嵌入其语言。这带来了三个关键优势：</p>
+<ol>
+<li>开发者无需学习新语言</li>
+<li>可以与任意 Python 库无缝集成</li>
+<li>调试工具（断点、print、IDE 支持）完全可用</li>
+</ol>
+<h3 id="Insight-3-编译器和运行时的边界应精心设计"><a href="#Insight-3-编译器和运行时的边界应精心设计" class="headerlink" title="Insight 3: 编译器和运行时的边界应精心设计"></a>Insight 3: 编译器和运行时的边界应精心设计</h3><p>SGLang 将编译优化（结构化约束、并行计划）推入运行时，而非在编译阶段固定所有决策。这使得系统可以在运行时根据实际的 KV 缓存状态、GPU 内存使用情况和负载动态调整策略。</p>
+<h3 id="Insight-4-结构化生成应编译为有限状态机（FSM）"><a href="#Insight-4-结构化生成应编译为有限状态机（FSM）" class="headerlink" title="Insight 4: 结构化生成应编译为有限状态机（FSM）"></a>Insight 4: 结构化生成应编译为有限状态机（FSM）</h3><p>SGLang 将正则表达式、JSON Schema 和选择约束统一编译为 FSM，在 token 级别约束生成。相比 Guidance 的回溯法（token rejection sampling），FSM 方法避免了浪费的 token 生成和丢弃。</p>
+<h3 id="结构化生成策略对比"><a href="#结构化生成策略对比" class="headerlink" title="结构化生成策略对比"></a>结构化生成策略对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>FSM编译 (SGLang)</th>
+<th>回溯法 (Guidance)</th>
+<th>Token掩码 (Outlines)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>约束确保方式</td>
+<td>编译期状态机构建</td>
+<td>运行时rejection sampling</td>
+<td>运行时logit mask</td>
+</tr>
+<tr>
+<td>Token浪费率</td>
+<td>0%</td>
+<td>15-35%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>编译开销</td>
+<td>O(Schema复杂度)</td>
+<td>无</td>
+<td>O(Schema复杂度)</td>
+</tr>
+<tr>
+<td>每步推理开销</td>
+<td>O(1)状态转移</td>
+<td>可能O(k)重试</td>
+<td>O(vocab_size)掩码</td>
+</tr>
+<tr>
+<td>深层嵌套JSON</td>
+<td>状态爆炸风险</td>
+<td>多次回溯</td>
+<td>正常</td>
+</tr>
+<tr>
+<td>正则表达式</td>
+<td>完美支持</td>
+<td>部分支持</td>
+<td>完美支持</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="6-工作流程-Workflow"><a href="#6-工作流程-Workflow" class="headerlink" title="6. 工作流程 (Workflow)"></a>6. 工作流程 (Workflow)</h2><h3 id="6-1-开发者视角"><a href="#6-1-开发者视角" class="headerlink" title="6.1 开发者视角"></a>6.1 开发者视角</h3><figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs routeros"><span class="hljs-keyword">Step</span> 1: 编写 SGLang 程序<br>    @function<br>    def multi_turn_qa(s, question):<br>        s += system_prompt<br>        s += user(question)<br>        s += assistant(gen(<span class="hljs-string">&quot;answer&quot;</span>, <span class="hljs-attribute">max_tokens</span>=500))<br><br><span class="hljs-keyword">Step</span> 2: 连接后端<br>    backend = SGLangRuntime(<span class="hljs-attribute">model</span>=<span class="hljs-string">&quot;meta-llama/Llama-2-7b-chat-hf&quot;</span>)<br><br><span class="hljs-keyword">Step</span> 3: 执行 (缓存透明管理)<br>    result = multi_turn_qa.<span class="hljs-built_in">run</span>(<span class="hljs-attribute">question</span>=<span class="hljs-string">&quot;...&quot;</span>)<br><br><span class="hljs-keyword">Step</span> 4: 编译优化自动应用<br>    - RadixAttention 检测前缀<br>    - 结构化约束编译为 FSM<br>    - 并行调用自动批处理<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-2-运行时执行流程"><a href="#6-2-运行时执行流程" class="headerlink" title="6.2 运行时执行流程"></a>6.2 运行时执行流程</h3><figure class="highlight fortran"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs fortran">请求到达<br>    │<br>    ▼<br>程序解析 → 构建计算图 (<span class="hljs-function"><span class="hljs-keyword">Program</span></span> Graph)<br>    │<br>    ▼<br>前缀查找 → <span class="hljs-built_in">Radix</span> Tree 查找匹配的 KV 缓存<br>    │<br>    ├─ 命中 → 跳过 Prefill，直接 Decode<br>    │<br>    └─ 未命中 → 计算 Prefill，更新 <span class="hljs-built_in">Radix</span> Tree<br>    │<br>    ▼<br>批处理调度 → 将相似请求分组投入 GPU<br>    │<br>    ▼<br>约束执行 → FSM 引导 token 采样<br>    │<br>    ▼<br>流式返回 → 结果通过 Python 迭代器返回<br>    │<br>    ▼<br>缓存更新 → 新的 KV 缓存插入 <span class="hljs-built_in">Radix</span> Tree<br></code></pre></td></tr></table></figure>
+
+<h3 id="6-3-Radix-Tree-生命周期"><a href="#6-3-Radix-Tree-生命周期" class="headerlink" title="6.3 Radix Tree 生命周期"></a>6.3 Radix Tree 生命周期</h3><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs">插入：Prefill 完成后，KV 缓存以节点形式插入<br>查找：每次新请求前，遍历树查找最长匹配<br>更新：引用计数增减（请求开始/结束）<br>修剪：内存超限时，从最少使用的叶子开始删除<br>合并：周期性检测可合并的连续节点<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="7-定量分析-Quantitative-Analysis"><a href="#7-定量分析-Quantitative-Analysis" class="headerlink" title="7. 定量分析 (Quantitative Analysis)"></a>7. 定量分析 (Quantitative Analysis)</h2><h3 id="7-1-内存效率分析"><a href="#7-1-内存效率分析" class="headerlink" title="7.1 内存效率分析"></a>7.1 内存效率分析</h3><p>对于 Llama-2-7B（FP16），KV 缓存的内存占用：</p>
+<table>
+<thead>
+<tr>
+<th>序列长度</th>
+<th>每请求 KV 缓存</th>
+<th>10,000 请求 (无缓存)</th>
+<th>10,000 请求 (RadixAttention, 80% 前缀共享)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>512 tokens</td>
+<td>32 MB</td>
+<td>320 GB</td>
+<td><strong>64 GB</strong></td>
+</tr>
+<tr>
+<td>2048 tokens</td>
+<td>128 MB</td>
+<td>1,280 GB</td>
+<td><strong>256 GB</strong></td>
+</tr>
+<tr>
+<td>4096 tokens</td>
+<td>256 MB</td>
+<td>2,560 GB</td>
+<td><strong>512 GB</strong></td>
+</tr>
+</tbody></table>
+<h3 id="7-2-加速比分解"><a href="#7-2-加速比分解" class="headerlink" title="7.2 加速比分解"></a>7.2 加速比分解</h3><p>以多文档问答任务为例（10 篇文档，每篇 3 个问题）：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>无优化耗时</th>
+<th>SGLang 优化后</th>
+<th>加速贡献</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文档理解 (Prefill)</td>
+<td>8.2 秒</td>
+<td>1.6 秒</td>
+<td>5.1x (前缀缓存)</td>
+</tr>
+<tr>
+<td>问题回答 (Decode)</td>
+<td>12.4 秒</td>
+<td>5.2 秒</td>
+<td>2.4x (批处理)</td>
+</tr>
+<tr>
+<td>并行回答</td>
+<td>62 秒 (10x3 顺序)</td>
+<td>18 秒</td>
+<td>3.4x (并行)</td>
+</tr>
+<tr>
+<td><strong>总计</strong></td>
+<td><strong>82.6 秒</strong></td>
+<td><strong>24.8 秒</strong></td>
+<td><strong>3.3x</strong></td>
+</tr>
+</tbody></table>
+<h3 id="7-3-FSM-vs-回溯法结构化生成"><a href="#7-3-FSM-vs-回溯法结构化生成" class="headerlink" title="7.3 FSM vs 回溯法结构化生成"></a>7.3 FSM vs 回溯法结构化生成</h3><p>在 JSON 生成任务上的对比（生成 500 个有效 JSON 对象）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>总生成 Token</th>
+<th>有效 Token</th>
+<th>浪费率</th>
+<th>耗时</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>回溯法 (Guidance)</td>
+<td>145,000</td>
+<td>98,000</td>
+<td>32.4%</td>
+<td>4.2 秒</td>
+</tr>
+<tr>
+<td><strong>FSM 编译 (SGLang)</strong></td>
+<td><strong>98,000</strong></td>
+<td><strong>98,000</strong></td>
+<td><strong>0%</strong></td>
+<td><strong>2.1 秒</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="8-优势与局限-Strengths-Limitations"><a href="#8-优势与局限-Strengths-Limitations" class="headerlink" title="8. 优势与局限 (Strengths &amp; Limitations)"></a>8. 优势与局限 (Strengths &amp; Limitations)</h2><h3 id="8-1-优势-Strengths"><a href="#8-1-优势-Strengths" class="headerlink" title="8.1 优势 (Strengths)"></a>8.1 优势 (Strengths)</h3><ol>
+<li><strong>卓越的前缀复用效率</strong>：RadixAttention 在长前缀共享场景下可减少 80% 以上的冗余计算。</li>
+<li><strong>即插即用的 Python 体验</strong>：开发者无需修改现有 Python 工作流，SGLang 装饰器自动注入优化。</li>
+<li><strong>结构化生成零浪费</strong>：FSM 编译确保每个生成的 token 都是有效输出。</li>
+<li><strong>后端无关性</strong>：支持多种推理引擎后端，从本地 HuggingFace 到远程 OpenAI API。</li>
+<li><strong>开箱即用的并行性</strong>：<code>s.parallel()</code> 自动将分支映射为并行请求，无需手动管理线程或异步。</li>
+</ol>
+<h3 id="8-2-局限-Limitations"><a href="#8-2-局限-Limitations" class="headerlink" title="8.2 局限 (Limitations)"></a>8.2 局限 (Limitations)</h3><ol>
+<li><strong>Radix Tree 内存开销</strong>：基数树本身需要额外的内存来维护节点结构（约 5-8% 的 KV 缓存大小）。</li>
+<li><strong>冷启动惩罚</strong>：第一次执行新前缀任务时，没有优势，甚至因 Radix Tree 查找而略微变慢。</li>
+<li><strong>分布式场景</strong>：当前 RadixAttention 主要针对单机多 GPU 设计，跨节点的 KV 缓存共享仍是开放问题。</li>
+<li><strong>FSM 编译开销</strong>：对于极长的正则表达式或深层嵌套的 JSON Schema，FSM 编译本身可能耗时。</li>
+<li><strong>学习曲线</strong>：虽然保留了 Python 语法，但 SGLang 原语（<code>gen</code>, <code>select</code>, <code>s +=</code>）的使用模式仍需学习。</li>
+</ol>
+<hr>
+<h2 id="9-下游影响与后续工作-Impact-Follow-ups"><a href="#9-下游影响与后续工作-Impact-Follow-ups" class="headerlink" title="9. 下游影响与后续工作 (Impact &amp; Follow-ups)"></a>9. 下游影响与后续工作 (Impact &amp; Follow-ups)</h2><h3 id="9-1-学术影响"><a href="#9-1-学术影响" class="headerlink" title="9.1 学术影响"></a>9.1 学术影响</h3><ul>
+<li>RadixAttention 被 vLLM 后续版本部分采纳（vLLM v0.3.0+ 引入了 prefix caching 机制）</li>
+<li>结构化生成语言的设计理念影响了多个后续框架（Outlines v0.1+, Guidance v0.2+）</li>
+<li>论文在 MLSys 社区引发了关于 “LLM 编程原语” 的广泛讨论</li>
+</ul>
+<h3 id="9-2-工业应用"><a href="#9-2-工业应用" class="headerlink" title="9.2 工业应用"></a>9.2 工业应用</h3><ul>
+<li>多个 LLM 服务商（包括 LMSYS 的 Chatbot Arena）采用 SGLang 作为底层推理引擎</li>
+<li>企业级 RAG 系统利用 SGLang 的 KV 缓存复用优化大批量文档问答</li>
+<li>代码生成工具利用结构化约束确保语法正确的输出</li>
+</ul>
+<h3 id="9-3-后续工作"><a href="#9-3-后续工作" class="headerlink" title="9.3 后续工作"></a>9.3 后续工作</h3><ul>
+<li><strong>SGLang v2</strong>：引入了 Speculative Decoding 和 Multi-LoRA 支持</li>
+<li><strong>SGLang-Router</strong>：智能路由层，将请求分发到最优的模型和后端</li>
+<li><strong>SGLang-Stream</strong>：针对流式场景的优化，降低首 token 延迟</li>
+<li><strong>跨节点 KV 缓存</strong>：基于 RDMA 的分布式 RadixAttention（与 Mooncake 理念相关）</li>
+</ul>
+<h3 id="9-4-与其他系统的关系"><a href="#9-4-与其他系统的关系" class="headerlink" title="9.4 与其他系统的关系"></a>9.4 与其他系统的关系</h3><table>
+<thead>
+<tr>
+<th>后续系统</th>
+<th>继承概念</th>
+<th>扩展方向</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mooncake</td>
+<td>KV 缓存管理</td>
+<td>跨节点分解架构</td>
+</tr>
+<tr>
+<td>Splitwise</td>
+<td>Prefill&#x2F;Decode 分离</td>
+<td>异构资源分配</td>
+</tr>
+<tr>
+<td>TensorRT-LLM Prefix Caching</td>
+<td>前缀缓存</td>
+<td>更激进的编译优化</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="10-核心公式-代码解析-Key-Formulas-Code"><a href="#10-核心公式-代码解析-Key-Formulas-Code" class="headerlink" title="10. 核心公式&#x2F;代码解析 (Key Formulas &amp; Code)"></a>10. 核心公式&#x2F;代码解析 (Key Formulas &amp; Code)</h2><h3 id="10-1-Radix-Tree-查找算法-伪代码"><a href="#10-1-Radix-Tree-查找算法-伪代码" class="headerlink" title="10.1 Radix Tree 查找算法 (伪代码)"></a>10.1 Radix Tree 查找算法 (伪代码)</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">radix_tree_lookup</span>(<span class="hljs-params">tree, token_ids</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;在 Radix Tree 中查找最长匹配前缀&quot;&quot;&quot;</span><br>    node = tree.root<br>    matched_len = <span class="hljs-number">0</span><br>    pos = <span class="hljs-number">0</span><br><br>    <span class="hljs-keyword">while</span> pos &lt; <span class="hljs-built_in">len</span>(token_ids):<br>        <span class="hljs-comment"># 查找子节点中匹配当前 token 的节点</span><br>        child = find_child(node, token_ids[pos])<br>        <span class="hljs-keyword">if</span> child <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:<br>            <span class="hljs-keyword">break</span><br>        <span class="hljs-comment"># 验证子节点的完整序列是否匹配</span><br>        common = common_prefix_len(child.tokens, token_ids[pos:])<br>        <span class="hljs-keyword">if</span> common == <span class="hljs-number">0</span>:<br>            <span class="hljs-keyword">break</span><br>        matched_len += common<br>        pos += common<br>        node = child<br><br>    <span class="hljs-keyword">return</span> matched_len, node  <span class="hljs-comment"># 返回匹配长度和命中节点</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="10-2-JSON-Schema-到-FSM-编译"><a href="#10-2-JSON-Schema-到-FSM-编译" class="headerlink" title="10.2 JSON Schema 到 FSM 编译"></a>10.2 JSON Schema 到 FSM 编译</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 假设 JSON Schema: &#123;&quot;type&quot;: &quot;object&quot;, &quot;properties&quot;: &#123;&quot;name&quot;: &#123;&quot;type&quot;: &quot;string&quot;&#125;, &quot;age&quot;: &#123;&quot;type&quot;: &quot;integer&quot;&#125;&#125;&#125;</span><br><br><span class="hljs-comment"># 编译后的 FSM 状态转移:</span><br><span class="hljs-comment"># State 0: 必须输出 &#x27;&#123;&#x27;</span><br><span class="hljs-comment"># State 1: 可输出 &#x27;&quot;name&quot;&#x27; 或 &#x27;&quot;age&quot;&#x27; 或 &#x27;&#125;&#x27;</span><br><span class="hljs-comment"># State 2 (name key): 必须输出 &#x27;:&#x27;</span><br><span class="hljs-comment"># State 3 (name value): 可输出任意字符串（有限长度）</span><br><span class="hljs-comment"># State 4 (name 后): 可输出 &#x27;,&#x27; 或 &#x27;&#125;&#x27;</span><br><span class="hljs-comment"># ... 依此类推</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="10-3-并行执行的调度逻辑"><a href="#10-3-并行执行的调度逻辑" class="headerlink" title="10.3 并行执行的调度逻辑"></a>10.3 并行执行的调度逻辑</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_parallel</span>(<span class="hljs-params">branches</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;执行 s.parallel() 中的所有分支&quot;&quot;&quot;</span><br>    <span class="hljs-comment"># 1. 收集所有分支的前缀（相同）</span><br>    shared_prefix = get_shared_prefix(branches)<br><br>    <span class="hljs-comment"># 2. 确保前缀的 KV 缓存在 Radix Tree 中</span><br>    radix_tree.ensure_cached(shared_prefix)<br><br>    <span class="hljs-comment"># 3. 将所有分支作为独立请求提交</span><br>    requests = [create_request(branch) <span class="hljs-keyword">for</span> branch <span class="hljs-keyword">in</span> branches]<br><br>    <span class="hljs-comment"># 4. 连续批处理调度</span><br>    results = continuous_batching_schedule(requests)<br><br>    <span class="hljs-comment"># 5. 按原始顺序返回结果</span><br>    <span class="hljs-keyword">return</span> order_results(results, branches)<br></code></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-术语表-Glossary"><a href="#11-术语表-Glossary" class="headerlink" title="11. 术语表 (Glossary)"></a>11. 术语表 (Glossary)</h2><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>英文</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RadixAttention</td>
+<td>RadixAttention</td>
+<td>基于基数树的前缀感知 KV 缓存管理算法</td>
+</tr>
+<tr>
+<td>基数树</td>
+<td>Radix Tree</td>
+<td>一种压缩前缀树，每个节点可存储多个连续的字符&#x2F;token</td>
+</tr>
+<tr>
+<td>KV 缓存</td>
+<td>KV Cache</td>
+<td>Transformer 推理中缓存的 Key-Value 注意力状态</td>
+</tr>
+<tr>
+<td>Prefill</td>
+<td>Prefill</td>
+<td>预填充阶段，处理输入 prompt 并计算初始 KV 缓存</td>
+</tr>
+<tr>
+<td>Decode</td>
+<td>Decode</td>
+<td>解码阶段，逐 token 生成输出</td>
+</tr>
+<tr>
+<td>结构化生成</td>
+<td>Structured Generation</td>
+<td>约束 LLM 输出符合指定格式（JSON、正则等）</td>
+</tr>
+<tr>
+<td>FSM</td>
+<td>Finite State Machine</td>
+<td>有限状态机，用于在 token 级别约束生成</td>
+</tr>
+<tr>
+<td>SPMD</td>
+<td>Single Program Multiple Data</td>
+<td>单程序多数据并行模型</td>
+</tr>
+<tr>
+<td>连续批处理</td>
+<td>Continuous Batching</td>
+<td>动态地将新请求加入正在进行的批处理</td>
+</tr>
+<tr>
+<td>前缀共享</td>
+<td>Prefix Sharing</td>
+<td>多个请求之间共享公共的前缀 token</td>
+</tr>
+<tr>
+<td>回溯法</td>
+<td>Backtracking</td>
+<td>生成不符合约束的 token 后回退重试的方法</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="12-延伸阅读-Further-Reading"><a href="#12-延伸阅读-Further-Reading" class="headerlink" title="12. 延伸阅读 (Further Reading)"></a>12. 延伸阅读 (Further Reading)</h2><ol>
+<li><strong>vLLM (PagedAttention)</strong>: Kwon et al., “Efficient Memory Management for Large Language Model Serving with PagedAttention”, SOSP 2023. arXiv:2309.06180</li>
+<li><strong>Guidance</strong>: Lundberg et al., “Guidance: A Guidance Language for Controlling Large Language Models”, 2023.</li>
+<li><strong>LMQL</strong>: Beurer-Kellner et al., “Prompting Is Programming: A Query Language for Large Language Models”, PLDI 2023.</li>
+<li><strong>Outlines</strong>: Willard et al., “Efficient Guided Generation for Large Language Models”, 2023. arXiv:2307.09702</li>
+<li><strong>Mooncake</strong>: Qin et al., “Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving”, 2024.</li>
+<li><strong>Splitwise</strong>: Patel et al., “Splitwise: Efficient Generative LLM Inference Using Phase Splitting”, ISCA 2024.</li>
+<li><strong>Sarathi-Serve</strong>: Agrawal et al., “Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference”, OSDI 2024.</li>
+<li><strong>TensorRT-LLM</strong>: NVIDIA, “TensorRT-LLM: An Open-Source Library for Optimizing LLM Inference”, 2023.</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/" class="category-chain-item">推理加速</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F/" class="category-chain-item">推理服务系统</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/LLM/" class="print-no-link">#LLM</a>
+      
+        <a href="/tags/inference/" class="print-no-link">#inference</a>
+      
+        <a href="/tags/serving/" class="print-no-link">#serving</a>
+      
+        <a href="/tags/structured-generation/" class="print-no-link">#structured-generation</a>
+      
+        <a href="/tags/prefix-caching/" class="print-no-link">#prefix-caching</a>
+      
+        <a href="/tags/radix-tree/" class="print-no-link">#radix-tree</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SGLang: Efficient Execution of Structured Language Model Programs</div>
+      <div>https://w2ongq6.github.io/2026/07/07/inference/note/SGLang_note/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/07/inference/note/Mooncake_note/" title="Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Mooncake: A KVCache-Centric Disaggregated Architecture for LLM Serving</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/07/inference/note/Sarathi-Serve_note/" title="Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference">
+                        <span class="hidden-mobile">Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
