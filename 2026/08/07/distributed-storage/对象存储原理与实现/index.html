@@ -1,0 +1,1310 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="对象存储原理与实现 本文是「分布式存储系统」专题的一篇。对象存储（S3、OSS、MinIO、Ceph RGW）是云时代海量非结构化数据的事实底座，也是 JuiceFS、数据湖、备份归档的地基。本文讲清它与文件&#x2F;块存储的本质区别、扁平命名空间、S3 语义、数据放置、元数据、一致性与纠删码等核心实现。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对象存储原理与实现">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/07/distributed-storage/%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="对象存储原理与实现 本文是「分布式存储系统」专题的一篇。对象存储（S3、OSS、MinIO、Ceph RGW）是云时代海量非结构化数据的事实底座，也是 JuiceFS、数据湖、备份归档的地基。本文讲清它与文件&#x2F;块存储的本质区别、扁平命名空间、S3 语义、数据放置、元数据、一致性与纠删码等核心实现。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-07T15:50:00.000Z">
+<meta property="article:modified_time" content="2026-08-08T02:47:08.500Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="S3">
+<meta property="article:tag" content="一致性哈希">
+<meta property="article:tag" content="分布式存储">
+<meta property="article:tag" content="对象存储">
+<meta property="article:tag" content="纠删码">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>对象存储原理与实现 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="对象存储原理与实现"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-07 23:50" pubdate>
+          2026年8月7日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          45 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">对象存储原理与实现</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="对象存储原理与实现"><a href="#对象存储原理与实现" class="headerlink" title="对象存储原理与实现"></a>对象存储原理与实现</h2><blockquote>
+<p>本文是「分布式存储系统」专题的一篇。对象存储（S3、OSS、MinIO、Ceph RGW）是云时代海量非结构化数据的事实底座，也是 JuiceFS、数据湖、备份归档的地基。本文讲清它与文件/块存储的本质区别、扁平命名空间、S3 语义、数据放置、元数据、一致性与纠删码等核心实现。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ol>
+<li><a href="#%E4%B8%80%E4%B8%89%E7%A7%8D%E5%AD%98%E5%82%A8%E5%BD%A2%E6%80%81%E7%9A%84%E6%9C%AC%E8%B4%A8%E5%8C%BA%E5%88%AB">三种存储形态的本质区别</a></li>
+<li><a href="#%E4%BA%8C%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E7%9A%84%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B">对象存储的数据模型</a></li>
+<li><a href="#%E4%B8%89s3-api-%E4%B8%8E%E6%A0%B8%E5%BF%83%E8%AF%AD%E4%B9%89">S3 API 与核心语义</a></li>
+<li><a href="#%E5%9B%9B%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84">整体架构</a></li>
+<li><a href="#%E4%BA%94%E6%95%B0%E6%8D%AE%E6%94%BE%E7%BD%AE%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%93%AA">数据放置：如何决定对象存哪</a></li>
+<li><a href="#%E5%85%AD%E5%85%83%E6%95%B0%E6%8D%AE%E7%AE%A1%E7%90%86">元数据管理</a></li>
+<li><a href="#%E4%B8%83%E5%86%97%E4%BD%99%E4%B8%8E%E6%8C%81%E4%B9%85%E6%80%A7%E5%89%AF%E6%9C%AC%E4%B8%8E%E7%BA%A0%E5%88%A0%E7%A0%81">冗余与持久性：副本与纠删码</a></li>
+<li><a href="#%E5%85%AB%E4%B8%80%E8%87%B4%E6%80%A7%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%BC%94%E8%BF%9B">一致性模型的演进</a></li>
+<li><a href="#%E4%B9%9D%E5%A4%A7%E5%AF%B9%E8%B1%A1%E4%B8%8E%E5%88%86%E6%AE%B5%E4%B8%8A%E4%BC%A0">大对象与分段上传</a></li>
+<li><a href="#%E5%8D%81%E5%A4%9A%E7%A7%9F%E6%88%B7%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E4%B8%8E%E5%85%B6%E4%BB%96%E8%83%BD%E5%8A%9B">多租户、生命周期与其他能力</a></li>
+<li><a href="#%E5%8D%81%E4%B8%80%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E9%80%9F%E6%9F%A5%E8%A1%A8">核心概念速查表</a></li>
+<li><a href="#%E5%8D%81%E4%BA%8C%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90">参考资源</a></li>
+</ol>
+<hr>
+<h2 id="一、三种存储形态的本质区别"><a href="#一、三种存储形态的本质区别" class="headerlink" title="一、三种存储形态的本质区别"></a>一、三种存储形态的本质区别</h2><p>存储有三种基本形态，理解对象存储要先看清它和另两者的分野。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>块存储（Block）</th>
+<th>文件存储（File）</th>
+<th>对象存储（Object）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>抽象</strong></td>
+<td>定长块的数组（裸盘/云盘）</td>
+<td>目录树 + 文件</td>
+<td>扁平的 key → object</td>
+</tr>
+<tr>
+<td><strong>访问</strong></td>
+<td>读写扇区/块（SCSI/NVMe/RBD）</td>
+<td>POSIX（open/read/write/seek）</td>
+<td>HTTP REST（PUT/GET/DELETE）</td>
+</tr>
+<tr>
+<td><strong>命名</strong></td>
+<td>块地址（LBA）</td>
+<td>层级路径 <code>/a/b/c</code></td>
+<td>扁平 key（<code>bucket/key</code>）</td>
+</tr>
+<tr>
+<td><strong>修改</strong></td>
+<td>原地随机读写</td>
+<td>支持随机写、追加</td>
+<td><strong>整对象读写，一般不支持原地改</strong></td>
+</tr>
+<tr>
+<td><strong>元数据</strong></td>
+<td>无（裸块）</td>
+<td>丰富（权限/时间/inode）</td>
+<td>每对象带用户自定义元数据</td>
+</tr>
+<tr>
+<td><strong>典型</strong></td>
+<td>云硬盘、数据库底层</td>
+<td>NAS、共享目录</td>
+<td>S3、备份、数据湖、图片视频</td>
+</tr>
+</tbody></table>
+<p><strong>对象存储的三个决定性特征</strong>：</p>
+<ol>
+<li><strong>扁平命名空间</strong>：没有真正的目录树，<code>bucket</code> 下就是一堆 key。所谓「文件夹」只是 key 里带 <code>/</code> 的前缀假象。</li>
+<li><strong>不可变对象 / 整体写</strong>：对象一次 PUT 写入，要改就整体覆盖上传（部分实现支持追加，但非原地改）。这是它能极致扩展的关键简化。</li>
+<li><strong>HTTP RESTful + 海量扩展</strong>：无状态 REST 接口、天然适合互联网规模，单桶可存万亿对象、EB 级容量。</li>
+</ol>
+<p>正是「扁平 + 不可变 + REST」这三条简化，让对象存储甩掉了文件系统 POSIX 语义的沉重包袱（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8%E4%B8%8EPOSIX%E8%AF%AD%E4%B9%89/">分布式文件存储与 POSIX 语义</a>》里那些难题），换来了近乎无限的扩展性和极低的成本。</p>
+<hr>
+<h2 id="二、对象存储的数据模型"><a href="#二、对象存储的数据模型" class="headerlink" title="二、对象存储的数据模型"></a>二、对象存储的数据模型</h2><h3 id="2-1-三个层级"><a href="#2-1-三个层级" class="headerlink" title="2.1 三个层级"></a>2.1 三个层级</h3><p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="58.353ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 25792.1 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{Account（账号/租户）} \supset \text{Bucket（桶）} \supset \text{Object（对象）}
+"><g data-mml-node="mtext" data-latex="\text{Account（账号/租户）}"><path data-c="41" d="M583 3L717 0L717 39L695 39C670 39 653 40 646 42C631 47 621 58 615 75L401 694C397 707 390 716 375 716C362 716 353 709 348 694L143 102C129 61 92 39 32 38L32 0L137 3L254 0L254 39C205 39 180 54 180 85C180 92 181 96 182 98L227 225L465 225L516 77C518 71 519 67 519 64C519 47 492 39 437 39L437 0C479 3 528 4 583 3M345 569L451 264L240 264Z"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(750,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(1194,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(1638,0)"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(2138,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(2694,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(3250,0)"></path><text data-variant="normal" transform="translate(3639,0) scale(1,-1)" font-size="884px" font-family="serif">（账号</text><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z" transform="translate(6639,0)"></path><text data-variant="normal" transform="translate(7139,0) scale(1,-1)" font-size="884px" font-family="serif">租户）</text></g><g data-mml-node="mo" data-latex="\supset" transform="translate(10416.8,0)"><path data-c="2283" d="M400-43C482-43 551-15 608 42C665 99 693 168 693 250C693 297 689 331 682 352C671 383 646 418 607 457C550 514 481 543 400 543L109 543C93 543 85 535 85 519C85 504 93 496 109 496L400 496C469 496 526 472 574 424C622 376 646 319 646 250C646 181 622 124 574 76C526 28 469 4 400 4L109 4C93 4 85-4 85-19C85-35 93-43 109-43Z"></path></g><g data-mml-node="mtext" data-latex="\text{Bucket（桶）}" transform="translate(11472.6,0)"><path data-c="42" d="M478 358C548 376 624 432 624 512C624 565 599 607 549 640C506 669 456 683 401 683L36 683L36 644L64 644C99 644 120 641 127 636C134 631 138 620 138 602L138 81C138 63 134 51 127 46C120 41 99 39 64 39L36 39L36 0L427 0C484 0 535 16 579 48C627 83 651 129 651 185C651 278 563 342 478 358M521 512C521 428 451 370 367 370L228 370L228 609C228 645 233 644 272 644L394 644C468 644 521 586 521 512M544 186L544 160C542 137 529 111 504 84C478 54 442 39 395 39L272 39C233 39 228 38 228 74L228 340L409 340C490 340 544 270 544 186Z"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(708,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(1264,0)"></path><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z" transform="translate(1708,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(2236,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2680,0)"></path><text data-variant="normal" transform="translate(3069,0) scale(1,-1)" font-size="884px" font-family="serif">（桶）</text></g><g data-mml-node="mo" data-latex="\supset" transform="translate(17819.3,0)"><path data-c="2283" d="M400-43C482-43 551-15 608 42C665 99 693 168 693 250C693 297 689 331 682 352C671 383 646 418 607 457C550 514 481 543 400 543L109 543C93 543 85 535 85 519C85 504 93 496 109 496L400 496C469 496 526 472 574 424C622 376 646 319 646 250C646 181 622 124 574 76C526 28 469 4 400 4L109 4C93 4 85-4 85-19C85-35 93-43 109-43Z"></path></g><g data-mml-node="mtext" data-latex="\text{Object（对象）}" transform="translate(18875.1,0)"><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z"></path><path data-c="62" d="M298-11C360-11 413 11 456 56C499 101 521 154 521 217C521 278 501 332 460 377C419 422 369 445 308 445C259 445 215 426 178 387L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 0L136 0L169 58C201 12 244-11 298-11M294 19C253 19 219 38 194 77C185 90 181 104 181 117L181 320C181 333 184 344 191 354C220 395 257 415 304 415C345 415 378 395 404 354C422 324 431 279 431 218C431 110 393 19 294 19Z" transform="translate(778,0)"></path><path data-c="6A" d="M210 601C210 631 185 657 155 657C124 657 99 632 99 601C99 570 123 544 154 544C185 544 210 570 210 601M210-47L210 444L55 433L55 394C94 394 118 392 126 386C134 380 138 366 138 343L138-49C138-77 134-104 127-129C118-160 99-175 71-175C57-175 43-172 29-167C48-158 57-143 57-122C57-89 41-72 8-72C-24-72-40-89-40-122C-40-176 15-205 73-205C155-205 210-132 210-47Z" transform="translate(1334,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(1640,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(2084,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2528,0)"></path><text data-variant="normal" transform="translate(2917,0) scale(1,-1)" font-size="884px" font-family="serif">（对象）</text></g></g></g></svg></mjx-container></p>
+<ul>
+<li><strong>Bucket（桶）</strong>：对象的容器，命名空间单位，全局或区域内唯一，承载权限/策略/区域等配置。</li>
+<li><strong>Object（对象）</strong>：由 <strong>key（名字）+ data（数据）+ metadata（元数据）</strong> 组成。metadata 又分系统元数据（大小、etag、时间）和用户自定义元数据（<code>x-amz-meta-*</code>）。</li>
+<li><strong>key</strong>：对象在桶内的唯一标识，是一个字符串，可含 <code>/</code> 但那只是字符，不构成真实目录。</li>
+</ul>
+<h3 id="2-2-「目录」的幻觉"><a href="#2-2-「目录」的幻觉" class="headerlink" title="2.2 「目录」的幻觉"></a>2.2 「目录」的幻觉</h3><p><code>GET bucket?prefix=photos/2026/&amp;delimiter=/</code> 这类请求能模拟出「列目录」的效果：<code>prefix</code> 过滤前缀、<code>delimiter</code> 把更深层折叠成「公共前缀（CommonPrefixes）」。但底层没有目录 inode，列举本质是<strong>对有序 key 空间的范围扫描</strong>。这也是为什么对象存储里「重命名一个大目录」很贵——要逐个 copy+delete，没有文件系统那种 O(1) 的 rename。</p>
+<hr>
+<h2 id="三、S3-API-与核心语义"><a href="#三、S3-API-与核心语义" class="headerlink" title="三、S3 API 与核心语义"></a>三、S3 API 与核心语义</h2><p>Amazon S3 的 API 已成为对象存储的事实标准，几乎所有对象存储都提供 S3 兼容接口。核心操作：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>PUT Object</strong></td>
+<td>上传/覆盖一个对象（整体写）</td>
+</tr>
+<tr>
+<td><strong>GET Object</strong></td>
+<td>下载对象，支持 Range 读部分字节</td>
+</tr>
+<tr>
+<td><strong>DELETE Object</strong></td>
+<td>删除对象</td>
+</tr>
+<tr>
+<td><strong>HEAD Object</strong></td>
+<td>只取元数据（大小、etag 等）</td>
+</tr>
+<tr>
+<td><strong>List Objects (v2)</strong></td>
+<td>按 prefix/delimiter 分页列举 key</td>
+</tr>
+<tr>
+<td><strong>Multipart Upload</strong></td>
+<td>大对象分段上传（见 §9）</td>
+</tr>
+<tr>
+<td><strong>Copy Object</strong></td>
+<td>服务端复制（rename 靠 copy+delete 模拟）</td>
+</tr>
+</tbody></table>
+<p><strong>关键语义点</strong>：</p>
+<ul>
+<li><strong>ETag</strong>：对象内容的标识（常是 MD5），用于校验完整性和条件请求。</li>
+<li><strong>条件请求</strong>：<code>If-Match</code>/<code>If-None-Match</code>/<code>If-Modified-Since</code>，可做乐观并发控制。</li>
+<li><strong>Range GET</strong>：只取对象的一段字节，是 JuiceFS 等按 Block 读取的基础。</li>
+<li><strong>无 rename、无追加改写、无字节级随机写</strong>：这些正是对象存储用来换取扩展性而主动放弃的能力。</li>
+</ul>
+<hr>
+<h2 id="四、整体架构"><a href="#四、整体架构" class="headerlink" title="四、整体架构"></a>四、整体架构</h2><p>一个典型的分布式对象存储系统大致分为几层：</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs nix">┌──────────────────────────────────────┐<br>│   接入层（S3 API Gateway <span class="hljs-symbol">/</span> LB）          │  认证、鉴权、限流、协议解析<br>├──────────────────────────────────────┤<br>│   元数据服务（Metadata Service）          │  bucket<span class="hljs-symbol">/object</span> 索引、key→数据位置<br>├──────────────────────────────────────┤<br>│   数据服务（Storage Nodes）              │  实际存储对象数据（分块 <span class="hljs-operator">+</span> 冗余）<br>└──────────────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>接入层</strong>：无状态的 S3 协议处理节点，可水平扩展，前面挂负载均衡。负责签名验证（AWS SigV4）、权限、分片路由。</li>
+<li><strong>元数据服务</strong>：维护「bucket 有哪些对象」「对象的数据在哪些存储节点上」的索引。是扩展性的关键难点。</li>
+<li><strong>数据服务</strong>：把对象数据分块、加冗余（副本/EC）后存到磁盘。</li>
+</ul>
+<p>这套「接入-元数据-数据」分层和文件系统的「元数据/数据分离」一脉相承，只是对象存储的元数据更简单（无目录树层级依赖），因此更容易做到极致扩展。</p>
+<hr>
+<h2 id="五、数据放置：如何决定对象存哪"><a href="#五、数据放置：如何决定对象存哪" class="headerlink" title="五、数据放置：如何决定对象存哪"></a>五、数据放置：如何决定对象存哪</h2><p>给定一个对象，怎么决定它存到哪些存储节点？两大流派（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》§8 分区）：</p>
+<h3 id="5-1-一致性哈希（去中心）"><a href="#5-1-一致性哈希（去中心）" class="headerlink" title="5.1 一致性哈希（去中心）"></a>5.1 一致性哈希（去中心）</h3><p>把对象 key 和存储节点都映射到哈希环，对象归属顺时针最近的节点。增删节点只影响相邻数据。配合<strong>虚拟节点</strong>解决分布不均。Swift、早期 Dynamo 系用此思路。</p>
+<h3 id="5-2-算法定位（CRUSH-式）"><a href="#5-2-算法定位（CRUSH-式）" class="headerlink" title="5.2 算法定位（CRUSH 式）"></a>5.2 算法定位（CRUSH 式）</h3><p>如 Ceph RGW：对象名 → 哈希 → PG → CRUSH → OSD 集合，纯计算定位，无需查中心表（详见《<a href="/2026/08/07/distributed-storage/Ceph-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">Ceph 架构与实现</a>》）。</p>
+<h3 id="5-3-查表-分片（中心元数据）"><a href="#5-3-查表-分片（中心元数据）" class="headerlink" title="5.3 查表 + 分片（中心元数据）"></a>5.3 查表 + 分片（中心元数据）</h3><p>另一些系统用元数据服务显式记录对象位置，元数据本身分片 + 复制以扩展。灵活但元数据是关键路径。</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="56.299ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 24884 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{放置目标：均匀分布 + 故障域隔离 + 增删节点最小迁移}
+"><g data-mml-node="mtext" data-latex="\text{放置目标：均匀分布 + 故障域隔离 + 增删节点最小迁移}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">放置目标：均匀分布</text><path data-c="20" d="" transform="translate(9000,0)"></path><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z" transform="translate(9332,0)"></path><path data-c="20" d="" transform="translate(10110,0)"></path><text data-variant="normal" transform="translate(10442,0) scale(1,-1)" font-size="884px" font-family="serif">故障域隔离</text><path data-c="20" d="" transform="translate(15442,0)"></path><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z" transform="translate(15774,0)"></path><path data-c="20" d="" transform="translate(16552,0)"></path><text data-variant="normal" transform="translate(16884,0) scale(1,-1)" font-size="884px" font-family="serif">增删节点最小迁移</text></g></g></g></svg></mjx-container></p>
+<p>无论哪种，都要满足：数据在节点/机架/AZ 间均匀分布、副本/EC 块跨故障域放置、扩缩容时迁移量最小。</p>
+<hr>
+<h2 id="六、元数据管理"><a href="#六、元数据管理" class="headerlink" title="六、元数据管理"></a>六、元数据管理</h2><p>对象存储的元数据比文件系统简单（扁平、无目录树），但<strong>量极大</strong>（万亿对象），仍是核心挑战。</p>
+<h3 id="6-1-元数据内容"><a href="#6-1-元数据内容" class="headerlink" title="6.1 元数据内容"></a>6.1 元数据内容</h3><ul>
+<li><strong>bucket 级</strong>：桶配置、权限策略、区域、版本开关、生命周期规则</li>
+<li><strong>object 级</strong>：key、大小、etag、时间戳、存储类别、用户元数据、数据块位置</li>
+</ul>
+<h3 id="6-2-索引结构"><a href="#6-2-索引结构" class="headerlink" title="6.2 索引结构"></a>6.2 索引结构</h3><ul>
+<li>需要支持<strong>按 key 前缀有序列举</strong>（List with prefix），因此元数据常按 key 排序存储（LSM-Tree / B-Tree / 有序 KV）——对照《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》。</li>
+<li>海量对象下元数据要<strong>分片</strong>（按 bucket、按 key range/hash）到多个节点，每片再复制容错。</li>
+<li>元数据存储常直接用成熟数据库/KV（如 Ceph RGW 把桶索引存在 RADOS 的 OMAP 里；很多自研系统用 RocksDB/分布式 KV）。</li>
+</ul>
+<h3 id="6-3-桶索引热点"><a href="#6-3-桶索引热点" class="headerlink" title="6.3 桶索引热点"></a>6.3 桶索引热点</h3><p>一个超大桶（数十亿对象）的索引若集中一处会成热点，需<strong>分片桶索引（bucket index sharding）</strong>，把一个桶的 key 空间拆到多个索引分片并行处理 List/PUT——这与文件系统的「大目录分片」（文件系统篇 §3.7）是同一个问题的不同马甲。</p>
+<hr>
+<h2 id="七、冗余与持久性：副本与纠删码"><a href="#七、冗余与持久性：副本与纠删码" class="headerlink" title="七、冗余与持久性：副本与纠删码"></a>七、冗余与持久性：副本与纠删码</h2><p>对象存储以「高持久性」著称（AWS S3 宣称 <strong>11 个 9</strong>，即 99.999999999% 年持久性）。靠的就是冗余（对照文件系统篇 §6）。</p>
+<h3 id="7-1-多副本"><a href="#7-1-多副本" class="headerlink" title="7.1 多副本"></a>7.1 多副本</h3><p>对象数据存多份（如 3 份）在不同节点/AZ。简单、读快、恢复快，但 3 倍成本。小对象、热数据常用副本。</p>
+<h3 id="7-2-纠删码（EC）"><a href="#7-2-纠删码（EC）" class="headerlink" title="7.2 纠删码（EC）"></a>7.2 纠删码（EC）</h3><p>大规模对象存储的主力。RS(<mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g></g></svg></mjx-container>,<mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="m"><g data-mml-node="mi" data-latex="m"><path data-c="1D45A" d="M657 442C596 442 543 412 498 353C489 412 451 442 383 442C324 442 273 416 231 363C223 407 188 442 137 442C96 442 66 409 45 344C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 66 299C84 375 107 413 134 413C152 413 161 399 161 371C161 358 156 331 145 290L88 63C84 51 79 25 79 19C79-1 90-11 111-11C131-11 145-1 152 19C153 24 160 49 171 92L192 181L222 295C233 318 250 341 272 365C301 397 337 413 380 413C413 413 429 391 429 348C429 335 424 308 414 267L387 153C380 124 364 64 356 32C355 25 354 21 354 19C354-1 365-11 387-11C398-11 406-8 413-1C428 14 429 21 435 48L494 285C497 298 511 321 535 353C565 393 605 413 654 413C687 413 703 391 703 348C703 309 683 236 642 129C633 106 629 87 629 74C629 25 666-11 714-11C759-11 793 14 818 64C838 104 848 131 848 144C848 153 843 158 832 158C825 157 818 148 813 137C791 58 759 18 716 18C703 18 696 28 696 47C696 62 702 84 714 115C755 222 775 295 775 333C775 404 728 442 657 442Z"></path></g></g></g></svg></mjx-container>)：对象切 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g></g></svg></mjx-container> 数据块 + <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="m"><g data-mml-node="mi" data-latex="m"><path data-c="1D45A" d="M657 442C596 442 543 412 498 353C489 412 451 442 383 442C324 442 273 416 231 363C223 407 188 442 137 442C96 442 66 409 45 344C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 66 299C84 375 107 413 134 413C152 413 161 399 161 371C161 358 156 331 145 290L88 63C84 51 79 25 79 19C79-1 90-11 111-11C131-11 145-1 152 19C153 24 160 49 171 92L192 181L222 295C233 318 250 341 272 365C301 397 337 413 380 413C413 413 429 391 429 348C429 335 424 308 414 267L387 153C380 124 364 64 356 32C355 25 354 21 354 19C354-1 365-11 387-11C398-11 406-8 413-1C428 14 429 21 435 48L494 285C497 298 511 321 535 353C565 393 605 413 654 413C687 413 703 391 703 348C703 309 683 236 642 129C633 106 629 87 629 74C629 25 666-11 714-11C759-11 793 14 818 64C838 104 848 131 848 144C848 153 843 158 832 158C825 157 818 148 813 137C791 58 759 18 716 18C703 18 696 28 696 47C696 62 702 84 714 115C755 222 775 295 775 333C775 404 728 442 657 442Z"></path></g></g></g></svg></mjx-container> 校验块，存 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 521 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k+m"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g></g></svg><mjx-break size="3"> </mjx-break><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="4.249ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 1878.2 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k+m"><g data-mml-node="mo" data-latex="+"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mi" data-latex="m" transform="translate(1000.2,0)"><path data-c="1D45A" d="M657 442C596 442 543 412 498 353C489 412 451 442 383 442C324 442 273 416 231 363C223 407 188 442 137 442C96 442 66 409 45 344C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 66 299C84 375 107 413 134 413C152 413 161 399 161 371C161 358 156 331 145 290L88 63C84 51 79 25 79 19C79-1 90-11 111-11C131-11 145-1 152 19C153 24 160 49 171 92L192 181L222 295C233 318 250 341 272 365C301 397 337 413 380 413C413 413 429 391 429 348C429 335 424 308 414 267L387 153C380 124 364 64 356 32C355 25 354 21 354 19C354-1 365-11 387-11C398-11 406-8 413-1C428 14 429 21 435 48L494 285C497 298 511 321 535 353C565 393 605 413 654 413C687 413 703 391 703 348C703 309 683 236 642 129C633 106 629 87 629 74C629 25 666-11 714-11C759-11 793 14 818 64C838 104 848 131 848 144C848 153 843 158 832 158C825 157 818 148 813 137C791 58 759 18 716 18C703 18 696 28 696 47C696 62 702 84 714 115C755 222 775 295 775 333C775 404 728 442 657 442Z"></path></g></g></g></svg></mjx-container> 处，任意 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g></g></svg></mjx-container> 块可恢复。</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -1.577ex;" xmlns="http://www.w3.org/2000/svg" width="37.063ex" height="4.676ex" role="img" focusable="false" viewBox="0 -1370 16381.7 2067"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{存储开销} = \frac{k+m}{k}, \quad \text{容忍 } m \text{ 处故障}
+"><g data-mml-node="mtext" data-latex="\text{存储开销}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">存储开销</text></g><g data-mml-node="mo" data-latex="=" transform="translate(4277.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mfrac" data-latex="\frac{k+m}{k}" transform="translate(5333.6,0)"><g data-mml-node="mrow" data-latex="k+m" transform="translate(220,676)"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g><g data-mml-node="mo" data-latex="+" transform="translate(743.2,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mi" data-latex="m" transform="translate(1743.4,0)"><path data-c="1D45A" d="M657 442C596 442 543 412 498 353C489 412 451 442 383 442C324 442 273 416 231 363C223 407 188 442 137 442C96 442 66 409 45 344C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 66 299C84 375 107 413 134 413C152 413 161 399 161 371C161 358 156 331 145 290L88 63C84 51 79 25 79 19C79-1 90-11 111-11C131-11 145-1 152 19C153 24 160 49 171 92L192 181L222 295C233 318 250 341 272 365C301 397 337 413 380 413C413 413 429 391 429 348C429 335 424 308 414 267L387 153C380 124 364 64 356 32C355 25 354 21 354 19C354-1 365-11 387-11C398-11 406-8 413-1C428 14 429 21 435 48L494 285C497 298 511 321 535 353C565 393 605 413 654 413C687 413 703 391 703 348C703 309 683 236 642 129C633 106 629 87 629 74C629 25 666-11 714-11C759-11 793 14 818 64C838 104 848 131 848 144C848 153 843 158 832 158C825 157 818 148 813 137C791 58 759 18 716 18C703 18 696 28 696 47C696 62 702 84 714 115C755 222 775 295 775 333C775 404 728 442 657 442Z"></path></g></g><g data-mml-node="mi" data-latex="k" transform="translate(1270.2,-686)"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g><rect width="2821.4" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" data-latex="," transform="translate(8395,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(8673,0)"></g><g data-mml-node="mtext" data-latex="\text{容忍 }" transform="translate(9839.7,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">容忍</text><path data-c="A0" d="" transform="translate(2000,0)"></path></g><g data-mml-node="mi" data-latex="m" transform="translate(12171.7,0)"><path data-c="1D45A" d="M657 442C596 442 543 412 498 353C489 412 451 442 383 442C324 442 273 416 231 363C223 407 188 442 137 442C96 442 66 409 45 344C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 66 299C84 375 107 413 134 413C152 413 161 399 161 371C161 358 156 331 145 290L88 63C84 51 79 25 79 19C79-1 90-11 111-11C131-11 145-1 152 19C153 24 160 49 171 92L192 181L222 295C233 318 250 341 272 365C301 397 337 413 380 413C413 413 429 391 429 348C429 335 424 308 414 267L387 153C380 124 364 64 356 32C355 25 354 21 354 19C354-1 365-11 387-11C398-11 406-8 413-1C428 14 429 21 435 48L494 285C497 298 511 321 535 353C565 393 605 413 654 413C687 413 703 391 703 348C703 309 683 236 642 129C633 106 629 87 629 74C629 25 666-11 714-11C759-11 793 14 818 64C838 104 848 131 848 144C848 153 843 158 832 158C825 157 818 148 813 137C791 58 759 18 716 18C703 18 696 28 696 47C696 62 702 84 714 115C755 222 775 295 775 333C775 404 728 442 657 442Z"></path></g><g data-mml-node="mtext" data-latex="\text{ 处故障}" transform="translate(13049.7,0)"><path data-c="A0" d=""></path><text data-variant="normal" transform="translate(332,0) scale(1,-1)" font-size="884px" font-family="serif">处故障</text></g></g></g></svg></mjx-container></p>
+<p>例：RS(10,4) 开销 1.4 倍，却容忍任意 4 块丢失——比三副本省一半还多、可靠性更高。<strong>大对象、冷数据几乎都用 EC</strong>。代价是编码 CPU 开销和修复时的读放大（修一块要读 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="k"><g data-mml-node="mi" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g></g></svg></mjx-container> 块）。</p>
+<h3 id="7-3-跨区域复制与-AZ"><a href="#7-3-跨区域复制与-AZ" class="headerlink" title="7.3 跨区域复制与 AZ"></a>7.3 跨区域复制与 AZ</h3><ul>
+<li><strong>跨 AZ</strong>：副本/EC 块分散到同区域多个可用区，抗单 AZ 故障。</li>
+<li><strong>跨 Region 复制（CRR）</strong>：异步把对象复制到另一地域，抗区域级灾难，但跨域是最终一致。</li>
+</ul>
+<h3 id="7-4-完整性与自愈"><a href="#7-4-完整性与自愈" class="headerlink" title="7.4 完整性与自愈"></a>7.4 完整性与自愈</h3><ul>
+<li>每个块存校验和，读时校验，后台 scrub 主动巡检。</li>
+<li>检测到副本/EC 块损坏或节点故障，自动重建冗余（对照 Ceph 的 recovery/backfill）。</li>
+</ul>
+<hr>
+<h2 id="八、一致性模型的演进"><a href="#八、一致性模型的演进" class="headerlink" title="八、一致性模型的演进"></a>八、一致性模型的演进</h2><p>这是对象存储一个有趣的历史演进，值得单独讲。</p>
+<h3 id="8-1-曾经的最终一致"><a href="#8-1-曾经的最终一致" class="headerlink" title="8.1 曾经的最终一致"></a>8.1 曾经的最终一致</h3><p>早期 S3（及很多对象存储）是<strong>最终一致（eventual consistency）</strong> 的：</p>
+<ul>
+<li><strong>新建对象后立即读</strong>：可能读不到（PUT 后 GET 404）</li>
+<li><strong>覆盖/删除后读</strong>：可能读到旧值</li>
+<li>原因：元数据在多副本间异步传播，为了高可用和低延迟（PACELC 里的 EL / PA，对照原理篇 §3.2）</li>
+</ul>
+<p>应用不得不加重试、加延迟来应对，很反直觉。</p>
+<h3 id="8-2-现在的强一致"><a href="#8-2-现在的强一致" class="headerlink" title="8.2 现在的强一致"></a>8.2 现在的强一致</h3><p>2020 年底，AWS S3 升级为<strong>强读写一致性（strong read-after-write consistency）</strong>，且不牺牲性能、不加价：</p>
+<ul>
+<li>PUT 新对象后，任何 GET/LIST 立即看到</li>
+<li>覆盖或删除后，后续读立即反映最新状态</li>
+</ul>
+<p>主流对象存储（OSS、MinIO、Ceph RGW 等）现也普遍提供读写强一致。实现上依赖元数据服务的强一致（元数据一变，全局立刻可见——权威在元数据服务，和 JuiceFS 的思路一致）。</p>
+<h3 id="8-3-仍然最终一致的部分"><a href="#8-3-仍然最终一致的部分" class="headerlink" title="8.3 仍然最终一致的部分"></a>8.3 仍然最终一致的部分</h3><ul>
+<li><strong>跨区域复制</strong>：天生异步，仍是最终一致。</li>
+<li><strong>List 的实时性</strong>：极端并发下 List 可能有短暂延迟（取决于实现）。</li>
+</ul>
+<p><strong>要点</strong>：单区域内的「读己之写」现在通常是强一致的，但跨域、跨副本的地理复制仍需按最终一致来设计应用。</p>
+<hr>
+<h2 id="九、大对象与分段上传"><a href="#九、大对象与分段上传" class="headerlink" title="九、大对象与分段上传"></a>九、大对象与分段上传</h2><p>对象可能很大（GB~TB），一次 PUT 上传不现实（网络中断就得重来）。<strong>Multipart Upload（分段上传）</strong> 解决这个问题：</p>
+<ol>
+<li><strong>Initiate</strong>：向服务端申请一个 <code>uploadId</code></li>
+<li><strong>Upload Part</strong>：把大对象切成多段（如每段 8MB~5GB），各段独立并行上传，每段返回一个 ETag</li>
+<li><strong>Complete</strong>：提交所有段的 (partNumber, ETag) 列表，服务端把它们<strong>拼装</strong>成一个完整对象</li>
+<li><strong>Abort</strong>：放弃则清理已传分段（否则占空间，需生命周期规则清理残留）</li>
+</ol>
+<p>好处：</p>
+<ul>
+<li><strong>并行上传</strong>提升大对象吞吐</li>
+<li><strong>断点续传</strong>：某段失败只重传该段</li>
+<li>服务端拼装时各段作为对象的组成部分（内部仍是分块存储）</li>
+</ul>
+<p>这与 JuiceFS/Ceph 内部的分块存储天然契合——大对象在底层本就是一堆块。</p>
+<hr>
+<h2 id="十、多租户、生命周期与其他能力"><a href="#十、多租户、生命周期与其他能力" class="headerlink" title="十、多租户、生命周期与其他能力"></a>十、多租户、生命周期与其他能力</h2><p>对象存储作为云基础服务，还有一系列生产能力：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>多租户与鉴权</strong></td>
+<td>账号隔离、IAM 策略、Bucket Policy、ACL、预签名 URL（临时授权）</td>
+</tr>
+<tr>
+<td><strong>版本控制（Versioning）</strong></td>
+<td>保留对象的历史版本，覆盖/删除不丢旧版，防误删</td>
+</tr>
+<tr>
+<td><strong>生命周期（Lifecycle）</strong></td>
+<td>规则化地迁移存储类别（热→温→冷→归档）或到期删除</td>
+</tr>
+<tr>
+<td><strong>存储类别（Storage Class）</strong></td>
+<td>Standard / IA（低频）/ Glacier（归档）等，成本与取回延迟权衡</td>
+</tr>
+<tr>
+<td><strong>服务端加密（SSE）</strong></td>
+<td>静态加密（SSE-S3/KMS/C），传输 TLS</td>
+</tr>
+<tr>
+<td><strong>事件通知</strong></td>
+<td>对象创建/删除触发事件（推给队列/函数），驱动数据处理流水线</td>
+</tr>
+<tr>
+<td><strong>CORS / 静态网站 / CDN 回源</strong></td>
+<td>Web 场景直接服务静态资源</td>
+</tr>
+</tbody></table>
+<h3 id="生命周期与冷热分层"><a href="#生命周期与冷热分层" class="headerlink" title="生命周期与冷热分层"></a>生命周期与冷热分层</h3><p>生命周期是对象存储降本的核心：数据刚写入是热的（Standard，多副本或低冗余、低延迟），随时间变冷自动转到归档类别（深度 EC、可能延迟取回、极低价）。这把「冷热分层」自动化，是海量长尾数据经济性的关键。</p>
+<hr>
+<h2 id="十一、核心概念速查表"><a href="#十一、核心概念速查表" class="headerlink" title="十一、核心概念速查表"></a>十一、核心概念速查表</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>一句话</th>
+<th>重要性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>扁平命名空间</strong></td>
+<td>无目录树，bucket 下一堆 key</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>不可变对象</strong></td>
+<td>整体写、不支持原地改，换来扩展性</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>S3 API</strong></td>
+<td>事实标准的对象存储接口</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Bucket/Object/Key</strong></td>
+<td>桶/对象/键三层模型</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>一致性哈希 / CRUSH</strong></td>
+<td>无中心的数据放置</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>纠删码 RS(k,m)</strong></td>
+<td>省一半存储拿到更高容错</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>11 个 9 持久性</strong></td>
+<td>靠多副本/EC + scrub + 自愈</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>强读写一致</strong></td>
+<td>现代对象存储单域内已强一致</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Multipart Upload</strong></td>
+<td>大对象分段并行 + 断点续传</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>生命周期/存储类别</strong></td>
+<td>冷热分层自动降本</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>桶索引分片</strong></td>
+<td>超大桶 List/PUT 防热点</td>
+<td>⭐⭐⭐</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十二、参考资源"><a href="#十二、参考资源" class="headerlink" title="十二、参考资源"></a>十二、参考资源</h2><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Amazon S3 一致性模型</td>
+<td><a target="_blank" rel="noopener" href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel">S3 Consistency Model</a></td>
+</tr>
+<tr>
+<td>Dynamo 论文（一致性哈希/最终一致）</td>
+<td><a target="_blank" rel="noopener" href="https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">Dynamo</a></td>
+</tr>
+<tr>
+<td>Ceph RGW 文档</td>
+<td><a target="_blank" rel="noopener" href="https://docs.ceph.com/en/latest/radosgw/">docs.ceph.com/radosgw</a></td>
+</tr>
+<tr>
+<td>MinIO 文档（EC/架构）</td>
+<td><a target="_blank" rel="noopener" href="https://min.io/docs/minio/linux/index.html">min.io/docs</a></td>
+</tr>
+<tr>
+<td>OpenStack Swift 架构</td>
+<td><a target="_blank" rel="noopener" href="https://docs.openstack.org/swift/latest/">Swith Docs</a></td>
+</tr>
+<tr>
+<td>Reed-Solomon 纠删码</td>
+<td><a target="_blank" rel="noopener" href="https://www.usenix.org/legacy/event/fast09/tech/full_papers/plank/plank.pdf">Erasure Coding 综述</a></td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p><strong>本专题系列</strong>：</p>
+<ul>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/">分布式存储系统专题总览</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8%E4%B8%8EPOSIX%E8%AF%AD%E4%B9%89/">分布式文件存储与 POSIX 语义</a> ｜ <a href="/2026/08/07/distributed-storage/JuiceFS-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">JuiceFS</a> ｜ <a href="/2026/08/07/distributed-storage/Ceph-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">Ceph</a></li>
+<li>本篇：对象存储原理与实现</li>
+</ul>
+<p><strong>一句话总结对象存储</strong>：用「扁平命名空间 + 不可变对象 + REST 接口」这三条简化，主动放弃 POSIX 的沉重语义，换来近乎无限的扩展性、11 个 9 的持久性和极低的成本——它是云时代海量非结构化数据当之无愧的底座。</p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="category-chain-item">分布式存储</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8/" class="category-chain-item">对象存储</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8/" class="print-no-link">#对象存储</a>
+      
+        <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="print-no-link">#分布式存储</a>
+      
+        <a href="/tags/S3/" class="print-no-link">#S3</a>
+      
+        <a href="/tags/%E7%BA%A0%E5%88%A0%E7%A0%81/" class="print-no-link">#纠删码</a>
+      
+        <a href="/tags/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C/" class="print-no-link">#一致性哈希</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>对象存储原理与实现</div>
+      <div>https://w2ongq6.github.io/2026/08/07/distributed-storage/对象存储原理与实现/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/Kafka-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="Kafka 架构与实现深度解析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Kafka 架构与实现深度解析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/Raft%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82-braft%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" title="Raft 实现细节：百度 braft 源码解析">
+                        <span class="hidden-mobile">Raft 实现细节：百度 braft 源码解析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

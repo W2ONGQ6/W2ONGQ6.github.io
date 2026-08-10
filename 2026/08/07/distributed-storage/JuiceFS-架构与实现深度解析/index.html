@@ -1,0 +1,1434 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="JuiceFS 架构与实现深度解析 本文是「分布式存储系统」专题的加餐篇。上一篇《分布式文件存储与 POSIX 语义》把 JuiceFS 归为「元数据外包 + 对象存储」的云原生路线代表。这一篇我们把它单独拎出来，从整体架构一路讲到读写路径、元数据事务、缓存体系与一致性实现，看它如何用「站在巨人肩上」的组合式设计，在对象存储之上拼出一个完整 POSIX 文件系统。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JuiceFS 架构与实现深度解析">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/07/distributed-storage/JuiceFS-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="JuiceFS 架构与实现深度解析 本文是「分布式存储系统」专题的加餐篇。上一篇《分布式文件存储与 POSIX 语义》把 JuiceFS 归为「元数据外包 + 对象存储」的云原生路线代表。这一篇我们把它单独拎出来，从整体架构一路讲到读写路径、元数据事务、缓存体系与一致性实现，看它如何用「站在巨人肩上」的组合式设计，在对象存储之上拼出一个完整 POSIX 文件系统。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-07T15:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-08T02:18:24.344Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="JuiceFS">
+<meta property="article:tag" content="POSIX">
+<meta property="article:tag" content="元数据引擎">
+<meta property="article:tag" content="分布式文件系统">
+<meta property="article:tag" content="对象存储">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>JuiceFS 架构与实现深度解析 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="JuiceFS 架构与实现深度解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-07 23:00" pubdate>
+          2026年8月7日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          83 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">JuiceFS 架构与实现深度解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="JuiceFS-架构与实现深度解析"><a href="#JuiceFS-架构与实现深度解析" class="headerlink" title="JuiceFS 架构与实现深度解析"></a>JuiceFS 架构与实现深度解析</h2><blockquote>
+<p>本文是「分布式存储系统」专题的加餐篇。上一篇《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8%E4%B8%8EPOSIX%E8%AF%AD%E4%B9%89/">分布式文件存储与 POSIX 语义</a>》把 JuiceFS 归为「元数据外包 + 对象存储」的云原生路线代表。这一篇我们把它单独拎出来，从整体架构一路讲到读写路径、元数据事务、缓存体系与一致性实现，看它如何用「站在巨人肩上」的组合式设计，在对象存储之上拼出一个完整 POSIX 文件系统。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ol>
+<li><a href="#%E4%B8%80juicefs-%E6%98%AF%E4%BB%80%E4%B9%88">JuiceFS 是什么</a></li>
+<li><a href="#%E4%BA%8C%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%E4%B8%89%E5%A4%A7%E4%BB%B6--%E5%AF%8C%E5%AE%A2%E6%88%B7%E7%AB%AF">整体架构：三大件 + 富客户端</a></li>
+<li><a href="#%E4%B8%89%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8Fchunk--slice--block-%E4%B8%89%E7%BA%A7%E6%A8%A1%E5%9E%8B">存储格式：Chunk / Slice / Block 三级模型</a></li>
+<li><a href="#%E5%9B%9B%E5%86%99%E8%B7%AF%E5%BE%84%E8%AF%A6%E8%A7%A3">写路径详解</a></li>
+<li><a href="#%E4%BA%94%E8%AF%BB%E8%B7%AF%E5%BE%84%E8%AF%A6%E8%A7%A3">读路径详解</a></li>
+<li><a href="#%E5%85%AD%E9%9A%8F%E6%9C%BA%E5%86%99%E8%A6%86%E7%9B%96%E5%86%99%E4%B8%8E%E7%A2%8E%E7%89%87compaction">随机写、覆盖写与碎片、Compaction</a></li>
+<li><a href="#%E4%B8%83%E5%85%83%E6%95%B0%E6%8D%AE%E5%BC%95%E6%93%8E%E4%B8%8E%E4%BA%8B%E5%8A%A1">元数据引擎与事务</a></li>
+<li><a href="#%E5%85%AB%E7%BC%93%E5%AD%98%E4%BD%93%E7%B3%BB">缓存体系</a></li>
+<li><a href="#%E4%B9%9D%E4%B8%80%E8%87%B4%E6%80%A7%E6%A8%A1%E5%9E%8B">一致性模型</a></li>
+<li><a href="#%E5%8D%81%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%AE%89%E5%85%A8">垃圾回收与数据安全</a></li>
+<li><a href="#%E5%8D%81%E4%B8%80posix-%E8%AF%AD%E4%B9%89%E5%A6%82%E4%BD%95%E8%90%BD%E5%9C%B0">POSIX 语义如何落地</a></li>
+<li><a href="#%E5%8D%81%E4%BA%8C%E9%80%89%E5%9E%8B%E4%BC%98%E5%8A%A3%E4%B8%8E%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF">选型、优劣与适用场景</a></li>
+<li><a href="#%E5%8D%81%E4%B8%89%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90">参考资源</a></li>
+</ol>
+<hr>
+<h2 id="一、JuiceFS-是什么"><a href="#一、JuiceFS-是什么" class="headerlink" title="一、JuiceFS 是什么"></a>一、JuiceFS 是什么</h2><p>JuiceFS 是一个开源的、云原生的<strong>分布式 POSIX 文件系统</strong>。它的核心设计哲学一句话概括：</p>
+<blockquote>
+<p><strong>元数据与数据彻底分离——元数据交给成熟的事务型数据库，数据交给对象存储，客户端负责把两者组装成一个完整的 POSIX 文件系统。</strong></p>
+</blockquote>
+<p>它不自己发明元数据存储，也不自己造数据持久化层，而是<strong>编排</strong>现有的两类成熟基础设施：</p>
+<ul>
+<li><strong>元数据</strong>：存进 Redis / TiKV / MySQL / PostgreSQL / etcd / FoundationDB 等事务型引擎</li>
+<li><strong>数据</strong>：切块后存进 Amazon S3 / 阿里云 OSS / MinIO / Ceph RADOS 等几乎任意对象存储</li>
+</ul>
+<p>这种「组合式」设计让 JuiceFS 天然继承了底层组件几十年积累的可靠性、扩展性和运维经验，同时向上暴露一个可挂载、可 <code>ls</code>/<code>cat</code>/<code>rename</code>、支持强一致的普通文件系统——这正是它区别于「裸对象存储 + s3fs」的关键：<strong>它有真正的元数据服务和完整文件语义，而不只是把对象名伪装成路径。</strong></p>
+<p>JuiceFS 分社区版与企业版，架构一致（元数据/数据分离 + 富客户端），主要差异在元数据服务（企业版提供自研的分布式元数据引擎）。本文以开源社区版为主线。</p>
+<hr>
+<h2 id="二、整体架构：三大件-富客户端"><a href="#二、整体架构：三大件-富客户端" class="headerlink" title="二、整体架构：三大件 + 富客户端"></a>二、整体架构：三大件 + 富客户端</h2><p>JuiceFS 由三个部分组成：</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs nix">┌─────────────────────────────────────────────┐<br>│              JuiceFS 客户端 (rich client)      │<br>│  FUSE <span class="hljs-symbol">/</span> Java SDK <span class="hljs-symbol">/</span> S3 Gateway <span class="hljs-symbol">/</span> CSI Driver    │<br>│  ┌──────────────┐        ┌─────────────────┐  │<br>│  │ 元数据操作     │        │ 数据分块<span class="hljs-operator">/</span>组装     │  │<br>│  │ (路径解析<span class="hljs-operator">/</span>inode)│        │ <span class="hljs-operator">+</span> 本地缓存        │  │<br>│  └──────┬───────┘        └────────┬────────┘  │<br>└─────────┼─────────────────────────┼───────────┘<br>          │                         │<br>┌─────────▼─────────┐     ┌─────────▼──────────┐<br>│   元数据引擎        │     │     对象存储         │<br>│ Redis<span class="hljs-symbol">/TiKV/MySQL</span>   │     │  S3<span class="hljs-symbol">/OSS/MinIO/Ceph</span>  │<br>│ (目录树<span class="hljs-operator">/</span>inode<span class="hljs-operator">/</span>映射)  │     │   (数据 Block)      │<br>└───────────────────┘     └────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<h3 id="2-1-元数据引擎（Metadata-Engine）"><a href="#2-1-元数据引擎（Metadata-Engine）" class="headerlink" title="2.1 元数据引擎（Metadata Engine）"></a>2.1 元数据引擎（Metadata Engine）</h3><p>存放文件系统的<strong>命名空间与元信息</strong>：目录树、inode（大小、权限、时间戳）、文件到数据块的映射、符号链接、xattr 等。JuiceFS 抽象出一套元数据接口，适配多种后端：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>引擎</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>KV</strong></td>
+<td>TiKV、etcd、FoundationDB、BadgerDB(单机)</td>
+<td>高性能、可扩展；TiKV 提供 Raft 分布式强一致</td>
+</tr>
+<tr>
+<td><strong>Redis</strong></td>
+<td>Redis / Redis Cluster</td>
+<td>极低延迟，但持久性/一致性依赖 Redis 配置</td>
+</tr>
+<tr>
+<td><strong>SQL</strong></td>
+<td>MySQL、PostgreSQL、SQLite</td>
+<td>运维成熟、事务强，适合中小规模</td>
+</tr>
+</tbody></table>
+<p>选谁直接决定了文件系统的<strong>扩展性、一致性与持久性上限</strong>——这是 JuiceFS「组合式」设计的精髓：把《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》里讨论的事务能力直接拿来用。</p>
+<h3 id="2-2-数据存储（Object-Storage）"><a href="#2-2-数据存储（Object-Storage）" class="headerlink" title="2.2 数据存储（Object Storage）"></a>2.2 数据存储（Object Storage）</h3><p>存放实际文件数据。文件被客户端切成固定大小的 <strong>Block</strong>（默认 4MiB），每个 Block 以唯一 key 上传为对象存储里的一个对象。JuiceFS 支持几乎所有对象存储，也支持用本地磁盘、Ceph RADOS、WebDAV 等作为后端。</p>
+<p><strong>关键性质</strong>：写入对象存储的 Block 是<strong>一次写入、永不修改（immutable）</strong> 的——这与对象存储「不支持原地改写」的特性完美契合，也是后面理解随机写/碎片的关键。</p>
+<h3 id="2-3-富客户端（Rich-Client）"><a href="#2-3-富客户端（Rich-Client）" class="headerlink" title="2.3 富客户端（Rich Client）"></a>2.3 富客户端（Rich Client）</h3><p>JuiceFS 的「智能」几乎全在客户端。它同时与元数据引擎和对象存储通信，负责：</p>
+<ul>
+<li>路径解析、权限检查（查元数据引擎）</li>
+<li>文件分块、上传/下载 Block（对象存储）</li>
+<li>本地缓存（内存 + 磁盘）</li>
+<li>后台任务：数据 <strong>compaction</strong>（碎片整理）、<strong>GC</strong>（垃圾回收）、副本/回收管理</li>
+</ul>
+<p>客户端提供多种访问方式：<strong>FUSE</strong>（POSIX 挂载）、<strong>Hadoop Java SDK</strong>（大数据）、<strong>S3 Gateway</strong>（S3 协议）、<strong>CSI Driver</strong>（Kubernetes）、<strong>WebDAV</strong>。无论哪种入口，核心的分块与元数据逻辑都一致。</p>
+<hr>
+<h2 id="三、存储格式：Chunk-Slice-Block-三级模型"><a href="#三、存储格式：Chunk-Slice-Block-三级模型" class="headerlink" title="三、存储格式：Chunk / Slice / Block 三级模型"></a>三、存储格式：Chunk / Slice / Block 三级模型</h2><p>这是理解 JuiceFS 的<strong>最核心一节</strong>。一个文件在 JuiceFS 里被组织成三个层级，各司其职。</p>
+<h3 id="3-1-三个概念"><a href="#3-1-三个概念" class="headerlink" title="3.1 三个概念"></a>3.1 三个概念</h3><figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs scss">一个文件<br>├── Chunk <span class="hljs-number">0</span>  (逻辑, 固定 <span class="hljs-number">64</span>MiB)<br>│   ├── Slice <span class="hljs-selector-tag">A</span>  (一次连续写产生, ≤<span class="hljs-number">64</span>MiB)<br>│   │   ├── Block  (物理, 默认 <span class="hljs-number">4</span>MiB) → 对象存储对象<br>│   │   ├── Block  (<span class="hljs-number">4</span>MiB)            → 对象存储对象<br>│   │   └── Block  (&lt;<span class="hljs-number">4</span>MiB 尾块)       → 对象存储对象<br>│   └── Slice <span class="hljs-selector-tag">B</span>  (另一次写)<br>├── Chunk <span class="hljs-number">1</span>  (<span class="hljs-number">64</span>MiB)<br>│   └── ...<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>性质</th>
+<th>大小</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chunk</strong></td>
+<td><strong>逻辑</strong>概念</td>
+<td>固定 <strong>64MiB</strong></td>
+<td>按文件内偏移切分，仅用于定位（<code>offset / 64MiB</code> = chunk 号）。互不重叠。</td>
+</tr>
+<tr>
+<td><strong>Slice</strong></td>
+<td><strong>逻辑</strong>概念</td>
+<td>≤ 64MiB（不能跨 Chunk）</td>
+<td><strong>一次连续写入</strong>的单元。为「文件编辑/随机写」而存在。</td>
+</tr>
+<tr>
+<td><strong>Block</strong></td>
+<td><strong>物理</strong>概念</td>
+<td>默认 <strong>4MiB</strong></td>
+<td>持久化到对象存储的最小单位。为「提升读写并发」而存在。</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-为什么要分三层"><a href="#3-2-为什么要分三层" class="headerlink" title="3.2 为什么要分三层"></a>3.2 为什么要分三层</h3><p>三层各解决一个不同的问题，缺一不可：</p>
+<ul>
+<li><strong>Chunk（64MiB 固定切分）</strong>：解决<strong>定位</strong>。文件按偏移天然切成互不重叠的 64MiB 逻辑段，任何偏移都能 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.561ex;" xmlns="http://www.w3.org/2000/svg" width="4.618ex" height="2.253ex" role="img" focusable="false" viewBox="0 -748 2041 996"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="O(1)"><g data-mml-node="mi" data-latex="O"><path data-c="1D442" d="M702 263C727 320 740 377 740 435C740 513 717 577 670 628C623 679 561 705 484 705C431 705 378 692 325 666C217 613 138 529 87 415C62 359 49 303 49 246C49 167 72 103 119 53C166 3 228-22 306-22C358-22 410-9 463 16C572 69 651 152 702 263M644 474C644 341 584 208 520 129C476 74 400 12 312 12C205 12 149 105 149 218C149 253 156 300 169 357C196 475 264 579 353 633C396 659 438 672 478 672C586 672 644 586 644 474Z"></path></g><g data-mml-node="mo" data-latex="(" transform="translate(763,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mn" data-latex="1" transform="translate(1152,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(1652,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g></g></g></svg></mjx-container> 算出属于哪个 chunk，无需遍历。这是文件在元数据里的第一级索引。</li>
+<li><strong>Slice（一次连续写）</strong>：解决<strong>编辑与随机写</strong>。对象存储的对象不可原地修改，那怎么支持「改文件中间一段」？答案是：每次连续写生成一个新的 Slice，Slice 之间可以<strong>重叠</strong>，读的时候「新 Slice 覆盖旧 Slice」——用<strong>追加新版本 + 逻辑覆盖</strong>模拟原地修改。</li>
+<li><strong>Block（4MiB 物理块）</strong>：解决<strong>并发与吞吐</strong>。一个 Slice 再切成多个 4MiB 的 Block 并行上传/下载，既提高对象存储的并发带宽，又让大文件的部分读只需取相关 Block。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="67.962ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 30039.1 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{文件偏移 } o ;\Rightarrow; \text{chunk} = \lfloor o / 64\text{MiB} \rfloor,\quad \text{chunk 内偏移} = o \bmod 64\text{MiB}
+"><g data-mml-node="mtext" data-latex="\text{文件偏移 }"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">文件偏移</text><path data-c="A0" d="" transform="translate(4000,0)"></path></g><g data-mml-node="mi" data-latex="o" transform="translate(4332,0)"><path data-c="1D45C" d="M308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 63 106-11 202-11C272-11 334 19 388 78C442 137 469 201 469 272C469 369 405 442 308 442M389 310C389 287 384 255 374 213C353 130 319 73 272 42C248 26 225 18 203 18C149 18 121 65 121 122C121 180 155 288 178 324C216 383 259 413 307 413C361 413 389 367 389 310Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(4817,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mo" data-latex="\Rightarrow" transform="translate(5261.7,0)"><path data-c="21D2" d="M927 233C935 237 939 243 939 250C939 257 935 263 927 267C866 283 804 318 742 371C697 410 662 455 636 507C632 516 625 520 615 520C599 520 591 512 591 496C591 494 592 491 593 486C616 442 644 403 676 369L84 369C68 369 60 361 60 346C60 330 68 322 84 322L728 322C765 292 806 268 849 250C806 232 765 208 728 178L84 178C68 178 60 170 60 154C60 139 68 131 84 131L676 131C644 97 616 58 593 14C592 9 591 6 591 4C591-12 599-20 615-20C625-20 632-16 636-7C662 45 697 90 742 129C804 182 866 217 927 233Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(6261.7,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mtext" data-latex="\text{chunk}" transform="translate(6706.3,0)"><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z"></path><path data-c="68" d="M314 415C359 415 382 380 382 309L382 79C382 60 379 48 372 44C365 40 343 39 306 39L306 0L421 3L535 0L535 39C503 39 482 40 472 43C462 46 458 53 458 64L458 253C458 301 457 334 454 353C444 414 399 445 320 445C259 445 213 417 182 361L182 694L32 683L32 645C68 645 90 642 98 636C106 630 109 616 109 593L109 79C109 60 105 48 98 44C91 40 69 39 32 39L32 0L147 3L261 0L261 39C224 39 203 40 196 44C189 48 185 60 185 79L185 261C185 342 236 415 314 415Z" transform="translate(444,0)"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(1000,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(1556,0)"></path><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z" transform="translate(2112,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(9624.1,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mo" data-latex="\lfloor" transform="translate(10679.9,0)"><path data-c="230A" d="M393-202L220-202L220 726C220 742 212 750 197 750C182 750 174 742 174 726L174-250L393-250C408-250 416-242 416-226C416-214 405-202 393-202Z"></path></g><g data-mml-node="mi" data-latex="o" transform="translate(11123.9,0)"><path data-c="1D45C" d="M308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 63 106-11 202-11C272-11 334 19 388 78C442 137 469 201 469 272C469 369 405 442 308 442M389 310C389 287 384 255 374 213C353 130 319 73 272 42C248 26 225 18 203 18C149 18 121 65 121 122C121 180 155 288 178 324C216 383 259 413 307 413C361 413 389 367 389 310Z"></path></g><g data-mml-node="mo" data-latex="/" transform="translate(11608.9,0)"><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z"></path></g><g data-mml-node="mn" data-latex="64" transform="translate(12108.9,0)"><path data-c="36" d="M383 504C416 504 432 521 432 555C432 627 378 666 304 666C221 666 155 627 106 548C63 480 42 403 42 316C42 189 65 100 112 47C152 1 198-22 251-22C312-22 362 1 401 47C438 91 457 144 457 205C457 266 439 318 403 361C365 407 316 431 257 431C205 431 165 402 138 346L138 352C138 465 166 561 226 605C252 624 279 633 306 633C342 633 368 623 385 602C351 602 334 583 334 553C334 525 355 504 383 504M344 340C355 317 361 272 361 206C361 141 356 98 345 76C325 35 294 14 251 14C222 14 200 24 184 44C171 60 162 74 158 85C146 116 140 163 140 227C140 255 144 282 151 308C164 355 201 399 256 399C295 399 325 379 344 340Z"></path><path data-c="34" d="M353 677C344 677 336 672 330 663L28 199L28 163L289 163L289 81C289 63 285 51 278 46C271 41 252 39 219 39L194 39L194 0C223 2 269 3 331 3C393 3 439 2 468 0L468 39L443 39C410 39 391 41 384 46C377 51 373 63 373 81L373 163L471 163L471 202L373 202L373 660C373 670 366 677 353 677M295 553L295 202L67 202Z" transform="translate(500,0)"></path></g><g data-mml-node="mtext" data-latex="\text{MiB}" transform="translate(13108.9,0)"><path data-c="4D" d="M175 108L175 622L407 24C413 8 421 0 430 0C439 0 446 7 452 21L689 630L689 81C689 63 685 51 678 46C671 41 650 39 615 39L587 39L587 0C614 2 663 3 733 3C803 3 852 2 879 0L879 39L851 39C816 39 795 41 788 46C781 51 777 63 777 81L777 602C777 620 781 631 788 636C795 641 816 644 851 644L879 644L879 683L708 683C681 683 679 682 671 662L458 115L247 659C238 679 235 683 208 683L37 683L37 644L65 644C100 644 121 641 128 636C135 631 139 620 139 602L139 108C139 91 135 77 127 64C116 47 86 39 37 39L37 0L157 3L277 0L277 39C204 39 175 51 175 108Z"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(917,0)"></path><path data-c="42" d="M478 358C548 376 624 432 624 512C624 565 599 607 549 640C506 669 456 683 401 683L36 683L36 644L64 644C99 644 120 641 127 636C134 631 138 620 138 602L138 81C138 63 134 51 127 46C120 41 99 39 64 39L36 39L36 0L427 0C484 0 535 16 579 48C627 83 651 129 651 185C651 278 563 342 478 358M521 512C521 428 451 370 367 370L228 370L228 609C228 645 233 644 272 644L394 644C468 644 521 586 521 512M544 186L544 160C542 137 529 111 504 84C478 54 442 39 395 39L272 39C233 39 228 38 228 74L228 340L409 340C490 340 544 270 544 186Z" transform="translate(1195,0)"></path></g><g data-mml-node="mo" data-latex="\rfloor" transform="translate(15011.9,0)"><path data-c="230B" d="M51-250L270-250L270 726C270 742 262 750 247 750C232 750 224 742 224 726L224-202L51-202C36-202 28-210 28-226C28-242 36-250 51-250Z"></path></g><g data-mml-node="mo" data-latex="," transform="translate(15455.9,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(15733.9,0)"></g><g data-mml-node="mtext" data-latex="\text{chunk 内偏移}" transform="translate(16900.6,0)"><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z"></path><path data-c="68" d="M314 415C359 415 382 380 382 309L382 79C382 60 379 48 372 44C365 40 343 39 306 39L306 0L421 3L535 0L535 39C503 39 482 40 472 43C462 46 458 53 458 64L458 253C458 301 457 334 454 353C444 414 399 445 320 445C259 445 213 417 182 361L182 694L32 683L32 645C68 645 90 642 98 636C106 630 109 616 109 593L109 79C109 60 105 48 98 44C91 40 69 39 32 39L32 0L147 3L261 0L261 39C224 39 203 40 196 44C189 48 185 60 185 79L185 261C185 342 236 415 314 415Z" transform="translate(444,0)"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(1000,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(1556,0)"></path><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z" transform="translate(2112,0)"></path><path data-c="20" d="" transform="translate(2640,0)"></path><text data-variant="normal" transform="translate(2972,0) scale(1,-1)" font-size="884px" font-family="serif">内偏移</text></g><g data-mml-node="mo" data-latex="=" transform="translate(23150.3,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mi" data-latex="o" transform="translate(24206.1,0)"><path data-c="1D45C" d="M308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 63 106-11 202-11C272-11 334 19 388 78C442 137 469 201 469 272C469 369 405 442 308 442M389 310C389 287 384 255 374 213C353 130 319 73 272 42C248 26 225 18 203 18C149 18 121 65 121 122C121 180 155 288 178 324C216 383 259 413 307 413C361 413 389 367 389 310Z"></path></g><g data-mml-node="mo" data-latex="\mmlToken{mo}[lspace=&quot;0.278em&quot; rspace=&quot;0.278em&quot;]{mod}" transform="translate(24969.1,0)"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(833,0)"></path><path data-c="64" d="M374-11L527 0L527 38C491 38 470 40 462 46C454 52 450 67 450 90L450 694L301 683L301 645C336 645 358 642 366 636C374 630 377 616 377 593L377 390C345 427 305 445 257 445C195 445 142 423 99 378C56 333 34 279 34 216C34 155 54 102 95 57C136 12 186-11 247-11C298-11 341 8 374 47M261 415C304 415 339 396 364 358C371 347 374 336 374 323L374 121C374 108 371 97 364 86C336 41 298 19 251 19C210 19 177 39 151 80C133 110 124 155 124 215C124 324 161 415 261 415Z" transform="translate(1333,0)"></path></g><g data-mml-node="mn" data-latex="64" transform="translate(27136.1,0)"><path data-c="36" d="M383 504C416 504 432 521 432 555C432 627 378 666 304 666C221 666 155 627 106 548C63 480 42 403 42 316C42 189 65 100 112 47C152 1 198-22 251-22C312-22 362 1 401 47C438 91 457 144 457 205C457 266 439 318 403 361C365 407 316 431 257 431C205 431 165 402 138 346L138 352C138 465 166 561 226 605C252 624 279 633 306 633C342 633 368 623 385 602C351 602 334 583 334 553C334 525 355 504 383 504M344 340C355 317 361 272 361 206C361 141 356 98 345 76C325 35 294 14 251 14C222 14 200 24 184 44C171 60 162 74 158 85C146 116 140 163 140 227C140 255 144 282 151 308C164 355 201 399 256 399C295 399 325 379 344 340Z"></path><path data-c="34" d="M353 677C344 677 336 672 330 663L28 199L28 163L289 163L289 81C289 63 285 51 278 46C271 41 252 39 219 39L194 39L194 0C223 2 269 3 331 3C393 3 439 2 468 0L468 39L443 39C410 39 391 41 384 46C377 51 373 63 373 81L373 163L471 163L471 202L373 202L373 660C373 670 366 677 353 677M295 553L295 202L67 202Z" transform="translate(500,0)"></path></g><g data-mml-node="mtext" data-latex="\text{MiB}" transform="translate(28136.1,0)"><path data-c="4D" d="M175 108L175 622L407 24C413 8 421 0 430 0C439 0 446 7 452 21L689 630L689 81C689 63 685 51 678 46C671 41 650 39 615 39L587 39L587 0C614 2 663 3 733 3C803 3 852 2 879 0L879 39L851 39C816 39 795 41 788 46C781 51 777 63 777 81L777 602C777 620 781 631 788 636C795 641 816 644 851 644L879 644L879 683L708 683C681 683 679 682 671 662L458 115L247 659C238 679 235 683 208 683L37 683L37 644L65 644C100 644 121 641 128 636C135 631 139 620 139 602L139 108C139 91 135 77 127 64C116 47 86 39 37 39L37 0L157 3L277 0L277 39C204 39 175 51 175 108Z"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(917,0)"></path><path data-c="42" d="M478 358C548 376 624 432 624 512C624 565 599 607 549 640C506 669 456 683 401 683L36 683L36 644L64 644C99 644 120 641 127 636C134 631 138 620 138 602L138 81C138 63 134 51 127 46C120 41 99 39 64 39L36 39L36 0L427 0C484 0 535 16 579 48C627 83 651 129 651 185C651 278 563 342 478 358M521 512C521 428 451 370 367 370L228 370L228 609C228 645 233 644 272 644L394 644C468 644 521 586 521 512M544 186L544 160C542 137 529 111 504 84C478 54 442 39 395 39L272 39C233 39 228 38 228 74L228 340L409 340C490 340 544 270 544 186Z" transform="translate(1195,0)"></path></g></g></g></svg></mjx-container></p>
+<h3 id="3-3-元数据里存了什么"><a href="#3-3-元数据里存了什么" class="headerlink" title="3.3 元数据里存了什么"></a>3.3 元数据里存了什么</h3><p>元数据引擎里，一个文件的数据布局本质是一张 <strong>「chunk → slice 列表」</strong> 的映射。每个 Slice 记录：它在 chunk 内的偏移、长度、以及它对应的底层 Block 引用（对象存储里的 key 前缀 + 大小）。</p>
+<p>读文件时，客户端查元数据拿到某 chunk 的所有 slice，<strong>按写入时间叠加</strong>计算出「每个字节最终由哪个 slice 提供」的视图（后写的覆盖先写的），再去对象存储取对应 Block。这套「slice 叠加视图」是 JuiceFS 支持随机写又不修改已有对象的关键机制。</p>
+<hr>
+<h2 id="四、写路径详解"><a href="#四、写路径详解" class="headerlink" title="四、写路径详解"></a>四、写路径详解</h2><p>顺着一次 <code>write()</code> 的旅程，看数据和元数据如何各自落地。</p>
+<h3 id="4-1-步骤分解"><a href="#4-1-步骤分解" class="headerlink" title="4.1 步骤分解"></a>4.1 步骤分解</h3><ol>
+<li><strong>写入客户端缓冲区（Buffer）</strong>：应用 <code>write()</code> 的数据先进客户端内存的写缓冲（由 <code>--buffer-size</code> 控制，默认数百 MiB 量级）。此时数据尚未持久化。</li>
+<li><strong>组织成 Slice</strong>：连续的写落入当前 Slice；若本次写与已有 slice 不重叠也不相邻，则新建 Slice。一个 Slice 对应「一段连续写」。</li>
+<li><strong>切分为 Block 并上传</strong>：Slice 内的数据按 4MiB 切成 Block，客户端把 Block 以唯一 key 上传到对象存储。Block 一旦写入即不可变。</li>
+<li><strong>提交元数据</strong>：当发生 <code>flush</code>（Slice 写满、文件 <code>close</code>、显式 <code>fsync</code>、或缓冲达阈值）时，客户端把这个 Slice 的元信息（chunk 内偏移、长度、Block 引用）<strong>事务性地写入元数据引擎</strong>。</li>
+<li><strong>确认</strong>：元数据提交成功后，这次写才算<strong>持久且对其他客户端可见</strong>。</li>
+</ol>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="64.133ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 28346.7 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{数据落对象存储（Block）} ;\prec; \text{元数据提交（Slice 引用）} ;\Rightarrow; \text{可见}
+"><g data-mml-node="mtext" data-latex="\text{数据落对象存储（Block）}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">数据落对象存储（</text><path data-c="42" d="M478 358C548 376 624 432 624 512C624 565 599 607 549 640C506 669 456 683 401 683L36 683L36 644L64 644C99 644 120 641 127 636C134 631 138 620 138 602L138 81C138 63 134 51 127 46C120 41 99 39 64 39L36 39L36 0L427 0C484 0 535 16 579 48C627 83 651 129 651 185C651 278 563 342 478 358M521 512C521 428 451 370 367 370L228 370L228 609C228 645 233 644 272 644L394 644C468 644 521 586 521 512M544 186L544 160C542 137 529 111 504 84C478 54 442 39 395 39L272 39C233 39 228 38 228 74L228 340L409 340C490 340 544 270 544 186Z" transform="translate(8000,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(8708,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(8986,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(9486,0)"></path><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z" transform="translate(9930,0)"></path><text data-variant="normal" transform="translate(10458,0) scale(1,-1)" font-size="884px" font-family="serif">）</text></g><g data-mml-node="mo" data-latex=";" transform="translate(11458,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mo" data-latex="\prec" transform="translate(11902.7,0)"><path data-c="227A" d="M678-47C694-47 702-39 702-23L702-19C675 118 571 207 391 250C571 293 675 382 702 519L702 523C702 539 694 547 678 547C665 547 658 541 655 528C636 435 578 369 482 329C395 292 294 274 179 274L100 274C99 274 97 274 96 273L92 273C81 269 76 261 76 250C76 239 81 231 92 227L96 227C97 226 99 226 100 226L179 226C294 226 395 208 482 171C578 131 636 65 655-28C658-41 665-47 678-47Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(12680.7,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mtext" data-latex="\text{元数据提交（Slice 引用）}" transform="translate(13125.3,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">元数据提交（</text><path data-c="53" d="M252 669C359 669 422 601 440 466C441 456 447 451 456 451C467 451 472 460 472 478L472 677C472 696 467 705 458 705C452 705 446 700 440 690L408 638C364 680 324 705 251 705C142 705 56 617 56 509C56 417 116 349 187 324L317 292C384 275 428 229 428 154C428 79 376 17 301 17C170 17 93 91 88 218C88 227 83 232 73 232C62 232 56 223 56 204L56 6C56-13 61-22 71-22C77-22 83-17 89-7L121 45C164 0 224-22 302-22C359-22 407-1 444 40C481 81 499 130 499 188C499 235 485 278 458 317C431 356 394 380 349 391L223 422C170 434 127 481 127 544C127 614 182 669 252 669Z" transform="translate(6000,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(6556,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(6834,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(7112,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(7556,0)"></path><path data-c="20" d="" transform="translate(8000,0)"></path><text data-variant="normal" transform="translate(8332,0) scale(1,-1)" font-size="884px" font-family="serif">引用）</text></g><g data-mml-node="mo" data-latex=";" transform="translate(24457.3,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mo" data-latex="\Rightarrow" transform="translate(24902,0)"><path data-c="21D2" d="M927 233C935 237 939 243 939 250C939 257 935 263 927 267C866 283 804 318 742 371C697 410 662 455 636 507C632 516 625 520 615 520C599 520 591 512 591 496C591 494 592 491 593 486C616 442 644 403 676 369L84 369C68 369 60 361 60 346C60 330 68 322 84 322L728 322C765 292 806 268 849 250C806 232 765 208 728 178L84 178C68 178 60 170 60 154C60 139 68 131 84 131L676 131C644 97 616 58 593 14C592 9 591 6 591 4C591-12 599-20 615-20C625-20 632-16 636-7C662 45 697 90 742 129C804 182 866 217 927 233Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(25902,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mtext" data-latex="\text{可见}" transform="translate(26346.7,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">可见</text></g></g></g></svg></mjx-container></p>
+<p><strong>顺序很重要</strong>：先传数据 Block、后提交元数据引用。这保证了「元数据里能查到的 slice，其底层 Block 一定已经存在」，不会出现引用到不存在数据的悬空指针。</p>
+<h3 id="4-2-flush-与持久性"><a href="#4-2-flush-与持久性" class="headerlink" title="4.2 flush 与持久性"></a>4.2 flush 与持久性</h3><ul>
+<li><strong>未 flush 前</strong>：数据只在客户端内存缓冲里，进程崩溃会丢——这与本地文件系统「未 fsync 的写可能丢」的语义一致。</li>
+<li><strong>flush 后</strong>：Block 在对象存储、Slice 引用在元数据引擎，两者都持久。<code>fsync</code>/<code>close</code>/<code>fdatasync</code> 会触发 flush。</li>
+</ul>
+<h3 id="4-3-写放大与合并"><a href="#4-3-写放大与合并" class="headerlink" title="4.3 写放大与合并"></a>4.3 写放大与合并</h3><p>小而频繁的写会产生很多小 Slice/Block。JuiceFS 通过写缓冲<strong>合并</strong>相邻小写、凑够 4MiB 再上传来减少对象数和请求数；实在零碎的，后续靠 compaction（§6）整理。</p>
+<hr>
+<h2 id="五、读路径详解"><a href="#五、读路径详解" class="headerlink" title="五、读路径详解"></a>五、读路径详解</h2><h3 id="5-1-步骤分解"><a href="#5-1-步骤分解" class="headerlink" title="5.1 步骤分解"></a>5.1 步骤分解</h3><ol>
+<li><strong>定位 chunk</strong>：由读偏移算出涉及哪些 chunk（<code>offset / 64MiB</code>）。</li>
+<li><strong>查元数据取 slice 列表</strong>：从元数据引擎读出这些 chunk 的所有 slice。</li>
+<li><strong>计算叠加视图</strong>：多个 slice 可能在同一区间重叠，客户端按写入顺序计算「每段字节由哪个（最新的）slice 提供」，得到一张精确的「读映射」。</li>
+<li><strong>读取 Block</strong>：根据读映射，从对象存储（或缓存）取对应的 4MiB Block，可并行拉取多个 Block。</li>
+<li><strong>拼装返回</strong>：把 Block 数据按偏移拼好返回给应用。</li>
+</ol>
+<h3 id="5-2-缓存加速"><a href="#5-2-缓存加速" class="headerlink" title="5.2 缓存加速"></a>5.2 缓存加速</h3><p>读路径大量依赖缓存（§8）。命中本地缓存的 Block 直接从本地磁盘/内存返回，避免访问对象存储（对象存储的首字节延迟往往几十毫秒，远高于本地）。JuiceFS 还会<strong>预读（readahead）</strong> 顺序访问的后续 Block、<strong>预取（prefetch）</strong> 被随机读触发的整块，提升顺序和随机读性能。</p>
+<h3 id="5-3-读放大与碎片的影响"><a href="#5-3-读放大与碎片的影响" class="headerlink" title="5.3 读放大与碎片的影响"></a>5.3 读放大与碎片的影响</h3><p>如果一个区间被很多次随机写切得七零八落（大量重叠小 slice），读时要合并很多 slice、拉很多小 Block，<strong>读放大</strong>上升。这正是需要 compaction 的场景。</p>
+<hr>
+<h2 id="六、随机写、覆盖写与碎片、Compaction"><a href="#六、随机写、覆盖写与碎片、Compaction" class="headerlink" title="六、随机写、覆盖写与碎片、Compaction"></a>六、随机写、覆盖写与碎片、Compaction</h2><p>这是 JuiceFS（以及所有「对象不可变 + 追加式」存储）最微妙的部分，值得单独讲透。</p>
+<h3 id="6-1-问题：对象存储不能原地改"><a href="#6-1-问题：对象存储不能原地改" class="headerlink" title="6.1 问题：对象存储不能原地改"></a>6.1 问题：对象存储不能原地改</h3><p>对象存储的对象是<strong>不可变</strong>的：你不能「修改 S3 上某对象的第 100–200 字节」，只能整体覆盖上传。那 JuiceFS 怎么支持 POSIX 的随机写 <code>pwrite(fd, buf, len, offset)</code>？</p>
+<h3 id="6-2-解法：新-Slice-逻辑覆盖旧-Slice"><a href="#6-2-解法：新-Slice-逻辑覆盖旧-Slice" class="headerlink" title="6.2 解法：新 Slice 逻辑覆盖旧 Slice"></a>6.2 解法：新 Slice 逻辑覆盖旧 Slice</h3><p>答案在 §3.2 已埋下伏笔：<strong>不修改旧数据，而是为这次随机写新建一个 Slice，让它在逻辑上「盖住」被覆盖的区间</strong>。</p>
+<p>举例：一个文件 chunk 0 原有 Slice A 覆盖 <code>[0, 64MiB)</code>。现在 <code>pwrite</code> 修改 <code>[10MiB, 12MiB)</code>：</p>
+<ul>
+<li>不去动 Slice A 的任何 Block</li>
+<li>新建 Slice B 覆盖 <code>[10MiB, 12MiB)</code>，上传对应 Block，提交元数据</li>
+<li>读 <code>[10MiB, 12MiB)</code> 时，因为 Slice B 比 A 新，返回 B 的数据；读其他区间仍返回 A</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="60.714ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 26835.6 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{读某字节} = \text{覆盖该字节的所有 slice 中，写入时间最新的那个}
+"><g data-mml-node="mtext" data-latex="\text{读某字节}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">读某字节</text></g><g data-mml-node="mo" data-latex="=" transform="translate(4277.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mtext" data-latex="\text{覆盖该字节的所有 slice 中，写入时间最新的那个}" transform="translate(5333.6,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">覆盖该字节的所有</text><path data-c="20" d="" transform="translate(8000,0)"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(8332,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(8726,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(9004,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(9282,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(9726,0)"></path><path data-c="20" d="" transform="translate(10170,0)"></path><text data-variant="normal" transform="translate(10502,0) scale(1,-1)" font-size="884px" font-family="serif">中，写入时间最新的那个</text></g></g></g></svg></mjx-container></p>
+<p>这套「多版本 slice 叠加」本质是数据层面的 <strong>MVCC</strong>——是不是很眼熟？它和《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》里 MVCC「写不覆盖、追加新版本、读取合适版本」的思想同源，也和 LSM-Tree「追加写 + 逻辑覆盖 + 后台 compaction」的套路一脉相承。</p>
+<h3 id="6-3-碎片（Fragmentation）"><a href="#6-3-碎片（Fragmentation）" class="headerlink" title="6.3 碎片（Fragmentation）"></a>6.3 碎片（Fragmentation）</h3><p>反复随机写会让一个 chunk 堆积<strong>大量重叠的小 slice</strong>。后果：</p>
+<ul>
+<li><strong>读放大</strong>：读一段要合并很多 slice、拉很多小 Block</li>
+<li><strong>元数据膨胀</strong>：slice 记录越来越多</li>
+<li><strong>空间浪费</strong>：被完全覆盖的旧 slice 的 Block 仍占着对象存储空间</li>
+</ul>
+<h3 id="6-4-Compaction（碎片整理）"><a href="#6-4-Compaction（碎片整理）" class="headerlink" title="6.4 Compaction（碎片整理）"></a>6.4 Compaction（碎片整理）</h3><p>JuiceFS 客户端后台执行 <strong>compaction</strong>：把一个 chunk 里重叠、零碎的多个 slice <strong>合并重写成一个（或少数几个）干净的新 slice</strong>——读出有效数据、按最新叠加视图重新组织、写成连续的新 Block、更新元数据指向新 slice，然后旧 slice 的 Block 交给 GC 回收。</p>
+<ul>
+<li><strong>触发</strong>：slice 数量/碎片程度达到阈值时自动触发，也可手动 <code>juicefs gc</code>/compact。</li>
+<li><strong>收益</strong>：降低读放大、压缩元数据、释放被覆盖数据的空间。</li>
+<li><strong>代价</strong>：后台的读-合并-写开销（占用带宽），因此是<strong>异步、限速</strong>进行的。</li>
+</ul>
+<p>这与 LSM-Tree 的 compaction 是完全对应的权衡：<strong>追加写让写变快，代价是要靠后台 compaction 控制读放大和空间放大</strong>（对照《数据库原理》的 RUM 猜想）。</p>
+<hr>
+<h2 id="七、元数据引擎与事务"><a href="#七、元数据引擎与事务" class="headerlink" title="七、元数据引擎与事务"></a>七、元数据引擎与事务</h2><h3 id="7-1-元数据的数据结构"><a href="#7-1-元数据的数据结构" class="headerlink" title="7.1 元数据的数据结构"></a>7.1 元数据的数据结构</h3><p>JuiceFS 把文件系统的元数据映射成引擎里的记录。核心几类（以 KV 引擎为例，SQL 引擎则是对应的表）：</p>
+<table>
+<thead>
+<tr>
+<th>元数据</th>
+<th>大致内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>inode 属性</strong></td>
+<td>类型、大小、权限、属主、时间戳、链接数</td>
+</tr>
+<tr>
+<td><strong>目录项（edge）</strong></td>
+<td><code>(父inode, 文件名) → 子inode</code>，构成目录树</td>
+</tr>
+<tr>
+<td><strong>chunk → slice 映射</strong></td>
+<td>文件每个 chunk 的 slice 列表（数据布局）</td>
+</tr>
+<tr>
+<td><strong>符号链接、xattr</strong></td>
+<td>链接目标、扩展属性</td>
+</tr>
+<tr>
+<td><strong>会话、锁、GC 待删列表</strong></td>
+<td>客户端会话、flock/plock、待回收对象</td>
+</tr>
+</tbody></table>
+<p>一个关键设计：<strong>目录项只存「名字 → inode number」，inode 属性单独存</strong>。这样硬链接（多个名字指向同一 inode number）、rename（改目录项而不动 inode）都变得自然——正好对应《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8%E4%B8%8EPOSIX%E8%AF%AD%E4%B9%89/">分布式文件存储与 POSIX 语义</a>》§3.5/§3.11 讲的 inode 与目录项分离原则。</p>
+<h3 id="7-2-事务如何保证-POSIX-原子性"><a href="#7-2-事务如何保证-POSIX-原子性" class="headerlink" title="7.2 事务如何保证 POSIX 原子性"></a>7.2 事务如何保证 POSIX 原子性</h3><p>很多 POSIX 元数据操作要求<strong>原子性</strong>，且往往涉及<strong>多条记录</strong>。JuiceFS 直接借助元数据引擎的<strong>事务</strong>能力，把这些操作包成一个事务：</p>
+<ul>
+<li><strong>rename</strong>：删旧目录项 + 加新目录项（+ 可能覆盖已存在目标）→ 一个事务，原子完成。跨目录也没问题，因为整棵树的元数据都在同一个引擎里。</li>
+<li><strong>create</strong>：检查同名不存在 + 建 inode + 加目录项 + 更新父目录 → 一个事务，保证文件名唯一性。</li>
+<li><strong>硬链接</strong>：加目录项 + inode 链接数 +1 → 一个事务。</li>
+<li><strong>unlink</strong>：删目录项 + 链接数 -1（归零且无打开引用则移入待删列表）→ 一个事务。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="51.15ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 22608.3 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{POSIX 元数据原子性} ;\Leftarrow; \text{元数据引擎的 ACID 事务}
+"><g data-mml-node="mtext" data-latex="\text{POSIX 元数据原子性}"><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(681,0)"></path><path data-c="53" d="M252 669C359 669 422 601 440 466C441 456 447 451 456 451C467 451 472 460 472 478L472 677C472 696 467 705 458 705C452 705 446 700 440 690L408 638C364 680 324 705 251 705C142 705 56 617 56 509C56 417 116 349 187 324L317 292C384 275 428 229 428 154C428 79 376 17 301 17C170 17 93 91 88 218C88 227 83 232 73 232C62 232 56 223 56 204L56 6C56-13 61-22 71-22C77-22 83-17 89-7L121 45C164 0 224-22 302-22C359-22 407-1 444 40C481 81 499 130 499 188C499 235 485 278 458 317C431 356 394 380 349 391L223 422C170 434 127 481 127 544C127 614 182 669 252 669Z" transform="translate(1459,0)"></path><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z" transform="translate(2015,0)"></path><path data-c="58" d="M593 3L726 0L726 39L703 39C653 39 634 43 614 72L406 385L540 582C568 623 616 643 684 644L684 683L571 680C528 679 485 680 440 683L440 645C481 643 502 629 502 603C502 598 499 591 493 582L384 420L260 606C255 612 253 616 253 619C253 634 275 643 318 645L318 683C277 680 227 679 169 680L37 683L37 644L60 644C108 644 130 640 148 612L329 339L168 102C141 61 95 39 24 39L24 0C145 3 227 3 268 0L268 38C227 39 206 53 206 80C206 85 209 93 215 102L352 304L505 73L509 64C509 49 488 40 445 38L445 0C486 3 536 4 593 3Z" transform="translate(2376,0)"></path><path data-c="20" d="" transform="translate(3126,0)"></path><text data-variant="normal" transform="translate(3458,0) scale(1,-1)" font-size="884px" font-family="serif">元数据原子性</text></g><g data-mml-node="mo" data-latex=";" transform="translate(9458,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mo" data-latex="\Leftarrow" transform="translate(9902.7,0)"><path data-c="21D0" d="M916 178L272 178C235 208 194 232 151 250C194 268 235 292 272 322L916 322C932 322 940 330 940 346C940 361 932 369 916 369L324 369C356 403 384 442 407 486C408 491 409 494 409 496C409 512 401 520 385 520C375 520 368 516 364 507C338 455 303 410 258 371C196 318 134 283 73 267C65 263 61 257 61 250C61 243 65 237 73 233C134 217 196 182 258 129C303 90 338 45 364-7C368-16 375-20 385-20C401-20 409-12 409 4C409 6 408 9 407 14C384 58 356 97 324 131L916 131C932 131 940 139 940 154C940 167 929 178 916 178Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(10902.7,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mtext" data-latex="\text{元数据引擎的 ACID 事务}" transform="translate(11347.3,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">元数据引擎的</text><path data-c="20" d="" transform="translate(6000,0)"></path><path data-c="41" d="M583 3L717 0L717 39L695 39C670 39 653 40 646 42C631 47 621 58 615 75L401 694C397 707 390 716 375 716C362 716 353 709 348 694L143 102C129 61 92 39 32 38L32 0L137 3L254 0L254 39C205 39 180 54 180 85C180 92 181 96 182 98L227 225L465 225L516 77C518 71 519 67 519 64C519 47 492 39 437 39L437 0C479 3 528 4 583 3M345 569L451 264L240 264Z" transform="translate(6332,0)"></path><path data-c="43" d="M665 443L665 677C665 696 660 705 650 705C643 705 637 700 631 691L584 622C554 653 522 675 487 689C461 700 433 705 403 705C306 705 223 670 156 598C89 526 56 441 56 342C56 243 89 158 155 87C222 14 305-22 403-22C474-22 536 3 588 53C640 103 665 163 665 234C665 248 659 255 648 255C638 255 633 251 633 242C633 241 633 239 632 236C626 116 540 17 415 17C378 17 341 27 302 47C210 97 166 193 166 341C166 481 215 589 302 636C341 656 378 666 414 666C538 666 609 553 626 435C627 422 634 415 645 415C665 415 665 423 665 443Z" transform="translate(7082,0)"></path><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z" transform="translate(7804,0)"></path><path data-c="44" d="M401 0C490 0 563 34 622 103C679 168 707 246 707 336C707 428 679 508 624 575C565 647 490 683 401 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0M374 39L274 39C235 39 230 38 230 74L230 609C230 645 235 644 274 644L373 644C447 644 506 614 550 554C583 507 600 435 600 336C600 161 534 39 374 39Z" transform="translate(8165,0)"></path><path data-c="20" d="" transform="translate(8929,0)"></path><text data-variant="normal" transform="translate(9261,0) scale(1,-1)" font-size="884px" font-family="serif">事务</text></g></g></g></svg></mjx-container></p>
+<p>这就是「站在巨人肩上」的威力：JuiceFS 不用自己实现分布式两阶段提交去保证 rename 原子性——<strong>它把这个难题下推给了 TiKV/MySQL 等本就擅长事务的引擎</strong>。选用 TiKV 时，还顺带获得了 Raft 复制带来的分布式强一致与高可用（见《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》的共识与复制）。</p>
+<h3 id="7-3-不同引擎的取舍"><a href="#7-3-不同引擎的取舍" class="headerlink" title="7.3 不同引擎的取舍"></a>7.3 不同引擎的取舍</h3><table>
+<thead>
+<tr>
+<th>引擎</th>
+<th>一致性/持久性</th>
+<th>扩展性</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Redis</strong></td>
+<td>取决于持久化配置（AOF/RDB）与主从，可能丢最近写</td>
+<td>单机内存受限；Cluster 分片</td>
+<td>追求极致元数据延迟、可容忍风险</td>
+</tr>
+<tr>
+<td><strong>MySQL/PG</strong></td>
+<td>强事务、持久</td>
+<td>单机为主，可读写分离</td>
+<td>中小规模、运维熟悉 SQL</td>
+</tr>
+<tr>
+<td><strong>TiKV/FoundationDB</strong></td>
+<td>分布式强一致（Raft）、持久</td>
+<td>水平扩展到海量文件</td>
+<td>大规模生产首选</td>
+</tr>
+</tbody></table>
+<p><strong>元数据引擎的选择 = 整个文件系统的一致性/扩展性天花板</strong>。这是 JuiceFS 用户最重要的一个架构决策。</p>
+<hr>
+<h2 id="八、缓存体系"><a href="#八、缓存体系" class="headerlink" title="八、缓存体系"></a>八、缓存体系</h2><p>由于数据在远端对象存储、元数据在远端引擎，<strong>缓存是 JuiceFS 性能的命脉</strong>。它有多级缓存：</p>
+<h3 id="8-1-元数据缓存"><a href="#8-1-元数据缓存" class="headerlink" title="8.1 元数据缓存"></a>8.1 元数据缓存</h3><p>客户端在内存缓存 inode 属性、目录项等，减少对元数据引擎的往返。配合 FUSE 的 attr/entry 超时（<code>--attr-cache</code>、<code>--entry-cache</code>）。缓存一致性通过会话与失效机制维护（见 §9）。</p>
+<h3 id="8-2-数据缓存"><a href="#8-2-数据缓存" class="headerlink" title="8.2 数据缓存"></a>8.2 数据缓存</h3><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>内核页缓存</strong></td>
+<td>已读数据页</td>
+<td>FUSE 之上，最快</td>
+</tr>
+<tr>
+<td><strong>客户端读缓存（本地盘）</strong></td>
+<td>下载过的 Block</td>
+<td><code>--cache-dir</code>、<code>--cache-size</code> 配置；命中则不访问对象存储</td>
+</tr>
+<tr>
+<td><strong>写缓冲（内存）</strong></td>
+<td>待上传数据</td>
+<td><code>--buffer-size</code>；也服务紧随其后的读</td>
+</tr>
+</tbody></table>
+<p><strong>本地盘缓存</strong>是关键：把热点 Block 缓存在本地 NVMe，把「访问对象存储的几十毫秒延迟」降到「读本地盘的几百微秒」。对 AI 训练这种「反复读同一批数据」的场景收益巨大。</p>
+<h3 id="8-3-预读与预取"><a href="#8-3-预读与预取" class="headerlink" title="8.3 预读与预取"></a>8.3 预读与预取</h3><ul>
+<li><strong>预读（readahead）</strong>：检测到顺序读，提前拉取后续 Block。</li>
+<li><strong>预取（prefetch）</strong>：随机读触发时，把命中 Block 所在的整块拉入缓存，赌后续会用到附近数据。</li>
+</ul>
+<h3 id="8-4-写回缓存（Writeback）"><a href="#8-4-写回缓存（Writeback）" class="headerlink" title="8.4 写回缓存（Writeback）"></a>8.4 写回缓存（Writeback）</h3><p>可选的 <code>--writeback</code> 模式：写先落<strong>本地盘缓存</strong>即向应用返回成功，再异步上传对象存储。大幅降低写延迟，但<strong>本地盘在上传完成前故障会丢数据</strong>——是一个明确的「延迟 vs 持久性」取舍，需按场景权衡（对照《分布式系统原理》里同步/异步复制的取舍）。</p>
+<hr>
+<h2 id="九、一致性模型"><a href="#九、一致性模型" class="headerlink" title="九、一致性模型"></a>九、一致性模型</h2><h3 id="9-1-强一致（元数据-已提交数据）"><a href="#9-1-强一致（元数据-已提交数据）" class="headerlink" title="9.1 强一致（元数据 + 已提交数据）"></a>9.1 强一致（元数据 + 已提交数据）</h3><p>JuiceFS 提供<strong>强一致（close-to-open 之上、接近完整 POSIX）</strong> 的语义：<strong>一旦一次修改被提交（元数据事务成功），挂载了同一文件系统的所有客户端立即可见</strong>。</p>
+<p>为什么能做到？因为<strong>权威状态在元数据引擎里</strong>。客户端 A 写完 flush、提交元数据后，客户端 B 的读会去（或被通知去）查元数据引擎，看到最新的 slice 列表，从而读到最新数据。可见性问题被归约成了「元数据引擎的读一致性」——只要引擎本身强一致（如 TiKV），文件系统就强一致。</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="61.339ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 27111.8 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{文件系统一致性} ;\Leftarrow; \text{元数据引擎一致性} + \text{数据先于元数据落盘}
+"><g data-mml-node="mtext" data-latex="\text{文件系统一致性}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">文件系统一致性</text></g><g data-mml-node="mo" data-latex=";" transform="translate(7000,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mo" data-latex="\Leftarrow" transform="translate(7444.7,0)"><path data-c="21D0" d="M916 178L272 178C235 208 194 232 151 250C194 268 235 292 272 322L916 322C932 322 940 330 940 346C940 361 932 369 916 369L324 369C356 403 384 442 407 486C408 491 409 494 409 496C409 512 401 520 385 520C375 520 368 516 364 507C338 455 303 410 258 371C196 318 134 283 73 267C65 263 61 257 61 250C61 243 65 237 73 233C134 217 196 182 258 129C303 90 338 45 364-7C368-16 375-20 385-20C401-20 409-12 409 4C409 6 408 9 407 14C384 58 356 97 324 131L916 131C932 131 940 139 940 154C940 167 929 178 916 178Z"></path></g><g data-mml-node="mo" data-latex=";" transform="translate(8444.7,0)"><path data-c="3B" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 344 109 318 139 318C169 318 192 345 192 375M86 54C86 22 107-2 139-2C150-2 160 1 167 5C166-61 146-117 108-163C103-169 101-174 101-178C101-188 105-193 114-193C119-193 128-185 141-168C177-121 195-64 195 4C195 75 176 110 139 110C107 110 86 86 86 54Z"></path></g><g data-mml-node="mtext" data-latex="\text{元数据引擎一致性}" transform="translate(8889.3,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">元数据引擎一致性</text></g><g data-mml-node="mo" data-latex="+" transform="translate(17111.6,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{数据先于元数据落盘}" transform="translate(18111.8,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">数据先于元数据落盘</text></g></g></g></svg></mjx-container></p>
+<h3 id="9-2-缓存与一致性的协调"><a href="#9-2-缓存与一致性的协调" class="headerlink" title="9.2 缓存与一致性的协调"></a>9.2 缓存与一致性的协调</h3><p>客户端缓存了元数据/数据，如何避免读到过时缓存？</p>
+<ul>
+<li><strong>元数据缓存超时</strong>：<code>--attr-cache</code>/<code>--entry-cache</code> 控制缓存有效期，到期回源。设为 0 则每次回源（最强一致，最慢）。</li>
+<li><strong>打开即校验</strong>：close-to-open 保证——文件 <code>open</code> 时校验元数据，确保看到此前所有已 <code>close</code> 的写。</li>
+<li><strong>写立即提交</strong>：flush 后元数据即更新，其他客户端下次查元数据即见新版本。</li>
+</ul>
+<p>这套机制与 CephFS 的 capability 思路目标一致（无冲突时用缓存、需要时回源保证一致），只是 JuiceFS 把「权威」放在外部元数据引擎，实现更轻。</p>
+<h3 id="9-3-未提交写的边界"><a href="#9-3-未提交写的边界" class="headerlink" title="9.3 未提交写的边界"></a>9.3 未提交写的边界</h3><p>需要明确：<strong>只有已 flush/close 的写才保证跨客户端可见</strong>。还在某客户端内存缓冲里、未提交元数据的写，其他客户端看不到——这与本地 POSIX「未 fsync 的写对其他机器不可见」是一致的合理边界。</p>
+<hr>
+<h2 id="十、垃圾回收与数据安全"><a href="#十、垃圾回收与数据安全" class="headerlink" title="十、垃圾回收与数据安全"></a>十、垃圾回收与数据安全</h2><h3 id="10-1-为什么需要-GC"><a href="#10-1-为什么需要-GC" class="headerlink" title="10.1 为什么需要 GC"></a>10.1 为什么需要 GC</h3><p>由于「对象不可变 + 新 slice 覆盖旧 slice + compaction 重写」，系统会不断产生<strong>不再被任何 slice 引用的孤儿 Block</strong>：</p>
+<ul>
+<li>被新 slice 完全覆盖的旧数据</li>
+<li>compaction 后被替换的旧 Block</li>
+<li>删除文件后其数据 Block（unlink 只删元数据，数据延迟回收）</li>
+</ul>
+<h3 id="10-2-GC-机制"><a href="#10-2-GC-机制" class="headerlink" title="10.2 GC 机制"></a>10.2 GC 机制</h3><p>JuiceFS 用<strong>引用可达性</strong>判断垃圾：元数据里能追溯到的 Block 是「活」的，其余是「垃圾」。</p>
+<ul>
+<li><strong>删除文件</strong>：<code>unlink</code> 事务只更新元数据（快），实际 Block 放入<strong>待删除队列</strong>，后台异步从对象存储删除——这解释了「删大文件秒回，空间稍后释放」的现象。</li>
+<li><strong>孤儿检测</strong>：<code>juicefs gc</code> 扫描比对元数据引用与对象存储实际对象，清理泄漏的孤儿对象（如上传成功但元数据提交失败留下的块）。</li>
+<li><strong>open-unlink 保护</strong>：删除仍被打开的文件时，靠会话/打开引用延迟真正回收，兑现 POSIX 的 open-unlink 语义（对照文件系统篇 §3.6）。</li>
+</ul>
+<h3 id="10-3-数据安全"><a href="#10-3-数据安全" class="headerlink" title="10.3 数据安全"></a>10.3 数据安全</h3><ul>
+<li><strong>完整性</strong>：Block 可带压缩与校验；对象存储本身通常提供多副本/EC 与校验。</li>
+<li><strong>加密</strong>：支持传输加密与静态加密（客户端侧加密后再上传）。</li>
+<li><strong>回收站（Trash）</strong>：默认开启，删除的文件在回收站保留一段时间（可配），防误删。</li>
+<li><strong>可靠性继承</strong>：数据可靠性很大程度<strong>继承自对象存储</strong>（S3 等宣称 11 个 9 的持久性），元数据可靠性继承自元数据引擎——又是组合式设计的红利。</li>
+</ul>
+<hr>
+<h2 id="十一、POSIX-语义如何落地"><a href="#十一、POSIX-语义如何落地" class="headerlink" title="十一、POSIX 语义如何落地"></a>十一、POSIX 语义如何落地</h2><p>把文件系统篇逐条讨论的 POSIX 语义，对照看 JuiceFS 的实现，是最好的总结：</p>
+<table>
+<thead>
+<tr>
+<th>POSIX 语义</th>
+<th>JuiceFS 实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>原子写 / read-after-write</strong></td>
+<td>数据先落对象存储、元数据事务后提交，提交即可见</td>
+</tr>
+<tr>
+<td><strong>写立即可见（强一致）</strong></td>
+<td>权威在元数据引擎；缓存超时/回源 + close-to-open</td>
+</tr>
+<tr>
+<td><strong>随机写 / 覆盖写</strong></td>
+<td>新 Slice 逻辑覆盖旧 Slice（数据层 MVCC），读时叠加</td>
+</tr>
+<tr>
+<td><strong>rename 原子性</strong></td>
+<td>元数据引擎单事务改目录项，跨目录亦原子</td>
+</tr>
+<tr>
+<td><strong>open-unlink</strong></td>
+<td>unlink 只改元数据 + 待删队列；打开引用延迟回收</td>
+</tr>
+<tr>
+<td><strong>硬链接</strong></td>
+<td>目录项与 inode 分离，多目录项指向同一 inode number + 链接计数</td>
+</tr>
+<tr>
+<td><strong>fsync 持久性</strong></td>
+<td>flush 把 Block 落对象存储 + Slice 引用落元数据</td>
+</tr>
+<tr>
+<td><strong>目录操作 / 唯一性</strong></td>
+<td>create 事务保证同名唯一</td>
+</tr>
+<tr>
+<td><strong>字节范围锁 flock/plock</strong></td>
+<td>元数据引擎中记录锁状态，会话失效兜底</td>
+</tr>
+<tr>
+<td><strong>stat / size</strong></td>
+<td>size 由元数据事务维护，提交时更新</td>
+</tr>
+<tr>
+<td><strong>稀疏文件</strong></td>
+<td>只为写过的区间建 slice，未写区间读返回 0</td>
+</tr>
+</tbody></table>
+<p>一句话：<strong>JuiceFS 把”数据布局”放进对象存储、把”文件语义”放进元数据引擎的事务里</strong>，于是完整 POSIX 语义几乎都能落地——这也是它相比 s3fs 之类「伪文件系统」的根本优势。</p>
+<hr>
+<h2 id="十二、选型、优劣与适用场景"><a href="#十二、选型、优劣与适用场景" class="headerlink" title="十二、选型、优劣与适用场景"></a>十二、选型、优劣与适用场景</h2><h3 id="12-1-优势"><a href="#12-1-优势" class="headerlink" title="12.1 优势"></a>12.1 优势</h3><ul>
+<li><strong>近乎无限的容量与低成本</strong>：数据存对象存储，容量和价格随云对象存储走。</li>
+<li><strong>完整 POSIX + 强一致</strong>：可直接挂载，兼容绝大多数应用；比 s3fs 语义完整得多。</li>
+<li><strong>组合式的可靠性/扩展性</strong>：站在对象存储和事务型数据库两个成熟生态肩上。</li>
+<li><strong>多协议、多场景</strong>：FUSE / Hadoop SDK / S3 Gateway / CSI，一套数据多种访问方式。</li>
+<li><strong>缓存友好</strong>：本地盘缓存对 AI 训练、重复读场景极友好。</li>
+</ul>
+<h3 id="12-2-局限与注意点"><a href="#12-2-局限与注意点" class="headerlink" title="12.2 局限与注意点"></a>12.2 局限与注意点</h3><ul>
+<li><strong>延迟受对象存储与元数据引擎影响</strong>：冷数据首次访问有对象存储延迟；元数据操作延迟取决于引擎与网络。</li>
+<li><strong>随机写重的负载</strong>：会产生碎片，依赖 compaction，写放大和后台开销需关注。</li>
+<li><strong>元数据引擎是关键依赖</strong>：它的可用性、一致性、运维直接决定文件系统。选型和容灾要认真对待。</li>
+<li><strong>海量小文件的元数据压力</strong>：虽然比集中式（HDFS 内存墙）好，但元数据引擎仍要扛住高 QPS 的小操作。</li>
+<li><strong>强一致依赖引擎</strong>：用 Redis 且持久化配置不当，可能在故障时丢最近元数据——要理解自己选的引擎的保证。</li>
+</ul>
+<h3 id="12-3-与其他系统的定位对比"><a href="#12-3-与其他系统的定位对比" class="headerlink" title="12.3 与其他系统的定位对比"></a>12.3 与其他系统的定位对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>JuiceFS</th>
+<th>CephFS</th>
+<th>HDFS</th>
+<th>s3fs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据层</td>
+<td>对象存储</td>
+<td>RADOS</td>
+<td>DataNode 块</td>
+<td>对象存储</td>
+</tr>
+<tr>
+<td>元数据</td>
+<td>外部 KV/DB</td>
+<td>多 MDS</td>
+<td>单 NameNode</td>
+<td>无（伪装）</td>
+</tr>
+<tr>
+<td>POSIX 完整度</td>
+<td>高</td>
+<td>高</td>
+<td>write-once</td>
+<td>低</td>
+</tr>
+<tr>
+<td>强一致</td>
+<td>是（依赖引擎）</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>随机写</td>
+<td>支持（slice 覆盖）</td>
+<td>支持</td>
+<td>不支持</td>
+<td>差</td>
+</tr>
+<tr>
+<td>最佳场景</td>
+<td>云原生/AI/海量文件</td>
+<td>通用/私有云</td>
+<td>大数据批处理</td>
+<td>简单只读挂载</td>
+</tr>
+</tbody></table>
+<p><strong>一句话选型</strong>：想在云对象存储之上要一个「真·文件系统」、又不想自建 Ceph 那么重的存储集群，JuiceFS 是极务实的选择；对随机写极重或对延迟极敏感的负载，需评估碎片与对象存储延迟的影响。</p>
+<h3 id="12-4-它在本专题里的位置"><a href="#12-4-它在本专题里的位置" class="headerlink" title="12.4 它在本专题里的位置"></a>12.4 它在本专题里的位置</h3><p>JuiceFS 是本专题三条主线的一次漂亮交汇：</p>
+<ul>
+<li><strong>分布式系统原理</strong>：一致性靠元数据引擎的强一致（TiKV 的 Raft），可用性/持久性是各组件取舍的组合。</li>
+<li><strong>数据库原理</strong>：元数据事务、数据层的 MVCC 式 slice 覆盖、compaction——处处是数据库思想的复用。</li>
+<li><strong>分布式文件系统</strong>：用「元数据外包 + 对象存储 + 富客户端」这条路线，把 POSIX 语义几乎完整地实现在了不可变对象存储之上。</li>
+</ul>
+<hr>
+<h2 id="十三、参考资源"><a href="#十三、参考资源" class="headerlink" title="十三、参考资源"></a>十三、参考资源</h2><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JuiceFS 架构文档</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/juicedata/juicefs/blob/main/docs/en/introduction/architecture.md">github.com/juicedata/juicefs</a></td>
+</tr>
+<tr>
+<td>数据处理流程（内部机制）</td>
+<td><a target="_blank" rel="noopener" href="https://juicefs.com/docs/community/internals/io_processing/">JuiceFS Docs - Internals</a></td>
+</tr>
+<tr>
+<td>元数据与数据存储设计（代码级分析）</td>
+<td><a target="_blank" rel="noopener" href="https://juicefs.com/en/blog/engineering/design-metadata-data-storage">JuiceFS Blog</a></td>
+</tr>
+<tr>
+<td>GC 机制深度解析</td>
+<td><a target="_blank" rel="noopener" href="https://juicefs.com/en/blog/engineering/juicefs-garbage-collection">JuiceFS Blog - Garbage Collection</a></td>
+</tr>
+<tr>
+<td>AI 场景性能优化</td>
+<td><a target="_blank" rel="noopener" href="https://juicefs.com/en/blog/engineering/juicefs-ai-workload-performance-optimization">JuiceFS Blog - AI Workload</a></td>
+</tr>
+<tr>
+<td>GitHub 仓库</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/juicedata/juicefs">juicedata/juicefs</a></td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p><strong>本专题系列</strong>：</p>
+<ul>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/">分布式存储系统专题总览</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理与核心技术</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8%E4%B8%8EPOSIX%E8%AF%AD%E4%B9%89/">分布式文件存储与 POSIX 语义</a></li>
+<li>本篇：JuiceFS 架构与实现深度解析</li>
+</ul>
+<p><strong>一句话总结 JuiceFS</strong>：把文件的「数据布局」交给不可变的对象存储、把「文件语义」交给事务型元数据引擎，用一个聪明的富客户端把两者缝合成完整的强一致 POSIX 文件系统——这是云时代「组合优于自造」的存储设计范本。</p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="category-chain-item">分布式存储</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/" class="category-chain-item">分布式文件系统</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/JuiceFS/" class="print-no-link">#JuiceFS</a>
+      
+        <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/" class="print-no-link">#分布式文件系统</a>
+      
+        <a href="/tags/%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8/" class="print-no-link">#对象存储</a>
+      
+        <a href="/tags/POSIX/" class="print-no-link">#POSIX</a>
+      
+        <a href="/tags/%E5%85%83%E6%95%B0%E6%8D%AE%E5%BC%95%E6%93%8E/" class="print-no-link">#元数据引擎</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>JuiceFS 架构与实现深度解析</div>
+      <div>https://w2ongq6.github.io/2026/08/07/distributed-storage/JuiceFS-架构与实现深度解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/Ceph-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="Ceph 架构与实现深度解析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Ceph 架构与实现深度解析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/" title="分布式存储系统专题总览">
+                        <span class="hidden-mobile">分布式存储系统专题总览</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

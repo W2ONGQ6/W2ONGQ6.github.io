@@ -1,0 +1,1301 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Redis 架构与实现深度解析 本文是「分布式存储系统」专题的一篇。Redis 是最流行的内存数据结构存储，既是缓存也是数据库、消息中间件。本文从它的数据结构与底层编码，讲到单线程事件循环、持久化（RDB&#x2F;AOF）、过期与淘汰、主从&#x2F;哨兵&#x2F;Cluster 的高可用与分布式，力求讲清「为什么 Redis 又快又灵活」。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis 架构与实现深度解析">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/07/distributed-storage/Redis-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Redis 架构与实现深度解析 本文是「分布式存储系统」专题的一篇。Redis 是最流行的内存数据结构存储，既是缓存也是数据库、消息中间件。本文从它的数据结构与底层编码，讲到单线程事件循环、持久化（RDB&#x2F;AOF）、过期与淘汰、主从&#x2F;哨兵&#x2F;Cluster 的高可用与分布式，力求讲清「为什么 Redis 又快又灵活」。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-07T15:56:00.000Z">
+<meta property="article:modified_time" content="2026-08-08T02:47:26.167Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Redis">
+<meta property="article:tag" content="内存数据库">
+<meta property="article:tag" content="持久化">
+<meta property="article:tag" content="数据结构">
+<meta property="article:tag" content="高可用">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Redis 架构与实现深度解析 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Redis 架构与实现深度解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-07 23:56" pubdate>
+          2026年8月7日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          6k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          51 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Redis 架构与实现深度解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="Redis-架构与实现深度解析"><a href="#Redis-架构与实现深度解析" class="headerlink" title="Redis 架构与实现深度解析"></a>Redis 架构与实现深度解析</h2><blockquote>
+<p>本文是「分布式存储系统」专题的一篇。Redis 是最流行的内存数据结构存储，既是缓存也是数据库、消息中间件。本文从它的数据结构与底层编码，讲到单线程事件循环、持久化（RDB/AOF）、过期与淘汰、主从/哨兵/Cluster 的高可用与分布式，力求讲清「为什么 Redis 又快又灵活」。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ol>
+<li><a href="#%E4%B8%80redis-%E6%98%AF%E4%BB%80%E4%B9%88%E5%86%85%E5%AD%98%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E6%9C%8D%E5%8A%A1%E5%99%A8">Redis 是什么：内存数据结构服务器</a></li>
+<li><a href="#%E4%BA%8C%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E5%BA%95%E5%B1%82%E7%BC%96%E7%A0%81">数据结构与底层编码</a></li>
+<li><a href="#%E4%B8%89%E5%8D%95%E7%BA%BF%E7%A8%8B%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%A8%A1%E5%9E%8B">单线程事件循环模型</a></li>
+<li><a href="#%E5%9B%9B%E6%8C%81%E4%B9%85%E5%8C%96rdb-%E4%B8%8E-aof">持久化：RDB 与 AOF</a></li>
+<li><a href="#%E4%BA%94%E8%BF%87%E6%9C%9F%E4%B8%8E%E5%86%85%E5%AD%98%E6%B7%98%E6%B1%B0">过期与内存淘汰</a></li>
+<li><a href="#%E5%85%AD%E4%BA%8B%E5%8A%A1%E4%B8%8E-lua-%E8%84%9A%E6%9C%AC">事务与 Lua 脚本</a></li>
+<li><a href="#%E4%B8%83%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6">主从复制</a></li>
+<li><a href="#%E5%85%AB%E5%93%A8%E5%85%B5%E8%87%AA%E5%8A%A8%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB">哨兵：自动故障转移</a></li>
+<li><a href="#%E4%B9%9Dredis-cluster%E5%88%86%E7%89%87%E4%B8%8E%E5%8E%BB%E4%B8%AD%E5%BF%83">Redis Cluster：分片与去中心</a></li>
+<li><a href="#%E5%8D%81redis-67-%E7%9A%84%E5%A4%9A%E7%BA%BF%E7%A8%8B%E4%B8%8E%E6%96%B0%E7%89%B9%E6%80%A7">Redis 6/7 的多线程与新特性</a></li>
+<li><a href="#%E5%8D%81%E4%B8%80%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E9%80%9F%E6%9F%A5%E8%A1%A8">核心概念速查表</a></li>
+<li><a href="#%E5%8D%81%E4%BA%8C%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90">参考资源</a></li>
+</ol>
+<hr>
+<h2 id="一、Redis-是什么：内存数据结构服务器"><a href="#一、Redis-是什么：内存数据结构服务器" class="headerlink" title="一、Redis 是什么：内存数据结构服务器"></a>一、Redis 是什么：内存数据结构服务器</h2><p>Redis（REmote DIctionary Server）常被叫「缓存」，但它的准确定位是<strong>内存数据结构服务器（in-memory data structure store）</strong>：</p>
+<ul>
+<li><strong>数据主要驻留内存</strong> → 读写都是内存操作，微秒级延迟、单机十万级 QPS。</li>
+<li><strong>提供丰富数据结构</strong> → 不只是 KV，而是 String、List、Hash、Set、Sorted Set、Stream、Bitmap、HyperLogLog、Geo 等，把「数据结构」作为一等服务对外提供。</li>
+<li><strong>可选持久化</strong> → 靠 RDB/AOF 把内存数据落盘，兼具数据库属性。</li>
+</ul>
+<p>一句话：<strong>Redis 把内存里的数据结构，通过网络暴露成一个共享的、原子操作的服务。</strong> 它的一切设计（单线程、编码优化、持久化、集群）都围绕「在内存速度和数据可靠/可扩展之间取平衡」。</p>
+<hr>
+<h2 id="二、数据结构与底层编码"><a href="#二、数据结构与底层编码" class="headerlink" title="二、数据结构与底层编码"></a>二、数据结构与底层编码</h2><p>Redis 的精髓在于<strong>同一种对外数据类型，底层根据数据规模自动选择不同编码</strong>，在内存和速度间权衡。</p>
+<h3 id="2-1-对外类型-vs-底层编码"><a href="#2-1-对外类型-vs-底层编码" class="headerlink" title="2.1 对外类型 vs 底层编码"></a>2.1 对外类型 vs 底层编码</h3><table>
+<thead>
+<tr>
+<th>对外类型</th>
+<th>底层编码（随规模切换）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>String</strong></td>
+<td>int（整数）、embstr（短字符串，≤44B）、raw（长字符串，SDS）</td>
+</tr>
+<tr>
+<td><strong>List</strong></td>
+<td>quicklist（listpack 节点组成的双向链表；早期 ziplist+linkedlist）</td>
+</tr>
+<tr>
+<td><strong>Hash</strong></td>
+<td>listpack（小）→ hashtable（大）</td>
+</tr>
+<tr>
+<td><strong>Set</strong></td>
+<td>intset（纯整数且少）→ listpack（小）→ hashtable（大）</td>
+</tr>
+<tr>
+<td><strong>Sorted Set</strong></td>
+<td>listpack（小）→ skiplist + hashtable（大）</td>
+</tr>
+</tbody></table>
+<h3 id="2-2-关键底层结构"><a href="#2-2-关键底层结构" class="headerlink" title="2.2 关键底层结构"></a>2.2 关键底层结构</h3><ul>
+<li><strong>SDS（Simple Dynamic String）</strong>：Redis 自己的字符串，记录长度（O(1) 取长度）、预分配、二进制安全，避免 C 字符串的缺陷。</li>
+<li><strong>listpack / ziplist</strong>：紧凑的连续内存结构，小数据时省内存（无指针开销），但增删是 O(n)。数据变大就升级为哈希表/跳表。</li>
+<li><strong>skiplist（跳表）</strong>：Sorted Set 的核心，<mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.561ex;" xmlns="http://www.w3.org/2000/svg" width="8.112ex" height="2.253ex" role="img" focusable="false" viewBox="0 -748 3585.7 996"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="O(\log n)"><g data-mml-node="mi" data-latex="O"><path data-c="1D442" d="M702 263C727 320 740 377 740 435C740 513 717 577 670 628C623 679 561 705 484 705C431 705 378 692 325 666C217 613 138 529 87 415C62 359 49 303 49 246C49 167 72 103 119 53C166 3 228-22 306-22C358-22 410-9 463 16C572 69 651 152 702 263M644 474C644 341 584 208 520 129C476 74 400 12 312 12C205 12 149 105 149 218C149 253 156 300 169 357C196 475 264 579 353 633C396 659 438 672 478 672C586 672 644 586 644 474Z"></path></g><g data-mml-node="mo" data-latex="(" transform="translate(763,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mi" data-latex="\log" transform="translate(1152,0)"><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(278,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(778,0)"></path></g><g data-mml-node="mo" transform="translate(2430,0)"><path data-c="2061" d=""></path></g><g data-mml-node="mi" data-latex="n" transform="translate(2596.7,0)"><path data-c="1D45B" d="M537 137C514 58 481 18 440 18C427 18 420 28 420 47C420 61 426 84 438 115C478 224 498 296 498 333C498 403 451 442 381 442C322 442 271 416 230 363C222 407 187 442 136 442C80 442 58 390 44 345C34 313 29 294 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 65 299C83 375 106 413 133 413C151 413 160 399 160 371C160 358 155 331 144 290L87 63C84 50 78 24 78 19C78-1 89-11 111-11C130-11 144-1 151 19C153 24 159 49 170 92L191 181L221 295C232 318 249 341 270 365C299 397 335 413 378 413C411 413 427 391 427 348C427 310 406 234 363 120C356 102 353 87 353 74C353 25 390-11 438-11C482-11 517 14 542 64C561 104 571 131 571 144C571 153 566 158 555 158C552 158 537 149 537 137Z"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(3196.7,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g></g></g></svg></mjx-container> 的有序插入/查找/范围查询。为什么用跳表而非红黑树？实现简单、范围查询友好、并发/持久化时更好处理。</li>
+<li><strong>dict（哈希表）</strong>：Redis 的核心字典（keyspace 本身就是个大 dict），用<strong>渐进式 rehash</strong>——扩容时不一次性搬，而是每次操作顺带搬一点，避免大字典 rehash 卡顿。</li>
+</ul>
+<h3 id="2-3-设计哲学"><a href="#2-3-设计哲学" class="headerlink" title="2.3 设计哲学"></a>2.3 设计哲学</h3><p><strong>「小对象用紧凑编码省内存，大对象用高效结构保性能」</strong>——这个「按规模自适应编码」的思想，是 Redis 能同时做到省内存和高性能的关键，也是理解它内存占用的基础。</p>
+<hr>
+<h2 id="三、单线程事件循环模型"><a href="#三、单线程事件循环模型" class="headerlink" title="三、单线程事件循环模型"></a>三、单线程事件循环模型</h2><p>Redis 一个经典的「反直觉」设计：<strong>核心命令处理是单线程的</strong>，却快得惊人。</p>
+<h3 id="3-1-为什么单线程还快"><a href="#3-1-为什么单线程还快" class="headerlink" title="3.1 为什么单线程还快"></a>3.1 为什么单线程还快</h3><ul>
+<li><strong>纯内存操作</strong>：瓶颈不在 CPU 而在内存/网络，单线程足以打满。</li>
+<li><strong>避免锁与上下文切换</strong>：多线程要加锁保护共享数据结构，锁竞争和上下文切换本身就是开销。单线程天然无锁，命令执行是<strong>原子</strong>的。</li>
+<li><strong>IO 多路复用</strong>：用 epoll/kqueue 在单线程里同时处理成千上万个连接的 IO 事件，不为每个连接开线程。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="58.344ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 25788 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{单线程可行的前提：瓶颈是内存/网络 IO，而非 CPU 计算}
+"><g data-mml-node="mtext" data-latex="\text{单线程可行的前提：瓶颈是内存/网络 IO，而非 CPU 计算}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">单线程可行的前提：瓶颈是内存</text><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z" transform="translate(14000,0)"></path><text data-variant="normal" transform="translate(14500,0) scale(1,-1)" font-size="884px" font-family="serif">网络</text><path data-c="20" d="" transform="translate(16500,0)"></path><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z" transform="translate(16832,0)"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(17193,0)"></path><text data-variant="normal" transform="translate(17971,0) scale(1,-1)" font-size="884px" font-family="serif">，而非</text><path data-c="20" d="" transform="translate(20971,0)"></path><path data-c="43" d="M665 443L665 677C665 696 660 705 650 705C643 705 637 700 631 691L584 622C554 653 522 675 487 689C461 700 433 705 403 705C306 705 223 670 156 598C89 526 56 441 56 342C56 243 89 158 155 87C222 14 305-22 403-22C474-22 536 3 588 53C640 103 665 163 665 234C665 248 659 255 648 255C638 255 633 251 633 242C633 241 633 239 632 236C626 116 540 17 415 17C378 17 341 27 302 47C210 97 166 193 166 341C166 481 215 589 302 636C341 656 378 666 414 666C538 666 609 553 626 435C627 422 634 415 645 415C665 415 665 423 665 443Z" transform="translate(21303,0)"></path><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z" transform="translate(22025,0)"></path><path data-c="55" d="M716 644L716 683L596 680L474 683L474 644C523 644 553 636 564 619C572 606 576 592 576 575L576 232C576 175 560 125 527 84C492 39 446 17 390 17C359 17 327 28 294 51C252 81 231 139 231 225L231 602C231 620 235 631 242 636C249 641 270 644 305 644L332 644L332 683C307 681 257 680 183 680C109 680 59 681 33 683L33 644L61 644C96 644 117 641 124 636C131 631 135 620 135 602L135 229C135 159 160 100 209 51C258 2 318-22 388-22C508-22 595 77 611 186C613 199 614 222 614 255L614 571C614 631 639 644 716 644Z" transform="translate(22706,0)"></path><path data-c="20" d="" transform="translate(23456,0)"></path><text data-variant="normal" transform="translate(23788,0) scale(1,-1)" font-size="884px" font-family="serif">计算</text></g></g></g></svg></mjx-container></p>
+<h3 id="3-2-事件循环（Event-Loop）"><a href="#3-2-事件循环（Event-Loop）" class="headerlink" title="3.2 事件循环（Event Loop）"></a>3.2 事件循环（Event Loop）</h3><p>Redis 基于自研的 <strong>ae（Async Event）</strong> 事件库，主循环处理两类事件：</p>
+<ul>
+<li><strong>文件事件（file event）</strong>：socket 可读/可写。用 IO 多路复用（epoll/kqueue/select）监听，把「接收命令→解析→执行→回复」串起来。</li>
+<li><strong>时间事件（time event）</strong>：定时任务，如 <code>serverCron</code>（每 100ms 级），负责过期键清理、统计、rehash 推进、主从心跳等后台工作。</li>
+</ul>
+<h3 id="3-3-单线程的隐患"><a href="#3-3-单线程的隐患" class="headerlink" title="3.3 单线程的隐患"></a>3.3 单线程的隐患</h3><p>因为单线程串行执行，<strong>一个慢命令会阻塞所有请求</strong>。所以要避免：</p>
+<ul>
+<li><code>KEYS *</code>、大范围 <code>SMEMBERS</code>/<code>HGETALL</code>、O(n) 的大集合操作</li>
+<li>大 key 的删除（用 <code>UNLINK</code> 异步删代替 <code>DEL</code>）</li>
+<li>复杂 Lua 脚本</li>
+</ul>
+<p>这也是 Redis 6 引入多线程 IO、以及提供异步删除的动因（见 §10）。</p>
+<hr>
+<h2 id="四、持久化：RDB-与-AOF"><a href="#四、持久化：RDB-与-AOF" class="headerlink" title="四、持久化：RDB 与 AOF"></a>四、持久化：RDB 与 AOF</h2><p>内存数据断电即失，Redis 提供两种持久化把数据落盘（对照《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》的持久性）。</p>
+<h3 id="4-1-RDB（快照）"><a href="#4-1-RDB（快照）" class="headerlink" title="4.1 RDB（快照）"></a>4.1 RDB（快照）</h3><p><strong>RDB</strong> 是某个时间点内存数据的<strong>二进制快照</strong>。</p>
+<ul>
+<li><strong>触发</strong>：<code>save</code>/<code>bgsave</code> 命令，或配置的自动规则（如 900 秒内 1 次写就存）。</li>
+<li><strong>实现（COW）</strong>：<code>bgsave</code> 时 <code>fork()</code> 出子进程，子进程把内存快照写盘，父进程继续服务。靠操作系统的<strong>写时复制（Copy-on-Write）</strong>——父进程改数据时才复制页，子进程看到的是 fork 瞬间的一致快照。</li>
+<li><strong>优点</strong>：文件紧凑、恢复快（直接加载）、对性能影响小（后台 fork）。</li>
+<li><strong>缺点</strong>：两次快照之间的数据会丢（不是实时持久）。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="51.82ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 22904.4 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{RDB} = \text{fork 子进程} + \text{COW 一致快照} + \text{二进制落盘}
+"><g data-mml-node="mtext" data-latex="\text{RDB}"><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z"></path><path data-c="44" d="M401 0C490 0 563 34 622 103C679 168 707 246 707 336C707 428 679 508 624 575C565 647 490 683 401 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0M374 39L274 39C235 39 230 38 230 74L230 609C230 645 235 644 274 644L373 644C447 644 506 614 550 554C583 507 600 435 600 336C600 161 534 39 374 39Z" transform="translate(736,0)"></path><path data-c="42" d="M478 358C548 376 624 432 624 512C624 565 599 607 549 640C506 669 456 683 401 683L36 683L36 644L64 644C99 644 120 641 127 636C134 631 138 620 138 602L138 81C138 63 134 51 127 46C120 41 99 39 64 39L36 39L36 0L427 0C484 0 535 16 579 48C627 83 651 129 651 185C651 278 563 342 478 358M521 512C521 428 451 370 367 370L228 370L228 609C228 645 233 644 272 644L394 644C468 644 521 586 521 512M544 186L544 160C542 137 529 111 504 84C478 54 442 39 395 39L272 39C233 39 228 38 228 74L228 340L409 340C490 340 544 270 544 186Z" transform="translate(1500,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(2485.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mtext" data-latex="\text{fork 子进程}" transform="translate(3541.6,0)"><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(306,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(806,0)"></path><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z" transform="translate(1198,0)"></path><path data-c="20" d="" transform="translate(1726,0)"></path><text data-variant="normal" transform="translate(2058,0) scale(1,-1)" font-size="884px" font-family="serif">子进程</text></g><g data-mml-node="mo" data-latex="+" transform="translate(8821.8,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{COW 一致快照}" transform="translate(9822,0)"><path data-c="43" d="M665 443L665 677C665 696 660 705 650 705C643 705 637 700 631 691L584 622C554 653 522 675 487 689C461 700 433 705 403 705C306 705 223 670 156 598C89 526 56 441 56 342C56 243 89 158 155 87C222 14 305-22 403-22C474-22 536 3 588 53C640 103 665 163 665 234C665 248 659 255 648 255C638 255 633 251 633 242C633 241 633 239 632 236C626 116 540 17 415 17C378 17 341 27 302 47C210 97 166 193 166 341C166 481 215 589 302 636C341 656 378 666 414 666C538 666 609 553 626 435C627 422 634 415 645 415C665 415 665 423 665 443Z"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(722,0)"></path><path data-c="57" d="M910 581C923 623 956 644 1009 644L1009 683C968 680 937 679 915 680L793 683L793 645C850 644 879 627 879 596C879 593 877 587 874 577L729 132L574 605C573 611 572 616 572 619C572 636 600 644 655 644L655 683C612 680 564 679 510 680L385 683L385 644C419 644 442 642 452 639C462 636 469 627 474 612L496 544L362 132L206 607C205 611 204 615 204 619C204 636 232 644 288 644L288 683C245 680 197 679 143 680L18 683L18 644C57 644 80 642 88 638C96 634 103 624 108 606L307 0C312-15 319-22 329-22C335-22 339-21 342-19C349-11 352-4 353 1L513 491L674 0C679-15 686-22 697-22C702-22 707-21 710-19C716-11 719-4 720 1Z" transform="translate(1500,0)"></path><path data-c="20" d="" transform="translate(2528,0)"></path><text data-variant="normal" transform="translate(2860,0) scale(1,-1)" font-size="884px" font-family="serif">一致快照</text></g><g data-mml-node="mo" data-latex="+" transform="translate(16904.2,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{二进制落盘}" transform="translate(17904.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">二进制落盘</text></g></g></g></svg></mjx-container></p>
+<h3 id="4-2-AOF（Append-Only-File）"><a href="#4-2-AOF（Append-Only-File）" class="headerlink" title="4.2 AOF（Append Only File）"></a>4.2 AOF（Append Only File）</h3><p><strong>AOF</strong> 记录<strong>每一条写命令</strong>（追加到文件），恢复时重放这些命令重建数据——本质是 WAL/命令日志。</p>
+<ul>
+<li><strong>写回策略（appendfsync）</strong>：<code>always</code>（每命令 fsync，最安全最慢）、<code>everysec</code>（每秒 fsync，默认，最多丢 1 秒）、<code>no</code>（交给 OS）。</li>
+<li><strong>AOF 重写（rewrite）</strong>：命令日志会越来越大，<code>bgrewriteaof</code> 后台 fork 子进程，把当前内存状态<strong>压缩成最小命令集</strong>（如 100 次 incr 变成 1 条 set），控制文件大小。</li>
+<li><strong>优点</strong>：可配到几乎不丢（everysec/always）。</li>
+<li><strong>缺点</strong>：文件大、恢复比 RDB 慢。</li>
+</ul>
+<h3 id="4-3-混合持久化"><a href="#4-3-混合持久化" class="headerlink" title="4.3 混合持久化"></a>4.3 混合持久化</h3><p>Redis 4.0+ 支持 <strong>混合持久化</strong>：AOF 重写时，用 <strong>RDB 格式存基线 + 增量命令用 AOF 格式追加</strong>。恢复时先快速加载 RDB 基线，再重放少量增量命令——兼顾 RDB 的快恢复和 AOF 的低丢失。是生产推荐配置。</p>
+<hr>
+<h2 id="五、过期与内存淘汰"><a href="#五、过期与内存淘汰" class="headerlink" title="五、过期与内存淘汰"></a>五、过期与内存淘汰</h2><h3 id="5-1-过期删除策略"><a href="#5-1-过期删除策略" class="headerlink" title="5.1 过期删除策略"></a>5.1 过期删除策略</h3><p>给 key 设了 TTL 后，Redis 怎么删过期 key？组合两种策略：</p>
+<ul>
+<li><strong>惰性删除（lazy）</strong>：访问 key 时检查是否过期，过期才删。省 CPU，但过期 key 若不被访问会一直占内存。</li>
+<li><strong>定期删除（active）</strong>：<code>serverCron</code> 周期性<strong>随机抽样</strong>一批带 TTL 的 key，删掉其中过期的；若过期比例高就多删几轮。平衡 CPU 与内存。</li>
+</ul>
+<p>两者互补：惰性保证访问到的一定不过期，定期兜底清理没被访问的。</p>
+<h3 id="5-2-内存淘汰（maxmemory-policy）"><a href="#5-2-内存淘汰（maxmemory-policy）" class="headerlink" title="5.2 内存淘汰（maxmemory-policy）"></a>5.2 内存淘汰（maxmemory-policy）</h3><p>内存达到 <code>maxmemory</code> 上限时，按策略淘汰 key 腾空间：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>noeviction</strong></td>
+<td>不淘汰，写请求直接报错（默认）</td>
+</tr>
+<tr>
+<td><strong>allkeys-lru / volatile-lru</strong></td>
+<td>淘汰最久未用的（全部 / 仅带 TTL 的）</td>
+</tr>
+<tr>
+<td><strong>allkeys-lfu / volatile-lfu</strong></td>
+<td>淘汰最少使用的（LFU，Redis 4+）</td>
+</tr>
+<tr>
+<td><strong>allkeys-random / volatile-random</strong></td>
+<td>随机淘汰</td>
+</tr>
+<tr>
+<td><strong>volatile-ttl</strong></td>
+<td>淘汰最快过期的</td>
+</tr>
+</tbody></table>
+<p><strong>近似 LRU/LFU</strong>：Redis 不维护严格 LRU 链表（太耗内存），而是<strong>采样近似</strong>——随机取若干 key，淘汰其中最久未用/最少用的。LFU 用一个带衰减的计数器近似访问频率。这是「用近似换低开销」的典型工程取舍。</p>
+<hr>
+<h2 id="六、事务与-Lua-脚本"><a href="#六、事务与-Lua-脚本" class="headerlink" title="六、事务与 Lua 脚本"></a>六、事务与 Lua 脚本</h2><h3 id="6-1-事务（MULTI-EXEC）"><a href="#6-1-事务（MULTI-EXEC）" class="headerlink" title="6.1 事务（MULTI/EXEC）"></a>6.1 事务（MULTI/EXEC）</h3><p>Redis 事务用 <code>MULTI</code> 开启、命令入队、<code>EXEC</code> 一次性顺序执行：</p>
+<ul>
+<li><strong>原子性</strong>：EXEC 里的命令<strong>不被其他客户端命令打断</strong>（单线程串行执行整批）。</li>
+<li><strong>无回滚</strong>：Redis 事务<strong>不支持回滚</strong>！若某命令运行时出错（如对 String 做 List 操作），其他命令照常执行。它只保证「语法错误的整批不执行」和「执行时不被打断」，不保证 ACID 的原子回滚——这与传统数据库事务差异很大。</li>
+<li><strong>WATCH（乐观锁）</strong>：<code>WATCH key</code> 后若该 key 在 EXEC 前被改，事务放弃执行，实现 CAS 式乐观并发控制（对照《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》的 OCC）。</li>
+</ul>
+<h3 id="6-2-Lua-脚本"><a href="#6-2-Lua-脚本" class="headerlink" title="6.2 Lua 脚本"></a>6.2 Lua 脚本</h3><p><code>EVAL</code> 执行 Lua 脚本，脚本内多条命令<strong>原子执行</strong>（单线程 + 脚本执行期间不插入其他命令）。相比事务更灵活：可带逻辑判断、循环。是实现「读-改-写」原子操作、复杂原子逻辑（如分布式锁、限流）的利器。注意脚本也会阻塞单线程，要避免慢脚本。</p>
+<h3 id="6-3-Redis-函数（Functions）"><a href="#6-3-Redis-函数（Functions）" class="headerlink" title="6.3 Redis 函数（Functions）"></a>6.3 Redis 函数（Functions）</h3><p>Redis 7 引入 <strong>Functions</strong>，把脚本作为服务端持久化的、可复用的库管理，比每次传 Lua 脚本更工程化。</p>
+<hr>
+<h2 id="七、主从复制"><a href="#七、主从复制" class="headerlink" title="七、主从复制"></a>七、主从复制</h2><p>单机有单点风险，Redis 用<strong>主从复制（replication）</strong> 做数据冗余和读扩展（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》§6）。</p>
+<h3 id="7-1-复制流程"><a href="#7-1-复制流程" class="headerlink" title="7.1 复制流程"></a>7.1 复制流程</h3><ol>
+<li>从节点 <code>REPLICAOF &lt;master&gt;</code> 后，向主发起同步。</li>
+<li><strong>全量同步</strong>：主 <code>bgsave</code> 生成 RDB 发给从，从加载；同时主把期间的新写命令缓存在 <strong>replication buffer</strong>，RDB 加载完再发给从。</li>
+<li><strong>增量传播</strong>：之后主把每条写命令<strong>异步</strong>转发给从（命令流复制）。</li>
+</ol>
+<h3 id="7-2-部分重同步（PSYNC）"><a href="#7-2-部分重同步（PSYNC）" class="headerlink" title="7.2 部分重同步（PSYNC）"></a>7.2 部分重同步（PSYNC）</h3><p>主从断连重连时，不必每次全量。主维护一个 <strong>replication backlog（环形缓冲）</strong> 和复制偏移量：</p>
+<ul>
+<li>从重连时带上自己的 offset 和主的 replid</li>
+<li>若 offset 还在 backlog 范围内，主只补发缺失的那段命令（<strong>部分重同步</strong>）</li>
+<li>否则退回全量同步</li>
+</ul>
+<p>这大幅降低了网络抖动导致的全量同步开销。</p>
+<h3 id="7-3-复制的一致性"><a href="#7-3-复制的一致性" class="headerlink" title="7.3 复制的一致性"></a>7.3 复制的一致性</h3><ul>
+<li><strong>异步复制</strong>：主写完本地即返回，不等从确认 → <strong>低延迟但主故障可能丢未复制的写</strong>（对照 PACELC 的 EL 取舍）。</li>
+<li><code>WAIT</code> 命令可要求写复制到 N 个从后才返回，提供更强保证但增延迟。</li>
+<li>从默认只读，避免数据不一致。</li>
+</ul>
+<hr>
+<h2 id="八、哨兵：自动故障转移"><a href="#八、哨兵：自动故障转移" class="headerlink" title="八、哨兵：自动故障转移"></a>八、哨兵：自动故障转移</h2><p>主从复制解决了数据冗余，但<strong>主挂了要人工切换</strong>。<strong>Sentinel（哨兵）</strong> 提供自动故障转移。</p>
+<h3 id="8-1-哨兵做什么"><a href="#8-1-哨兵做什么" class="headerlink" title="8.1 哨兵做什么"></a>8.1 哨兵做什么</h3><p>一组哨兵进程（独立于数据节点）持续监控主从：</p>
+<ol>
+<li><strong>监控</strong>：定期 ping 主从节点，判断存活。</li>
+<li><strong>主观下线（SDOWN）</strong>：单个哨兵认为主失联。</li>
+<li><strong>客观下线（ODOWN）</strong>：<strong>多数哨兵</strong>都认为主下线（达到 quorum），才判定主真的挂了——避免单个哨兵误判（对照原理篇的故障检测）。</li>
+<li><strong>选举 Leader 哨兵</strong>：哨兵间用类 Raft 的方式选出一个 Leader 来执行故障转移。</li>
+<li><strong>故障转移</strong>：Leader 哨兵从从节点中选一个<strong>最合适的</strong>（复制偏移最新、优先级高）提升为新主，让其他从改跟新主，并通知客户端。</li>
+</ol>
+<h3 id="8-2-关键点"><a href="#8-2-关键点" class="headerlink" title="8.2 关键点"></a>8.2 关键点</h3><ul>
+<li>哨兵自身也要<strong>多个（≥3，奇数）</strong> 以形成多数派，避免哨兵单点。</li>
+<li>客户端通过哨兵获取当前主地址，主切换后自动感知。</li>
+<li>故障转移期间有短暂不可写窗口，且异步复制下可能丢少量最新写——这是可用性优先的取舍。</li>
+</ul>
+<hr>
+<h2 id="九、Redis-Cluster：分片与去中心"><a href="#九、Redis-Cluster：分片与去中心" class="headerlink" title="九、Redis Cluster：分片与去中心"></a>九、Redis Cluster：分片与去中心</h2><p>主从+哨兵解决了高可用，但<strong>单主的内存和写吞吐仍是天花板</strong>。<strong>Redis Cluster</strong> 提供水平分片（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》§8 分区）。</p>
+<h3 id="9-1-哈希槽（Hash-Slot）"><a href="#9-1-哈希槽（Hash-Slot）" class="headerlink" title="9.1 哈希槽（Hash Slot）"></a>9.1 哈希槽（Hash Slot）</h3><p>Redis Cluster 把整个 key 空间划分为固定的 <strong>16384 个哈希槽</strong>：</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.561ex;" xmlns="http://www.w3.org/2000/svg" width="30.085ex" height="2.253ex" role="img" focusable="false" viewBox="0 -748 13297.6 996"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{slot} = \text{CRC16}(\text{key}) \bmod 16384
+"><g data-mml-node="mtext" data-latex="\text{slot}"><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(394,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(672,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1172,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(1838.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mtext" data-latex="\text{CRC16}" transform="translate(2894.6,0)"><path data-c="43" d="M665 443L665 677C665 696 660 705 650 705C643 705 637 700 631 691L584 622C554 653 522 675 487 689C461 700 433 705 403 705C306 705 223 670 156 598C89 526 56 441 56 342C56 243 89 158 155 87C222 14 305-22 403-22C474-22 536 3 588 53C640 103 665 163 665 234C665 248 659 255 648 255C638 255 633 251 633 242C633 241 633 239 632 236C626 116 540 17 415 17C378 17 341 27 302 47C210 97 166 193 166 341C166 481 215 589 302 636C341 656 378 666 414 666C538 666 609 553 626 435C627 422 634 415 645 415C665 415 665 423 665 443Z"></path><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z" transform="translate(722,0)"></path><path data-c="43" d="M665 443L665 677C665 696 660 705 650 705C643 705 637 700 631 691L584 622C554 653 522 675 487 689C461 700 433 705 403 705C306 705 223 670 156 598C89 526 56 441 56 342C56 243 89 158 155 87C222 14 305-22 403-22C474-22 536 3 588 53C640 103 665 163 665 234C665 248 659 255 648 255C638 255 633 251 633 242C633 241 633 239 632 236C626 116 540 17 415 17C378 17 341 27 302 47C210 97 166 193 166 341C166 481 215 589 302 636C341 656 378 666 414 666C538 666 609 553 626 435C627 422 634 415 645 415C665 415 665 423 665 443Z" transform="translate(1458,0)"></path><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z" transform="translate(2180,0)"></path><path data-c="36" d="M383 504C416 504 432 521 432 555C432 627 378 666 304 666C221 666 155 627 106 548C63 480 42 403 42 316C42 189 65 100 112 47C152 1 198-22 251-22C312-22 362 1 401 47C438 91 457 144 457 205C457 266 439 318 403 361C365 407 316 431 257 431C205 431 165 402 138 346L138 352C138 465 166 561 226 605C252 624 279 633 306 633C342 633 368 623 385 602C351 602 334 583 334 553C334 525 355 504 383 504M344 340C355 317 361 272 361 206C361 141 356 98 345 76C325 35 294 14 251 14C222 14 200 24 184 44C171 60 162 74 158 85C146 116 140 163 140 227C140 255 144 282 151 308C164 355 201 399 256 399C295 399 325 379 344 340Z" transform="translate(2680,0)"></path></g><g data-mml-node="mo" data-latex="(" transform="translate(6074.6,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mtext" data-latex="\text{key}" transform="translate(6463.6,0)"><path data-c="6B" d="M422 3C442 4 472 3 511 0L511 39C487 39 469 42 457 47C445 52 431 66 415 89L290 266C287 275 285 278 285 275C285 276 295 285 316 303C351 334 377 354 394 365C425 384 456 394 488 396L488 434C467 432 443 431 416 431C370 431 332 432 301 434L301 396C320 395 330 388 330 375C330 363 323 351 310 339L178 224L178 694L28 683L28 645C64 645 86 642 94 636C102 630 105 616 105 593L105 79C105 60 101 48 94 44C87 40 65 39 28 39L28 0L139 3L251 0L251 39C214 39 193 40 186 44C179 48 175 60 175 79L175 179L233 230L249 206C314 116 347 66 347 57C347 45 335 39 311 39L311 0Z"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(528,0)"></path><path data-c="79" d="M113-205C168-205 212-167 243-90L416 332C433 372 463 392 508 392L508 431C475 428 449 427 430 428L341 431L341 393C372 392 387 379 387 354C387 348 385 341 381 332L286 98L180 354C177 362 175 368 174 371C174 385 193 392 230 392L230 431L118 428C94 427 61 428 19 431L19 392C72 392 85 394 99 360L246 1L222-55C195-119 176-175 113-175C99-175 87-171 76-164C99-159 110-144 110-120C110-90 95-75 64-75C34-75 19-90 19-121C19-170 64-205 113-205Z" transform="translate(972,0)"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(7963.6,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g><g data-mml-node="mo" data-latex="\mmlToken{mo}[lspace=&quot;0.278em&quot; rspace=&quot;0.278em&quot;]{mod}" transform="translate(8630.6,0)"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(833,0)"></path><path data-c="64" d="M374-11L527 0L527 38C491 38 470 40 462 46C454 52 450 67 450 90L450 694L301 683L301 645C336 645 358 642 366 636C374 630 377 616 377 593L377 390C345 427 305 445 257 445C195 445 142 423 99 378C56 333 34 279 34 216C34 155 54 102 95 57C136 12 186-11 247-11C298-11 341 8 374 47M261 415C304 415 339 396 364 358C371 347 374 336 374 323L374 121C374 108 371 97 364 86C336 41 298 19 251 19C210 19 177 39 151 80C133 110 124 155 124 215C124 324 161 415 261 415Z" transform="translate(1333,0)"></path></g><g data-mml-node="mn" data-latex="16384" transform="translate(10797.6,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path><path data-c="36" d="M383 504C416 504 432 521 432 555C432 627 378 666 304 666C221 666 155 627 106 548C63 480 42 403 42 316C42 189 65 100 112 47C152 1 198-22 251-22C312-22 362 1 401 47C438 91 457 144 457 205C457 266 439 318 403 361C365 407 316 431 257 431C205 431 165 402 138 346L138 352C138 465 166 561 226 605C252 624 279 633 306 633C342 633 368 623 385 602C351 602 334 583 334 553C334 525 355 504 383 504M344 340C355 317 361 272 361 206C361 141 356 98 345 76C325 35 294 14 251 14C222 14 200 24 184 44C171 60 162 74 158 85C146 116 140 163 140 227C140 255 144 282 151 308C164 355 201 399 256 399C295 399 325 379 344 340Z" transform="translate(500,0)"></path><path data-c="33" d="M303 353C369 378 431 441 431 526C431 569 410 604 369 631C333 654 292 666 246 666C201 666 162 654 127 631C88 605 68 571 68 528C68 495 90 472 122 472C154 472 176 495 176 527C176 560 157 578 119 580C145 615 186 633 242 633C302 633 332 598 332 527C332 485 324 450 309 421C282 373 245 364 183 364C171 362 165 357 165 348C165 333 172 333 192 333L235 333C310 333 348 280 348 173C348 88 317 14 241 14C176 14 128 36 99 80C134 79 160 105 160 139C160 173 135 198 101 198C62 198 42 178 42 137C42 88 64 49 108 18C147-9 193-22 244-22C301-22 350-3 393 34C436 71 457 117 457 173C457 267 383 332 303 353Z" transform="translate(1000,0)"></path><path data-c="38" d="M250 666C201 666 158 650 122 618C86 586 68 546 68 497C68 456 83 419 113 386C120 378 142 361 179 335C88 288 42 227 42 153C42 100 64 57 107 24C147-7 194-22 249-22C305-22 354-4 395 32C436 68 457 115 457 170C457 216 441 257 408 294C396 307 365 330 316 361C393 402 431 454 431 515C431 606 344 666 250 666M379 515C379 463 348 418 286 381L167 459C136 479 120 505 120 536C120 596 185 633 249 633C318 633 379 584 379 515M250 14C168 14 99 73 99 153C99 220 136 274 210 315L328 240C376 209 400 174 400 134C400 62 325 14 250 14Z" transform="translate(1500,0)"></path><path data-c="34" d="M353 677C344 677 336 672 330 663L28 199L28 163L289 163L289 81C289 63 285 51 278 46C271 41 252 39 219 39L194 39L194 0C223 2 269 3 331 3C393 3 439 2 468 0L468 39L443 39C410 39 391 41 384 46C377 51 373 63 373 81L373 163L471 163L471 202L373 202L373 660C373 670 366 677 353 677M295 553L295 202L67 202Z" transform="translate(2000,0)"></path></g></g></g></svg></mjx-container></p>
+<ul>
+<li>每个主节点负责一部分槽（如 3 主各管 ~5461 个）。</li>
+<li>key 落到哪个槽 → 由哪个节点处理。</li>
+<li><strong>为什么用固定槽而非一致性哈希</strong>：槽是<strong>显式、可迁移</strong>的迁移单位，扩缩容时按槽搬数据、更新槽归属即可，管理直观、迁移可控。</li>
+</ul>
+<h3 id="9-2-去中心的路由"><a href="#9-2-去中心的路由" class="headerlink" title="9.2 去中心的路由"></a>9.2 去中心的路由</h3><ul>
+<li><strong>无中心代理</strong>：每个节点都知道「哪个槽归谁」（通过 Gossip 协议交换集群拓扑，对照原理篇 §9）。</li>
+<li><strong>MOVED/ASK 重定向</strong>：客户端请求发错了节点，节点回 <code>MOVED</code>（槽已永久归属另一节点）或 <code>ASK</code>（槽正在迁移中）重定向。智能客户端会缓存槽映射，直连正确节点。</li>
+</ul>
+<h3 id="9-3-分片下的多-key-操作限制"><a href="#9-3-分片下的多-key-操作限制" class="headerlink" title="9.3 分片下的多 key 操作限制"></a>9.3 分片下的多 key 操作限制</h3><p>因为不同 key 可能在不同节点，<strong>跨槽的多 key 操作（MSET、事务、Lua）受限</strong>。解决办法是 <strong>hash tag</strong>：<code>{user1}:name</code> 和 <code>{user1}:age</code> 用 <code>{}</code> 里的部分算槽，强制同一 key 前缀落到同一槽，从而能一起操作。这是分片系统「保序/原子性只能在同一分片内」的普遍约束。</p>
+<h3 id="9-4-高可用"><a href="#9-4-高可用" class="headerlink" title="9.4 高可用"></a>9.4 高可用</h3><p>Cluster 里每个主也有从副本，主挂了从自动提升（内置类似哨兵的故障转移，无需单独部署哨兵）。集群需<strong>多数主节点存活</strong>才能继续服务（判断故障、投票提升从），这是它的可用性下限。</p>
+<hr>
+<h2 id="十、Redis-6-7-的多线程与新特性"><a href="#十、Redis-6-7-的多线程与新特性" class="headerlink" title="十、Redis 6/7 的多线程与新特性"></a>十、Redis 6/7 的多线程与新特性</h2><p>Redis 一直强调单线程，但也在演进：</p>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>特性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Redis 4</strong></td>
+<td>惰性删除（UNLINK）、LFU 淘汰、混合持久化、模块系统</td>
+</tr>
+<tr>
+<td><strong>Redis 5</strong></td>
+<td><strong>Stream</strong> 数据类型（类 Kafka 的日志/消费者组）</td>
+</tr>
+<tr>
+<td><strong>Redis 6</strong></td>
+<td><strong>多线程 IO</strong>（网络读写解析用多线程，命令执行仍单线程）、RESP3 协议、ACL、客户端缓存</td>
+</tr>
+<tr>
+<td><strong>Redis 7</strong></td>
+<td><strong>Functions</strong>、AOF 多文件、listpack 广泛应用、性能优化</td>
+</tr>
+</tbody></table>
+<h3 id="多线程-IO-的边界"><a href="#多线程-IO-的边界" class="headerlink" title="多线程 IO 的边界"></a>多线程 IO 的边界</h3><p>Redis 6 的「多线程」只把<strong>网络 IO 的读取/写入/协议解析</strong>并行化，<strong>命令的实际执行仍是单线程</strong>——所以依然无锁、命令仍原子。这精准地缓解了「高并发连接下网络 IO 成瓶颈」的问题，又不破坏单线程执行模型的简洁性。这是一个克制而精准的优化。</p>
+<hr>
+<h2 id="十一、核心概念速查表"><a href="#十一、核心概念速查表" class="headerlink" title="十一、核心概念速查表"></a>十一、核心概念速查表</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>一句话</th>
+<th>重要性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>内存数据结构服务器</strong></td>
+<td>把内存数据结构做成网络服务</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>自适应编码</strong></td>
+<td>小对象紧凑编码、大对象高效结构</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>单线程事件循环</strong></td>
+<td>无锁原子 + IO 多路复用，纯内存够快</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>渐进式 rehash</strong></td>
+<td>分摊字典扩容，避免卡顿</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>RDB</strong></td>
+<td>fork + COW 二进制快照，恢复快</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>AOF</strong></td>
+<td>命令日志，可配到几乎不丢</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>混合持久化</strong></td>
+<td>RDB 基线 + AOF 增量</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>惰性+定期过期</strong></td>
+<td>两种过期删除互补</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>近似 LRU/LFU</strong></td>
+<td>采样淘汰，省开销</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>事务无回滚</strong></td>
+<td>MULTI/EXEC 原子但不回滚；WATCH 乐观锁</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>主从 + PSYNC</strong></td>
+<td>异步复制 + 部分重同步</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Sentinel</strong></td>
+<td>多数派判故障 + 自动故障转移</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Cluster / 16384 槽</strong></td>
+<td>CRC16 分槽 + Gossip + MOVED 重定向</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>多线程 IO</strong></td>
+<td>仅网络 IO 多线程，执行仍单线程</td>
+<td>⭐⭐⭐</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十二、参考资源"><a href="#十二、参考资源" class="headerlink" title="十二、参考资源"></a>十二、参考资源</h2><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Redis 官方文档</td>
+<td><a target="_blank" rel="noopener" href="https://redis.io/docs/latest/">redis.io/docs</a></td>
+</tr>
+<tr>
+<td>《Redis 设计与实现》(黄健宏)</td>
+<td>中文经典，讲透底层数据结构与实现</td>
+</tr>
+<tr>
+<td>Redis 持久化文档</td>
+<td><a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">redis.io/persistence</a></td>
+</tr>
+<tr>
+<td>Redis Cluster 规范</td>
+<td><a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">Cluster Spec</a></td>
+</tr>
+<tr>
+<td>Redis 源码</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/redis/redis">github.com/redis/redis</a></td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p><strong>本专题系列</strong>：</p>
+<ul>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/">分布式存储系统专题总览</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理与核心技术</a> ｜ <a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a></li>
+<li>本篇：Redis</li>
+</ul>
+<p><strong>一句话总结 Redis</strong>：用单线程无锁模型 + 自适应编码把内存数据结构服务做到极致快，用 RDB/AOF 补上持久性，用主从/哨兵/Cluster 补上高可用与扩展性——一个「内存字典」长成了缓存、数据库、消息队列的多面手。</p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="category-chain-item">分布式存储</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/%E6%95%B0%E6%8D%AE%E5%BA%93/" class="category-chain-item">数据库</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Redis/" class="print-no-link">#Redis</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98%E6%95%B0%E6%8D%AE%E5%BA%93/" class="print-no-link">#内存数据库</a>
+      
+        <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" class="print-no-link">#数据结构</a>
+      
+        <a href="/tags/%E6%8C%81%E4%B9%85%E5%8C%96/" class="print-no-link">#持久化</a>
+      
+        <a href="/tags/%E9%AB%98%E5%8F%AF%E7%94%A8/" class="print-no-link">#高可用</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Redis 架构与实现深度解析</div>
+      <div>https://w2ongq6.github.io/2026/08/07/distributed-storage/Redis-架构与实现深度解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/08/distributed-storage/3FS-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="3FS 架构与实现深度解析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">3FS 架构与实现深度解析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/Kafka-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="Kafka 架构与实现深度解析">
+                        <span class="hidden-mobile">Kafka 架构与实现深度解析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

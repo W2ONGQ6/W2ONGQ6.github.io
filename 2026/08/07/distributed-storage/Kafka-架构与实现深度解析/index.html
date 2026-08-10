@@ -1,0 +1,1313 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Kafka 架构与实现深度解析 本文是「分布式存储系统」专题的一篇。Kafka 表面是消息队列，本质是一个分布式的、持久化的、可复制的提交日志（commit log）——它把「日志」这个分布式系统里最朴素的抽象做到了极致。本文从日志存储讲到分区副本、ISR、控制器&#x2F;KRaft、生产消费语义与 exactly-once。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka 架构与实现深度解析">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/07/distributed-storage/Kafka-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="Kafka 架构与实现深度解析 本文是「分布式存储系统」专题的一篇。Kafka 表面是消息队列，本质是一个分布式的、持久化的、可复制的提交日志（commit log）——它把「日志」这个分布式系统里最朴素的抽象做到了极致。本文从日志存储讲到分区副本、ISR、控制器&#x2F;KRaft、生产消费语义与 exactly-once。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-07T15:53:00.000Z">
+<meta property="article:modified_time" content="2026-08-08T02:47:17.518Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="KRaft">
+<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="分布式日志">
+<meta property="article:tag" content="副本">
+<meta property="article:tag" content="消息队列">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Kafka 架构与实现深度解析 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Kafka 架构与实现深度解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-07 23:53" pubdate>
+          2026年8月7日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          6.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          56 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Kafka 架构与实现深度解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="Kafka-架构与实现深度解析"><a href="#Kafka-架构与实现深度解析" class="headerlink" title="Kafka 架构与实现深度解析"></a>Kafka 架构与实现深度解析</h2><blockquote>
+<p>本文是「分布式存储系统」专题的一篇。Kafka 表面是消息队列，本质是一个<strong>分布式的、持久化的、可复制的提交日志（commit log）</strong>——它把「日志」这个分布式系统里最朴素的抽象做到了极致。本文从日志存储讲到分区副本、ISR、控制器/KRaft、生产消费语义与 exactly-once。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ol>
+<li><a href="#%E4%B8%80kafka-%E7%9A%84%E6%9C%AC%E8%B4%A8%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E6%8F%90%E4%BA%A4%E6%97%A5%E5%BF%97">Kafka 的本质：一个分布式提交日志</a></li>
+<li><a href="#%E4%BA%8C%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5topicpartitionoffset">核心概念：Topic、Partition、Offset</a></li>
+<li><a href="#%E4%B8%89%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E%E8%BF%BD%E5%8A%A0%E6%97%A5%E5%BF%97%E4%B8%8E%E5%88%86%E6%AE%B5">存储引擎：追加日志与分段</a></li>
+<li><a href="#%E5%9B%9B%E5%89%AF%E6%9C%ACleader-%E4%B8%8E-isr">副本、Leader 与 ISR</a></li>
+<li><a href="#%E4%BA%94%E9%AB%98%E6%B0%B4%E4%BD%8D%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%8F%AF%E8%A7%81%E6%80%A7">高水位与数据可见性</a></li>
+<li><a href="#%E5%85%AD%E6%8E%A7%E5%88%B6%E5%99%A8%E4%B8%8E%E5%85%83%E6%95%B0%E6%8D%AE%E4%BB%8E-zookeeper-%E5%88%B0-kraft">控制器与元数据：从 ZooKeeper 到 KRaft</a></li>
+<li><a href="#%E4%B8%83%E7%94%9F%E4%BA%A7%E8%80%85%E5%88%86%E5%8C%BA%E6%89%B9%E9%87%8F%E4%B8%8E-acks">生产者：分区、批量与 acks</a></li>
+<li><a href="#%E5%85%AB%E6%B6%88%E8%B4%B9%E8%80%85%E4%B8%8E%E6%B6%88%E8%B4%B9%E8%80%85%E7%BB%84">消费者与消费者组</a></li>
+<li><a href="#%E4%B9%9D%E6%8A%95%E9%80%92%E8%AF%AD%E4%B9%89%E4%B8%8E-exactly-once">投递语义与 Exactly-Once</a></li>
+<li><a href="#%E5%8D%81%E9%AB%98%E6%80%A7%E8%83%BD%E7%9A%84%E7%A7%98%E5%AF%86">高性能的秘密</a></li>
+<li><a href="#%E5%8D%81%E4%B8%80%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E9%80%9F%E6%9F%A5%E8%A1%A8">核心概念速查表</a></li>
+<li><a href="#%E5%8D%81%E4%BA%8C%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90">参考资源</a></li>
+</ol>
+<hr>
+<h2 id="一、Kafka-的本质：一个分布式提交日志"><a href="#一、Kafka-的本质：一个分布式提交日志" class="headerlink" title="一、Kafka 的本质：一个分布式提交日志"></a>一、Kafka 的本质：一个分布式提交日志</h2><p>很多人把 Kafka 当消息队列用，但它的设计原点是 <strong>LinkedIn 用来统一数据管道的分布式日志</strong>。理解 Kafka 的钥匙就一句话：</p>
+<blockquote>
+<p><strong>Kafka 是一个分布式的、分区的、可复制的、只追加的提交日志（append-only commit log）。</strong></p>
+</blockquote>
+<p>「日志」在这里不是打印的 log，而是《<a href="/2026/08/07/distributed-storage/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%9F%E7%90%86/">数据库原理</a>》里那个 WAL、《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》里那个复制状态机的日志——一个<strong>只在末尾追加、按顺序编号、不可变</strong>的记录序列。Kafka 把这个抽象做成了一个可水平扩展、可持久化数月、可被多方重复消费的基础设施。</p>
+<p>这个视角能解释 Kafka 的一切特性：</p>
+<ul>
+<li><strong>顺序追加</strong> → 极高的写吞吐（顺序 IO）</li>
+<li><strong>不可变 + 保留期</strong> → 可重复消费、可回溯（消费者只是移动自己的读位置）</li>
+<li><strong>分区</strong> → 水平扩展</li>
+<li><strong>复制</strong> → 容错</li>
+</ul>
+<hr>
+<h2 id="二、核心概念：Topic、Partition、Offset"><a href="#二、核心概念：Topic、Partition、Offset" class="headerlink" title="二、核心概念：Topic、Partition、Offset"></a>二、核心概念：Topic、Partition、Offset</h2><h3 id="2-1-三个概念"><a href="#2-1-三个概念" class="headerlink" title="2.1 三个概念"></a>2.1 三个概念</h3><p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.581ex;" xmlns="http://www.w3.org/2000/svg" width="82.056ex" height="2.278ex" role="img" focusable="false" viewBox="0 -750 36268.7 1006.9"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{Topic} = [\text{Partition}_0, \text{Partition}_1, \dots], \quad \text{Partition} = [\text{msg}_0, \text{msg}_1, \dots]（\text{按 offset 有序}）
+"><g data-mml-node="mtext" data-latex="\text{Topic}"><path data-c="54" d="M653 447L685 447L666 677L55 677L36 447L68 447C75 513 78 572 106 605C132 635 181 638 242 638C271 638 289 638 295 637C313 633 313 624 313 603L313 82C313 69 312 61 309 56C303 45 271 39 213 39L169 39L169 0C199 2 263 3 360 3C458 3 522 2 552 0L552 39L508 39C450 39 418 45 412 56C409 61 408 69 408 82L408 603C408 614 410 623 412 629C414 635 436 638 479 638C540 638 588 635 614 605C642 572 646 513 653 447Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(722,0)"></path><path data-c="70" d="M298-13C360-13 413 9 456 54C499 99 521 152 521 215C521 276 501 328 462 372C421 419 371 442 311 442C260 442 216 422 178 383L178 442L28 431L28 393C65 393 87 391 94 386C101 381 105 368 105 347L105-115C105-134 101-146 94-150C87-154 65-155 28-155L28-194L142-191L257-194L257-155C220-155 199-154 192-150C185-146 181-134 181-115L181 44C203 13 246-13 298-13M304 409C345 409 377 386 402 340C421 301 431 260 431 215C431 168 420 125 398 86C372 39 337 16 294 16C252 16 219 36 194 75C185 88 181 101 181 114L181 333C210 384 251 409 304 409Z" transform="translate(1222,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(1778,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(2056,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(2777.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mo" data-latex="[" transform="translate(3833.6,0)"><path data-c="5B" d="M233-202L159-202L159 702L233 702C248 702 256 710 256 726C256 742 248 750 233 750L114 750L114-250L233-250C248-250 256-242 256-226C256-214 245-202 233-202Z"></path></g><g data-mml-node="msub" data-latex="\text{Partition}_0" transform="translate(4111.6,0)"><g data-mml-node="mtext" data-latex="\text{Partition}"><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(681,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(1181,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1573,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(1962,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2240,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2629,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(2907,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(3407,0)"></path></g><g data-mml-node="mn" transform="translate(3996,-150) scale(0.707)" data-latex="0"><path data-c="30" d="M249-22C390-22 460 92 460 320C460 473 428 575 365 625C330 652 291 666 250 666C109 666 39 551 39 320C39 136 88-22 249-22M361 524C368 489 371 425 371 332C371 240 367 172 360 128C347 48 310 8 249 8C226 8 203 17 182 34C155 57 139 104 132 176C129 201 128 253 128 332C128 419 131 480 136 513C145 568 163 603 191 618C213 630 232 636 249 636C314 636 350 583 361 524Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(8511.1,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="msub" data-latex="\text{Partition}_1" transform="translate(8955.8,0)"><g data-mml-node="mtext" data-latex="\text{Partition}"><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(681,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(1181,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1573,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(1962,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2240,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2629,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(2907,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(3407,0)"></path></g><g data-mml-node="mn" transform="translate(3996,-150) scale(0.707)" data-latex="1"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(13355.3,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mo" transform="translate(13800,0)"><path data-c="2026" d="M751 53C751 83 725 106 695 106C664 106 638 83 638 53C638 23 664 0 695 0C725 0 751 23 751 53M475 53C475 83 449 106 419 106C388 106 363 83 363 53C363 23 388 0 419 0C449 0 475 23 475 53M200 53C200 83 174 106 143 106C113 106 87 83 87 53C87 23 113 0 143 0C173 0 200 23 200 53Z"></path></g><g data-mml-node="mo" data-latex="]" transform="translate(14637,0)"><path data-c="5D" d="M45-250L164-250L164 750L45 750C30 750 22 742 22 726C22 710 30 702 45 702L119 702L119-202L45-202C30-202 22-210 22-226C22-242 30-250 45-250Z"></path></g><g data-mml-node="mo" data-latex="," transform="translate(14915,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(15193,0)"></g><g data-mml-node="mtext" data-latex="\text{Partition}" transform="translate(16359.7,0)"><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(681,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(1181,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1573,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(1962,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2240,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2629,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(2907,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(3407,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(20600.4,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mo" data-latex="[" transform="translate(21656.2,0)"><path data-c="5B" d="M233-202L159-202L159 702L233 702C248 702 256 710 256 726C256 742 248 750 233 750L114 750L114-250L233-250C248-250 256-242 256-226C256-214 245-202 233-202Z"></path></g><g data-mml-node="msub" data-latex="\text{msg}_0" transform="translate(21934.2,0)"><g data-mml-node="mtext" data-latex="\text{msg}"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(833,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(1227,0)"></path></g><g data-mml-node="mn" transform="translate(1760,-241.4) scale(0.707)" data-latex="0"><path data-c="30" d="M249-22C390-22 460 92 460 320C460 473 428 575 365 625C330 652 291 666 250 666C109 666 39 551 39 320C39 136 88-22 249-22M361 524C368 489 371 425 371 332C371 240 367 172 360 128C347 48 310 8 249 8C226 8 203 17 182 34C155 57 139 104 132 176C129 201 128 253 128 332C128 419 131 480 136 513C145 568 163 603 191 618C213 630 232 636 249 636C314 636 350 583 361 524Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(24097.8,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="msub" data-latex="\text{msg}_1" transform="translate(24542.4,0)"><g data-mml-node="mtext" data-latex="\text{msg}"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(833,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(1227,0)"></path></g><g data-mml-node="mn" transform="translate(1760,-241.4) scale(0.707)" data-latex="1"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(26706,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mo" transform="translate(27150.7,0)"><path data-c="2026" d="M751 53C751 83 725 106 695 106C664 106 638 83 638 53C638 23 664 0 695 0C725 0 751 23 751 53M475 53C475 83 449 106 419 106C388 106 363 83 363 53C363 23 388 0 419 0C449 0 475 23 475 53M200 53C200 83 174 106 143 106C113 106 87 83 87 53C87 23 113 0 143 0C173 0 200 23 200 53Z"></path></g><g data-mml-node="mo" data-latex="]" transform="translate(27987.7,0)"><path data-c="5D" d="M45-250L164-250L164 750L45 750C30 750 22 742 22 726C22 710 30 702 45 702L119 702L119-202L45-202C30-202 22-210 22-226C22-242 30-250 45-250Z"></path></g><g data-mml-node="mi" data-latex="（" transform="translate(28265.7,0)"><text data-variant="italic" transform="scale(1,-1)" font-size="884px" font-family="serif" font-style="italic">（</text></g><g data-mml-node="mtext" data-latex="\text{按 offset 有序}" transform="translate(29265.7,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">按</text><path data-c="20" d="" transform="translate(1000,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(1332,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(1832,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(2138,0)"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(2444,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(2838,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(3282,0)"></path><path data-c="20" d="" transform="translate(3671,0)"></path><text data-variant="normal" transform="translate(4003,0) scale(1,-1)" font-size="884px" font-family="serif">有序</text></g><g data-mml-node="mi" data-latex="）" transform="translate(35268.7,0)"><text data-variant="italic" transform="scale(1,-1)" font-size="884px" font-family="serif" font-style="italic">）</text></g></g></g></svg></mjx-container></p>
+<ul>
+<li><strong>Topic（主题）</strong>：逻辑上的消息类别，是一个 append-only 日志的抽象。</li>
+<li><strong>Partition（分区）</strong>：Topic 被切成多个分区，<strong>每个分区是一个独立的、严格有序的日志</strong>。分区是并行和扩展的单位。</li>
+<li><strong>Offset（偏移量）</strong>：分区内每条消息的单调递增编号，<strong>分区内唯一且有序</strong>。消费者靠记住 offset 来跟踪进度。</li>
+</ul>
+<h3 id="2-2-关键性质"><a href="#2-2-关键性质" class="headerlink" title="2.2 关键性质"></a>2.2 关键性质</h3><ul>
+<li><strong>顺序性只在分区内保证</strong>：同一分区内消息严格有序；跨分区无全局顺序。需要保序的消息要发到同一分区（用相同 key）。</li>
+<li><strong>分区是并行单位</strong>：一个 Topic 的吞吐 = 各分区吞吐之和。分区越多，并行度越高（但也有元数据/选主成本）。</li>
+<li><strong>消息不可变、按期保留</strong>：消息写入后不改，按 <code>retention</code>（时间或大小）过期删除。消费不删除消息——这是 Kafka 与传统 MQ 的根本区别。</li>
+</ul>
+<h3 id="2-3-消费的本质"><a href="#2-3-消费的本质" class="headerlink" title="2.3 消费的本质"></a>2.3 消费的本质</h3><p>消费者消费 = <strong>在分区日志上移动自己的 offset 指针</strong>。多个消费者可以各自以不同 offset 读同一分区，互不影响。这让「一份数据多方消费」「重新消费历史」变得自然——因为数据一直在，读的只是位置。</p>
+<hr>
+<h2 id="三、存储引擎：追加日志与分段"><a href="#三、存储引擎：追加日志与分段" class="headerlink" title="三、存储引擎：追加日志与分段"></a>三、存储引擎：追加日志与分段</h2><p>每个分区在 broker 磁盘上就是一个目录，里面是一串<strong>分段日志文件（log segment）</strong>。</p>
+<h3 id="3-1-分段结构"><a href="#3-1-分段结构" class="headerlink" title="3.1 分段结构"></a>3.1 分段结构</h3><p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.581ex;" xmlns="http://www.w3.org/2000/svg" width="81.999ex" height="2.278ex" role="img" focusable="false" viewBox="0 -750 36243.6 1006.9"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{Partition 目录} = [\text{segment}_0, \text{segment}_1, \dots], \quad \text{每个 segment} = { \text{.log}, \text{.index}, \text{.timeindex} }
+"><g data-mml-node="mtext" data-latex="\text{Partition 目录}"><path data-c="50" d="M395 312C452 312 503 328 548 360C599 396 624 441 624 495C624 552 598 599 546 635C500 667 447 683 387 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 39 63 39L35 39L35 0C61 2 111 3 184 3C258 3 308 2 334 0L334 39L306 39C271 39 250 41 243 46C236 51 232 63 232 81L232 312M274 644L362 644C391 644 416 640 437 633C494 612 514 570 514 495C514 467 511 443 504 423C487 373 433 346 362 346L229 346L229 609C229 645 235 644 274 644Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(681,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(1181,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1573,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(1962,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2240,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2629,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(2907,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(3407,0)"></path><path data-c="20" d="" transform="translate(3963,0)"></path><text data-variant="normal" transform="translate(4295,0) scale(1,-1)" font-size="884px" font-family="serif">目录</text></g><g data-mml-node="mo" data-latex="=" transform="translate(6572.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mo" data-latex="[" transform="translate(7628.6,0)"><path data-c="5B" d="M233-202L159-202L159 702L233 702C248 702 256 710 256 726C256 742 248 750 233 750L114 750L114-250L233-250C248-250 256-242 256-226C256-214 245-202 233-202Z"></path></g><g data-mml-node="msub" data-latex="\text{segment}_0" transform="translate(7906.6,0)"><g data-mml-node="mtext" data-latex="\text{segment}"><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(394,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(838,0)"></path><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z" transform="translate(1338,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(2171,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(2615,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(3171,0)"></path></g><g data-mml-node="mn" transform="translate(3593,-241.4) scale(0.707)" data-latex="0"><path data-c="30" d="M249-22C390-22 460 92 460 320C460 473 428 575 365 625C330 652 291 666 250 666C109 666 39 551 39 320C39 136 88-22 249-22M361 524C368 489 371 425 371 332C371 240 367 172 360 128C347 48 310 8 249 8C226 8 203 17 182 34C155 57 139 104 132 176C129 201 128 253 128 332C128 419 131 480 136 513C145 568 163 603 191 618C213 630 232 636 249 636C314 636 350 583 361 524Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(11903.1,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="msub" data-latex="\text{segment}_1" transform="translate(12347.8,0)"><g data-mml-node="mtext" data-latex="\text{segment}"><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(394,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(838,0)"></path><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z" transform="translate(1338,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(2171,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(2615,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(3171,0)"></path></g><g data-mml-node="mn" transform="translate(3593,-241.4) scale(0.707)" data-latex="1"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g><g data-mml-node="mo" data-latex="," transform="translate(16344.3,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mo" transform="translate(16789,0)"><path data-c="2026" d="M751 53C751 83 725 106 695 106C664 106 638 83 638 53C638 23 664 0 695 0C725 0 751 23 751 53M475 53C475 83 449 106 419 106C388 106 363 83 363 53C363 23 388 0 419 0C449 0 475 23 475 53M200 53C200 83 174 106 143 106C113 106 87 83 87 53C87 23 113 0 143 0C173 0 200 23 200 53Z"></path></g><g data-mml-node="mo" data-latex="]" transform="translate(17626,0)"><path data-c="5D" d="M45-250L164-250L164 750L45 750C30 750 22 742 22 726C22 710 30 702 45 702L119 702L119-202L45-202C30-202 22-210 22-226C22-242 30-250 45-250Z"></path></g><g data-mml-node="mo" data-latex="," transform="translate(17904,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(18182,0)"></g><g data-mml-node="mtext" data-latex="\text{每个 segment}" transform="translate(19348.7,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">每个</text><path data-c="20" d="" transform="translate(2000,0)"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(2332,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(2726,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(3170,0)"></path><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z" transform="translate(3670,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(4503,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(4947,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(5503,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(25518.4,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="TeXAtom" data-latex="{\text{.log},\text{.index},\text{.timeindex}}" data-mjx-texclass="ORD" transform="translate(26574.2,0)"><g data-mml-node="mtext" data-latex="\text{.log}"><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(278,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(556,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(1056,0)"></path></g><g data-mml-node="mo" data-latex="," transform="translate(1556,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mtext" data-latex="\text{.index}" transform="translate(2000.7,0)"><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(278,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(556,0)"></path><path data-c="64" d="M374-11L527 0L527 38C491 38 470 40 462 46C454 52 450 67 450 90L450 694L301 683L301 645C336 645 358 642 366 636C374 630 377 616 377 593L377 390C345 427 305 445 257 445C195 445 142 423 99 378C56 333 34 279 34 216C34 155 54 102 95 57C136 12 186-11 247-11C298-11 341 8 374 47M261 415C304 415 339 396 364 358C371 347 374 336 374 323L374 121C374 108 371 97 364 86C336 41 298 19 251 19C210 19 177 39 151 80C133 110 124 155 124 215C124 324 161 415 261 415Z" transform="translate(1112,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(1668,0)"></path><path data-c="78" d="M418 3C441 4 474 3 516 0L516 38C463 38 443 39 422 67L292 235C335 288 364 324 380 343C408 375 447 392 498 393L498 431C470 429 442 428 414 428C377 428 344 429 315 431L315 393C334 391 344 382 344 366C344 357 339 346 330 334L272 262L198 357C193 364 190 369 190 372C190 385 202 392 225 393L225 431L114 428C88 427 56 428 17 431L17 393C53 393 76 390 86 385C96 380 112 363 134 334L229 210C180 147 150 109 139 96C107 57 65 38 12 38L12 0C49 3 77 4 98 3L195 0L195 38C176 41 167 50 167 65C167 69 168 74 170 79C176 92 203 126 251 183L323 89C334 75 340 65 343 59C343 46 331 39 307 38L307 0Z" transform="translate(2112,0)"></path></g><g data-mml-node="mo" data-latex="," transform="translate(4640.7,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g><g data-mml-node="mtext" data-latex="\text{.timeindex}" transform="translate(5085.3,0)"><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(278,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(667,0)"></path><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z" transform="translate(945,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(1778,0)"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2222,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(2500,0)"></path><path data-c="64" d="M374-11L527 0L527 38C491 38 470 40 462 46C454 52 450 67 450 90L450 694L301 683L301 645C336 645 358 642 366 636C374 630 377 616 377 593L377 390C345 427 305 445 257 445C195 445 142 423 99 378C56 333 34 279 34 216C34 155 54 102 95 57C136 12 186-11 247-11C298-11 341 8 374 47M261 415C304 415 339 396 364 358C371 347 374 336 374 323L374 121C374 108 371 97 364 86C336 41 298 19 251 19C210 19 177 39 151 80C133 110 124 155 124 215C124 324 161 415 261 415Z" transform="translate(3056,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(3612,0)"></path><path data-c="78" d="M418 3C441 4 474 3 516 0L516 38C463 38 443 39 422 67L292 235C335 288 364 324 380 343C408 375 447 392 498 393L498 431C470 429 442 428 414 428C377 428 344 429 315 431L315 393C334 391 344 382 344 366C344 357 339 346 330 334L272 262L198 357C193 364 190 369 190 372C190 385 202 392 225 393L225 431L114 428C88 427 56 428 17 431L17 393C53 393 76 390 86 385C96 380 112 363 134 334L229 210C180 147 150 109 139 96C107 57 65 38 12 38L12 0C49 3 77 4 98 3L195 0L195 38C176 41 167 50 167 65C167 69 168 74 170 79C176 92 203 126 251 183L323 89C334 75 340 65 343 59C343 46 331 39 307 38L307 0Z" transform="translate(4056,0)"></path></g></g></g></g></svg></mjx-container></p>
+<ul>
+<li><strong>.log</strong>：实际消息数据，只追加写。写满（<code>log.segment.bytes</code>，默认 1GB）或到期就滚动新 segment。</li>
+<li><strong>.index</strong>：offset → 文件物理位置的<strong>稀疏索引</strong>（不是每条都建，隔几 KB 一条），用二分查找定位消息。</li>
+<li><strong>.timeindex</strong>：时间戳 → offset 的索引，支持按时间查找。</li>
+</ul>
+<h3 id="3-2-为什么快"><a href="#3-2-为什么快" class="headerlink" title="3.2 为什么快"></a>3.2 为什么快</h3><ul>
+<li><strong>纯顺序追加写</strong>：写消息就是往当前 segment 末尾 append，顺序 IO 对磁盘（尤其机械盘）极友好，吞吐远高于随机写。</li>
+<li><strong>稀疏索引</strong>：不为每条消息建索引，省空间；查找时先二分找到最近的索引点，再顺序扫到目标——用少量顺序扫换索引体积。</li>
+<li><strong>不可变 segment</strong>：老 segment 只读，利于 page cache 缓存和零拷贝（见 §10）。</li>
+</ul>
+<h3 id="3-3-数据清理"><a href="#3-3-数据清理" class="headerlink" title="3.3 数据清理"></a>3.3 数据清理</h3><ul>
+<li><strong>删除（delete）</strong>：按 <code>retention.ms</code>/<code>retention.bytes</code> 删除过期整个 segment（删文件，快）。</li>
+<li><strong>压实（compact）</strong>：<code>log.cleanup.policy=compact</code> 时，对每个 key 只保留<strong>最新值</strong>（类似把日志当 KV 快照），用于「变更流 / 状态存储」场景（如 Kafka 内部的 <code>__consumer_offsets</code>）。这本质是一次针对 key 的 compaction，思路同 LSM-Tree。</li>
+</ul>
+<hr>
+<h2 id="四、副本、Leader-与-ISR"><a href="#四、副本、Leader-与-ISR" class="headerlink" title="四、副本、Leader 与 ISR"></a>四、副本、Leader 与 ISR</h2><p>分区靠<strong>副本（replica）</strong> 容错。每个分区有 <code>replication.factor</code> 个副本，分布在不同 broker 上。</p>
+<h3 id="4-1-Leader-与-Follower"><a href="#4-1-Leader-与-Follower" class="headerlink" title="4.1 Leader 与 Follower"></a>4.1 Leader 与 Follower</h3><ul>
+<li>每个分区有一个 <strong>Leader 副本</strong> 和若干 <strong>Follower 副本</strong>。</li>
+<li><strong>所有读写都走 Leader</strong>（Follower 只负责从 Leader 拉取数据保持同步，不对外服务）——这是主副本串行化，保证分区内顺序与一致（对照文件系统篇 §3.1、Ceph 的 Primary OSD）。</li>
+<li>Follower 通过<strong>主动 fetch</strong>（像消费者一样从 Leader 拉）来复制日志。</li>
+</ul>
+<h3 id="4-2-ISR（In-Sync-Replicas，同步副本集）"><a href="#4-2-ISR（In-Sync-Replicas，同步副本集）" class="headerlink" title="4.2 ISR（In-Sync Replicas，同步副本集）"></a>4.2 ISR（In-Sync Replicas，同步副本集）</h3><p>这是 Kafka 复制模型的核心概念。<strong>ISR 是当前与 Leader「保持同步」的副本集合</strong>（包括 Leader 自己）。</p>
+<ul>
+<li>一个 Follower 若在 <code>replica.lag.time.max.ms</code> 内持续从 Leader 拉到了最新数据，就算「in-sync」，留在 ISR 里。</li>
+<li>落后太多（卡住、慢、宕机）的 Follower 被<strong>移出 ISR</strong>。</li>
+<li><strong>只有 ISR 里的副本才有资格被选为新 Leader</strong>——这保证新 Leader 一定有已提交的全部数据，不丢数据。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.452ex;" xmlns="http://www.w3.org/2000/svg" width="45.164ex" height="2.149ex" role="img" focusable="false" viewBox="0 -750 19962.6 950"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{消息「已提交」} \iff \text{被 ISR 中所有副本复制}
+"><g data-mml-node="mtext" data-latex="\text{消息「已提交」}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">消息「已提交」</text></g><g data-mml-node="mspace" data-latex="\;" transform="translate(7000,0)"></g><g data-mml-node="mo" data-latex="\Longleftrightarrow" transform="translate(7555.8,0)"><path data-c="27FA" d="M1465 233C1474 236 1478 241 1478 250C1478 259 1474 264 1465 267C1403 284 1342 318 1281 371C1237 410 1201 455 1174 507C1170 516 1163 520 1153 520C1137 520 1129 512 1129 496C1129 494 1130 491 1131 486C1154 442 1182 403 1214 369L320 369C352 403 380 442 403 486C404 491 405 494 405 496C405 512 397 520 381 520C371 520 364 516 360 507C333 455 297 410 253 371C192 318 131 284 69 267C60 264 56 259 56 250C56 241 60 236 69 233C131 216 192 182 253 129C297 90 333 45 360-7C364-16 371-20 381-20C397-20 405-12 405 4C405 6 404 9 403 14C380 58 352 97 320 131L1214 131C1182 97 1154 58 1131 14C1130 9 1129 6 1129 4C1129-12 1137-20 1153-20C1163-20 1170-16 1174-7C1201 45 1237 90 1281 129C1342 182 1403 216 1465 233M1266 322C1302 293 1342 269 1387 250C1342 231 1302 207 1266 178L268 178C232 207 192 231 147 250C192 269 232 293 268 322Z"></path></g><g data-mml-node="mspace" data-latex="\;" transform="translate(9089.8,0)"></g><g data-mml-node="mtext" data-latex="\text{被 ISR 中所有副本复制}" transform="translate(9645.6,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">被</text><path data-c="20" d="" transform="translate(1000,0)"></path><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z" transform="translate(1332,0)"></path><path data-c="53" d="M252 669C359 669 422 601 440 466C441 456 447 451 456 451C467 451 472 460 472 478L472 677C472 696 467 705 458 705C452 705 446 700 440 690L408 638C364 680 324 705 251 705C142 705 56 617 56 509C56 417 116 349 187 324L317 292C384 275 428 229 428 154C428 79 376 17 301 17C170 17 93 91 88 218C88 227 83 232 73 232C62 232 56 223 56 204L56 6C56-13 61-22 71-22C77-22 83-17 89-7L121 45C164 0 224-22 302-22C359-22 407-1 444 40C481 81 499 130 499 188C499 235 485 278 458 317C431 356 394 380 349 391L223 422C170 434 127 481 127 544C127 614 182 669 252 669Z" transform="translate(1693,0)"></path><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z" transform="translate(2249,0)"></path><path data-c="20" d="" transform="translate(2985,0)"></path><text data-variant="normal" transform="translate(3317,0) scale(1,-1)" font-size="884px" font-family="serif">中所有副本复制</text></g></g></g></svg></mjx-container></p>
+<h3 id="4-3-ISR-vs-多数派-quorum"><a href="#4-3-ISR-vs-多数派-quorum" class="headerlink" title="4.3 ISR vs 多数派 quorum"></a>4.3 ISR vs 多数派 quorum</h3><p>值得注意：Kafka 的 ISR 模型与经典 Raft/Paxos 的<strong>多数派（quorum）</strong> 不同：</p>
+<ul>
+<li><strong>多数派</strong>：写要 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.265ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2769 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="\lfloor N/2 \rfloor + 1"><g data-mml-node="mo" data-latex="\lfloor"><path data-c="230A" d="M393-202L220-202L220 726C220 742 212 750 197 750C182 750 174 742 174 726L174-250L393-250C408-250 416-242 416-226C416-214 405-202 393-202Z"></path></g><g data-mml-node="mi" data-latex="N" transform="translate(444,0)"><path data-c="1D441" d="M864 683C845 683 783 680 764 680C745 680 682 683 663 683C648 683 641 675 641 659C641 650 648 645 663 644C705 644 726 631 726 605C726 599 725 592 724 585L616 157L401 662C393 681 391 683 366 683L233 683C209 683 200 681 200 659C200 649 211 644 232 644C274 644 295 643 296 640L163 110C154 71 131 49 95 42C69 39 39 43 39 15C39 5 45 0 56 0C74 0 136 3 155 3C174 3 238 0 257 0C272 0 279 8 279 24C279 33 271 38 255 39C214 40 194 53 194 78C194 83 195 90 197 100L326 611L576 21C582 7 590 0 599 0C608 0 614 8 618 24L757 574C770 625 798 643 860 644C874 645 881 653 881 669C878 678 877 683 864 683Z"></path></g><g data-mml-node="mo" data-latex="/" transform="translate(1325,0)"><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z"></path></g><g data-mml-node="mn" data-latex="2" transform="translate(1825,0)"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g><g data-mml-node="mo" data-latex="\rfloor" transform="translate(2325,0)"><path data-c="230B" d="M51-250L270-250L270 726C270 742 262 750 247 750C232 750 224 742 224 726L224-202L51-202C36-202 28-210 28-226C28-242 36-250 51-250Z"></path></g></g></g></svg><mjx-break size="3"> </mjx-break><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="3.394ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 1500.2 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="\lfloor N/2 \rfloor + 1"><g data-mml-node="mo" data-latex="+"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mn" data-latex="1" transform="translate(1000.2,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g></g></svg></mjx-container> 个副本确认，能容忍 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.265ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2769 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="\lfloor N/2 \rfloor"><g data-mml-node="mo" data-latex="\lfloor"><path data-c="230A" d="M393-202L220-202L220 726C220 742 212 750 197 750C182 750 174 742 174 726L174-250L393-250C408-250 416-242 416-226C416-214 405-202 393-202Z"></path></g><g data-mml-node="mi" data-latex="N" transform="translate(444,0)"><path data-c="1D441" d="M864 683C845 683 783 680 764 680C745 680 682 683 663 683C648 683 641 675 641 659C641 650 648 645 663 644C705 644 726 631 726 605C726 599 725 592 724 585L616 157L401 662C393 681 391 683 366 683L233 683C209 683 200 681 200 659C200 649 211 644 232 644C274 644 295 643 296 640L163 110C154 71 131 49 95 42C69 39 39 43 39 15C39 5 45 0 56 0C74 0 136 3 155 3C174 3 238 0 257 0C272 0 279 8 279 24C279 33 271 38 255 39C214 40 194 53 194 78C194 83 195 90 197 100L326 611L576 21C582 7 590 0 599 0C608 0 614 8 618 24L757 574C770 625 798 643 860 644C874 645 881 653 881 669C878 678 877 683 864 683Z"></path></g><g data-mml-node="mo" data-latex="/" transform="translate(1325,0)"><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z"></path></g><g data-mml-node="mn" data-latex="2" transform="translate(1825,0)"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g><g data-mml-node="mo" data-latex="\rfloor" transform="translate(2325,0)"><path data-c="230B" d="M51-250L270-250L270 726C270 742 262 750 247 750C232 750 224 742 224 726L224-202L51-202C36-202 28-210 28-226C28-242 36-250 51-250Z"></path></g></g></g></svg></mjx-container> 个故障，但要容忍 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.249ex" height="2.059ex" role="img" focusable="false" viewBox="0 -705 552 910"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="f"><g data-mml-node="mi" data-latex="f"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g></g></g></svg></mjx-container> 个故障需 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="2.38ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 1052 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="2f+1"><g data-mml-node="mn" data-latex="2"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g><g data-mml-node="mi" data-latex="f" transform="translate(500,0)"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g></g></g></svg><mjx-break size="3"> </mjx-break><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="3.394ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 1500.2 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="2f+1"><g data-mml-node="mo" data-latex="+"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mn" data-latex="1" transform="translate(1000.2,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g></g></svg></mjx-container> 个副本。</li>
+<li><strong>ISR</strong>：写要 <strong>ISR 中所有</strong>副本确认。灵活性在于 ISR 大小可动态收缩——极端下 ISR 可能只剩 Leader 自己（此时是否允许写取决于 <code>min.insync.replicas</code>）。用 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="1.249ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 552 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="f+1"><g data-mml-node="mi" data-latex="f"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g></g></g></svg><mjx-break size="3"> </mjx-break><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="3.394ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 1500.2 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="f+1"><g data-mml-node="mo" data-latex="+"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mn" data-latex="1" transform="translate(1000.2,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g></g></svg></mjx-container> 个副本就能容忍 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.249ex" height="2.059ex" role="img" focusable="false" viewBox="0 -705 552 910"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="f"><g data-mml-node="mi" data-latex="f"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g></g></g></svg></mjx-container> 个故障，副本利用率更高，代价是延迟受最慢 ISR 副本影响。</li>
+</ul>
+<p>这是 Kafka 在「副本成本」和「容错/延迟」之间做的独特权衡（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》§6 复制）。</p>
+<h3 id="4-4-min-insync-replicas-与可用性"><a href="#4-4-min-insync-replicas-与可用性" class="headerlink" title="4.4 min.insync.replicas 与可用性"></a>4.4 min.insync.replicas 与可用性</h3><p><code>min.insync.replicas</code> 规定「至少多少个副本在 ISR 里，才允许 <code>acks=all</code> 的写成功」。例如 <code>replication.factor=3, min.insync.replicas=2</code>：允许挂 1 个副本仍可写；挂 2 个则拒绝写（保护数据不丢）——又是一致性/可用性的可调旋钮。</p>
+<hr>
+<h2 id="五、高水位与数据可见性"><a href="#五、高水位与数据可见性" class="headerlink" title="五、高水位与数据可见性"></a>五、高水位与数据可见性</h2><h3 id="5-1-High-Watermark（HW，高水位）"><a href="#5-1-High-Watermark（HW，高水位）" class="headerlink" title="5.1 High Watermark（HW，高水位）"></a>5.1 High Watermark（HW，高水位）</h3><p><strong>HW = ISR 中所有副本都已复制到的最大 offset</strong>。它是「已提交」的边界：</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -1.801ex;" xmlns="http://www.w3.org/2000/svg" width="22.599ex" height="3.498ex" role="img" focusable="false" viewBox="0 -750 9988.9 1545.9"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{HW} = \min_{r \in \text{ISR}} (\text{r 的 LEO})
+"><g data-mml-node="mtext" data-latex="\text{HW}"><path data-c="48" d="M566 3C640 3 690 2 716 0L716 39L688 39C653 39 632 41 625 46C618 51 614 63 614 81L614 602C614 620 618 631 625 636C632 641 653 644 688 644L716 644L716 683C690 681 640 680 567 680C492 680 442 681 417 683L417 644L444 644C479 644 500 641 507 636C514 631 518 620 518 602L518 375L231 375L231 602C231 620 235 631 242 636C249 641 270 644 305 644L332 644L332 683C307 681 257 680 183 680C109 680 59 681 33 683L33 644L61 644C96 644 117 641 124 636C131 631 135 620 135 602L135 81C135 63 131 51 124 46C117 41 96 39 61 39L33 39L33 0C59 2 109 3 182 3C257 3 307 2 332 0L332 39L305 39C270 39 249 41 242 46C235 51 231 63 231 81L231 336L518 336L518 81C518 63 514 51 507 46C500 41 479 39 444 39L417 39L417 0C442 2 492 3 566 3Z"></path><path data-c="57" d="M910 581C923 623 956 644 1009 644L1009 683C968 680 937 679 915 680L793 683L793 645C850 644 879 627 879 596C879 593 877 587 874 577L729 132L574 605C573 611 572 616 572 619C572 636 600 644 655 644L655 683C612 680 564 679 510 680L385 683L385 644C419 644 442 642 452 639C462 636 469 627 474 612L496 544L362 132L206 607C205 611 204 615 204 619C204 636 232 644 288 644L288 683C245 680 197 679 143 680L18 683L18 644C57 644 80 642 88 638C96 634 103 624 108 606L307 0C312-15 319-22 329-22C335-22 339-21 342-19C349-11 352-4 353 1L513 491L674 0C679-15 686-22 697-22C702-22 707-21 710-19C716-11 719-4 720 1Z" transform="translate(750,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(2055.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="munder" data-latex="\min_{r\in\text{ISR}}" transform="translate(3111.6,0)"><g data-mml-node="mo" data-latex="\min" transform="translate(146.2,0)"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(833,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(1111,0)"></path></g><g data-mml-node="TeXAtom" transform="translate(0,-665.5) scale(0.707)" data-latex="{r\in\text{ISR}}" data-mjx-texclass="ORD"><g data-mml-node="mi" data-latex="r"><path data-c="1D45F" d="M436 374C436 416 395 442 351 442C302 442 261 419 227 372C217 411 183 442 136 442C95 442 65 410 44 345C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 65 299C83 375 106 413 133 413C150 413 159 399 159 371C159 358 154 331 144 290L87 63C84 50 78 24 78 19C78-1 89-11 110-11C130-11 143-1 150 19L169 91C180 134 187 162 190 175L221 303C223 311 231 324 244 343C271 381 302 413 351 413C363 413 373 411 382 406C352 397 337 378 337 351C337 325 351 312 378 312C411 312 436 341 436 374Z"></path></g><g data-mml-node="mo" data-latex="\in" transform="translate(451,0)"><path data-c="2208" d="M563 4L373 4C310 4 254 25 208 68C162 111 136 163 130 226L563 226C579 226 587 234 587 250C587 266 579 274 563 274L130 274C136 337 162 389 208 432C254 475 310 496 373 496L563 496C579 496 587 504 587 519C587 535 579 543 563 543L373 543C292 543 223 515 166 458C109 401 81 332 81 250C81 168 109 99 166 42C223-15 292-43 373-43L563-43C579-43 587-35 587-19C587-7 576 4 563 4Z"></path></g><g data-mml-node="mtext" data-latex="\text{ISR}" transform="translate(1118,0)"><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z"></path><path data-c="53" d="M252 669C359 669 422 601 440 466C441 456 447 451 456 451C467 451 472 460 472 478L472 677C472 696 467 705 458 705C452 705 446 700 440 690L408 638C364 680 324 705 251 705C142 705 56 617 56 509C56 417 116 349 187 324L317 292C384 275 428 229 428 154C428 79 376 17 301 17C170 17 93 91 88 218C88 227 83 232 73 232C62 232 56 223 56 204L56 6C56-13 61-22 71-22C77-22 83-17 89-7L121 45C164 0 224-22 302-22C359-22 407-1 444 40C481 81 499 130 499 188C499 235 485 278 458 317C431 356 394 380 349 391L223 422C170 434 127 481 127 544C127 614 182 669 252 669Z" transform="translate(361,0)"></path><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z" transform="translate(917,0)"></path></g></g></g><g data-mml-node="mo" data-latex="(" transform="translate(5070.9,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mtext" data-latex="\text{r 的 LEO}" transform="translate(5459.9,0)"><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z"></path><path data-c="20" d="" transform="translate(392,0)"></path><text data-variant="normal" transform="translate(724,0) scale(1,-1)" font-size="884px" font-family="serif">的</text><path data-c="20" d="" transform="translate(1724,0)"></path><path data-c="4C" d="M230 74L230 601C230 614 231 622 233 627C238 638 267 644 320 644L356 644L356 683C330 681 274 680 187 680C110 680 59 681 33 683L33 644L61 644C96 644 117 641 124 636C131 631 135 620 135 602L135 81C135 63 131 51 124 46C117 41 96 39 61 39L33 39L33 0L554 0L582 263L550 263C545 212 536 171 525 139C503 76 444 39 355 39L274 39C236 39 230 39 230 74Z" transform="translate(2056,0)"></path><path data-c="45" d="M230 74L230 334L315 334C360 334 388 326 400 311C412 296 418 265 418 218L451 218L451 488L418 488C418 441 412 411 400 396C388 381 360 373 315 373L230 373L230 606C230 642 236 641 275 641L402 641C474 641 522 627 547 598C579 559 583 523 592 450L625 450L596 680L33 680L33 641L61 641C96 641 117 639 124 634C131 629 135 617 135 599L135 81C135 63 131 51 124 46C117 41 96 39 61 39L33 39L33 0L610 0L653 263L620 263C611 208 602 166 591 136C580 106 560 82 530 63C505 47 464 39 406 39L275 39C236 39 230 38 230 74Z" transform="translate(2681,0)"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(3362,0)"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(9599.9,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g></g></g></svg></mjx-container></p>
+<p>其中 <strong>LEO（Log End Offset）</strong> 是每个副本日志的末尾 offset。</p>
+<ul>
+<li><strong>消费者只能读到 HW 之前的消息</strong>——HW 之后的消息虽然可能已在 Leader 上，但还没被所有 ISR 副本确认，不算已提交，不可见。这保证了消费者读到的都是「不会因 Leader 切换而丢失」的数据（read-committed 式可见性）。</li>
+<li>Leader 收集各 Follower 的 fetch 位置来推进 HW，再随 fetch 响应把 HW 告知 Follower。</li>
+</ul>
+<h3 id="5-2-Leader-Epoch"><a href="#5-2-Leader-Epoch" class="headerlink" title="5.2 Leader Epoch"></a>5.2 Leader Epoch</h3><p>早期 Kafka 用 HW 做日志截断，在 Leader 频繁切换时有丢/错数据的边界问题。新版引入 <strong>Leader Epoch</strong>（每次选新 Leader，epoch+1，记录该 epoch 起始 offset），用它精确判断日志分叉点、正确截断，替代了纯 HW 的截断逻辑——和 braft/Raft 用 term 判断日志一致性异曲同工。</p>
+<hr>
+<h2 id="六、控制器与元数据：从-ZooKeeper-到-KRaft"><a href="#六、控制器与元数据：从-ZooKeeper-到-KRaft" class="headerlink" title="六、控制器与元数据：从 ZooKeeper 到 KRaft"></a>六、控制器与元数据：从 ZooKeeper 到 KRaft</h2><h3 id="6-1-Controller（控制器）"><a href="#6-1-Controller（控制器）" class="headerlink" title="6.1 Controller（控制器）"></a>6.1 Controller（控制器）</h3><p>集群里有一个 broker 兼任 <strong>Controller</strong>，负责集群级协调：分区 Leader 选举、副本分配、感知 broker 上下线、传播元数据。它是 Kafka 的「大脑」。</p>
+<h3 id="6-2-老架构：依赖-ZooKeeper"><a href="#6-2-老架构：依赖-ZooKeeper" class="headerlink" title="6.2 老架构：依赖 ZooKeeper"></a>6.2 老架构：依赖 ZooKeeper</h3><p>早期 Kafka 用 <strong>ZooKeeper</strong> 存元数据（broker 列表、topic 配置、ISR、controller 选举等）。问题：</p>
+<ul>
+<li>ZooKeeper 是<strong>外部依赖</strong>，运维两套系统</li>
+<li>元数据规模受限，分区数上不去（几十万分区就吃力）</li>
+<li>controller 故障切换时要从 ZK 全量加载元数据，慢</li>
+</ul>
+<h3 id="6-3-新架构：KRaft（Kafka-Raft）"><a href="#6-3-新架构：KRaft（Kafka-Raft）" class="headerlink" title="6.3 新架构：KRaft（Kafka Raft）"></a>6.3 新架构：KRaft（Kafka Raft）</h3><p><strong>KRaft</strong>（KIP-500，Kafka 2.8 起、3.x 生产可用、4.0 起默认且移除 ZK）用 <strong>Kafka 自己的 Raft 实现</strong>管理元数据，彻底去掉 ZooKeeper：</p>
+<ul>
+<li>一组 broker 担任 <strong>controller quorum</strong>，用 Raft 对元数据变更达成共识（对照《<a href="/2026/08/07/distributed-storage/Raft%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82-braft%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Raft 实现细节</a>》）。</li>
+<li><strong>元数据本身也变成一个 Kafka 日志</strong>（<code>__cluster_metadata</code> topic）——元数据变更就是往这个 Raft 复制的日志追加记录，controller 和 broker 回放它来构建状态。这是「元数据即日志、复制状态机」思想的漂亮自洽。</li>
+<li>好处：单一系统、支持<strong>百万级分区</strong>、controller 故障切换秒级（只需回放增量元数据日志）、架构更简洁。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="83.656ex" height="2.161ex" role="img" focusable="false" viewBox="0 -750 36976 955"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{KRaft: 元数据 = Raft 复制的日志}，\quad \text{controller quorum apply 该日志构建集群状态}
+"><g data-mml-node="mtext" data-latex="\text{KRaft: 元数据 = Raft 复制的日志}"><path data-c="4B" d="M550 616C550 607 545 597 534 586L231 297L231 602C231 620 235 631 242 636C249 641 270 644 305 644L333 644L333 683C307 681 257 680 183 680C109 680 59 681 33 683L33 644L61 644C96 644 117 641 124 636C131 631 135 620 135 602L135 81C135 63 131 51 124 46C117 41 96 39 61 39L33 39L33 0C59 2 109 3 182 3C257 3 307 2 333 0L333 39L305 39C270 39 249 41 242 46C235 51 231 63 231 81L231 252L341 357L517 96C526 82 531 71 531 64C531 47 512 39 473 39L473 0C516 3 564 4 618 3L736 0L736 39C671 39 659 45 631 84L405 418L581 586C620 625 667 644 722 644L722 683C702 681 673 680 634 680C573 680 530 681 505 683L505 644C529 644 550 636 550 616Z"></path><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z" transform="translate(778,0)"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(1514,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(2014,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(2320,0)"></path><path data-c="3A" d="M192 375C192 405 169 431 139 431C109 431 86 405 86 375C86 345 109 319 139 319C169 319 192 345 192 375M192 56C192 86 169 112 139 112C109 112 86 86 86 56C86 26 109 0 139 0C169 0 192 26 192 56Z" transform="translate(2709,0)"></path><path data-c="20" d="" transform="translate(2987,0)"></path><text data-variant="normal" transform="translate(3319,0) scale(1,-1)" font-size="884px" font-family="serif">元数据</text><path data-c="20" d="" transform="translate(6319,0)"></path><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z" transform="translate(6651,0)"></path><path data-c="20" d="" transform="translate(7429,0)"></path><path data-c="52" d="M611 501C611 558 580 604 519 639C468 668 411 683 349 683L35 683L35 644L63 644C98 644 119 641 126 636C133 631 137 620 137 602L137 81C137 63 133 51 126 46C119 41 98 38 63 38L35 38L35-1C62 2 111 3 183 3C256 3 305 2 332-1L332 38L304 38C269 38 248 41 241 46C234 51 230 63 230 81L230 327L340 327C404 327 451 289 462 235C464 224 465 200 465 165C465 138 466 118 467 106C473 22 546-22 634-22C672-22 699-6 714 25C726 48 732 70 732 91C732 104 726 111 715 111C706 111 700 105 699 92C694 36 673 8 638 8C603 8 591 41 585 70C579 104 575 130 572 147L559 226C544 278 507 316 448 339C524 361 611 415 611 501M470 600C491 581 502 548 502 501C502 463 492 431 473 404C450 373 405 357 336 357L230 357L230 609C230 630 236 641 248 642C255 643 274 644 306 644C385 644 426 641 470 600Z" transform="translate(7761,0)"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(8497,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(8997,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(9303,0)"></path><path data-c="20" d="" transform="translate(9692,0)"></path><text data-variant="normal" transform="translate(10024,0) scale(1,-1)" font-size="884px" font-family="serif">复制的日志</text></g><g data-mml-node="mi" data-latex="，" transform="translate(15024,0)"><text data-variant="italic" transform="scale(1,-1)" font-size="884px" font-family="serif" font-style="italic">，</text></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(16024,0)"></g><g data-mml-node="mtext" data-latex="\text{controller quorum apply 该日志构建集群状态}" transform="translate(17024,0)"><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(444,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(944,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(1500,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(1889,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(2281,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(2781,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(3059,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(3337,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(3781,0)"></path><path data-c="20" d="" transform="translate(4173,0)"></path><path data-c="71" d="M255 442C193 442 141 419 98 374C55 329 34 276 34 214C34 153 55 100 96 55C137 10 187-13 248-13C297-13 339 8 374 51L374-115C374-134 371-146 364-150C357-154 335-155 298-155L298-194L412-191L527-194L527-155C490-155 468-154 461-150C454-146 450-134 450-115L450 442L422 442L387 358C364 401 320 442 255 442M251 16C210 16 177 40 153 88C134 126 124 168 124 214C124 261 135 303 157 341C183 386 218 409 261 409C326 409 377 342 377 275L377 136C377 75 311 16 251 16Z" transform="translate(4505,0)"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(5033,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(5589,0)"></path><path data-c="72" d="M364 378C364 417 327 442 288 442C237 442 198 412 172 351L172 442L28 431L28 393C63 393 84 390 92 384C100 378 104 365 104 342L104 79C104 60 101 48 94 44C87 40 65 38 28 38L28 0L143 3C185 4 228 3 271 0L271 38L247 38C214 38 193 41 186 46C179 51 176 63 176 81L176 232C176 275 184 314 199 347C219 390 248 412 287 413C277 403 272 391 272 377C272 346 287 331 318 331C345 331 364 352 364 378Z" transform="translate(6089,0)"></path><path data-c="75" d="M267 18C198 18 185 47 185 112L185 442L32 431L32 393C71 393 94 389 100 382C106 375 109 350 109 306L109 159C109 120 112 90 119 67C134 15 189-11 262-11C316-11 357 14 385 65L385-11L535 0L535 38C499 38 478 40 470 46C462 52 458 66 458 89L458 442L306 431L306 393C341 393 362 390 370 384C378 378 382 365 382 342L382 167C382 88 340 18 267 18Z" transform="translate(6481,0)"></path><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z" transform="translate(7037,0)"></path><path data-c="20" d="" transform="translate(7870,0)"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(8202,0)"></path><path data-c="70" d="M298-13C360-13 413 9 456 54C499 99 521 152 521 215C521 276 501 328 462 372C421 419 371 442 311 442C260 442 216 422 178 383L178 442L28 431L28 393C65 393 87 391 94 386C101 381 105 368 105 347L105-115C105-134 101-146 94-150C87-154 65-155 28-155L28-194L142-191L257-194L257-155C220-155 199-154 192-150C185-146 181-134 181-115L181 44C203 13 246-13 298-13M304 409C345 409 377 386 402 340C421 301 431 260 431 215C431 168 420 125 398 86C372 39 337 16 294 16C252 16 219 36 194 75C185 88 181 101 181 114L181 333C210 384 251 409 304 409Z" transform="translate(8702,0)"></path><path data-c="70" d="M298-13C360-13 413 9 456 54C499 99 521 152 521 215C521 276 501 328 462 372C421 419 371 442 311 442C260 442 216 422 178 383L178 442L28 431L28 393C65 393 87 391 94 386C101 381 105 368 105 347L105-115C105-134 101-146 94-150C87-154 65-155 28-155L28-194L142-191L257-194L257-155C220-155 199-154 192-150C185-146 181-134 181-115L181 44C203 13 246-13 298-13M304 409C345 409 377 386 402 340C421 301 431 260 431 215C431 168 420 125 398 86C372 39 337 16 294 16C252 16 219 36 194 75C185 88 181 101 181 114L181 333C210 384 251 409 304 409Z" transform="translate(9258,0)"></path><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(9814,0)"></path><path data-c="79" d="M113-205C168-205 212-167 243-90L416 332C433 372 463 392 508 392L508 431C475 428 449 427 430 428L341 431L341 393C372 392 387 379 387 354C387 348 385 341 381 332L286 98L180 354C177 362 175 368 174 371C174 385 193 392 230 392L230 431L118 428C94 427 61 428 19 431L19 392C72 392 85 394 99 360L246 1L222-55C195-119 176-175 113-175C99-175 87-171 76-164C99-159 110-144 110-120C110-90 95-75 64-75C34-75 19-90 19-121C19-170 64-205 113-205Z" transform="translate(10092,0)"></path><path data-c="20" d="" transform="translate(10620,0)"></path><text data-variant="normal" transform="translate(10952,0) scale(1,-1)" font-size="884px" font-family="serif">该日志构建集群状态</text></g></g></g></svg></mjx-container></p>
+<hr>
+<h2 id="七、生产者：分区、批量与-acks"><a href="#七、生产者：分区、批量与-acks" class="headerlink" title="七、生产者：分区、批量与 acks"></a>七、生产者：分区、批量与 acks</h2><h3 id="7-1-分区选择"><a href="#7-1-分区选择" class="headerlink" title="7.1 分区选择"></a>7.1 分区选择</h3><p>生产者发消息时决定进哪个分区：</p>
+<ul>
+<li><strong>有 key</strong>：<code>hash(key) % 分区数</code>，保证同 key 消息进同一分区（保序）</li>
+<li><strong>无 key</strong>：粘性分区（sticky partitioning）批量发往一个分区，攒够一批再换，兼顾均衡与批量效率</li>
+</ul>
+<h3 id="7-2-批量与压缩"><a href="#7-2-批量与压缩" class="headerlink" title="7.2 批量与压缩"></a>7.2 批量与压缩</h3><p>生产者不是每条消息立刻发，而是攒在 <strong>RecordBatch</strong> 里（<code>batch.size</code>、<code>linger.ms</code> 控制），批量发送 + 批量压缩（gzip/lz4/zstd/snappy）。批量是 Kafka 高吞吐的关键之一——摊薄网络和 IO 的固定开销。</p>
+<h3 id="7-3-acks：持久性级别"><a href="#7-3-acks：持久性级别" class="headerlink" title="7.3 acks：持久性级别"></a>7.3 acks：持久性级别</h3><p>生产者的 <code>acks</code> 参数决定「写多可靠才算成功」（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》同步/异步复制）：</p>
+<table>
+<thead>
+<tr>
+<th>acks</th>
+<th>含义</th>
+<th>权衡</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>acks=0</strong></td>
+<td>发出即认为成功，不等确认</td>
+<td>最快，可能丢</td>
+</tr>
+<tr>
+<td><strong>acks=1</strong></td>
+<td>Leader 写入本地即成功</td>
+<td>Leader 挂且未复制则丢</td>
+</tr>
+<tr>
+<td><strong>acks=all(-1)</strong></td>
+<td>ISR 所有副本确认才成功</td>
+<td>最可靠，配合 min.insync.replicas 不丢，延迟最高</td>
+</tr>
+</tbody></table>
+<p>生产场景要「不丢」一般用 <code>acks=all</code> + <code>min.insync.replicas&gt;=2</code> + <code>replication.factor&gt;=3</code>。</p>
+<hr>
+<h2 id="八、消费者与消费者组"><a href="#八、消费者与消费者组" class="headerlink" title="八、消费者与消费者组"></a>八、消费者与消费者组</h2><h3 id="8-1-消费者组（Consumer-Group）"><a href="#8-1-消费者组（Consumer-Group）" class="headerlink" title="8.1 消费者组（Consumer Group）"></a>8.1 消费者组（Consumer Group）</h3><p><strong>消费者组</strong>是 Kafka 实现「负载均衡消费」和「广播消费」的机制：</p>
+<ul>
+<li>一个 Topic 的所有分区，被<strong>分配给同一个组内的消费者</strong>，每个分区在组内<strong>只被一个消费者</strong>消费——组内是负载均衡（并行消费）。</li>
+<li>不同组各自独立消费全量数据——组间是广播。</li>
+<li><strong>并行度上限 = 分区数</strong>：组内消费者多于分区数时，多出的消费者闲置。所以分区数决定了最大消费并行度。</li>
+</ul>
+<h3 id="8-2-Rebalance（再均衡）"><a href="#8-2-Rebalance（再均衡）" class="headerlink" title="8.2 Rebalance（再均衡）"></a>8.2 Rebalance（再均衡）</h3><p>组成员变化（消费者加入/退出/崩溃）或分区数变化时，触发 <strong>rebalance</strong>：重新分配分区到消费者。由组内选出的 <strong>Group Coordinator</strong>（某 broker）协调，用分配策略（Range/RoundRobin/Sticky/Cooperative）决定谁消费哪些分区。</p>
+<ul>
+<li>老的「stop-the-world」rebalance 会短暂暂停整组消费；新的 <strong>Cooperative（增量）rebalance</strong> 只调整变动的分区，减少抖动。</li>
+</ul>
+<h3 id="8-3-Offset-提交"><a href="#8-3-Offset-提交" class="headerlink" title="8.3 Offset 提交"></a>8.3 Offset 提交</h3><p>消费者定期把「消费到哪了」（offset）提交到内部 topic <strong><code>__consumer_offsets</code></strong>（一个 compact 日志）。这样消费者重启/接管分区时能从上次位置继续。</p>
+<ul>
+<li><strong>自动提交</strong>（<code>enable.auto.commit</code>）省事但可能重复或丢（提交时机与处理时机错位）。</li>
+<li><strong>手动提交</strong>：处理完再提交，精确控制语义。</li>
+</ul>
+<hr>
+<h2 id="九、投递语义与-Exactly-Once"><a href="#九、投递语义与-Exactly-Once" class="headerlink" title="九、投递语义与 Exactly-Once"></a>九、投递语义与 Exactly-Once</h2><p>消息系统的经典难题：一条消息到底被处理几次？</p>
+<h3 id="9-1-三种语义"><a href="#9-1-三种语义" class="headerlink" title="9.1 三种语义"></a>9.1 三种语义</h3><table>
+<thead>
+<tr>
+<th>语义</th>
+<th>含义</th>
+<th>何时发生</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>At-most-once（至多一次）</strong></td>
+<td>可能丢，不重复</td>
+<td>先提交 offset 再处理，处理前崩溃则丢</td>
+</tr>
+<tr>
+<td><strong>At-least-once（至少一次）</strong></td>
+<td>不丢，可能重复</td>
+<td>先处理再提交 offset，提交前崩溃则重放</td>
+</tr>
+<tr>
+<td><strong>Exactly-once（恰好一次）</strong></td>
+<td>不丢不重复</td>
+<td>需额外机制</td>
+</tr>
+</tbody></table>
+<p>默认最常见的是 <strong>at-least-once</strong>（配 acks=all + 手动提交），要求下游做<strong>幂等</strong>处理来容忍重复。</p>
+<h3 id="9-2-Kafka-的-Exactly-Once（EOS）"><a href="#9-2-Kafka-的-Exactly-Once（EOS）" class="headerlink" title="9.2 Kafka 的 Exactly-Once（EOS）"></a>9.2 Kafka 的 Exactly-Once（EOS）</h3><p>Kafka 通过两个机制组合实现端到端 exactly-once（对照《<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理</a>》分布式事务）：</p>
+<p><strong>① 幂等生产者（Idempotent Producer）</strong></p>
+<ul>
+<li>生产者被分配 <strong>PID（Producer ID）</strong>，每条消息带 <strong>序列号</strong>。</li>
+<li>Broker 按 (PID, 分区, 序列号) 去重，<strong>避免生产者重试导致的重复写入</strong>。</li>
+<li>保证单分区、单会话内消息不重复、不乱序。</li>
+</ul>
+<p><strong>② 事务（Transactions）</strong></p>
+<ul>
+<li>生产者可把「向多个分区的写」+「消费 offset 的提交」包进一个<strong>原子事务</strong>：要么全部可见，要么全部不可见。</li>
+<li>靠 <strong>Transaction Coordinator</strong>（broker）+ 事务日志 + 两阶段提交式的控制消息（commit/abort marker）实现。</li>
+<li>消费者设 <code>isolation.level=read_committed</code> 时，只读到已提交事务的消息。</li>
+</ul>
+<p><strong>③ 消费-处理-生产闭环的 EOS</strong></p>
+<ul>
+<li>典型场景：从 Topic A 消费 → 处理 → 写 Topic B。把「写 B」和「提交 A 的 offset」放进同一事务，就实现了流处理的 exactly-once（Kafka Streams 的 <code>processing.guarantee=exactly_once_v2</code> 即基于此）。</li>
+</ul>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="68.041ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 30074 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{EOS} = \text{幂等生产者（去重）} + \text{事务（跨分区/含 offset 的原子提交）}
+"><g data-mml-node="mtext" data-latex="\text{EOS}"><path data-c="45" d="M230 74L230 334L315 334C360 334 388 326 400 311C412 296 418 265 418 218L451 218L451 488L418 488C418 441 412 411 400 396C388 381 360 373 315 373L230 373L230 606C230 642 236 641 275 641L402 641C474 641 522 627 547 598C579 559 583 523 592 450L625 450L596 680L33 680L33 641L61 641C96 641 117 639 124 634C131 629 135 617 135 599L135 81C135 63 131 51 124 46C117 41 96 39 61 39L33 39L33 0L610 0L653 263L620 263C611 208 602 166 591 136C580 106 560 82 530 63C505 47 464 39 406 39L275 39C236 39 230 38 230 74Z"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(681,0)"></path><path data-c="53" d="M252 669C359 669 422 601 440 466C441 456 447 451 456 451C467 451 472 460 472 478L472 677C472 696 467 705 458 705C452 705 446 700 440 690L408 638C364 680 324 705 251 705C142 705 56 617 56 509C56 417 116 349 187 324L317 292C384 275 428 229 428 154C428 79 376 17 301 17C170 17 93 91 88 218C88 227 83 232 73 232C62 232 56 223 56 204L56 6C56-13 61-22 71-22C77-22 83-17 89-7L121 45C164 0 224-22 302-22C359-22 407-1 444 40C481 81 499 130 499 188C499 235 485 278 458 317C431 356 394 380 349 391L223 422C170 434 127 481 127 544C127 614 182 669 252 669Z" transform="translate(1459,0)"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(2292.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mtext" data-latex="\text{幂等生产者（去重）}" transform="translate(3348.6,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">幂等生产者（去重）</text></g><g data-mml-node="mo" data-latex="+" transform="translate(12570.8,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{事务（跨分区/含 offset 的原子提交）}" transform="translate(13571,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">事务（跨分区</text><path data-c="2F" d="M444 718C445 720 445 723 445 726C445 742 437 750 421 750C410 750 403 745 399 734L57-218C56-220 56-223 56-226C56-242 64-250 80-250C91-250 98-245 102-234Z" transform="translate(6000,0)"></path><text data-variant="normal" transform="translate(6500,0) scale(1,-1)" font-size="884px" font-family="serif">含</text><path data-c="20" d="" transform="translate(7500,0)"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(7832,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(8332,0)"></path><path data-c="66" d="M265 705C176 705 110 633 110 544L110 434L33 434L33 396L110 396L110 79C110 60 107 48 100 44C93 40 71 39 34 39L34 0L149 3C191 4 234 3 277 0L277 39L253 39C220 39 199 41 192 46C185 51 182 63 182 81L182 396L294 396L294 434L179 434L179 545C179 605 210 675 265 675C273 675 280 674 287 672C272 664 264 650 264 631C264 600 279 584 310 584C341 584 357 600 357 632C357 677 310 705 265 705Z" transform="translate(8638,0)"></path><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z" transform="translate(8944,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(9338,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(9782,0)"></path><path data-c="20" d="" transform="translate(10171,0)"></path><text data-variant="normal" transform="translate(10503,0) scale(1,-1)" font-size="884px" font-family="serif">的原子提交）</text></g></g></g></svg></mjx-container></p>
+<p><strong>边界</strong>：Kafka 的 exactly-once 是「Kafka 生态内」的；若处理结果写到外部系统（如数据库），端到端 exactly-once 还需外部系统配合幂等或事务。</p>
+<hr>
+<h2 id="十、高性能的秘密"><a href="#十、高性能的秘密" class="headerlink" title="十、高性能的秘密"></a>十、高性能的秘密</h2><p>Kafka 单机就能达到百万级消息/秒，靠这几招：</p>
+<table>
+<thead>
+<tr>
+<th>技术</th>
+<th>原理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>顺序 IO</strong></td>
+<td>只追加写日志，顺序写比随机写快几个数量级</td>
+</tr>
+<tr>
+<td><strong>Page Cache</strong></td>
+<td>依赖 OS 页缓存而非自建缓存，读写常命中内存；重启缓存仍在</td>
+</tr>
+<tr>
+<td><strong>零拷贝（sendfile）</strong></td>
+<td>发消息给消费者时，用 <code>sendfile</code> 让数据从 page cache 直达网卡，<strong>不经用户态拷贝</strong>，省去 4 次拷贝/2 次上下文切换中的大部分</td>
+</tr>
+<tr>
+<td><strong>批量</strong></td>
+<td>生产、复制、消费全程批量，摊薄固定开销</td>
+</tr>
+<tr>
+<td><strong>压缩</strong></td>
+<td>批量压缩后传输和存储，省带宽省空间</td>
+</tr>
+<tr>
+<td><strong>分区并行</strong></td>
+<td>吞吐随分区数线性扩展</td>
+</tr>
+</tbody></table>
+<p><strong>零拷贝</strong>尤其关键：传统「读文件→用户缓冲→socket 缓冲→网卡」要多次拷贝，<code>sendfile</code> 让老的、只读的、已在 page cache 里的 segment 数据直接从内核缓冲送到网卡——这也是为什么 Kafka 偏爱「消费者读的是历史数据」的场景。</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="59.761ex" height="2.163ex" role="img" focusable="false" viewBox="0 -750 26414.3 956"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\text{高吞吐} = \text{顺序 IO} + \text{page cache} + \text{零拷贝} + \text{批量} + \text{分区并行}
+"><g data-mml-node="mtext" data-latex="\text{高吞吐}"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">高吞吐</text></g><g data-mml-node="mo" data-latex="=" transform="translate(3277.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mtext" data-latex="\text{顺序 IO}" transform="translate(4333.6,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">顺序</text><path data-c="20" d="" transform="translate(2000,0)"></path><path data-c="49" d="M180 3C257 3 308 2 333 0L333 39L304 39C268 39 246 41 239 46C232 51 228 63 228 81L228 602C228 620 232 631 239 636C246 641 268 644 304 644L333 644L333 683C308 681 257 680 181 680C104 680 53 681 28 683L28 644L57 644C93 644 115 641 122 636C129 631 133 620 133 602L133 81C133 63 129 51 122 46C115 41 93 39 57 39L28 39L28 0C53 2 104 3 180 3Z" transform="translate(2332,0)"></path><path data-c="4F" d="M388-22C484-22 564 15 628 88C690 158 721 242 721 339C721 436 690 521 629 592C564 667 484 705 388 705C292 705 212 667 148 592C87 521 56 436 56 339C56 242 87 159 148 88C213 15 293-22 388-22M557 575C593 522 611 448 611 353C611 230 585 140 533 84C488 36 440 12 389 12C337 12 288 36 243 85C192 141 166 230 166 353C166 472 193 558 247 609C293 651 340 672 388 672C456 672 512 640 557 575Z" transform="translate(2693,0)"></path></g><g data-mml-node="mo" data-latex="+" transform="translate(8026.8,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{page cache}" transform="translate(9027,0)"><path data-c="70" d="M298-13C360-13 413 9 456 54C499 99 521 152 521 215C521 276 501 328 462 372C421 419 371 442 311 442C260 442 216 422 178 383L178 442L28 431L28 393C65 393 87 391 94 386C101 381 105 368 105 347L105-115C105-134 101-146 94-150C87-154 65-155 28-155L28-194L142-191L257-194L257-155C220-155 199-154 192-150C185-146 181-134 181-115L181 44C203 13 246-13 298-13M304 409C345 409 377 386 402 340C421 301 431 260 431 215C431 168 420 125 398 86C372 39 337 16 294 16C252 16 219 36 194 75C185 88 181 101 181 114L181 333C210 384 251 409 304 409Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(556,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(1056,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(1556,0)"></path><path data-c="20" d="" transform="translate(2000,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(2332,0)"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(2776,0)"></path><path data-c="63" d="M251 416C293 416 325 406 347 386C323 383 306 361 306 338C306 305 322 289 355 289C388 289 404 306 404 339C404 410 327 448 250 448C188 448 137 426 96 380C55 334 34 279 34 216C34 155 55 101 96 56C137 11 187-11 248-11C298-11 337 3 365 32C388 55 403 78 411 102C414 111 415 117 415 121C415 130 409 134 398 134C390 134 385 130 382 122C361 55 320 21 257 21C228 21 200 34 172 61C139 92 123 144 123 218C123 318 161 416 251 416Z" transform="translate(3276,0)"></path><path data-c="68" d="M314 415C359 415 382 380 382 309L382 79C382 60 379 48 372 44C365 40 343 39 306 39L306 0L421 3L535 0L535 39C503 39 482 40 472 43C462 46 458 53 458 64L458 253C458 301 457 334 454 353C444 414 399 445 320 445C259 445 213 417 182 361L182 694L32 683L32 645C68 645 90 642 98 636C106 630 109 616 109 593L109 79C109 60 105 48 98 44C91 40 69 39 32 39L32 0L147 3L261 0L261 39C224 39 203 40 196 44C189 48 185 60 185 79L185 261C185 342 236 415 314 415Z" transform="translate(3720,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(4276,0)"></path></g><g data-mml-node="mo" data-latex="+" transform="translate(13969.2,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{零拷贝}" transform="translate(14969.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">零拷贝</text></g><g data-mml-node="mo" data-latex="+" transform="translate(18191.7,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{批量}" transform="translate(19191.9,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">批量</text></g><g data-mml-node="mo" data-latex="+" transform="translate(21414.1,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mtext" data-latex="\text{分区并行}" transform="translate(22414.3,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">分区并行</text></g></g></g></svg></mjx-container></p>
+<hr>
+<h2 id="十一、核心概念速查表"><a href="#十一、核心概念速查表" class="headerlink" title="十一、核心概念速查表"></a>十一、核心概念速查表</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>一句话</th>
+<th>重要性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>分布式提交日志</strong></td>
+<td>Kafka 的本质，一切特性的根</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Topic/Partition/Offset</strong></td>
+<td>主题分区 + 分区内有序编号</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>分区 = 并行单位</strong></td>
+<td>吞吐与消费并行度都由分区数决定</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>分段日志 + 稀疏索引</strong></td>
+<td>顺序追加 + 二分定位</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Leader/Follower</strong></td>
+<td>读写走 Leader，Follower 主动拉</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>ISR</strong></td>
+<td>同步副本集，全 ISR 确认才算提交</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>High Watermark</strong></td>
+<td>已提交边界，消费者只能读到 HW</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>KRaft</strong></td>
+<td>用 Raft 管元数据，去 ZooKeeper</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>acks</strong></td>
+<td>生产者持久性级别（0/1/all）</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>消费者组</strong></td>
+<td>组内负载均衡、组间广播</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Exactly-Once</strong></td>
+<td>幂等生产者 + 事务</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td><strong>零拷贝</strong></td>
+<td>sendfile 直达网卡，高吞吐关键</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十二、参考资源"><a href="#十二、参考资源" class="headerlink" title="十二、参考资源"></a>十二、参考资源</h2><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kafka 官方文档</td>
+<td><a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/">kafka.apache.org/documentation</a></td>
+</tr>
+<tr>
+<td>Kafka 论文</td>
+<td><a target="_blank" rel="noopener" href="https://notes.stephenholiday.com/Kafka.pdf">Kafka: a Distributed Messaging System for Log Processing</a></td>
+</tr>
+<tr>
+<td>The Log（Jay Kreps 名篇）</td>
+<td><a target="_blank" rel="noopener" href="https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying">The Log: What every engineer should know</a></td>
+</tr>
+<tr>
+<td>KRaft（KIP-500）</td>
+<td><a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-500">KIP-500</a></td>
+</tr>
+<tr>
+<td>Exactly-Once 语义</td>
+<td><a target="_blank" rel="noopener" href="https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/">KIP-98 / Confluent Blog</a></td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p><strong>本专题系列</strong>：</p>
+<ul>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/">分布式存储系统专题总览</a></li>
+<li><a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E4%B8%8E%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AF/">分布式系统原理与核心技术</a> ｜ <a href="/2026/08/07/distributed-storage/Raft%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82-braft%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Raft 实现细节</a></li>
+<li>本篇：Kafka</li>
+</ul>
+<p><strong>一句话总结 Kafka</strong>：把「只追加的提交日志」这个最朴素的抽象，用分区做扩展、用 ISR 做复制、用 KRaft 做元数据共识、用零拷贝做性能——于是一个消息队列长成了整个数据世界的中枢神经。</p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="category-chain-item">分布式存储</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="category-chain-item">消息队列</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Kafka/" class="print-no-link">#Kafka</a>
+      
+        <a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="print-no-link">#消息队列</a>
+      
+        <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%97%A5%E5%BF%97/" class="print-no-link">#分布式日志</a>
+      
+        <a href="/tags/KRaft/" class="print-no-link">#KRaft</a>
+      
+        <a href="/tags/%E5%89%AF%E6%9C%AC/" class="print-no-link">#副本</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Kafka 架构与实现深度解析</div>
+      <div>https://w2ongq6.github.io/2026/08/07/distributed-storage/Kafka-架构与实现深度解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月7日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/Redis-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="Redis 架构与实现深度解析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Redis 架构与实现深度解析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/07/distributed-storage/%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/" title="对象存储原理与实现">
+                        <span class="hidden-mobile">对象存储原理与实现</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
