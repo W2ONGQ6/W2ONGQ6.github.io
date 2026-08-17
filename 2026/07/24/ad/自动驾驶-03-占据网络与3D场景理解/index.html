@@ -1,0 +1,1090 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="3. 占据网络与 3D 场景理解 本篇在主线中的位置：这是表示线的又一次深化，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为边界框——而框有一个致命的假设：你得先知道”这是一类什么东西”才能框它。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。 占据网络（">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自动驾驶-03：占据网络与 3D 场景理解">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="3. 占据网络与 3D 场景理解 本篇在主线中的位置：这是表示线的又一次深化，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为边界框——而框有一个致命的假设：你得先知道”这是一类什么东西”才能框它。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。 占据网络（">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-24T05:03:00.000Z">
+<meta property="article:modified_time" content="2026-08-17T08:39:31.182Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="3D场景理解">
+<meta property="article:tag" content="Occupancy">
+<meta property="article:tag" content="占据网络">
+<meta property="article:tag" content="自动驾驶">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>自动驾驶-03：占据网络与 3D 场景理解 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="自动驾驶-03：占据网络与 3D 场景理解"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-24 13:03" pubdate>
+          2026年7月24日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          59 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">自动驾驶-03：占据网络与 3D 场景理解</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="3-占据网络与-3D-场景理解"><a href="#3-占据网络与-3D-场景理解" class="headerlink" title="3. 占据网络与 3D 场景理解"></a>3. 占据网络与 3D 场景理解</h2><blockquote>
+<p><strong>本篇在主线中的位置</strong>：这是<strong>表示线的又一次深化</strong>，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为<strong>边界框</strong>——而框有一个致命的假设：<strong>你得先知道”这是一类什么东西”才能框它</strong>。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。</p>
+<p>占据网络（Occupancy Network）的核心思想是把问题<strong>从”这是什么框”改成”每个体素有没有被占、是什么”</strong>。这样任意形状、任意类别的障碍都能被表达——这是 Tesla 2022 年 AI Day 点燃、随后被学术界迅速标准化（Occ3D 基准）的范式转移。本篇内部的演进，本质是一场**”精度—算力—标注成本”的三方拉锯**：</p>
+<ul>
+<li><strong>稠密占据能力强但太贵</strong>：SurroundOcc、Occ3D 确立了稠密体素预测与评测；</li>
+<li><strong>于是想尽办法稀疏化</strong>：SparseOcc 全稀疏、TPVFormer 三视图把 3D 卷积降成 3 个 2D、GaussianFormer 用高斯球——因为”世界大部分是空的”，稠密体素是巨大浪费；</li>
+<li><strong>再攻标注成本</strong>：占据标注比检测框贵一个数量级，于是 OccNeRF、SelfOcc、RenderOcc 用<strong>神经渲染做自监督</strong>，摆脱对 3D 真值的依赖。</li>
+</ul>
+<p>最后 Cam4DOcc、Drive-OccWorld 把占据从”当前帧重建”推向”<strong>未来帧预测</strong>“——这一步直接与第 8 篇世界模型合流（OccWorld 就是”在占据空间里的世界模型”）。可以看到：表示线的终点，正是主线一与主线二在世界模型处的会师。</p>
+</blockquote>
+<h3 id="3-1-Tesla-Occupancy-Network-2022"><a href="#3-1-Tesla-Occupancy-Network-2022" class="headerlink" title="3.1 Tesla Occupancy Network (2022)"></a>3.1 Tesla Occupancy Network (2022)</h3><p><strong>背景</strong>：Tesla AI Day 2022 上提出占据网络（Occupancy Network）的概念，将 3D 空间划分为细粒度体素网格，逐体素预测是否被占据、语义类别及运动属性（速度向量）。系统完全基于多路摄像头图像，无 LiDAR 依赖，利用 Transformer 将多视角特征提升至统一 BEV 体积空间，再逐层解码为稠密占据场。</p>
+<p>这一方案的革命性在于彻底消除了传统检测器的”类别前提假设”——框只能框你认识的东西，但体素可以标记任何被占据的空间，无论那里是什么。翻倒的货箱、碎裂的轮胎、未知障碍物，只要体素被占了就能被感知、被规避。Tesla 在量产路况中展示的稠密 3D 占据输出，直接点燃了整个学术界对这一方向的热情，随后 Occ3D、SurroundOcc 等工作在短短几个月内相继涌现，将这一工业直觉快速标准化为可量化评测的研究课题。可以说，没有 Tesla 的这次公开演示，占据网络不会在 2023 年成为自动驾驶感知的最热门赛道。</p>
+<hr>
+<h3 id="3-2-SurroundOcc-2023"><a href="#3-2-SurroundOcc-2023" class="headerlink" title="3.2 SurroundOcc (2023)"></a>3.2 SurroundOcc (2023)</h3><blockquote>
+<p><strong>论文</strong>：Wei, Y. et al. “SurroundOcc: Multi-Camera 3D Occupancy Prediction for Autonomous Driving.” <em>ICCV 2023</em>.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：SurroundOcc 是 Tesla AI Day 点燃热潮后最早一批将占据网络推向学术规范的工作之一。它搭建了一条完整的纯视觉稠密占据预测流水线：多视角图像经骨干网络提取 2D 特征，再通过层次化的交叉注意力机制（Spatial Cross-Attention）将特征逐层投影至 3D 体素空间，最终逐体素预测占据状态与语义类别。核心贡献还包括提出基于 LiDAR 点云与多帧融合的离线稠密占据标注流程——这解决了学术研究一直缺乏的稠密 3D 真值问题。</p>
+<p>在意义层面，SurroundOcc 确立了”多视角图像→稠密 3D 占据”这条纯视觉路线的可行性，让后续工作有了一个结构清晰、可复现的基线。它展示的”体素可以表达施工锥、护栏碎片等无类别障碍物”的特性，正是占据网络相对检测框的核心优势。SurroundOcc v2（2024）在此基础上引入稠密深度监督与多尺度占据头，将 mIoU 从 35.2% 提升至 42.9%，延续了这条技术路线。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.09516">arXiv:2303.09516</a></p>
+<hr>
+<h3 id="3-3-Occ3D-2023"><a href="#3-3-Occ3D-2023" class="headerlink" title="3.3 Occ3D (2023)"></a>3.3 Occ3D (2023)</h3><blockquote>
+<p><strong>论文</strong>：Tian, X. et al. “Occ3D: A Large-Scale 3D Occupancy Prediction Benchmark for Autonomous Driving.” <em>NeurIPS 2023 Datasets and Benchmarks</em>.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：Occ3D 做的事情是”给占据网络这个赛道装上尺子”。在它出现之前，各种占据预测工作用的标注方式、评测指标、划分协议五花八门，论文之间几乎无法横向比较。Occ3D 利用 nuScenes 和 Waymo 的多帧 LiDAR 扫描，通过点云积累与可见性过滤，构建出覆盖 17 个语义类别（含”通用障碍物”这一关键类）的稠密体素真值，并定义了 mIoU 作为主指标——既评测语义识别质量，又惩罚几何重建的遗漏与误报。</p>
+<p>这份基准的历史地位堪比检测领域的 COCO：它固定了游戏规则，让占据网络研究进入了”可比较、可排名、可超越”的良性竞争阶段。此后几乎所有重要方法——SurroundOcc v2、TPVFormer、SparseOcc、GaussianFormer——都在 Occ3D-nuScenes 上汇报成绩，使其成为衡量占据预测技术进步的标准温度计。Occ3D 还揭示了一个关键工程洞见：稠密真值的质量高度依赖”可见性掩码”的设计——把相机和 LiDAR 都看不到的体素排除在评测之外，才能得到公平可信的指标。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2304.14365">arXiv:2304.14365</a></p>
+<hr>
+<h3 id="3-4-SparseOcc-2024"><a href="#3-4-SparseOcc-2024" class="headerlink" title="3.4 SparseOcc (2024)"></a>3.4 SparseOcc (2024)</h3><blockquote>
+<p><strong>论文</strong>：Liu, H. et al. “Fully Sparse 3D Occupancy Prediction.” <em>ECCV 2024</em>.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：SparseOcc 直击稠密占据网络的根本矛盾：自动驾驶场景中 95% 以上的体素是空的，但稠密方法却对每一个体素都投入同等计算——这既是算力浪费，也是车载部署的瓶颈。SparseOcc 用 mask 引导的稀疏采样策略，在图像特征空间里先识别”可能有物体”的候选区域，只在这些稀疏候选点上构建 3D 体素特征并执行注意力计算，彻底跳过空体素。最终实现 17.3 FPS 的实时推理速度，将稠密方法推向量产可行的效率区间。</p>
+<p>SparseOcc 的另一个重要贡献是提出 RayIoU 指标，揭示了传统体素级 mIoU 的评估盲点——沿深度轴方向，预测的体素如果在空间位置上整体偏移半格，mIoU 会给出非常差的分数，但实际感知质量可能并无大碍；RayIoU 改为沿射线方向评估命中率，更贴近实际驾驶决策的需求。这一指标提出后被多个后续工作采纳，标志着占据评测体系本身也在走向成熟。SparseOcc 与 SelfOcc、GaussianFormer 共同构成了”把占据网络做得更实用”这一技术方向的三条路线。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.17118">arXiv:2312.17118</a></p>
+<hr>
+<h3 id="3-5-OccNeRF-2023"><a href="#3-5-OccNeRF-2023" class="headerlink" title="3.5 OccNeRF (2023)"></a>3.5 OccNeRF (2023)</h3><blockquote>
+<p><strong>论文</strong>：Zhang, C. et al. “OccNeRF: Advancing 3D Occupancy Prediction in LiDAR-Free Environments.” <em>arXiv:2312.09243</em>, 2023.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：OccNeRF 攻克的是占据网络研究链条上成本最高的环节——3D 标注。产出一帧高质量的稠密占据真值，需要多帧 LiDAR 点云融合、人工校验、语义标注，成本比检测框高一个数量级。OccNeRF 的思路是把占据场用神经辐射场（NeRF）参数化：体素的占据概率对应 NeRF 里的体积密度，语义类别附加在各体素上，整个占据场通过体积渲染公式投影回 2D 图像平面，以渲染图和实际图像的光度一致性作为训练信号——不需要任何 3D 标注。</p>
+<p>OccNeRF 的意义在于打开了”用行车视频自监督训练占据网络”的大门。现实世界的视频数据是几乎无限的，一旦不再依赖稀缺的 3D 标注，模型的训练规模和泛化能力就能得到本质提升。这一思路与 SelfOcc、RenderOcc 形成了同期的自监督占据预测研究浪潮，共同指向同一个终极目标：在大规模无标注视频上预训练出具有强 3D 几何理解能力的占据模型。OccNeRF 在 nuScenes 和 SemanticKITTI 上的验证也表明，神经渲染提供的自监督信号足够强，不仅能学出几何结构，还能初步分离出语义信息。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.09243">arXiv:2312.09243</a></p>
+<hr>
+<h3 id="3-6-其他占据网络工作"><a href="#3-6-其他占据网络工作" class="headerlink" title="3.6 其他占据网络工作"></a>3.6 其他占据网络工作</h3><table>
+<thead>
+<tr>
+<th>论文</th>
+<th>年份</th>
+<th>核心贡献</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>GEOcc</strong></td>
+<td>2024</td>
+<td>显式深度 + 隐式投影 Transformer，最小分辨率 SOTA</td>
+</tr>
+<tr>
+<td><strong>DAOcc</strong></td>
+<td>2024</td>
+<td>3D 检测辅助的多传感器融合占据，轻量 backbone SOTA</td>
+</tr>
+<tr>
+<td><strong>TEOcc</strong></td>
+<td>2024 (ECAI)</td>
+<td>时序增强的雷达-相机占据预测</td>
+</tr>
+<tr>
+<td><strong>OccFiner</strong></td>
+<td>2024</td>
+<td>离线占据精修框架，混合传播提升标注质量</td>
+</tr>
+<tr>
+<td><strong>PanoSSC</strong></td>
+<td>2024</td>
+<td>全景 3D 语义场景补全（几何 + 语义 + 实例）</td>
+</tr>
+<tr>
+<td><strong>Object-Centric Occ</strong></td>
+<td>2024 (NeurIPS)</td>
+<td>物体为中心的占据，补全检测框内的细粒度几何</td>
+</tr>
+<tr>
+<td><strong>Drive-OccWorld</strong></td>
+<td>2025</td>
+<td>占据世界模型 + 4D 占据预测</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="3-7-SurroundOcc-v2-2024"><a href="#3-7-SurroundOcc-v2-2024" class="headerlink" title="3.7 SurroundOcc v2 (2024)"></a>3.7 SurroundOcc v2 (2024)</h3><blockquote>
+<p><strong>论文</strong>：Wei, Y. et al. “SurroundOcc v2: Towards High-Quality 3D Occupancy Prediction with Dense Supervision.” <em>arXiv:2403.15095</em>, 2024.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：SurroundOcc 的升级版，致力于提升占据预测的稠密性和精度。核心改进包括：(1) 稠密深度监督——将 LiDAR 点云投影到图像平面作为稠密深度标签，约束 2D→3D 的视角变换质量；(2) 多尺度占据头——在不同分辨率下预测占据和语义，捕获粗粒度的场景布局和细粒度的物体几何；(3) 增强的时序融合——用可变形注意力聚合多帧 BEV 特征，更好地处理动态物体。在 Occ3D-nuScenes 基准上将 mIoU 从 SurroundOcc 的 35.2% 提升至 42.9%，几何精度显著改善。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.15095">arXiv:2403.15095</a></p>
+<hr>
+<h3 id="3-8-VoxFormer-2023"><a href="#3-8-VoxFormer-2023" class="headerlink" title="3.8 VoxFormer (2023)"></a>3.8 VoxFormer (2023)</h3><blockquote>
+<p><strong>论文</strong>：Li, Y. et al. “VoxFormer: Sparse Voxel Transformer for Camera-based 3D Semantic Scene Completion.” <em>CVPR 2023</em>.</p>
+</blockquote>
+<p>📌 <strong>推荐</strong></p>
+<p><strong>中文摘要</strong>：稀疏体素 Transformer 做基于相机的 3D 语义场景补全。提出两阶段策略：第一阶段用轻量深度估计选出可能被占据的候选体素（稀疏体素候选），第二阶段在这些稀疏候选体素上运行 Transformer 进行占据分类和语义预测。这种”稀疏候选+精准确认”的两阶段设计避免了在全稠密 3D 体素网格上做昂贵的 3D 卷积，大幅降低计算量和内存占用。在 SemanticKITTI 和 nuScenes 上以更低的计算成本达到或超过稠密方法的语义场景补全精度。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2302.12251">arXiv:2302.12251</a></p>
+<hr>
+<h3 id="3-9-TPVFormer-2023"><a href="#3-9-TPVFormer-2023" class="headerlink" title="3.9 TPVFormer (2023)"></a>3.9 TPVFormer (2023)</h3><blockquote>
+<p><strong>论文</strong>：Huang, Y. et al. “Tri-Perspective View for Vision-Based 3D Semantic Occupancy Prediction.” <em>CVPR 2023</em>.</p>
+</blockquote>
+<p>📌 <strong>推荐</strong></p>
+<p><strong>中文摘要</strong>：用三个正交投影面（top-view、front-view、side-view）替代稠密 3D 体素的特征表示。核心创新：3D 空间中每个体素的特征由它在三个正交平面上的投影点的特征求和得到。这种”三视图”表示将 3D 卷积的 O(HWD) 复杂度降低为 3 个 2D 卷积的 O(HW+HD+WD)，实现了对稠密高分辨率占据预测的高效计算。在 Occ3D-nuScenes 上验证了这种表示在精度上不输全 3D 方法，而速度提升数倍。三视图表示的思想启发了后续多个高效占据预测工作。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2302.07817">arXiv:2302.07817</a></p>
+<hr>
+<h3 id="3-10-GaussianFormer-2024"><a href="#3-10-GaussianFormer-2024" class="headerlink" title="3.10 GaussianFormer (2024)"></a>3.10 GaussianFormer (2024)</h3><blockquote>
+<p><strong>论文</strong>：Huang, Y. et al. “GaussianFormer: Scene as Gaussians for Vision-Based 3D Semantic Occupancy Prediction.” <em>ECCV 2024</em>.</p>
+</blockquote>
+<p>📌 <strong>推荐</strong></p>
+<p><strong>中文摘要</strong>：将 3D 占据场景表示为 3D 高斯球（3D Gaussian Splatting）的稀疏集合，彻底摆脱稠密体素表示。每个 3D 高斯球编码一个局部区域的占据概率、语义类别和几何属性（均值、协方差）。通过可微的 splatting 将高斯球渲染到 2D 图像平面，与输入图像做光度一致性比较作为自监督信号。这种”稀疏高斯表示”天然适合自动驾驶场景——大多数空间是空的，只有少部分被物体占据——比稠密体素网格节省数百倍内存。在 Occ3D-nuScenes 上以极低的计算开销取得竞争性精度。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2405.17429">arXiv:2405.17429</a></p>
+<hr>
+<h3 id="3-11-SelfOcc-2024"><a href="#3-11-SelfOcc-2024" class="headerlink" title="3.11 SelfOcc (2024)"></a>3.11 SelfOcc (2024)</h3><blockquote>
+<p><strong>论文</strong>：Huang, Y. et al. “SelfOcc: Self-Supervised Vision-Based 3D Occupancy Prediction.” <em>CVPR 2024</em>.</p>
+</blockquote>
+<p>📌 <strong>推荐</strong></p>
+<p><strong>中文摘要</strong>：首个完全自监督的 3D 占据预测方法。无需任何 3D 占据标签、无需 LiDAR 真值——仅依靠多视角图像之间的时序光度一致性作为训练信号。通过神经辐射场（NeRF）参数化占据场，从多视角图像的体渲染损失中学习 3D 几何。引入时序光度损失和语义渲染损失提升预测质量。在 Occ3D-nuScenes 上，自监督 SelfOcc 在有监督方法的 85% 精度水平上，且无需任何 3D 标注。这对自动驾驶数据的标注成本削减有重要意义——占据标注比检测框标注昂贵一个数量级。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2311.12702">arXiv:2311.12702</a></p>
+<hr>
+<h3 id="3-12-RenderOcc-2024"><a href="#3-12-RenderOcc-2024" class="headerlink" title="3.12 RenderOcc (2024)"></a>3.12 RenderOcc (2024)</h3><blockquote>
+<p><strong>论文</strong>：Pan, M. et al. “RenderOcc: Vision-Centric 3D Occupancy Prediction via 2D Rendering Supervision.” <em>ICRA 2024</em>.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：RenderOcc 的核心洞察是：3D 占据标签稀缺昂贵，但 2D 深度图和语义分割标签相对廉价，而且这两种 2D 标签本质上是 3D 占据场的投影——只要渲染过程可微，就可以用 2D 标签反向训练 3D 占据场。具体地，RenderOcc 在预测出 3D 体素占据场后，通过可微体积渲染将其投影回各视角图像平面，生成预测深度图和语义分割图，再以这些渲染结果与 2D 真值（来自 LiDAR 点云投影的深度或已有 2D 语义分割模型的标签）的差异监督整个网络，完全绕开了 3D 体素真值。</p>
+<p>RenderOcc 在方法论上的贡献是连接了两个研究领域：它把神经渲染领域的可微渲染工具引入了 3D 感知的训练范式，证明了”从 2D 渲染监督 3D 结构”这条路的通达性。这与 OccNeRF、SelfOcc 形成互补——后两者侧重完全无标注的自监督，RenderOcc 则利用了更易获取的 2D 标签，在精度与标注成本之间找到了实用的平衡点。对于希望在大规模无 3D 标注数据集上预训练占据模型的工业应用来说，RenderOcc 提供了一条可行路线。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.12032">arXiv:2402.12032</a></p>
+<hr>
+<h3 id="3-13-UniOcc-2024"><a href="#3-13-UniOcc-2024" class="headerlink" title="3.13 UniOcc (2024)"></a>3.13 UniOcc (2024)</h3><blockquote>
+<p><strong>论文</strong>：Zheng, W. et al. “UniOcc: Unifying Vision-Centric 3D Occupancy Prediction with Geometric and Semantic Rendering.” <em>arXiv:2403.17195</em>, 2024.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：统一几何渲染和语义渲染的占据预测框架。将占据预测分解为两个互补任务——几何占据（哪些体素被填充）和语义占据（填充的体素是什么类别）——并通过统一的 NeRF 风格体渲染同时优化两个目标。关键设计是共享的密度场（同时服务几何和语义渲染），使几何信息和语义信息互相增强。在 Occ3D-nuScenes 和 SemanticKITTI 双基准上验证了统一渲染的优势，尤其在类型稀少的语义类别上改进明显。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.17195">arXiv:2403.17195</a></p>
+<hr>
+<h3 id="3-14-Cam4DOcc-2024"><a href="#3-14-Cam4DOcc-2024" class="headerlink" title="3.14 Cam4DOcc (2024)"></a>3.14 Cam4DOcc (2024)</h3><blockquote>
+<p><strong>论文</strong>：Ma, J. et al. “Cam4DOcc: Benchmark for Camera-Only 4D Occupancy Forecasting in Autonomous Driving Applications.” <em>CVPR 2024 Workshop</em>.</p>
+</blockquote>
+<p>📌 <strong>推荐</strong></p>
+<p><strong>中文摘要</strong>：Cam4DOcc 完成了占据预测领域一次重要的任务升级——从”当前时刻 3D 重建”迈向”未来时刻 3D 预测”。原有的占据网络（SurroundOcc、Occ3D 等）本质上是重建任务：给定当前帧图像，输出当前时刻的 3D 占据场；而 Cam4DOcc 的任务定义是：给定过去若干帧的多视角图像，预测未来若干秒内的 3D 占据演变——哪些区域会被新物体占据、哪些占据区域将消失、哪些保持不变。这是一个时序理解与空间预测的联合挑战。</p>
+<p>Cam4DOcc 为这一任务建立了标准化基准（覆盖 nuScenes、Waymo 等主流数据集），并设计了同时评测几何精度和时序一致性的指标体系。在意义层面，它把占据网络与运动预测、世界模型两条技术线直接对接：4D 占据预测本质上是在占据空间里做世界建模——预测世界未来状态而非重建当前状态，这与第 8 篇世界模型的终极目标一脉相承。Cam4DOcc 的出现为 OccWorld、Drive-OccWorld 等占据世界模型工作提供了评测框架，标志着占据网络研究正式进入”预测性感知”阶段。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2311.17663">arXiv:2311.17663</a></p>
+<hr>
+<p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-02-BEV%E6%84%9F%E7%9F%A5/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/">下一篇 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="category-chain-item">自动驾驶</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/" class="category-chain-item">占据网络与3D场景理解</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
+      
+        <a href="/tags/%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C/" class="print-no-link">#占据网络</a>
+      
+        <a href="/tags/3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/" class="print-no-link">#3D场景理解</a>
+      
+        <a href="/tags/Occupancy/" class="print-no-link">#Occupancy</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>自动驾驶-03：占据网络与 3D 场景理解</div>
+      <div>https://w2ongq6.github.io/2026/07/24/ad/自动驾驶-03-占据网络与3D场景理解/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/" title="自动驾驶-04：端到端规划 —— 从模块化到全栈可微分">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">自动驾驶-04：端到端规划 —— 从模块化到全栈可微分</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-02-BEV%E6%84%9F%E7%9F%A5/" title="自动驾驶-02：BEV 感知 —— 鸟瞰图表示的范式革命">
+                        <span class="hidden-mobile">自动驾驶-02：BEV 感知 —— 鸟瞰图表示的范式革命</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

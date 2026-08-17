@@ -1,0 +1,1097 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="一、引子：Hadoop 1.0 的结构性缺陷上一篇讲到，Hadoop 用 HDFS + MapReduce 解决了”单机存不下、算不动”的问题。但在实际的大规模生产集群里运行一段时间后，工程师们发现了一个根本性的设计缺陷——资源管理和计算逻辑被焊死在同一个组件里。 这个组件叫 JobTracker。 JobTracker 身兼几职在 Hadoop 1.0（也叫 MRv1）的架构里，JobTrack">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大数据-02：YARN —— &quot;资源与计算解耦&quot;这一步棋">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-02-YARN%E8%B5%84%E6%BA%90%E8%B0%83%E5%BA%A6/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="一、引子：Hadoop 1.0 的结构性缺陷上一篇讲到，Hadoop 用 HDFS + MapReduce 解决了”单机存不下、算不动”的问题。但在实际的大规模生产集群里运行一段时间后，工程师们发现了一个根本性的设计缺陷——资源管理和计算逻辑被焊死在同一个组件里。 这个组件叫 JobTracker。 JobTracker 身兼几职在 Hadoop 1.0（也叫 MRv1）的架构里，JobTrack">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-16T08:02:00.000Z">
+<meta property="article:modified_time" content="2026-08-17T06:54:30.937Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="ResourceManager">
+<meta property="article:tag" content="YARN">
+<meta property="article:tag" content="大数据">
+<meta property="article:tag" content="资源调度">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-16 16:02" pubdate>
+          2026年8月16日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          73 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="一、引子：Hadoop-1-0-的结构性缺陷"><a href="#一、引子：Hadoop-1-0-的结构性缺陷" class="headerlink" title="一、引子：Hadoop 1.0 的结构性缺陷"></a>一、引子：Hadoop 1.0 的结构性缺陷</h2><p>上一篇讲到，Hadoop 用 HDFS + MapReduce 解决了”单机存不下、算不动”的问题。但在实际的大规模生产集群里运行一段时间后，工程师们发现了一个根本性的设计缺陷——<strong>资源管理和计算逻辑被焊死在同一个组件里</strong>。</p>
+<p>这个组件叫 <strong>JobTracker</strong>。</p>
+<h3 id="JobTracker-身兼几职"><a href="#JobTracker-身兼几职" class="headerlink" title="JobTracker 身兼几职"></a>JobTracker 身兼几职</h3><p>在 Hadoop 1.0（也叫 MRv1）的架构里，JobTracker 负责以下所有事情：</p>
+<ul>
+<li><strong>资源管理</strong>：追踪集群中每个节点有多少可用的 slot（Map slot 和 Reduce slot）；</li>
+<li><strong>作业调度</strong>：决定哪个任务在哪个节点的哪个 slot 上运行；</li>
+<li><strong>作业监控</strong>：跟踪每个任务的运行状态，处理失败重试；</li>
+<li><strong>心跳管理</strong>：接收所有 TaskTracker（工作节点）的心跳上报。</li>
+</ul>
+<p>一个进程，四种职责。这在小集群里还能应付，但随着集群规模扩大到几百、上千台节点，问题就暴露出来了：</p>
+<p><strong>问题一：单点瓶颈（Scalability）</strong></p>
+<p>所有 TaskTracker 每隔几秒都要向 JobTracker 发心跳。集群有 1000 台节点，每秒就有数百个心跳涌入，JobTracker 既要处理心跳、又要做调度决策、又要维护作业状态，CPU 和内存都承受巨大压力。据当时的工程经验，MapReduce 1.0 在超过 4000 个节点时扩展性就已经很吃力了。</p>
+<p><strong>问题二：单点故障（Availability）</strong></p>
+<p>JobTracker 是单点。它挂掉，整个集群所有正在运行的作业全部失败，必须等 JobTracker 重启后手动重提交。在一个 7×24 小时的生产环境里，这几乎是不可接受的。</p>
+<p><strong>问题三：资源利用率低（Utilization）</strong></p>
+<p>Hadoop 1.0 的资源单位是 <strong>slot</strong>，而且 Map slot 和 Reduce slot 是分开的、不可互换的。一个作业的 Map 阶段跑完了，Map slot 空出来了，但这些 slot 不能给 Reduce 用，更不能给其他类型的作业用。结果是集群里常常一边有资源闲置，一边有作业排队等待。</p>
+<p><strong>问题四：只能跑 MapReduce（Flexibility）</strong></p>
+<p>最致命的一点：JobTracker 的设计是与 MapReduce 的执行模型深度绑定的。它管理的 slot、它处理的任务生命周期、它理解的 map/reduce 两阶段——全都是为 MapReduce 量身定做的。如果你想在这个集群上跑一个图计算（如 Giraph）、或者一个内存计算框架（如早期的 Spark），几乎是不可能的，要么自己维护一套独立集群，要么对 Hadoop 做深度侵入式修改。</p>
+<p>这就是 Hadoop 1.0 留下的历史账单：<strong>一个好用的分布式存储（HDFS），配上一个设计上有天花板的计算框架管理系统（MRv1 的 JobTracker）</strong>。</p>
+<hr>
+<h2 id="二、YARN-的核心思想：解耦"><a href="#二、YARN-的核心思想：解耦" class="headerlink" title="二、YARN 的核心思想：解耦"></a>二、YARN 的核心思想：解耦</h2><p>面对上述问题，Hadoop 社区在 2012 年前后推出了 <strong>YARN（Yet Another Resource Negotiator，另一个资源调度器）</strong>，作为 Hadoop 2.0 的核心改进之一。</p>
+<p>YARN 的设计哲学，用一句话概括：</p>
+<blockquote>
+<p><strong>把”资源管理”从”计算框架”里剥离出来，让集群的资源层变成一个通用的操作系统层。</strong></p>
+</blockquote>
+<p>具体来说，YARN 把原来 JobTracker 的职责拆成了两个相互独立的部分：</p>
+<ol>
+<li><strong>资源管理（Resource Management）</strong>：由全局的 ResourceManager 负责，管全集群的资源；</li>
+<li><strong>作业管理（Job Management）</strong>：由每个作业自己的 ApplicationMaster 负责，管自己这个作业的任务调度和状态。</li>
+</ol>
+<p>这个拆分，表面上看只是把一个大进程拆成了两个，但其意义远不止于此——<strong>它把”集群是什么框架的集群”这个问题的答案，从”MapReduce 的集群”变成了”通用计算集群”</strong>。计算框架不再是特权居民，而是普通应用。</p>
+<p>这是整个大数据生态后来百花齐放的前提。我们后面会反复回到这一点。</p>
+<hr>
+<h2 id="三、YARN-的架构：四个核心角色"><a href="#三、YARN-的架构：四个核心角色" class="headerlink" title="三、YARN 的架构：四个核心角色"></a>三、YARN 的架构：四个核心角色</h2><h3 id="整体架构示意"><a href="#整体架构示意" class="headerlink" title="整体架构示意"></a>整体架构示意</h3><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs css">┌─────────────────────────────────────────────────────┐<br>│                    YARN 集群                         │<br>│                                                     │<br>│   ┌──────────────────────────────────────────────┐  │<br>│   │          ResourceManager (全局唯一)           │  │<br>│   │                                              │  │<br>│   │  ┌────────────────┐  ┌────────────────────┐  │  │<br>│   │  │  Scheduler     │  │ ApplicationsManager│  │  │<br>│   │  │ (资源分配决策)  │  │  (应用生命周期管理)│  │  │<br>│   │  └────────────────┘  └────────────────────┘  │  │<br>│   └──────────────────┬───────────────────────────┘  │<br>│                      │ 心跳 / 资源上报               │<br>│          ┌───────────┼──────────────┐               │<br>│          ▼           ▼              ▼               │<br>│   ┌────────────┐ ┌────────────┐ ┌────────────┐      │<br>│   │NodeManager │ │NodeManager │ │NodeManager │      │<br>│   │  (节点 <span class="hljs-number">1</span>)  │ │  (节点 <span class="hljs-number">2</span>)  │ │  (节点 N)  │      │<br>│   │            │ │            │ │            │      │<br>│   │ ┌────────┐ │ │ ┌────────┐ │ │ ┌────────┐ │      │<br>│   │ │<span class="hljs-attribute">Container</span>│ │ │<span class="hljs-attribute">Container</span>│ │ │ │<span class="hljs-attribute">Container</span>│ │     │<br>│   │ │(任务<span class="hljs-number">1</span>) │ │ │ │(AM)   │ │ │ │(任务<span class="hljs-number">2</span>) │ │      │<br>│   │ └────────┘ │ │ └────────┘ │ │ └────────┘ │      │<br>│   └────────────┘ └────────────┘ └────────────┘      │<br>│                                                     │<br>│   ApplicationMaster(每个作业一个，运行在某个 <span class="hljs-attribute">Container</span> 里)│<br>└─────────────────────────────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<p>下面逐一介绍四个核心角色。</p>
+<hr>
+<h3 id="3-1-ResourceManager（RM）：全局资源大管家"><a href="#3-1-ResourceManager（RM）：全局资源大管家" class="headerlink" title="3.1 ResourceManager（RM）：全局资源大管家"></a>3.1 ResourceManager（RM）：全局资源大管家</h3><p>ResourceManager 是整个 YARN 集群中唯一的全局资源管理者。它内部有两个关键子模块：</p>
+<p><strong>Scheduler（调度器）</strong>：纯粹负责资源分配。它接收来自 ApplicationMaster 的资源请求，结合当前集群各节点的资源状况，决定把哪些资源（Container）分配给哪个请求。注意，Scheduler 只管”分配”，不关心任务的执行、监控和重试——这些都是 ApplicationMaster 的事。</p>
+<p><strong>ApplicationsManager（应用管理器，注意和 ApplicationMaster 区分）</strong>：负责接受客户端提交的新应用，为其分配第一个 Container 来启动 ApplicationMaster，并在 AM 失败时负责重启它。</p>
+<p>ResourceManager 在高可用（HA）模式下可以配置主备节点，通过 ZooKeeper 做主备切换，从而解决 Hadoop 1.0 时代 JobTracker 的单点故障问题。</p>
+<hr>
+<h3 id="3-2-NodeManager（NM）：单机资源守卫"><a href="#3-2-NodeManager（NM）：单机资源守卫" class="headerlink" title="3.2 NodeManager（NM）：单机资源守卫"></a>3.2 NodeManager（NM）：单机资源守卫</h3><p>每台工作节点上运行一个 NodeManager。它的职责：</p>
+<ul>
+<li><strong>定期向 ResourceManager 发心跳</strong>，上报本节点当前可用的资源（CPU、内存），以及本节点上各 Container 的运行状态；</li>
+<li><strong>根据 ResourceManager 的指令，启动和停止 Container</strong>；</li>
+<li><strong>监控 Container 的资源使用</strong>，如果一个 Container 超过了分配给它的内存限额，NodeManager 会将其杀死（防止一个任务拖垮整台机器）；</li>
+<li><strong>管理本地磁盘缓存</strong>，如分布式缓存（DistributedCache）中的文件。</li>
+</ul>
+<p>NodeManager 只是本机资源的执行者，它不理解任务的业务逻辑，不知道也不关心 Container 里跑的是 MapReduce 的 Map 任务还是 Spark 的 Executor。</p>
+<hr>
+<h3 id="3-3-ApplicationMaster（AM）：每个作业的”小-JobTracker”"><a href="#3-3-ApplicationMaster（AM）：每个作业的”小-JobTracker”" class="headerlink" title="3.3 ApplicationMaster（AM）：每个作业的”小 JobTracker”"></a>3.3 ApplicationMaster（AM）：每个作业的”小 JobTracker”</h3><p>ApplicationMaster 是 YARN 设计中最精妙的部分，也是解耦得以成立的关键。</p>
+<p><strong>每提交一个应用（Application），YARN 就会启动一个对应的 ApplicationMaster</strong>，它运行在集群的某个 Container 里。AM 的职责是：</p>
+<ul>
+<li><strong>向 ResourceManager 申请本作业所需的资源</strong>（以 Container 的形式提出请求，指定需要的 CPU 核数、内存量、数据本地性偏好等）；</li>
+<li><strong>与 NodeManager 协作，启动具体的任务 Container</strong>；</li>
+<li><strong>监控任务的运行进度</strong>，处理任务失败的重试；</li>
+<li><strong>作业完成后释放所有资源，注销自己</strong>。</li>
+</ul>
+<p>这里有一个关键的设计思想：<strong>AM 是框架相关的</strong>。MapReduce 有自己的 MRAppMaster，Spark on YARN 有自己的 SparkYarnClient 和 AM，Flink on YARN 有自己的 Flink AM。每个计算框架自己实现 AM，把本框架的调度逻辑封装在 AM 里，YARN 不需要理解这些细节。</p>
+<p>这就是解耦的精髓：<strong>YARN 提供统一的资源层，框架各自实现自己的 AM，双方通过 Container 这个抽象接口交互</strong>。</p>
+<hr>
+<h3 id="3-4-Container：资源抽象单元"><a href="#3-4-Container：资源抽象单元" class="headerlink" title="3.4 Container：资源抽象单元"></a>3.4 Container：资源抽象单元</h3><p>Container 是 YARN 分配资源的基本单位。一个 Container 代表集群上某个节点的一组资源，包含：</p>
+<ul>
+<li>指定量的<strong>内存</strong>（以 MB 为单位）；</li>
+<li>指定数量的<strong>虚拟 CPU 核（vcore）</strong>。</li>
+</ul>
+<p>（较新版本的 YARN 还支持 GPU 等其他资源类型。）</p>
+<p>Container 是一个逻辑概念，在实现层面对应操作系统的进程（以及可选的 cgroup 隔离）。任何东西都跑在 Container 里：ApplicationMaster 本身是一个 Container，每个 Map 任务是一个 Container，每个 Spark Executor 是一个 Container。</p>
+<p>与 Hadoop 1.0 的 slot 不同，<strong>Container 的大小是动态指定的</strong>——不同的任务可以申请不同规格的 Container，不再受限于固定的 Map slot / Reduce slot 划分，资源利用率因此大幅提升。</p>
+<hr>
+<h2 id="四、一个作业的完整生命周期"><a href="#四、一个作业的完整生命周期" class="headerlink" title="四、一个作业的完整生命周期"></a>四、一个作业的完整生命周期</h2><p>把四个角色的互动串起来，以一个 MapReduce 作业为例，描述从提交到完成的全过程：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs css">客户端                ResourceManager        NodeManager(们)         ApplicationMaster<br>   │                       │                      │                       │<br>   │──<span class="hljs-number">1</span>. 提交 Job ─────────▶│                      │                       │<br>   │                       │                      │                       │<br>   │                       │──<span class="hljs-number">2</span>. 找到一台 NM ──────▶│                       │<br>   │                       │   分配 <span class="hljs-attribute">Container</span>      │                       │<br>   │                       │   启动 MRAppMaster ───▶│ 在 <span class="hljs-attribute">Container</span> 里       │<br>   │                       │                      │ 启动 MRAppMaster ─────▶│<br>   │                       │                      │                       │<br>   │                       │◀──<span class="hljs-number">3</span>. AM 向 RM 注册 ───────────────────────────│<br>   │                       │   协商资源请求          │                       │<br>   │                       │                       │                       │<br>   │                       │◀──<span class="hljs-number">4</span>. AM 发 ResourceRequest(N 个 Map/Reduce)───│<br>   │                       │                       │                       │<br>   │                       │──<span class="hljs-number">5</span>. Scheduler 分配 ───▶│(每台 NM)              │<br>   │                       │   <span class="hljs-attribute">Container</span> 列表       │                       │<br>   │                       │                       │                       │<br>   │                       │   <span class="hljs-number">6</span>. AM 通知 NM ────────────────────────────▶ │<br>   │                       │      在对应 <span class="hljs-attribute">Container</span> 里启动 Map/Reduce Task   │<br>   │                       │                       │ 启动任务进程           │<br>   │                       │                       │                       │<br>   │                       │        <span class="hljs-number">7</span>. 任务执行、心跳上报给 AM               │<br>   │                       │                       │──────────────────────▶│<br>   │                       │                       │                       │<br>   │                       │        <span class="hljs-number">8</span>. 作业完成，AM 注销，<span class="hljs-attribute">Container</span> 释放     │<br>   │◀──<span class="hljs-number">9</span>. 客户端轮询结果 ───│                       │                       │<br></code></pre></td></tr></table></figure>
+
+<p>几个值得注意的细节：</p>
+<p><strong>数据本地性（Data Locality）</strong>：AM 在向 RM 申请 Container 时，会携带数据本地性偏好。对于 Map 任务，AM 会告诉 RM”我希望这个任务跑在存有对应 HDFS 数据块的节点上”。RM 的 Scheduler 在做分配决策时会尽量满足这个偏好，实在不行才退而求其次（rack-local 或 off-rack）。这是”移动计算而非移动数据”思想的具体实现。</p>
+<p><strong>心跳驱动</strong>：YARN 的资源分配是<strong>心跳驱动</strong>的，而不是推送式的。NodeManager 向 RM 发心跳，RM 在心跳响应里携带分配决策。这个设计简化了 RM 的实现，但也意味着资源分配有一定的延迟（心跳间隔通常是秒级）。</p>
+<p><strong>ApplicationMaster 的容错</strong>：如果某个 AM 崩溃，ResourceManager 会感知到（心跳超时），并重新启动一个新的 AM。新 AM 启动后可以通过读取已完成任务的输出来恢复作业状态，避免全部重跑。</p>
+<hr>
+<h2 id="五、调度器：多租户下的取舍"><a href="#五、调度器：多租户下的取舍" class="headerlink" title="五、调度器：多租户下的取舍"></a>五、调度器：多租户下的取舍</h2><p>YARN 的 Scheduler 是可插拔的，官方提供了三种实现，分别针对不同的业务场景：</p>
+<h3 id="5-1-FIFO-调度器"><a href="#5-1-FIFO-调度器" class="headerlink" title="5.1 FIFO 调度器"></a>5.1 FIFO 调度器</h3><p>先进先出（First In First Out）。提交早的作业优先获得所有可用资源，后提交的作业必须等前面的作业完全完成后才能开始。</p>
+<p>优点：实现简单，不需要任何配置。</p>
+<p>缺点：不适合生产环境的多租户场景。一个大作业独占资源时，大量小作业（比如报表、Ad hoc 查询）只能无限等待，集群利用率和用户体验都差。</p>
+<p>实用场景：开发调试，或完全受控的单作业流水线。</p>
+<h3 id="5-2-Capacity-调度器（容量调度器）"><a href="#5-2-Capacity-调度器（容量调度器）" class="headerlink" title="5.2 Capacity 调度器（容量调度器）"></a>5.2 Capacity 调度器（容量调度器）</h3><p>Capacity Scheduler 是 Hadoop 社区的默认调度器，由 Yahoo! 主导开发。</p>
+<p><strong>核心思想</strong>：把集群资源按比例划分成若干<strong>队列（Queue）</strong>，每个队列有保证的最低资源容量（capacity）。不同的业务团队/部门使用不同的队列，互不干扰，各有保障。</p>
+<p>主要特性：</p>
+<ul>
+<li><strong>容量保证</strong>：每个队列保证能使用不低于 capacity 比例的资源。</li>
+<li><strong>弹性扩展</strong>：某个队列暂时闲置时，其资源可以借给其他繁忙队列使用，但一旦本队列有新作业进来，借出的资源会被逐步归还。</li>
+<li><strong>层级队列</strong>：队列可以嵌套，形成树状结构（如 root → engineering → ml_team）。</li>
+<li><strong>作业优先级</strong>：队列内部可以配置基于 FIFO 或优先级的调度。</li>
+<li><strong>ACL 控制</strong>：每个队列可以配置哪些用户/组有权提交作业。</li>
+</ul>
+<p>适合场景：大型企业，多个部门共享同一个集群，需要对不同部门的资源使用进行隔离和配额管理。</p>
+<h3 id="5-3-Fair-调度器（公平调度器）"><a href="#5-3-Fair-调度器（公平调度器）" class="headerlink" title="5.3 Fair 调度器（公平调度器）"></a>5.3 Fair 调度器（公平调度器）</h3><p>Fair Scheduler 由 Facebook 开发并贡献给社区。</p>
+<p><strong>核心思想</strong>：让所有提交的作业<strong>公平地共享</strong>集群资源，使每个作业在统计上都能获得相等份额的资源。</p>
+<p>主要特性：</p>
+<ul>
+<li><strong>动态公平</strong>：当集群只有一个作业时，它独占所有资源；当有新作业提交时，一部分资源会从正在运行的作业里”抢占”（preemption）回来分配给新作业，最终达到各作业资源均等。</li>
+<li><strong>抢占（Preemption）</strong>：这是 Fair Scheduler 和 Capacity Scheduler 的重要区别之一。Fair Scheduler 支持强制抢占——如果某个作业长期未获得公平份额，调度器可以杀死其他作业的 Container 来”强制腾出”资源（这有一定代价，需要谨慎配置）。</li>
+<li><strong>队列机制</strong>：同样支持队列，队列内按公平策略调度；跨队列之间也可以配置权重（weighted fair）。</li>
+<li><strong>最小份额保证</strong>：可以为队列配置最低资源保证，防止小作业被完全饿死。</li>
+</ul>
+<p>适合场景：交互式分析、Ad hoc 查询等延迟敏感型场景，希望每个用户的作业都能快速得到响应，而不是排在一个大批处理作业后面无限等待。</p>
+<h3 id="三种调度器对比"><a href="#三种调度器对比" class="headerlink" title="三种调度器对比"></a>三种调度器对比</h3><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs">┌─────────────┬──────────────┬────────────────┬────────────────┐<br>│ 特性         │ FIFO         │ Capacity       │ Fair           │<br>├─────────────┼──────────────┼────────────────┼────────────────┤<br>│ 资源模型     │ 全局单队列    │ 多队列 + 容量   │ 多队列 + 权重  │<br>│ 隔离方式     │ 无           │ 队列容量上限    │ 队列权重公平   │<br>│ 资源弹性     │ 无           │ 可借用闲置容量  │ 动态公平分配   │<br>│ 抢占机制     │ 无           │ 无(默认)        │ 支持           │<br>│ 适合场景     │ 单用户/调试   │ 多租户大集群    │ 交互式多用户   │<br>│ 配置复杂度   │ 低           │ 中             │ 中             │<br>└─────────────┴──────────────┴────────────────┴────────────────┘<br></code></pre></td></tr></table></figure>
+
+<p>实际生产中，Capacity Scheduler 更常见于需要强资源隔离和 SLA 保证的企业场景；Fair Scheduler 更受开发者喜爱，因为它能让每个用户的 Ad hoc 查询都快速得到响应。</p>
+<hr>
+<h2 id="六、解耦的深远意义"><a href="#六、解耦的深远意义" class="headerlink" title="六、解耦的深远意义"></a>六、解耦的深远意义</h2><p>说清了架构和调度器，现在我们回到最重要的问题：<strong>YARN 的解耦，究竟带来了什么？</strong></p>
+<h3 id="6-1-计算框架退化为”YARN-上的一个应用”"><a href="#6-1-计算框架退化为”YARN-上的一个应用”" class="headerlink" title="6.1 计算框架退化为”YARN 上的一个应用”"></a>6.1 计算框架退化为”YARN 上的一个应用”</h3><p>这是最直接的好处。在 YARN 的世界里，<strong>没有任何计算框架是”原住民”</strong>——MapReduce、Spark、Flink、Tez、Storm、Giraph，全都是 YARN 上的普通应用，通过实现 ApplicationMaster 接口来接入 YARN 的资源层。</p>
+<p>它们共享同一套物理资源（CPU、内存、网络），无需各自维护独立的集群。一家公司不再需要”一个跑 MapReduce 的集群”+”一个跑 Spark 的集群”，而是维护<strong>一个 YARN 集群，按需跑任何框架</strong>。这在资源利用率和运维成本上都是巨大的节省。</p>
+<h3 id="6-2-生态爆发的基础设施前提"><a href="#6-2-生态爆发的基础设施前提" class="headerlink" title="6.2 生态爆发的基础设施前提"></a>6.2 生态爆发的基础设施前提</h3><p>更深一层：<strong>没有 YARN 的解耦，Spark、Flink 几乎不可能以今天这个规模繁荣起来</strong>。</p>
+<p>原因很简单：推广一个新的计算框架，最大的障碍不是框架本身的代码有多好，而是<strong>它能跑在哪里</strong>。如果每个新框架都要求用户建一套独立的集群，迁移成本就是天文数字，绝大多数企业根本不会去尝试。</p>
+<p>YARN 把这个障碍移除了。当 Spark 的 YARN 支持成熟后，任何已经有 Hadoop/YARN 集群的企业，都可以<strong>零额外基础设施成本</strong>地试用 Spark——只需要提交一个 Spark 应用到已有的 YARN 集群，几分钟后就能看到结果。这极大地降低了生态中新框架的试用门槛和推广成本。</p>
+<p>从这个角度看，<strong>YARN 不是 Hadoop 的一个内部改进，而是整个大数据生态的”公共操作系统层”</strong>——它让后来的 Spark、Flink 站在了一个统一的资源基座上，而不是各自为战。</p>
+<h3 id="6-3-架构思想：分离关注点（Separation-of-Concerns）"><a href="#6-3-架构思想：分离关注点（Separation-of-Concerns）" class="headerlink" title="6.3 架构思想：分离关注点（Separation of Concerns）"></a>6.3 架构思想：分离关注点（Separation of Concerns）</h3><p>YARN 的解耦是一个经典的”分离关注点”设计。在此之前，”这个集群能跑什么”和”这个集群的资源怎么分配”是同一个问题；在此之后，它们成了两个完全独立的问题，由不同的组件分别负责、分别演进。</p>
+<p>这种分离带来了另一个好处：<strong>各层可以独立优化</strong>。YARN 的 Scheduler 可以单独改进公平性算法，不影响 Spark；Spark 可以在不动 YARN 的情况下优化自己的 AM 实现和 Executor 管理。正交性使系统更健壮、更易演进。</p>
+<h3 id="6-4-YARN-的局限与-Kubernetes-时代的演进"><a href="#6-4-YARN-的局限与-Kubernetes-时代的演进" class="headerlink" title="6.4 YARN 的局限与 Kubernetes 时代的演进"></a>6.4 YARN 的局限与 Kubernetes 时代的演进</h3><p>YARN 解决了”多框架共存”的问题，但它本身也有局限：</p>
+<ul>
+<li><strong>容器模型相对简单</strong>：YARN 的 Container 是进程级隔离，没有 Docker 容器那样的镜像封装和环境一致性保证，部署新框架时依然需要在所有节点上预装依赖；</li>
+<li><strong>主要面向批处理和长运行服务</strong>：YARN 对微服务、在线推理等低延迟服务的调度支持相对有限；</li>
+<li><strong>生态绑定</strong>：YARN 是 Hadoop 生态的一部分，对于完全基于云原生的新架构，引入整套 Hadoop 显得笨重。</li>
+</ul>
+<p>这些局限催生了另一种思路：<strong>用 Kubernetes（K8s）来做大数据的资源调度</strong>。K8s 提供了更标准的容器化、更丰富的资源类型（GPU、TPU）、更好的多租户隔离（Namespace）和更活跃的云原生生态。</p>
+<p>从 Spark 2.3 开始，Spark 官方支持 Kubernetes 作为部署模式（取代或并行于 YARN）；Flink 的 Kubernetes Operator 也日趋成熟。越来越多的新平台选择直接基于 K8s 而不是 YARN。</p>
+<p>但这并不意味着 YARN 被抛弃。对于已经有大规模 Hadoop 集群的企业，YARN 依然是主力资源调度层，而且稳定性和调度效率经过多年生产验证，短期内不会消失。<strong>YARN 和 K8s，代表的是”Hadoop 生态内资源调度”和”云原生资源调度”两条路线，在相当长的时间内会并行存在</strong>。</p>
+<p>从历史的角度看，YARN 做的事情在当时是正确且必要的：在 Hadoop 成为事实标准的年代，它用解耦打开了多框架共存的大门。K8s 后来做了类似的事，只是在更彻底的容器化和云原生语境下重新做了一遍。</p>
+<hr>
+<h2 id="七、小结：YARN-解决了什么，又留下了什么"><a href="#七、小结：YARN-解决了什么，又留下了什么" class="headerlink" title="七、小结：YARN 解决了什么，又留下了什么"></a>七、小结：YARN 解决了什么，又留下了什么</h2><p>YARN 的出现，是大数据演进链条上一个承上启下的关键节点。</p>
+<p><strong>它解决的问题</strong>：</p>
+<ul>
+<li>JobTracker 单点瓶颈 → ResourceManager + HA 支持，集群可扩展到数万节点；</li>
+<li>资源计算耦死 → 解耦，任意框架都可以作为 YARN 应用运行；</li>
+<li>固定 slot 利用率低 → 动态 Container，资源分配更灵活；</li>
+<li>只能跑 MapReduce → 多框架共存成为可能，生态开放。</li>
+</ul>
+<p><strong>它没有解决（也不打算解决）的问题</strong>：</p>
+<ul>
+<li><strong>MapReduce 的慢</strong>：YARN 让 MapReduce 以外的框架能跑起来，但 MapReduce 本身每一步都要把中间结果落回 HDFS 的问题依然存在。迭代计算、机器学习、交互式查询，MapReduce 仍然太慢、太难用。</li>
+<li><strong>流式计算的缺失</strong>：YARN 本质上还是个面向批处理的资源调度器，实时流处理需要专门的计算框架。</li>
+</ul>
+<p>这两个悬而未决的问题，分别指向了大数据演进链条上的下两站：<strong>Spark</strong>（用内存计算打破磁盘瓶颈，解决”慢”和”难用”）和 <strong>Kafka + Flink</strong>（解决流式计算问题）。</p>
+<p>YARN 完成了它的历史使命：<strong>把资源层从计算层解放出来，为后续的百花齐放搭好了舞台</strong>。接下来登场的，是这个舞台上最耀眼的主角之一——Spark。</p>
+<hr>
+<p><strong>大数据专题导航</strong>：<a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-01-%E8%B5%B7%E6%BA%90%E4%B8%8E%E5%9F%BA%E7%9F%B3-Hadoop/">← 上一篇：Hadoop 基石</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/">[目录]</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-03-Spark%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/">下一篇：Spark →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="category-chain-item">大数据</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/YARN/" class="category-chain-item">YARN</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="print-no-link">#大数据</a>
+      
+        <a href="/tags/YARN/" class="print-no-link">#YARN</a>
+      
+        <a href="/tags/%E8%B5%84%E6%BA%90%E8%B0%83%E5%BA%A6/" class="print-no-link">#资源调度</a>
+      
+        <a href="/tags/Hadoop/" class="print-no-link">#Hadoop</a>
+      
+        <a href="/tags/ResourceManager/" class="print-no-link">#ResourceManager</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋</div>
+      <div>https://w2ongq6.github.io/2026/08/16/bigdata/大数据-02-YARN资源调度/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月16日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-03-Spark%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/" title="大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-01-%E8%B5%B7%E6%BA%90%E4%B8%8E%E5%9F%BA%E7%9F%B3-Hadoop/" title="大数据-01：起源与基石 —— 从 Google 三驾马车到 Hadoop">
+                        <span class="hidden-mobile">大数据-01：起源与基石 —— 从 Google 三驾马车到 Hadoop</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

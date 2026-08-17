@@ -1,0 +1,1097 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引子：为什么讲 Flink 之前先讲 Kafka在板块三里，我们看到 Spark 用内存计算打破了 MapReduce 的磁盘瓶颈，把批处理速度提升了一两个数量级。但 Spark 有一个基因层面的局限：它是批处理原生的，流处理只能靠”微批（micro-batch）”来模拟——把数据流切成一个个小批次，按固定间隔触发一次批计算。 微批能凑合用，但它有一道无法逾越的延迟下限——批的时间间隔。想要真正的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大数据-04：Kafka —— 流式时代的数据中枢">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-04-Kafka%E6%B5%81%E6%95%B0%E6%8D%AE%E4%B8%AD%E6%9E%A2/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="引子：为什么讲 Flink 之前先讲 Kafka在板块三里，我们看到 Spark 用内存计算打破了 MapReduce 的磁盘瓶颈，把批处理速度提升了一两个数量级。但 Spark 有一个基因层面的局限：它是批处理原生的，流处理只能靠”微批（micro-batch）”来模拟——把数据流切成一个个小批次，按固定间隔触发一次批计算。 微批能凑合用，但它有一道无法逾越的延迟下限——批的时间间隔。想要真正的">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-16T08:04:00.000Z">
+<meta property="article:modified_time" content="2026-08-17T06:54:38.267Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="commit log">
+<meta property="article:tag" content="大数据">
+<meta property="article:tag" content="流处理">
+<meta property="article:tag" content="消息队列">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>大数据-04：Kafka —— 流式时代的数据中枢 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="大数据-04：Kafka —— 流式时代的数据中枢"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-16 16:04" pubdate>
+          2026年8月16日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          63 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">大数据-04：Kafka —— 流式时代的数据中枢</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="引子：为什么讲-Flink-之前先讲-Kafka"><a href="#引子：为什么讲-Flink-之前先讲-Kafka" class="headerlink" title="引子：为什么讲 Flink 之前先讲 Kafka"></a>引子：为什么讲 Flink 之前先讲 Kafka</h2><p>在板块三里，我们看到 Spark 用内存计算打破了 MapReduce 的磁盘瓶颈，把批处理速度提升了一两个数量级。但 Spark 有一个基因层面的局限：它是批处理原生的，流处理只能靠”微批（micro-batch）”来模拟——把数据流切成一个个小批次，按固定间隔触发一次批计算。</p>
+<p>微批能凑合用，但它有一道无法逾越的延迟下限——批的时间间隔。想要真正的毫秒级流处理，微批帮不到你。这就引出了板块五的主角 Flink。</p>
+<p>然而，在谈 Flink 如何计算之前，有一个更基础的问题必须先解决：<strong>数据从哪里来？</strong></p>
+<p>流式计算的本质是持续处理到来的事件。这意味着你需要一条”河流”，而不是一个”水桶”：</p>
+<ul>
+<li>数据源源不断地生产，不能因为计算引擎短暂宕机就永久丢失；</li>
+<li>多个下游消费者（Flink 作业、实时报表、数仓同步……）需要各自独立消费，互不干扰；</li>
+<li>如果计算出了 bug，需要从几小时前的某个时间点**重放（replay）**数据来修正结果；</li>
+<li>吞吐量必须能跟上生产侧的高并发写入。</li>
+</ul>
+<p>传统消息队列（如 RabbitMQ）无法满足这些需求——它的语义是”消费即删除”，消息一旦被取走就从队列里消失，既不能回放，也难以支持多个独立的消费者各自维护进度。</p>
+<p><strong>Kafka 正是为了填补这个空白而生的。<strong>它不把自己定位成消息队列，而是一个</strong>分布式的、分区的、持久化的提交日志（distributed, partitioned, persistent commit log）平台</strong>。这个定位的转变，是流式时代最重要的基础设施革命之一。</p>
+<hr>
+<h2 id="核心抽象：提交日志（Commit-Log）"><a href="#核心抽象：提交日志（Commit-Log）" class="headerlink" title="核心抽象：提交日志（Commit Log）"></a>核心抽象：提交日志（Commit Log）</h2><p>理解 Kafka 的钥匙只有一个词：<strong>commit log</strong>。</p>
+<p>数据库领域早就有 commit log（也叫 WAL，Write-Ahead Log）的概念——数据库在把数据改写到实际存储之前，先把操作追加写到一条日志里。这条日志有几个关键属性：</p>
+<ol>
+<li><strong>追加写（append-only）</strong>：永远在末尾追加，不修改已有的记录；</li>
+<li><strong>有序</strong>：日志里的每条记录都有一个单调递增的序号；</li>
+<li><strong>持久化</strong>：落盘，机器重启后仍在；</li>
+<li><strong>可重放</strong>：给你一个起始位置，你可以从那里开始重新”消费”整条日志。</li>
+</ol>
+<p>Kafka 把这个抽象搬到了分布式消息领域，并以此为基础构建了整个系统。</p>
+<h3 id="与传统消息队列的根本差异"><a href="#与传统消息队列的根本差异" class="headerlink" title="与传统消息队列的根本差异"></a>与传统消息队列的根本差异</h3><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs css">传统消息队列（RabbitMQ 为例）：<br>  Producer → <span class="hljs-selector-attr">[Queue]</span> → Consumer<br>                消费后消息被删除<br><br>Kafka：<br>  Producer → <span class="hljs-selector-attr">[Partition 0: offset 0, 1, 2, 3, 4, ...]</span><br>  Producer → <span class="hljs-selector-attr">[Partition 1: offset 0, 1, 2, 3, 4, ...]</span><br>  Producer → <span class="hljs-selector-attr">[Partition 2: offset 0, 1, 2, 3, 4, ...]</span><br>                Consumer <span class="hljs-selector-tag">A</span> 记住自己的 <span class="hljs-attribute">offset</span>，按自己的节奏消费<br>                Consumer <span class="hljs-selector-tag">B</span> 记住自己的 <span class="hljs-attribute">offset</span>，互不干扰<br>                日志按配置的保留策略（时间或大小）留存<br></code></pre></td></tr></table></figure>
+
+<p>这个差异看似微小，实则颠覆了消息中间件的使用范式：</p>
+<ul>
+<li><strong>消息不再是”易消耗品”</strong>，而是持久的历史记录；</li>
+<li><strong>消费进度由消费者持有（offset）</strong>，而不是由 broker 管理；</li>
+<li><strong>同一批数据可以被多个消费者独立消费，互不影响</strong>；</li>
+<li><strong>回放（replay）成为一等功能</strong>，只需把 offset 重置到某个历史位置即可。</li>
+</ul>
+<p>这正是流式基础设施所需要的”河流”特质：水流过去了，但河床记得，你可以逆流而上。</p>
+<hr>
+<h2 id="架构详解"><a href="#架构详解" class="headerlink" title="架构详解"></a>架构详解</h2><h3 id="Topic、Partition-与-Offset"><a href="#Topic、Partition-与-Offset" class="headerlink" title="Topic、Partition 与 Offset"></a>Topic、Partition 与 Offset</h3><p><strong>Topic</strong> 是逻辑上的数据分类，类似数据库的表名。一个 Kafka 集群里可以有成百上千个 Topic，每个 Topic 对应一类业务数据（用户行为日志、订单事件、传感器数据……）。</p>
+<p><strong>Partition</strong> 是 Topic 的物理分片，每个 Topic 在创建时被划分为若干个 Partition。每个 Partition 就是一条独立的 commit log：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs sql">Topic: <span class="hljs-keyword">user</span><span class="hljs-operator">-</span>events（分 <span class="hljs-number">3</span> 个 <span class="hljs-keyword">Partition</span>）<br><br><span class="hljs-keyword">Partition</span> <span class="hljs-number">0</span>: [msg<span class="hljs-variable">@0</span>] [msg<span class="hljs-variable">@1</span>] [msg<span class="hljs-variable">@2</span>] [msg<span class="hljs-variable">@3</span>] [msg<span class="hljs-variable">@4</span>] ...<br>                                                       ↑ 最新写入的末尾<br><br><span class="hljs-keyword">Partition</span> <span class="hljs-number">1</span>: [msg<span class="hljs-variable">@0</span>] [msg<span class="hljs-variable">@1</span>] [msg<span class="hljs-variable">@2</span>] ...<br><br><span class="hljs-keyword">Partition</span> <span class="hljs-number">2</span>: [msg<span class="hljs-variable">@0</span>] [msg<span class="hljs-variable">@1</span>] [msg<span class="hljs-variable">@2</span>] [msg<span class="hljs-variable">@3</span>] ...<br></code></pre></td></tr></table></figure>
+
+<p><strong>Offset</strong> 是 Partition 内每条消息的序号，单调递增，从 0 开始。消费者通过记录”我消费到了哪个 Partition 的哪个 Offset”来跟踪自己的进度。</p>
+<p>Partition 的存在让 Kafka 天然具备了水平扩展能力：不同 Partition 可以分布在不同的 Broker（节点）上，读写负载随 Partition 数量线性增长。</p>
+<h3 id="Producer：写入与分区路由"><a href="#Producer：写入与分区路由" class="headerlink" title="Producer：写入与分区路由"></a>Producer：写入与分区路由</h3><p>Producer 把消息写入指定 Topic。写入时需要决定消息落入哪个 Partition，路由策略有三种：</p>
+<ul>
+<li><strong>指定 key</strong>：对 key 做哈希，相同 key 的消息落入同一 Partition，保证局部有序（如同一用户的所有事件顺序到达）；</li>
+<li><strong>轮询（round-robin）</strong>：无 key 时默认轮询各 Partition，最大化吞吐；</li>
+<li><strong>自定义 Partitioner</strong>：业务自定义路由逻辑。</li>
+</ul>
+<p>Producer 默认批量发送——在本地累积一批消息后一次性发出，减少网络往返。批量大小和等待时间（<code>batch.size</code>、<code>linger.ms</code>）可调，是吞吐与延迟的权衡旋钮。</p>
+<h3 id="Consumer-Group：并行消费与负载均衡"><a href="#Consumer-Group：并行消费与负载均衡" class="headerlink" title="Consumer Group：并行消费与负载均衡"></a>Consumer Group：并行消费与负载均衡</h3><p>这是 Kafka 设计里最精妙的一个机制。</p>
+<p>每个 Consumer 属于一个 <strong>Consumer Group</strong>。Kafka 保证：<strong>一个 Partition 在同一时刻只能被同一 Consumer Group 内的一个 Consumer 消费</strong>。</p>
+<p>这个约束带来了自然的并行消费模型：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs mathematica"><span class="hljs-variable">Topic</span><span class="hljs-operator">:</span> <span class="hljs-variable">user</span><span class="hljs-operator">-</span><span class="hljs-variable">events</span>（<span class="hljs-number">3</span> 个 <span class="hljs-built_in">Partition</span>）<br><br><span class="hljs-variable">Consumer</span> <span class="hljs-variable">Group</span> <span class="hljs-variable">A</span>（<span class="hljs-variable">Flink</span> 作业，<span class="hljs-number">3</span> 个并行度）：<br>  <span class="hljs-variable">Flink</span> <span class="hljs-variable">Task</span> <span class="hljs-number">0</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">0</span><br>  <span class="hljs-variable">Flink</span> <span class="hljs-variable">Task</span> <span class="hljs-number">1</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">1</span><br>  <span class="hljs-variable">Flink</span> <span class="hljs-variable">Task</span> <span class="hljs-number">2</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">2</span><br>  （完美的 <span class="hljs-number">1</span><span class="hljs-operator">:</span><span class="hljs-number">1</span> 分配，最大并行）<br><br><span class="hljs-variable">Consumer</span> <span class="hljs-variable">Group</span> <span class="hljs-variable">B</span>（实时报表服务，<span class="hljs-number">2</span> 个实例）：<br>  <span class="hljs-variable">Report</span><span class="hljs-operator">-</span><span class="hljs-number">1</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">0</span> <span class="hljs-operator">+</span> <span class="hljs-built_in">Partition</span> <span class="hljs-number">1</span><br>  <span class="hljs-variable">Report</span><span class="hljs-operator">-</span><span class="hljs-number">2</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">2</span><br>  （<span class="hljs-number">2</span> 个消费者分担 <span class="hljs-number">3</span> 个 <span class="hljs-built_in">Partition</span>）<br><br><span class="hljs-variable">Consumer</span> <span class="hljs-variable">Group</span> <span class="hljs-built_in">C</span>（数仓同步，<span class="hljs-number">1</span> 个进程）：<br>  <span class="hljs-variable">Sync</span><span class="hljs-operator">-</span><span class="hljs-number">1</span>  →  <span class="hljs-built_in">Partition</span> <span class="hljs-number">0</span> <span class="hljs-operator">+</span> <span class="hljs-built_in">Partition</span> <span class="hljs-number">1</span> <span class="hljs-operator">+</span> <span class="hljs-built_in">Partition</span> <span class="hljs-number">2</span><br>  （单进程，串行消费所有 <span class="hljs-built_in">Partition</span>）<br></code></pre></td></tr></table></figure>
+
+<p>A、B、C 三个 Consumer Group 各自维护独立的 offset，互不干扰——同一批数据被三个下游”各取所需”，而 Kafka 不需要为此复制数据。这正是”解耦生产者与消费者”的精髓。</p>
+<p>当 Consumer Group 内的消费者数量发生变化（节点宕机或扩容），Kafka 会触发 <strong>Rebalance</strong>：重新分配哪个消费者负责哪些 Partition。Rebalance 期间消费暂停，这是一个已知的延迟开销，较新版本的 Kafka 引入了增量式 Rebalance（Incremental Cooperative Rebalancing）来缩短暂停时间。</p>
+<h3 id="Broker-与-ISR-副本机制"><a href="#Broker-与-ISR-副本机制" class="headerlink" title="Broker 与 ISR 副本机制"></a>Broker 与 ISR 副本机制</h3><p><strong>Broker</strong> 是 Kafka 的服务端节点。一个 Kafka 集群由多个 Broker 组成，每个 Broker 存储若干 Partition 的数据。</p>
+<p>单个 Partition 的数据只存在一台机器上显然不可靠。Kafka 为每个 Partition 维护多个副本（replica），其中一个是 <strong>Leader</strong>，其余是 <strong>Follower</strong>：</p>
+<ul>
+<li>所有读写请求都走 Leader；</li>
+<li>Follower 从 Leader 异步拉取数据进行同步。</li>
+</ul>
+<p><strong>ISR（In-Sync Replicas，同步副本集合）</strong> 是核心的可靠性机制。ISR 是一个动态集合，包含”与 Leader 保持充分同步”的副本。判定标准是：Follower 在一定时间窗口内（<code>replica.lag.time.max.ms</code>）没有落后 Leader 超过阈值，就保持在 ISR 内；否则被踢出。</p>
+<p>当 Producer 写入消息时，可以要求 Broker 等待 ISR 内所有（或指定数量）副本确认后再返回成功（<code>acks=all</code>）。这保证了即便 Leader 立刻宕机，ISR 内任意一个 Follower 晋升为新 Leader 后数据也不丢失。</p>
+<p>这是 Kafka **”不丢消息”**承诺的底层实现：不是单点落盘，而是多副本 ISR 的集体确认。</p>
+<h3 id="ZooKeeper-与-KRaft"><a href="#ZooKeeper-与-KRaft" class="headerlink" title="ZooKeeper 与 KRaft"></a>ZooKeeper 与 KRaft</h3><p>早期（2.x 及以前），Kafka 依赖 <strong>ZooKeeper</strong> 存储集群元数据（Broker 列表、Topic 配置、Partition Leader 信息、Consumer Group offset 等）。ZooKeeper 是一个独立的分布式协调服务，运维 Kafka 意味着同时运维两套系统。</p>
+<p>从 Kafka 3.x 开始，社区推出了 <strong>KRaft 模式</strong>（Kafka Raft Metadata mode）：用 Kafka 内置的 Raft 协议自管理元数据，彻底去除 ZooKeeper 依赖。KRaft 模式在 3.3 起成为生产可用选项，在 4.0 起 ZooKeeper 模式已被移除。</p>
+<p>KRaft 的好处不只是减少运维复杂度，更关键的是它解决了 ZooKeeper 成为扩展瓶颈的问题：ZooKeeper 在管理超大规模 Partition 时会成为性能瓶颈，KRaft 把这个上限大幅提高。</p>
+<hr>
+<h2 id="为什么快：四个设计决策的叠加"><a href="#为什么快：四个设计决策的叠加" class="headerlink" title="为什么快：四个设计决策的叠加"></a>为什么快：四个设计决策的叠加</h2><p>Kafka 能在普通机械磁盘上实现极高吞吐，是四个设计决策共同作用的结果。每一个单独看都不新鲜，但叠加在一起，就形成了”磁盘也能很快”的经典案例。</p>
+<h3 id="1-顺序写磁盘"><a href="#1-顺序写磁盘" class="headerlink" title="1. 顺序写磁盘"></a>1. 顺序写磁盘</h3><p>磁盘的随机 IO 很慢（寻道时间），但顺序 IO 可以达到接近内存的吞吐——现代机械硬盘的顺序写速度通常在 100–200 MB/s 量级，远高于随机写的几 MB/s。</p>
+<p>Kafka 的 commit log 是 append-only 的：每次写入都追加到文件末尾，从不修改已有位置。这让 Kafka 的写入天然是顺序 IO，完美地规避了磁盘最贵的那部分开销。</p>
+<p>与之对比，传统消息队列（如 RabbitMQ 的某些存储模式）需要维护复杂的索引结构，导致写入存在随机 IO；Kafka 用极简的追加写换来了极高的写入速度。</p>
+<h3 id="2-零拷贝（Zero-Copy）"><a href="#2-零拷贝（Zero-Copy）" class="headerlink" title="2. 零拷贝（Zero-Copy）"></a>2. 零拷贝（Zero-Copy）</h3><p>消息从磁盘发送给网络消费者，在传统做法下要经历四次数据拷贝：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">传统路径（<span class="hljs-number">4</span> 次拷贝，<span class="hljs-number">2</span> 次内核态<span class="hljs-operator">/</span>用户态切换）：<br>  磁盘 → 内核页缓存（<span class="hljs-variable">Page</span> <span class="hljs-variable">Cache</span>）<br>  内核页缓存 → 用户空间缓冲区<br>  用户空间缓冲区 → 内核 <span class="hljs-built_in">Socket</span> 缓冲区<br>  内核 <span class="hljs-built_in">Socket</span> 缓冲区 → 网卡 <span class="hljs-variable">DMA</span> 缓冲区<br></code></pre></td></tr></table></figure>
+
+<p>Kafka 利用 Linux 的 <code>sendfile()</code> 系统调用，让数据直接从页缓存传输到网卡，跳过用户空间：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs css">零拷贝路径（sendfile，<span class="hljs-number">2</span> 次拷贝，<span class="hljs-number">0</span> 次用户态切换）：<br>  磁盘 → 内核页缓存（<span class="hljs-attribute">Page</span> Cache）<br>  内核页缓存 → 网卡 DMA 缓冲区（通过 sendfile 直传）<br></code></pre></td></tr></table></figure>
+
+<p>在大量小消息的高并发场景下，这两条路径的 CPU 开销差异巨大。零拷贝让 Kafka 的网络传输开销接近理论下限。</p>
+<h3 id="3-批量压缩"><a href="#3-批量压缩" class="headerlink" title="3. 批量压缩"></a>3. 批量压缩</h3><p>Producer 在本地积累一批消息，打包成一个 batch 再发送。Broker 将整个 batch 作为一个单元落盘，Consumer 拉取也是按 batch 拉取。</p>
+<p>批量处理有两重收益：</p>
+<ul>
+<li><strong>减少网络往返次数</strong>：一次 RTT 传输大量消息，而不是每条消息一次 RTT；</li>
+<li><strong>压缩率更高</strong>：相同类型的消息批在一起，重复字段多，压缩率远高于逐条压缩。</li>
+</ul>
+<p>Kafka 支持 Snappy、LZ4、ZSTD 等压缩算法，实际使用中消息体积可以压缩到原始大小的 20%–50%，既节省网络带宽，也节省存储空间。</p>
+<h3 id="4-Page-Cache-优先"><a href="#4-Page-Cache-优先" class="headerlink" title="4. Page Cache 优先"></a>4. Page Cache 优先</h3><p>Kafka 几乎不自己管内存缓存，而是将大量数据操作委托给操作系统的 <strong>Page Cache</strong>（内核管理的磁盘缓冲区）。当 Broker 写入消息时，数据先进 Page Cache；当 Consumer 消费近实时的数据时，很可能直接从 Page Cache 命中，根本不需要真正读磁盘。</p>
+<p>这个设计有一个微妙的好处：Page Cache 在 Kafka 进程重启后仍然存在（它属于操作系统），而进程内自管的 JVM 堆缓存重启即清空。对于运行数月不停的生产集群，这意味着更稳定的缓存命中率。</p>
+<hr>
+<h2 id="交付语义：消息究竟会丢还是重复？"><a href="#交付语义：消息究竟会丢还是重复？" class="headerlink" title="交付语义：消息究竟会丢还是重复？"></a>交付语义：消息究竟会丢还是重复？</h2><p>流式系统里，”消息不丢不重”是一个经典难题。Kafka 将其拆解为三个层次：</p>
+<h3 id="At-Most-Once（最多一次）"><a href="#At-Most-Once（最多一次）" class="headerlink" title="At-Most-Once（最多一次）"></a>At-Most-Once（最多一次）</h3><p>消息最多被处理一次，可能丢失，不会重复。</p>
+<p>实现方式：Producer 发出后不等确认（<code>acks=0</code>），Consumer 拉取后立刻提交 offset，再处理消息。如果处理中途崩溃，消息丢失。</p>
+<p>适用场景：对丢失容忍但对重复零容忍的场景（如日志采样）。</p>
+<h3 id="At-Least-Once（至少一次）"><a href="#At-Least-Once（至少一次）" class="headerlink" title="At-Least-Once（至少一次）"></a>At-Least-Once（至少一次）</h3><p>消息至少被处理一次，不会丢失，但可能重复。</p>
+<p>实现方式：Producer 开启重试（<code>acks=all</code> + <code>retries&gt;0</code>），Consumer 处理完消息后再提交 offset。如果处理成功但 offset 提交失败，崩溃恢复后会重新处理同一批消息。</p>
+<p>这是绝大多数生产场景的默认选择，下游需要做幂等处理来应对重复。</p>
+<h3 id="Exactly-Once（精确一次）"><a href="#Exactly-Once（精确一次）" class="headerlink" title="Exactly-Once（精确一次）"></a>Exactly-Once（精确一次）</h3><p>消息恰好被处理一次，既不丢失也不重复。</p>
+<p>这是最难实现的语义，Kafka 通过两个机制来支撑：</p>
+<p><strong>幂等 Producer（Idempotent Producer）</strong>：每个 Producer 实例有全局唯一的 Producer ID（PID），每条消息带有单调递增的序列号（Sequence Number）。Broker 检测到重复序列号时直接丢弃，从而去除 Producer 重试导致的重复写入。启用方式：<code>enable.idempotence=true</code>。</p>
+<p><strong>Kafka 事务（Transactions）</strong>：Producer 可以在一个原子事务里向多个 Topic/Partition 写入消息——要么全部成功，要么全部回滚。Consumer 端可以设置 <code>isolation.level=read_committed</code>，只读取已提交事务的消息，过滤掉中间状态。</p>
+<p>这两个机制组合，使 Flink 等流引擎能在 Kafka-to-Kafka 的处理链路上实现端到端的 exactly-once——这是 Flink checkpoint 与 Kafka 事务深度配合的基础，板块五会详细展开。</p>
+<hr>
+<h2 id="Kafka-在数据架构中的角色"><a href="#Kafka-在数据架构中的角色" class="headerlink" title="Kafka 在数据架构中的角色"></a>Kafka 在数据架构中的角色</h2><h3 id="解耦：生产者与消费者的完全分离"><a href="#解耦：生产者与消费者的完全分离" class="headerlink" title="解耦：生产者与消费者的完全分离"></a>解耦：生产者与消费者的完全分离</h3><p>没有 Kafka 的世界里，生产者和消费者必须直接对接：A 服务调 B 服务的接口，B 挂了 A 就堵死；B 需要扩容，A 的调用逻辑要跟着改。</p>
+<p>有了 Kafka 之后：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs css">生产者（各业务服务）        Kafka                  消费者（各下游系统）<br>  App 服务器      →  <span class="hljs-selector-attr">[Topic: user-events]</span>  →  Flink 实时分析作业<br>  移动端埋点      →  <span class="hljs-selector-attr">[Topic: user-events]</span>  →  实时推荐引擎<br>  支付系统        →  <span class="hljs-selector-attr">[Topic: order-events]</span> →  数仓 ETL 同步<br>                                            →  风控系统<br>                                            →  对账服务<br></code></pre></td></tr></table></figure>
+
+<p>生产者只管写入，不关心谁在消费；消费者只管从自己的 offset 读取，不关心谁在生产。双方通过 Kafka 这层”日志”完全解耦，独立部署、独立扩展、独立故障。</p>
+<h3 id="可重放：修复-bug-的超能力"><a href="#可重放：修复-bug-的超能力" class="headerlink" title="可重放：修复 bug 的超能力"></a>可重放：修复 bug 的超能力</h3><p>传统消息队列消费即删除，一旦消费者处理时存在 bug，那批消息永久丢失，无法回头。</p>
+<p>Kafka 的消息保留在日志里（默认 7 天，可调），任何时候都可以：</p>
+<ol>
+<li>把消费者的 offset 重置到某个历史时间点；</li>
+<li>重新消费那段时间的所有数据；</li>
+<li>把修复 bug 后的正确结果写入下游。</li>
+</ol>
+<p>这个”时间旅行”能力在生产环境里价值巨大——它把”数据处理错了怎么办”从一个灾难级问题变成了一个日常运维操作。</p>
+<h3 id="Lambda-与-Kappa-架构的骨架"><a href="#Lambda-与-Kappa-架构的骨架" class="headerlink" title="Lambda 与 Kappa 架构的骨架"></a>Lambda 与 Kappa 架构的骨架</h3><p><strong>Lambda 架构</strong>是流批并行的经典方案：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs">数据源 → Kafka → 批处理层（Spark）→ 批次视图<br>              → 流处理层（Storm/Flink）→ 实时视图<br>                                      → 合并 → 查询层<br></code></pre></td></tr></table></figure>
+
+<p>Kafka 在这里是数据的”分叉点”——原始数据只写一份，批处理层和流处理层各自独立消费，批层用来修正流层的误差，流层提供低延迟实时视图。</p>
+<p><strong>Kappa 架构</strong>是 Lambda 的简化版，去掉批处理层，只保留流处理层：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs">数据源 → Kafka（长期保留日志）→ 流处理层（Flink）→ 结果存储<br></code></pre></td></tr></table></figure>
+
+<p>当需要重新计算时，直接从 Kafka 历史日志重放，用流处理引擎处理完整历史数据。这成立的前提，正是 Kafka 的长期保留能力——日志足够长，Kappa 就能替代批处理层。</p>
+<p>没有 Kafka 这条可重放的”数据河流”，Kappa 架构是无法成立的。</p>
+<h3 id="Kafka-作为-Flink-的典型-Source-Sink"><a href="#Kafka-作为-Flink-的典型-Source-Sink" class="headerlink" title="Kafka 作为 Flink 的典型 Source/Sink"></a>Kafka 作为 Flink 的典型 Source/Sink</h3><p>Flink 与 Kafka 的配合几乎是现代流式架构的标准范式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">外部事件 → Kafka（<span class="hljs-built_in">source</span> topic）→ Flink 流处理 → Kafka（sink topic）→ 下游消费<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Flink 作为 Consumer</strong>：Flink 作业的每个并行实例对应若干 Kafka Partition，天然并行；Flink 的 checkpoint 时机与 Kafka offset 提交绑定，实现端到端 exactly-once；</li>
+<li><strong>Flink 作为 Producer</strong>：Flink 计算结果写回 Kafka 的下游 Topic，供其他系统消费；</li>
+<li><strong>可重放 + 可恢复</strong>：Flink 作业失败后从 checkpoint 恢复，重置 Kafka offset 到对应位置，从那里重新消费，保证状态一致性。</li>
+</ul>
+<p>这个组合的深度整合，是”真正的流式计算”成为可能的基础设施前提，也是板块五要深入展开的内容。</p>
+<hr>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>Kafka 在大数据发展主线上解决的是一个基础设施级的问题：<strong>如何为流式计算提供一条”持续、可靠、可重放”的数据供给</strong>。</p>
+<p>它的核心贡献可以归结为三点：</p>
+<ol>
+<li><p><strong>用 commit log 重新定义消息中间件</strong>：从”消费即删除的队列”升级为”持久化的、可多消费者独立消费的分布式日志”，让消息不再是易耗品，而是历史记录。</p>
+</li>
+<li><p><strong>用顺序写、零拷贝、批量压缩、Page Cache 四个机制的叠加</strong>，在普通磁盘上实现了极高吞吐，证明了”存储介质的快慢不全由硬件决定，访问模式同样关键”。</p>
+</li>
+<li><p><strong>用 Consumer Group + offset 机制</strong>实现了生产者与消费者的彻底解耦，以及多下游的并行独立消费，让同一份数据可以同时服务实时计算、批量同步、风控分析等多个截然不同的场景。</p>
+</li>
+</ol>
+<p>Kafka 把”数据河流”这个问题解决了。河床铺好、水流稳定、可以随时回溯。现在，流式计算引擎终于有了一个足够稳固的数据基础。</p>
+<p>数据就位，下一步是<strong>如何正确地计算它</strong>——这正是板块五 Flink 要回答的问题：event-time、watermark、exactly-once 状态，以及”批是有界的流”这一统一世界观。</p>
+<hr>
+<p><strong>大数据专题导航</strong>：<a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-03-Spark%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/">← 上一篇：Spark</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/">[目录]</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-05-Flink%E7%9C%9F%E6%B5%81%E5%BC%8F/">下一篇：Flink →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="category-chain-item">大数据</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/Kafka/" class="category-chain-item">Kafka</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="print-no-link">#大数据</a>
+      
+        <a href="/tags/%E6%B5%81%E5%A4%84%E7%90%86/" class="print-no-link">#流处理</a>
+      
+        <a href="/tags/Kafka/" class="print-no-link">#Kafka</a>
+      
+        <a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="print-no-link">#消息队列</a>
+      
+        <a href="/tags/commit-log/" class="print-no-link">#commit log</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>大数据-04：Kafka —— 流式时代的数据中枢</div>
+      <div>https://w2ongq6.github.io/2026/08/16/bigdata/大数据-04-Kafka流数据中枢/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月16日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-05-Flink%E7%9C%9F%E6%B5%81%E5%BC%8F/" title="大数据-05：Flink —— 真正的流式与批流统一">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">大数据-05：Flink —— 真正的流式与批流统一</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-03-Spark%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/" title="大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈">
+                        <span class="hidden-mobile">大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

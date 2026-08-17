@@ -1,0 +1,1204 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="一、引子：MapReduce 慢在哪、难用在哪上一篇讲 YARN 时留下一个悬案：YARN 完成了”解耦”，让 Spark、Flink 得以和 MapReduce 共存于同一个集群。但为什么非得把 MapReduce 换掉？它具体慢在哪，又难用在哪？ 1.1 慢的根源：每一步都要落盘MapReduce 的执行模型可以用一句话概括：Map 产出中间结果写本地磁盘，Reduce 从所有 Mapper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-03-Spark%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="一、引子：MapReduce 慢在哪、难用在哪上一篇讲 YARN 时留下一个悬案：YARN 完成了”解耦”，让 Spark、Flink 得以和 MapReduce 共存于同一个集群。但为什么非得把 MapReduce 换掉？它具体慢在哪，又难用在哪？ 1.1 慢的根源：每一步都要落盘MapReduce 的执行模型可以用一句话概括：Map 产出中间结果写本地磁盘，Reduce 从所有 Mapper">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-16T08:03:00.000Z">
+<meta property="article:modified_time" content="2026-08-17T06:55:09.223Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="DAG">
+<meta property="article:tag" content="RDD">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="SparkSQL">
+<meta property="article:tag" content="内存计算">
+<meta property="article:tag" content="大数据">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-16 16:03" pubdate>
+          2026年8月16日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          94 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="一、引子：MapReduce-慢在哪、难用在哪"><a href="#一、引子：MapReduce-慢在哪、难用在哪" class="headerlink" title="一、引子：MapReduce 慢在哪、难用在哪"></a>一、引子：MapReduce 慢在哪、难用在哪</h2><p>上一篇讲 YARN 时留下一个悬案：YARN 完成了”解耦”，让 Spark、Flink 得以和 MapReduce 共存于同一个集群。但为什么非得把 MapReduce 换掉？它具体慢在哪，又难用在哪？</p>
+<h3 id="1-1-慢的根源：每一步都要落盘"><a href="#1-1-慢的根源：每一步都要落盘" class="headerlink" title="1.1 慢的根源：每一步都要落盘"></a>1.1 慢的根源：每一步都要落盘</h3><p>MapReduce 的执行模型可以用一句话概括：<strong>Map 产出中间结果写本地磁盘，Reduce 从所有 Mapper 拉数据再写 HDFS，下一步 Job 再从 HDFS 读</strong>。</p>
+<p>用文字描绘一个三步迭代的数据处理流程：</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs arcade">输入(HDFS)<br>   │  <span class="hljs-built_in">Map</span> → 写本地磁盘(shuffle) → <span class="hljs-built_in">Reduce</span> → 写 HDFS<br>   │<br>   │  <span class="hljs-built_in">Map</span> → 写本地磁盘(shuffle) → <span class="hljs-built_in">Reduce</span> → 写 HDFS<br>   │<br>   │  <span class="hljs-built_in">Map</span> → 写本地磁盘(shuffle) → <span class="hljs-built_in">Reduce</span> → 写 HDFS<br>   ▼<br>输出(HDFS)<br></code></pre></td></tr></table></figure>
+
+<p>每一步的结果都要经历一次<strong>序列化写磁盘 → 网络传输 → 反序列化读磁盘</strong>的完整循环。磁盘 IO 和网络传输的延迟，是内存读写的成百上千倍。</p>
+<p>这对于只跑一次的 ETL 任务还可以忍受，但对于<strong>迭代算法</strong>来说是灾难。机器学习里的梯度下降、图算法里的 PageRank，都需要反复在同一份数据上迭代几十上百次。用 MapReduce 做机器学习，意味着每轮迭代都要把整个中间状态写回 HDFS 再读回来——磁盘 IO 把绝大部分时间都吃掉了。</p>
+<h3 id="1-2-难用的根源：万物皆-Map-Reduce"><a href="#1-2-难用的根源：万物皆-Map-Reduce" class="headerlink" title="1.2 难用的根源：万物皆 Map/Reduce"></a>1.2 难用的根源：万物皆 Map/Reduce</h3><p>MapReduce 的 API 只有两个原语：Map 和 Reduce。业务逻辑必须被强行压进这两个框里。</p>
+<ul>
+<li><strong>Join 两张表</strong>：要把两边的 key-value 同时塞进一个 Reduce，手写分发逻辑。</li>
+<li><strong>多步聚合</strong>：每一步都是一个独立的 MapReduce Job，作业之间靠 HDFS 传递中间结果。</li>
+<li><strong>排序 + 过滤 + 聚合</strong>：在同一个 Job 里揉在一起，逻辑拆不开、测试难、调试更难。</li>
+</ul>
+<p>Hive 用 HQL 给 MapReduce 套了一层 SQL 方言，缓解了”难写”的问题，但生成的执行计划本质上还是 MapReduce，慢的问题一分未解。</p>
+<p><strong>这是板块三要解决的核心矛盾：既要快，又要易用。</strong></p>
+<hr>
+<h2 id="二、RDD：Spark-的计算原语"><a href="#二、RDD：Spark-的计算原语" class="headerlink" title="二、RDD：Spark 的计算原语"></a>二、RDD：Spark 的计算原语</h2><p>Spark 的回答是 <strong>RDD（Resilient Distributed Dataset，弹性分布式数据集）</strong>。这是 2012 年 Matei Zaharia 在 UC Berkeley 博士论文中提出的抽象，也是整个 Spark 体系的逻辑地基。</p>
+<h3 id="2-1-RDD-的三个核心属性"><a href="#2-1-RDD-的三个核心属性" class="headerlink" title="2.1 RDD 的三个核心属性"></a>2.1 RDD 的三个核心属性</h3><p><strong>1. 不可变（Immutable）</strong></p>
+<p>RDD 一旦创建就不能修改。所有操作都是从一个 RDD 生成一个新的 RDD，而不是在原地改写。这个设计和函数式编程一脉相承——不可变对象天然没有并发写入问题，任意分区可以在任意节点上独立计算，不需要任何同步。</p>
+<p><strong>2. 分区（Partitioned）</strong></p>
+<p>每个 RDD 被切分为若干<strong>分区</strong>（Partition），分区是调度的最小单位。每个分区会被分配到集群的某个节点上计算，多个分区可以在不同节点上并行运行。分区数决定了并行度。</p>
+<p><strong>3. 血统（Lineage）</strong></p>
+<p>每个 RDD 都记得自己是从哪个父 RDD、经过什么操作变化而来的。这条”变换链”就是血统，也叫<strong>依赖图</strong>。</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs scss">textFile (HDFS)<br>    │  <span class="hljs-built_in">flatMap</span>(_.split(" "))<br>    ▼<br>words RDD<br>    │  <span class="hljs-built_in">map</span>(word =&gt; (word, <span class="hljs-number">1</span>))<br>    ▼<br>pairs RDD<br>    │  <span class="hljs-built_in">reduceByKey</span>(_ + _)<br>    ▼<br>counts RDD<br></code></pre></td></tr></table></figure>
+
+<p>血统的价值在后面容错一节展开。</p>
+<h3 id="2-2-Transformation-与-Action：惰性求值"><a href="#2-2-Transformation-与-Action：惰性求值" class="headerlink" title="2.2 Transformation 与 Action：惰性求值"></a>2.2 Transformation 与 Action：惰性求值</h3><p>RDD 的操作分两类：</p>
+<p><strong>Transformation（转换）</strong>：从一个 RDD 生成另一个 RDD，<strong>惰性执行</strong>——调用时只记录”我打算这样变换”，不触发任何实际计算。</p>
+<p>常见 Transformation：</p>
+<table>
+<thead>
+<tr>
+<th>算子</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>map(f)</code></td>
+<td>对每个元素应用 f，1:1 变换</td>
+</tr>
+<tr>
+<td><code>flatMap(f)</code></td>
+<td>对每个元素应用 f，结果展平（1:N）</td>
+</tr>
+<tr>
+<td><code>filter(f)</code></td>
+<td>过滤满足 f 的元素</td>
+</tr>
+<tr>
+<td><code>groupByKey()</code></td>
+<td>按 key 分组（会触发 shuffle）</td>
+</tr>
+<tr>
+<td><code>reduceByKey(f)</code></td>
+<td>按 key 聚合，先本地预聚合再 shuffle</td>
+</tr>
+<tr>
+<td><code>join(other)</code></td>
+<td>按 key 做内连接（会触发 shuffle）</td>
+</tr>
+<tr>
+<td><code>sortByKey()</code></td>
+<td>按 key 全局排序（会触发 shuffle）</td>
+</tr>
+<tr>
+<td><code>union(other)</code></td>
+<td>合并两个 RDD</td>
+</tr>
+<tr>
+<td><code>distinct()</code></td>
+<td>去重（会触发 shuffle）</td>
+</tr>
+</tbody></table>
+<p><strong>Action（动作）</strong>：触发实际计算，返回结果到 Driver 或写到外部存储。</p>
+<p>常见 Action：</p>
+<table>
+<thead>
+<tr>
+<th>算子</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>collect()</code></td>
+<td>拉回全量数据到 Driver</td>
+</tr>
+<tr>
+<td><code>count()</code></td>
+<td>统计元素个数</td>
+</tr>
+<tr>
+<td><code>take(n)</code></td>
+<td>取前 n 个</td>
+</tr>
+<tr>
+<td><code>saveAsTextFile(path)</code></td>
+<td>写出到文件系统</td>
+</tr>
+<tr>
+<td><code>reduce(f)</code></td>
+<td>在 Driver 端规约</td>
+</tr>
+<tr>
+<td><code>first()</code></td>
+<td>取第一个元素</td>
+</tr>
+</tbody></table>
+<p><strong>为什么要惰性求值？</strong> 因为 Spark 需要在触发 Action 之前，拿到完整的计算图，才能做全局优化——合并多次过滤、消除冗余的 shuffle、决定最优的 Stage 划分。如果每个 Transformation 立即执行，就失去了优化的窗口。</p>
+<h3 id="2-3-容错：靠血统重算，而非落盘"><a href="#2-3-容错：靠血统重算，而非落盘" class="headerlink" title="2.3 容错：靠血统重算，而非落盘"></a>2.3 容错：靠血统重算，而非落盘</h3><p>MapReduce 的容错方案是<strong>检查点（checkpoint）</strong>：每一步结果写到 HDFS，某个 Task 失败了就从最近的 HDFS 检查点重启。这保证了容错，却也是落盘的直接原因——为了容错，不得不写磁盘。</p>
+<p>RDD 的容错思路完全不同：<strong>利用血统重算（lineage recomputation）</strong>。</p>
+<p>某个分区的数据丢失了（节点宕机），Spark 不需要从 HDFS 重新读整个数据集，它直接顺着血统往上追溯——找到这个分区的”父分区”，重新执行那段 Transformation，就能还原出丢失的分区。</p>
+<figure class="highlight tp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs tp">假设 counts RDD 的分区 <span class="hljs-keyword">P</span><span class="hljs-number">2</span> 丢失：<br><br>textFile.<span class="hljs-keyword">P</span><span class="hljs-number">2</span> → flatMap → words.<span class="hljs-keyword">P</span><span class="hljs-number">2</span> → map → pairs.<span class="hljs-keyword">P</span><span class="hljs-number">2</span> → reduceByKey → counts.<span class="hljs-keyword">P</span><span class="hljs-number">2</span><br>                                                                      ↑<br>                                                               只重算这一条链<br></code></pre></td></tr></table></figure>
+
+<p>这个方案的前提是：Transformation 是纯函数式的（相同输入，相同输出），因此”重算”是安全的。RDD 的不可变性正是为此服务的——正因为不可变，重算的结果才能保证等价于原来的结果。</p>
+<p>血统的代价：如果血统很长（几十步），某个分区丢失后重算的代价很高。对于这种情况，Spark 提供了显式的 <code>checkpoint()</code> 操作，把 RDD 物化到 HDFS，切断过长的血统。这是用户主动选择的权衡，而非框架强制。</p>
+<hr>
+<h2 id="三、内存计算：为什么快一两个数量级"><a href="#三、内存计算：为什么快一两个数量级" class="headerlink" title="三、内存计算：为什么快一两个数量级"></a>三、内存计算：为什么快一两个数量级</h2><h3 id="3-1-中间结果驻留内存"><a href="#3-1-中间结果驻留内存" class="headerlink" title="3.1 中间结果驻留内存"></a>3.1 中间结果驻留内存</h3><p>RDD 的 Transformation 是惰性的，所有中间 RDD 只是计算计划里的一个节点。当 Action 触发执行时，Spark 的执行器（Executor）在内存中流水线式地处理分区数据：</p>
+<ul>
+<li>读取输入分区数据到内存。</li>
+<li>在内存中执行所有 Transformation（filter、map、flatMap 等窄依赖操作可以直接串联，不产生落盘）。</li>
+<li>遇到 shuffle 边界时，把 shuffle 数据写到本地磁盘（这一步无法避免，但只在 shuffle 边界发生，而非每一步）。</li>
+<li>Shuffle 读取对端写下的数据，继续在内存中处理。</li>
+</ul>
+<p>对比 MapReduce：每一步（即每个 MapReduce Job）都要把结果写回 HDFS，下一步再从 HDFS 读。Spark 只在 shuffle 边界落盘，其余全在内存里流转。</p>
+<p>对于迭代算法，差距尤为明显：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs lasso">MapReduce 迭代 k 轮：<br>  输入 → 读HDFS → 计算 → 写HDFS → 读HDFS → 计算 → 写HDFS → <span class="hljs-params">...</span> (共 <span class="hljs-number">2</span>k 次磁盘IO)<br><br>Spark 迭代 k 轮（数据 <span class="hljs-keyword">cache</span> 在内存）：<br>  输入 → 读HDFS → 缓存内存 → 计算 → 更新 → 计算 → <span class="hljs-params">...</span> (只有<span class="hljs-number">1</span>次磁盘IO)<br></code></pre></td></tr></table></figure>
+
+<h3 id="3-2-cache-与-persist"><a href="#3-2-cache-与-persist" class="headerlink" title="3.2 cache 与 persist"></a>3.2 cache 与 persist</h3><p>如果一个 RDD 会被多次使用（迭代算法、多次查询同一基础数据集），可以显式告诉 Spark 把它保留下来：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># PySpark 示例</span><br><span class="hljs-keyword">from</span> pyspark <span class="hljs-keyword">import</span> SparkContext, SparkConf<br><br>conf = SparkConf().setAppName(<span class="hljs-string">"WordCount"</span>)<br>sc = SparkContext(conf=conf)<br><br><span class="hljs-comment"># 从 HDFS 读取文本</span><br>lines = sc.textFile(<span class="hljs-string">"hdfs://namenode/data/logs"</span>)<br><br><span class="hljs-comment"># 多次用到 words，显式缓存</span><br>words = lines.flatMap(<span class="hljs-keyword">lambda</span> line: line.split(<span class="hljs-string">" "</span>)).cache()<br><br><span class="hljs-comment"># 第一次 Action：统计总词数</span><br>total = words.count()<br><br><span class="hljs-comment"># 第二次 Action：统计 "ERROR" 开头的词</span><br>errors = words.<span class="hljs-built_in">filter</span>(<span class="hljs-keyword">lambda</span> w: w.startswith(<span class="hljs-string">"ERROR"</span>)).count()<br><br><span class="hljs-comment"># 没有 cache，words 会被计算两次（两次从 HDFS 读 lines 再 flatMap）</span><br><span class="hljs-comment"># 有 cache，第一次 count() 触发计算并缓存，第二次 filter().count() 直接命中缓存</span><br></code></pre></td></tr></table></figure>
+
+<p><code>cache()</code> 是 <code>persist(StorageLevel.MEMORY_ONLY)</code> 的简写。<code>persist</code> 提供了更细的控制：</p>
+<table>
+<thead>
+<tr>
+<th>StorageLevel</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MEMORY_ONLY</code></td>
+<td>只存内存，内存不够则不缓存该分区（重算）</td>
+</tr>
+<tr>
+<td><code>MEMORY_AND_DISK</code></td>
+<td>内存不够的分区溢写到磁盘</td>
+</tr>
+<tr>
+<td><code>MEMORY_ONLY_SER</code></td>
+<td>序列化后存内存（更省空间，CPU 换内存）</td>
+</tr>
+<tr>
+<td><code>DISK_ONLY</code></td>
+<td>只写磁盘</td>
+</tr>
+<tr>
+<td><code>OFF_HEAP</code></td>
+<td>堆外内存（减少 GC 压力）</td>
+</tr>
+</tbody></table>
+<p>实际调优时，ML 迭代训练通常用 <code>MEMORY_AND_DISK</code>——内存放不下的分区落磁盘，总好过每轮都重算。</p>
+<h3 id="3-3-内存管理：统一内存模型"><a href="#3-3-内存管理：统一内存模型" class="headerlink" title="3.3 内存管理：统一内存模型"></a>3.3 内存管理：统一内存模型</h3><p>Spark 1.6 引入了<strong>统一内存管理（Unified Memory Manager）</strong>。Executor JVM 堆内存大致分为：</p>
+<ul>
+<li><strong>Execution Memory（执行内存）</strong>：shuffle、join、sort、aggregation 的临时数据。</li>
+<li><strong>Storage Memory（存储内存）</strong>：cache/persist 的 RDD 数据。</li>
+<li>两者共享同一个内存池，可以动态借用——执行内存不够时可以占用存储内存（evict 缓存），存储内存不够时也可以借用执行内存。</li>
+</ul>
+<p>这比早期静态划分（Spark 1.5 以前固定各 60%/40%）灵活得多，但内存压力大时 cache 可能被 evict，需要结合 <code>StorageLevel</code> 策略做权衡。</p>
+<hr>
+<h2 id="四、DAG-执行引擎：把计算构建成有向无环图"><a href="#四、DAG-执行引擎：把计算构建成有向无环图" class="headerlink" title="四、DAG 执行引擎：把计算构建成有向无环图"></a>四、DAG 执行引擎：把计算构建成有向无环图</h2><h3 id="4-1-从两段式到-DAG"><a href="#4-1-从两段式到-DAG" class="headerlink" title="4.1 从两段式到 DAG"></a>4.1 从两段式到 DAG</h3><p>MapReduce 的执行模型是<strong>僵硬的两段式</strong>：Map → Shuffle → Reduce，不多也不少。任何计算都必须压进这个模子，哪怕你的逻辑只需要一次 Map，也要付出 Shuffle 的代价。</p>
+<p>Spark 的执行模型是 <strong>DAG（有向无环图）</strong>：把整个计算（从输入 RDD 到最终 Action）表示为一张有向无环图，节点是 RDD，边是 Transformation。DAGScheduler 拿到这张图后，负责把它<strong>划分成 Stage，Stage 再切分成 Task，分发到 Executor 执行</strong>。</p>
+<h3 id="4-2-宽依赖与窄依赖：Stage-的划分边界"><a href="#4-2-宽依赖与窄依赖：Stage-的划分边界" class="headerlink" title="4.2 宽依赖与窄依赖：Stage 的划分边界"></a>4.2 宽依赖与窄依赖：Stage 的划分边界</h3><p>Stage 的划分依据是<strong>依赖类型</strong>：</p>
+<p><strong>窄依赖（Narrow Dependency）</strong>：父 RDD 的每个分区，至多被子 RDD 的一个分区依赖。数据不需要跨节点传输，可以在同一个 Executor 上流水线执行。</p>
+<p>典型窄依赖算子：<code>map</code>、<code>filter</code>、<code>flatMap</code>、<code>mapPartitions</code>、<code>union</code>（一对一或多对一，但不需要 shuffle）。</p>
+<p><strong>宽依赖（Wide Dependency）</strong>：父 RDD 的一个分区，可能被子 RDD 的多个分区依赖。数据必须跨节点重新分发（Shuffle），是 Stage 的边界。</p>
+<p>典型宽依赖算子：<code>groupByKey</code>、<code>reduceByKey</code>、<code>join</code>（默认）、<code>sortByKey</code>、<code>distinct</code>。</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs scss">Stage 划分示意图<br><br><span class="hljs-selector-attr">[Stage 0]</span>──────────────────────────────────<br>  textFile ──flatMap──► words ──map──► pairs<br>                                           │<br>                                       (Shuffle Write)<br>                                           │<br><span class="hljs-selector-attr">[Stage 1]</span>──────────────────────────────────<br>                                    (Shuffle Read)<br>                                           │<br>                                       ──reduceByKey──► counts ──saveAsTextFile<br></code></pre></td></tr></table></figure>
+
+<p>Stage 0 包含所有窄依赖操作（flatMap、map），可以在一个 Task 里流水线完成。Stage 1 在 Shuffle Read 之后继续处理（reduceByKey 的聚合部分），最终写出结果。</p>
+<p>同一个 Stage 内的操作**流水线化（pipeline）**执行：一个分区的数据进来，依次经过所有窄依赖算子，不产生任何临时落盘。</p>
+<h3 id="4-3-一个更复杂的-DAG-示例"><a href="#4-3-一个更复杂的-DAG-示例" class="headerlink" title="4.3 一个更复杂的 DAG 示例"></a>4.3 一个更复杂的 DAG 示例</h3><p>以”日志分析：按小时统计 ERROR 数量，并 join 一张小时维度表”为例：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs scss">       <span class="hljs-selector-attr">[logs RDD]</span>        <span class="hljs-selector-attr">[hourDim RDD]</span><br>           │                   │<br>     <span class="hljs-attribute">filter</span>("ERROR")      <span class="hljs-built_in">map</span>(parse)<br>           │                   │<br>     <span class="hljs-built_in">map</span>(extractHour)          │<br>           │                   │<br>(宽依赖─── join ───────────────)  ◄── Stage 边界（Shuffle）<br>           │<br>     <span class="hljs-built_in">groupByKey</span>(hour)   ◄── Stage 边界（Shuffle）<br>           │<br>     <span class="hljs-built_in">agg</span>(count)<br>           │<br>  <span class="hljs-built_in">saveAsTextFile</span>(output)<br></code></pre></td></tr></table></figure>
+
+<p>整个流程被切成三个 Stage：</p>
+<ul>
+<li>Stage 0：logs 侧的 filter + map（窄依赖，流水线）</li>
+<li>Stage 0’：hourDim 侧的 map（窄依赖，流水线）</li>
+<li>Stage 1：join 的 Shuffle Read + groupByKey 之前的操作</li>
+<li>Stage 2：groupByKey 的 Shuffle Read + agg + saveAsTextFile</li>
+</ul>
+<p>MapReduce 要实现同样的逻辑，需要至少两个独立的 MapReduce Job，中间结果写 HDFS 传递。Spark 的 DAG 调度器把它们融合在一张图里，全局优化，减少中间落盘。</p>
+<h3 id="4-4-Catalyst-优化器（Spark-SQL-层的-DAG-优化）"><a href="#4-4-Catalyst-优化器（Spark-SQL-层的-DAG-优化）" class="headerlink" title="4.4 Catalyst 优化器（Spark SQL 层的 DAG 优化）"></a>4.4 Catalyst 优化器（Spark SQL 层的 DAG 优化）</h3><p>如果用 Spark SQL / DataFrame API，还会经过 <strong>Catalyst 优化器</strong>的进一步处理。Catalyst 是一个基于规则和代价的查询优化器，工作分四个阶段：</p>
+<ol>
+<li><strong>解析（Analysis）</strong>：把 SQL 文本或 DataFrame 操作解析成未解析的逻辑计划。</li>
+<li><strong>逻辑优化（Logical Optimization）</strong>：应用规则优化逻辑计划——谓词下推（把 filter 提前，减少数据量）、列剪裁（只读需要的列）、常量折叠、子查询合并等。</li>
+<li><strong>物理计划生成（Physical Planning）</strong>：把逻辑计划转换为物理计划，选择 join 算法（BroadcastHashJoin vs SortMergeJoin）、决定是否广播小表等。</li>
+<li><strong>代码生成（Code Generation）</strong>：利用 Tungsten 引擎把物理计划编译成 JVM 字节码，消除虚函数调用开销，充分利用 CPU 缓存局部性。</li>
+</ol>
+<p>Catalyst 的存在让 Spark SQL 的性能往往优于手写 RDD 代码——用户写的声明式 SQL 被优化器重写后，执行计划可能与人工调优的 RDD 程序相当甚至更好。</p>
+<hr>
+<h2 id="五、Spark-生态：统一的大数据栈"><a href="#五、Spark-生态：统一的大数据栈" class="headerlink" title="五、Spark 生态：统一的大数据栈"></a>五、Spark 生态：统一的大数据栈</h2><p>MapReduce 解决的是”把数据跑一遍”，生态极度单薄。Spark 的野心是<strong>用一套引擎覆盖批处理、SQL 查询、流处理、机器学习、图计算</strong>，形成统一栈，消除多套系统带来的运维复杂度和数据搬迁成本。</p>
+<h3 id="5-1-Spark-SQL-DataFrame"><a href="#5-1-Spark-SQL-DataFrame" class="headerlink" title="5.1 Spark SQL / DataFrame"></a>5.1 Spark SQL / DataFrame</h3><p><strong>核心价值</strong>：把声明式 SQL 和结构化数据（DataFrame）带入 Spark 计算体系。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># PySpark DataFrame 示例</span><br><span class="hljs-keyword">from</span> pyspark.sql <span class="hljs-keyword">import</span> SparkSession<br><span class="hljs-keyword">from</span> pyspark.sql.functions <span class="hljs-keyword">import</span> col, hour, count<br><br>spark = SparkSession.builder.appName(<span class="hljs-string">"LogAnalysis"</span>).getOrCreate()<br><br><span class="hljs-comment"># 读取结构化日志</span><br>df = spark.read.json(<span class="hljs-string">"hdfs://namenode/logs/2026/"</span>)<br><br><span class="hljs-comment"># 声明式操作：过滤 ERROR，按小时聚合计数</span><br>result = (<br>    df.<span class="hljs-built_in">filter</span>(col(<span class="hljs-string">"level"</span>) == <span class="hljs-string">"ERROR"</span>)<br>      .withColumn(<span class="hljs-string">"hour"</span>, hour(col(<span class="hljs-string">"timestamp"</span>)))<br>      .groupBy(<span class="hljs-string">"hour"</span>)<br>      .agg(count(<span class="hljs-string">"*"</span>).alias(<span class="hljs-string">"error_count"</span>))<br>      .orderBy(<span class="hljs-string">"hour"</span>)<br>)<br><br>result.show()<br>result.write.parquet(<span class="hljs-string">"hdfs://namenode/output/error_by_hour"</span>)<br></code></pre></td></tr></table></figure>
+
+<p>DataFrame 底层依然是 RDD，但经过 Catalyst 优化，通常比等价的手写 RDD 代码更快。它还支持直接注册临时视图后用标准 SQL 查询：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs python">df.createOrReplaceTempView(<span class="hljs-string">"logs"</span>)<br>spark.sql(<span class="hljs-string">"SELECT hour(timestamp) as h, count(*) FROM logs WHERE level='ERROR' GROUP BY h ORDER BY h"</span>).show()<br></code></pre></td></tr></table></figure>
+
+<h3 id="5-2-Structured-Streaming：微批流处理"><a href="#5-2-Structured-Streaming：微批流处理" class="headerlink" title="5.2 Structured Streaming：微批流处理"></a>5.2 Structured Streaming：微批流处理</h3><p><strong>Structured Streaming</strong> 是 Spark 2.0 引入的流处理模型，建立在 DataFrame API 之上。它的核心思想是把<strong>流当成一张无界的表</strong>——新数据持续追加到表的末尾，流式查询就是对这张不断增长的表持续运行的批处理查询。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># Structured Streaming 示例：从 Kafka 消费日志，实时统计错误数</span><br><span class="hljs-keyword">from</span> pyspark.sql <span class="hljs-keyword">import</span> SparkSession<br><span class="hljs-keyword">from</span> pyspark.sql.functions <span class="hljs-keyword">import</span> col, from_json, window<br><span class="hljs-keyword">from</span> pyspark.sql.types <span class="hljs-keyword">import</span> StructType, StringType, TimestampType<br><br>spark = SparkSession.builder.appName(<span class="hljs-string">"StreamingErrors"</span>).getOrCreate()<br><br>schema = StructType().add(<span class="hljs-string">"level"</span>, StringType()).add(<span class="hljs-string">"msg"</span>, StringType()).add(<span class="hljs-string">"ts"</span>, TimestampType())<br><br>stream = (<br>    spark.readStream<br>         .<span class="hljs-built_in">format</span>(<span class="hljs-string">"kafka"</span>)<br>         .option(<span class="hljs-string">"kafka.bootstrap.servers"</span>, <span class="hljs-string">"broker:9092"</span>)<br>         .option(<span class="hljs-string">"subscribe"</span>, <span class="hljs-string">"app-logs"</span>)<br>         .load()<br>         .select(from_json(col(<span class="hljs-string">"value"</span>).cast(<span class="hljs-string">"string"</span>), schema).alias(<span class="hljs-string">"data"</span>))<br>         .select(<span class="hljs-string">"data.*"</span>)<br>         .<span class="hljs-built_in">filter</span>(col(<span class="hljs-string">"level"</span>) == <span class="hljs-string">"ERROR"</span>)<br>         .groupBy(window(col(<span class="hljs-string">"ts"</span>), <span class="hljs-string">"5 minutes"</span>))<br>         .count()<br>)<br><br>query = stream.writeStream.<span class="hljs-built_in">format</span>(<span class="hljs-string">"console"</span>).outputMode(<span class="hljs-string">"update"</span>).start()<br>query.awaitTermination()<br></code></pre></td></tr></table></figure>
+
+<p>Structured Streaming 的实现机制：每隔一个触发间隔（trigger interval），Spark 把该间隔内到达的新数据当成一个”微批”（micro-batch），在内部以一次小的批处理 Job 来执行，结果增量合并到输出。</p>
+<p>这个模型有一个直接的好处：<strong>Spark SQL 的所有优化（Catalyst、Tungsten）直接复用</strong>，不需要另起炉灶。批处理代码和流处理代码几乎可以互换，运维统一。</p>
+<p>但是——这里要点出一个重要的设计约束，留到下一节展开。</p>
+<h3 id="5-3-MLlib：分布式机器学习"><a href="#5-3-MLlib：分布式机器学习" class="headerlink" title="5.3 MLlib：分布式机器学习"></a>5.3 MLlib：分布式机器学习</h3><p>MLlib 是 Spark 内置的分布式机器学习库。它的意义在于：ML 训练本质上是迭代算法，每轮迭代需要遍历整个训练集。把训练集 <code>persist</code> 在内存里，每轮迭代直接从内存读，相比 Mahout（基于 MapReduce 的前辈）快了一两个数量级。</p>
+<p>MLlib 支持常用算法：线性回归、逻辑回归、决策树、随机森林、K-means 聚合、协同过滤（ALS）、朴素贝叶斯等，以及特征工程 Pipeline（<code>Pipeline</code>、<code>Transformer</code>、<code>Estimator</code> 的组合）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> pyspark.ml <span class="hljs-keyword">import</span> Pipeline<br><span class="hljs-keyword">from</span> pyspark.ml.feature <span class="hljs-keyword">import</span> VectorAssembler, StandardScaler<br><span class="hljs-keyword">from</span> pyspark.ml.classification <span class="hljs-keyword">import</span> LogisticRegression<br><br>assembler = VectorAssembler(inputCols=[<span class="hljs-string">"feat1"</span>, <span class="hljs-string">"feat2"</span>, <span class="hljs-string">"feat3"</span>], outputCol=<span class="hljs-string">"raw_features"</span>)<br>scaler = StandardScaler(inputCol=<span class="hljs-string">"raw_features"</span>, outputCol=<span class="hljs-string">"features"</span>)<br>lr = LogisticRegression(maxIter=<span class="hljs-number">20</span>, regParam=<span class="hljs-number">0.01</span>)<br><br>pipeline = Pipeline(stages=[assembler, scaler, lr])<br>model = pipeline.fit(train_df)<br>predictions = model.transform(test_df)<br></code></pre></td></tr></table></figure>
+
+<h3 id="5-4-GraphX：图计算"><a href="#5-4-GraphX：图计算" class="headerlink" title="5.4 GraphX：图计算"></a>5.4 GraphX：图计算</h3><p>GraphX 是 Spark 的图处理 API，提供了属性图（Property Graph）抽象——顶点和边都可以携带任意属性。内置算法包括 PageRank、连通分量、最短路径、三角计数等。GraphX 的底层依然是 RDD，利用 Spark 的内存计算优势做迭代图算法。</p>
+<p>这里不深入展开——GraphX 在今天实际使用中已逐渐被 GraphFrames（基于 DataFrame API 的图框架）取代，后者更好地接入了 Catalyst 优化器。</p>
+<hr>
+<h2 id="六、Spark-的基因缺陷：批处理原生，流是后来者"><a href="#六、Spark-的基因缺陷：批处理原生，流是后来者" class="headerlink" title="六、Spark 的基因缺陷：批处理原生，流是后来者"></a>六、Spark 的基因缺陷：批处理原生，流是后来者</h2><p>讲完 Spark 的优势，必须直视它的设计根源，以及从这个根源生长出来的内在局限。</p>
+<h3 id="6-1-世界观：流是连续的小批"><a href="#6-1-世界观：流是连续的小批" class="headerlink" title="6.1 世界观：流是连续的小批"></a>6.1 世界观：流是连续的小批</h3><p>Spark 诞生于批处理场景。它的核心抽象 RDD 是一个静态的、有界的数据集。当 Spark 要做流处理时，它的思路是：<strong>把一条连续的数据流切成一个个小的时间窗口，每个窗口对应一批数据，对每批数据跑一次批处理 Job</strong>。</p>
+<p>这就是 <strong>微批（micro-batch）</strong> 模型。在 Spark Streaming（DStream API）时代这一点很明显；Structured Streaming 用”无界表”重新包装了这个概念，但底层执行机制（默认 Trigger.ProcessingTime）仍然是微批。</p>
+<p>Spark 的世界观：<strong>流 = 连续的批。</strong></p>
+<h3 id="6-2-微批的两个根本性局限"><a href="#6-2-微批的两个根本性局限" class="headerlink" title="6.2 微批的两个根本性局限"></a>6.2 微批的两个根本性局限</h3><p><strong>局限一：延迟受批间隔限制。</strong></p>
+<p>微批模型下，一条数据的处理延迟至少是一个批间隔。把批间隔设小（比如 100ms）可以缩短延迟，但批 Job 的调度开销（Stage 调度、Task 序列化分发、JVM 启动等）是有下限的。在实际工程中，Spark Structured Streaming 的端到端延迟通常在秒级，很难做到真正的毫秒级低延迟。</p>
+<p>对于大多数离线报表、分钟级实时大屏来说，这个延迟完全够用。但对于金融风控（需要毫秒内决策）、高频交易、实时推荐等场景，秒级延迟是不可接受的。</p>
+<p><strong>局限二：Event-time 语义处理吃力。</strong></p>
+<p>真实世界的数据是<strong>乱序到达</strong>的：移动设备可能在网络恢复后一次性上报几分钟前的事件；物联网传感器可能有几秒的时钟偏移；后端服务在重启后可能重放历史日志。</p>
+<p>“事件时间”（event-time）指的是事件实际发生的时间，区别于 Spark 收到数据的”处理时间”（processing-time）。如果要按事件真正发生的时间做窗口聚合（比如”每分钟用户点击次数，按点击发生的时刻而非服务器收到的时刻统计”），就必须处理乱序。</p>
+<p>Structured Streaming 提供了 <strong>Watermark</strong> 机制来处理乱序——声明”我愿意等待最多 X 时间的迟到数据，超过 X 的就丢弃或不更新”。但这个机制在微批模型下有内在的精度问题：</p>
+<ul>
+<li>Watermark 的推进以批为粒度，粒度太粗，对乱序的响应存在一个批间隔的滞后。</li>
+<li>“恰好一次”（exactly-once）语义在状态 checkpoint 上更复杂，实现和调优的认知成本高。</li>
+<li>有状态算子（stateful aggregation）在内存压力大时容易出现性能抖动。</li>
+</ul>
+<p>这些不是 Spark 团队的工程疏忽，而是<strong>微批世界观的先天约束</strong>——你始终是在用批处理模拟流处理，总有一层不完美的抽象在中间。</p>
+<h3 id="6-3-两套代码的维护成本：Lambda-架构的痛"><a href="#6-3-两套代码的维护成本：Lambda-架构的痛" class="headerlink" title="6.3 两套代码的维护成本：Lambda 架构的痛"></a>6.3 两套代码的维护成本：Lambda 架构的痛</h3><p>在 Spark 成为批处理标准之后，行业里形成了一种常见的架构模式——<strong>Lambda 架构</strong>：</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs nix">原始数据<br>    ├── 批处理层（Spark）：定期全量重算，产出准确的历史视图<br>    └── 速度层（Spark Streaming <span class="hljs-symbol">/</span> Storm）：近实时处理，产出低延迟但可能不准确的近似视图<br>                            ↓<br>                    服务层：合并两层结果，对外提供查询<br></code></pre></td></tr></table></figure>
+
+<p>Lambda 的逻辑是合理的：批处理保证准确性（全量重算可以纠正历史错误），速度层保证低延迟，两者互补。</p>
+<p>但它的工程代价是：<strong>同一套业务逻辑要用两套代码实现，批处理一套（Spark batch），流处理一套（Spark Streaming 或 Storm）</strong>。两套代码要保持语义一致——这在实际工程中极难保证：一侧修了 bug，另一侧忘了改；两侧对某个边界情况的处理方式有微妙差异；业务逻辑变了，两边都要同步更新……</p>
+<p>这个痛点，正是 Flink 的登场动机之一。Flink 的设计哲学是<strong>流式原生、批是有界的流</strong>，从根上统一了批和流的执行路径，从根上消除了”两套代码”的问题。这是下两个板块的主题。</p>
+<hr>
+<h2 id="七、小结：Spark-在历史坐标中的位置"><a href="#七、小结：Spark-在历史坐标中的位置" class="headerlink" title="七、小结：Spark 在历史坐标中的位置"></a>七、小结：Spark 在历史坐标中的位置</h2><p>回顾一下这条逻辑链：</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs arcade">MapReduce（慢：每步落盘；难用：万物皆 <span class="hljs-built_in">Map</span>/<span class="hljs-built_in">Reduce</span>）<br>        │<br>        ▼  Spark 的回答<br>RDD（不可变 + 分区 + 血统）<br>  + 内存计算（中间结果驻留内存，迭代快一两个数量级）<br>  + 惰性求值（拿到完整计算图再优化）<br>  + 血统容错（重算而非落盘检查点）<br>        │<br>        ▼<br>DAG 执行引擎<br>  + 宽/窄依赖划分 Stage（灵活，打破 <span class="hljs-built_in">Map</span>-<span class="hljs-built_in">Reduce</span> 两段式）<br>  + Stage 内流水线（窄依赖算子零落盘）<br>  + Catalyst 优化（SQL 层全局重写）<br>        │<br>        ▼<br>统一生态栈<br>  Spark SQL / DataFrame + Structured Streaming + MLlib + GraphX<br>        │<br>        ▼<br>解决了：MapReduce 的慢与难用<br>留下了：批处理原生基因 → 微批流有延迟上限、event-<span class="hljs-built_in">time</span> 处理吃力<br>        │<br>        ▼<br>        引出板块四（Kafka：流数据中枢）<br>        和板块五（Flink：真正的流式与批流统一）<br></code></pre></td></tr></table></figure>
+
+<p>Spark 是大数据生态里里程碑式的作品。它用一个足够优雅的抽象（RDD）把内存计算、容错、惰性优化统一起来，把批处理的生产力提升了一个数量级，并用一套引擎覆盖了 SQL、ML、图计算等多个场景。在今天，Spark 依然是离线批处理和数仓 ETL 最主流的选择。</p>
+<p>但它是批处理时代的产物。流处理的世界，需要一个从流出发、批只是特例的新框架。这个框架，就是 Flink。在此之前，我们需要先看清 Flink 最重要的数据来源——Kafka，以及它如何把”数据流”这件事变成了一个稳固的基础设施。</p>
+<hr>
+<p><strong>大数据专题导航</strong>：<a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-02-YARN%E8%B5%84%E6%BA%90%E8%B0%83%E5%BA%A6/">← 上一篇：YARN</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/">[目录]</a> | <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-04-Kafka%E6%B5%81%E6%95%B0%E6%8D%AE%E4%B8%AD%E6%9E%A2/">下一篇：Kafka →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="category-chain-item">大数据</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/Spark/" class="category-chain-item">Spark</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/" class="print-no-link">#大数据</a>
+      
+        <a href="/tags/Spark/" class="print-no-link">#Spark</a>
+      
+        <a href="/tags/RDD/" class="print-no-link">#RDD</a>
+      
+        <a href="/tags/DAG/" class="print-no-link">#DAG</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/" class="print-no-link">#内存计算</a>
+      
+        <a href="/tags/SparkSQL/" class="print-no-link">#SparkSQL</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>大数据-03：Spark —— 用内存计算与 DAG 打破磁盘瓶颈</div>
+      <div>https://w2ongq6.github.io/2026/08/16/bigdata/大数据-03-Spark内存计算/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月16日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-04-Kafka%E6%B5%81%E6%95%B0%E6%8D%AE%E4%B8%AD%E6%9E%A2/" title="大数据-04：Kafka —— 流式时代的数据中枢">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">大数据-04：Kafka —— 流式时代的数据中枢</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/16/bigdata/%E5%A4%A7%E6%95%B0%E6%8D%AE-02-YARN%E8%B5%84%E6%BA%90%E8%B0%83%E5%BA%A6/" title="大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋">
+                        <span class="hidden-mobile">大数据-02：YARN —— &#34;资源与计算解耦&#34;这一步棋</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
