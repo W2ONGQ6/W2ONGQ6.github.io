@@ -1,0 +1,1191 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引子：人生苦短，我用 Python1991 年，Guido van Rossum 发布了 Python 的第一个公开版本。他给这门语言起名时，脑子里浮现的不是蟒蛇，而是英国喜剧团体 Monty Python。这个细节透露了 Python 的基因：它应该是有趣的、易读的、让人愉快的。 二十年后，Python 成了世界上使用人数最多的编程语言之一，但与此同时，它也是主流语言中单线程性能最低的一个。这个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Python 语言设计哲学与底层原理 —— 一切皆对象的代价与自由">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/16/lang/Python%E8%AF%AD%E8%A8%80%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E4%B8%8E%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="引子：人生苦短，我用 Python1991 年，Guido van Rossum 发布了 Python 的第一个公开版本。他给这门语言起名时，脑子里浮现的不是蟒蛇，而是英国喜剧团体 Monty Python。这个细节透露了 Python 的基因：它应该是有趣的、易读的、让人愉快的。 二十年后，Python 成了世界上使用人数最多的编程语言之一，但与此同时，它也是主流语言中单线程性能最低的一个。这个">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-16T05:02:00.000Z">
+<meta property="article:modified_time" content="2026-08-16T08:38:45.732Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="CPython">
+<meta property="article:tag" content="GIL">
+<meta property="article:tag" content="Python">
+<meta property="article:tag" content="对象模型">
+<meta property="article:tag" content="底层原理">
+<meta property="article:tag" content="引用计数">
+<meta property="article:tag" content="描述符">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Python 语言设计哲学与底层原理 —— 一切皆对象的代价与自由 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Python 语言设计哲学与底层原理 —— 一切皆对象的代价与自由"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-16 13:02" pubdate>
+          2026年8月16日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          121 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Python 语言设计哲学与底层原理 —— 一切皆对象的代价与自由</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="引子：人生苦短，我用-Python"><a href="#引子：人生苦短，我用-Python" class="headerlink" title="引子：人生苦短，我用 Python"></a>引子：人生苦短，我用 Python</h2><p>1991 年，Guido van Rossum 发布了 Python 的第一个公开版本。他给这门语言起名时，脑子里浮现的不是蟒蛇，而是英国喜剧团体 Monty Python。这个细节透露了 Python 的基因：<strong>它应该是有趣的、易读的、让人愉快的</strong>。</p>
+<p>二十年后，Python 成了世界上使用人数最多的编程语言之一，但与此同时，它也是主流语言中单线程性能最低的一个。这个矛盾并非偶然——<strong>它恰恰是一套内在自洽的设计取舍的两面</strong>。</p>
+<p>Guido 在 PEP 20（Python 之禅）里写道：</p>
+<blockquote>
+<p><strong>Readability counts.</strong> （可读性很重要。）<br><strong>Simple is better than complex.</strong> （简单胜于复杂。）<br><strong>Special cases aren’t special enough to break the rules.</strong> （特殊情况也不足以打破规则。）</p>
+</blockquote>
+<p>这三条构成了 Python 一切设计决策的底色。为了可读性，Python 用强制缩进替代花括号；为了简单，它不区分 int/Integer，一切都是对象；为了规则的一致性，它让 <code>1</code>、<code>True</code>、<code>"hello"</code>、<code>len</code> 函数、一个类，全部以同一种方式存在于内存里。</p>
+<p>这种”一切皆对象 + 动态性优先”的设计哲学，换来了极致的表达力和开发效率——代价是性能和 GIL。本文将逐层拆开 CPython（Python 的 C 参考实现）的底层机制，讲清每一处”怎么实现”和”为什么这么设计”。</p>
+<hr>
+<h2 id="一、对象模型：一切皆对象的底层意义"><a href="#一、对象模型：一切皆对象的底层意义" class="headerlink" title="一、对象模型：一切皆对象的底层意义"></a>一、对象模型：一切皆对象的底层意义</h2><h3 id="1-1-PyObject：所有对象的公共头"><a href="#1-1-PyObject：所有对象的公共头" class="headerlink" title="1.1 PyObject：所有对象的公共头"></a>1.1 PyObject：所有对象的公共头</h3><p>在 CPython 中，”一切皆对象”不是一句哲学口号，而是一个精确的 C 语言实现事实：<strong>内存里每一个 Python 对象，无论是整数、字符串、函数还是类，都以 <code>PyObject</code> 结构体开头</strong>。</p>
+<p><code>PyObject</code> 的核心定义（来自 <code>Include/object.h</code>）只有两个字段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> _<span class="hljs-title">object</span> {</span><br>    Py_ssize_t ob_refcnt;   <span class="hljs-comment">// 引用计数</span><br>    PyTypeObject *ob_type;  <span class="hljs-comment">// 指向类型对象的指针</span><br>} PyObject;<br></code></pre></td></tr></table></figure>
+
+<p>这两个字段就是 Python 对象模型的全部基础。<code>ob_refcnt</code> 是引用计数，用于内存管理（第四节详述）；<code>ob_type</code> 指向这个对象的类型（比如 <code>int</code>、<code>str</code>、<code>list</code>），类型对象本身也是 <code>PyObject</code>，递归地遵循同样的结构。</p>
+<p>对于有长度的序列对象（字符串、列表等），还有一个扩展：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> {</span><br>    PyObject ob_base;   <span class="hljs-comment">// 内嵌 PyObject 头</span><br>    Py_ssize_t ob_size; <span class="hljs-comment">// 元素个数</span><br>} PyVarObject;<br></code></pre></td></tr></table></figure>
+
+<p>这种用 C 结构体”头部内嵌”来模拟继承的技巧，让所有对象都能被安全地向上转型为 <code>PyObject *</code>——这是 CPython 整个 C API 的基础。</p>
+<figure class="highlight elm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs elm">内存中的 <span class="hljs-type">Python</span> 整数 <span class="hljs-number">42</span>：<br>┌─────────────────┐<br>│ ob_refcnt = <span class="hljs-number">3</span>   │  ← 当前有 <span class="hljs-number">3</span> 个引用指向它<br>│ ob_<span class="hljs-keyword">type</span> = &amp;<span class="hljs-type">PyLong_Type</span> │  ← 类型是 int<br>│ ... (整数值存储) │<br>└─────────────────┘<br></code></pre></td></tr></table></figure>
+
+<h3 id="1-2-变量是名字绑定，不是容器"><a href="#1-2-变量是名字绑定，不是容器" class="headerlink" title="1.2 变量是名字绑定，不是容器"></a>1.2 变量是名字绑定，不是容器</h3><p>理解了 PyObject，就能理解 Python 变量语义的根本：<strong>Python 的变量不是存放值的盒子，而是贴在对象上的标签（名字绑定）。</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs python">a = <span class="hljs-number">42</span>      <span class="hljs-comment"># 名字 'a' 绑定到整数对象 42</span><br>b = a       <span class="hljs-comment"># 名字 'b' 也绑定到同一个对象 42，不是拷贝</span><br>a = <span class="hljs-number">100</span>     <span class="hljs-comment"># 名字 'a' 重新绑定到新对象 100，b 不受影响</span><br></code></pre></td></tr></table></figure>
+
+<p>赋值操作的本质是：在当前命名空间（一个字典）里，把字符串键映射到某个 <code>PyObject *</code>。这解释了为什么 Python 里”赋值”不会拷贝——你只是在移动一个指针，而不是复制数据。</p>
+<p>这与 Go 和 C++ 的值语义截然不同：在那些语言里，<code>a = b</code> 默认是值拷贝，对象独立存在。Python 选择了引用语义，因为它与”一切皆对象”协调一致——如果连整数赋值都要 copy 一个 PyObject，开销将难以接受，更会打破”对象有统一身份”的模型。</p>
+<h3 id="1-3-不可变对象与小整数缓存"><a href="#1-3-不可变对象与小整数缓存" class="headerlink" title="1.3 不可变对象与小整数缓存"></a>1.3 不可变对象与小整数缓存</h3><p>Python 里有可变对象（<code>list</code>、<code>dict</code>、自定义类实例）和不可变对象（<code>int</code>、<code>str</code>、<code>tuple</code>、<code>frozenset</code>）。不可变对象一旦创建，其值就不可更改——这是名字绑定语义下安全共享的前提：如果多个变量绑定了同一个不可变对象，任何一方都不能通过这个对象影响其他人。</p>
+<p>CPython 对小整数做了一个广为人知的优化——<strong>小整数缓存</strong>：在解释器初始化时，预先创建 <code>[-5, 256]</code> 范围内的整数对象，并永久缓存。每次需要这些值时，直接返回缓存中的对象而不新建。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs python">a = <span class="hljs-number">100</span><br>b = <span class="hljs-number">100</span><br><span class="hljs-built_in">print</span>(a <span class="hljs-keyword">is</span> b)   <span class="hljs-comment"># True：两者绑定了缓存中同一个对象</span><br><br>a = <span class="hljs-number">300</span><br>b = <span class="hljs-number">300</span><br><span class="hljs-built_in">print</span>(a <span class="hljs-keyword">is</span> b)   <span class="hljs-comment"># False（通常）：超出缓存范围，创建了两个独立对象</span><br></code></pre></td></tr></table></figure>
+
+<p>为什么是 <code>[-5, 256]</code>？这个范围是 CPython 经验性选择的，覆盖了绝大多数日常计数、循环、索引场景。类似地，短字符串也有 <strong>intern 机制</strong>（字符串驻留），对满足条件的字符串（通常是标识符形式的字符串字面量）只保留一份实例。</p>
+<p>这些优化的存在本身就揭示了 Python 的设计压力：<strong>“一切皆对象”意味着连 <code>1 + 1</code> 也要通过两个 PyObject 的方法调用来完成</strong>，如果不做缓存，内存分配与回收的压力将极大地拖慢最简单的运算。小整数缓存是”一切皆对象”代价的一个局部补丁。</p>
+<h3 id="1-4-设计哲学回望"><a href="#1-4-设计哲学回望" class="headerlink" title="1.4 设计哲学回望"></a>1.4 设计哲学回望</h3><p>“一切皆对象”是 Python 表达力的根基。正因为函数、类、模块都是对象，Python 才能轻松实现装饰器、元类、函数作为一等公民传递。<code>len(x)</code> 而不是 <code>x.len()</code>，是因为 <code>len</code> 本身也是个普通的函数对象，而不是某个类的特权方法——任何对象只要实现了 <code>__len__</code>，就能被 <code>len()</code> 正确处理。<strong>统一的对象抽象换来了统一的操作协议</strong>，这是 Python 生态碎片化程度低、库与库之间高度互操作的深层原因。</p>
+<hr>
+<h2 id="二、字节码与解释执行：CPython-的-eval-循环"><a href="#二、字节码与解释执行：CPython-的-eval-循环" class="headerlink" title="二、字节码与解释执行：CPython 的 eval 循环"></a>二、字节码与解释执行：CPython 的 eval 循环</h2><h3 id="2-1-源码到字节码的流水线"><a href="#2-1-源码到字节码的流水线" class="headerlink" title="2.1 源码到字节码的流水线"></a>2.1 源码到字节码的流水线</h3><p>CPython 执行一段 Python 代码，经历以下流水线：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs scss">源代码(.py)<br>    ↓ 词法分析 (Tokenizer)<br>Token 流<br>    ↓ 语法分析 (Parser)<br>抽象语法树 (AST)<br>    ↓ 编译器 (Compiler)<br>字节码 (bytecode) + 代码对象 (code object)<br>    ↓ Python 虚拟机 (PVM / ceval loop)<br>执行结果<br></code></pre></td></tr></table></figure>
+
+<p>每个函数、类、模块，都会被编译成一个<strong>代码对象（code object）</strong>，其中包含字节码指令序列、常量池、变量名列表等。字节码本身是一种紧凑的中间表示，用 <code>dis</code> 模块可以直接看到：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> dis<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">a, b</span>):<br>    <span class="hljs-keyword">return</span> a + b<br><br>dis.dis(add)<br><span class="hljs-comment"># 输出（Python 3.11+，实际指令名可能随版本变化）：</span><br><span class="hljs-comment">#   2           RESUME          0</span><br><span class="hljs-comment">#   3           LOAD_FAST       0 (a)</span><br><span class="hljs-comment">#               LOAD_FAST       1 (b)</span><br><span class="hljs-comment">#               BINARY_OP       0 (+)</span><br><span class="hljs-comment">#               RETURN_VALUE</span><br></code></pre></td></tr></table></figure>
+
+<p>每条字节码指令是一个操作码（opcode）加可选的操作数，解释器逐条执行。</p>
+<h3 id="2-2-帧对象与执行栈"><a href="#2-2-帧对象与执行栈" class="headerlink" title="2.2 帧对象与执行栈"></a>2.2 帧对象与执行栈</h3><p>每次调用一个函数，CPython 都会创建一个<strong>帧对象（frame object）</strong>，对应 Python 级别的一次函数调用上下文。帧对象保存了：</p>
+<ul>
+<li>当前执行的代码对象（code object）</li>
+<li>程序计数器（指向下一条字节码指令）</li>
+<li>局部变量数组</li>
+<li>求值栈（evaluation stack）——字节码操作的操作数栈</li>
+</ul>
+<p>帧对象用单链表串联，形成调用栈。<code>traceback</code> 对象就是遍历这条链表生成的。<code>inspect.currentframe()</code> 可以在运行时拿到当前帧，Python 的调试器、协程、生成器都建立在帧对象可以被”挂起”和”恢复”这个能力之上。</p>
+<h3 id="2-3-ceval-循环：解释执行的心脏"><a href="#2-3-ceval-循环：解释执行的心脏" class="headerlink" title="2.3 ceval 循环：解释执行的心脏"></a>2.3 ceval 循环：解释执行的心脏</h3><p>CPython 的执行核心是 <code>Python/ceval.c</code> 中的 <code>_PyEval_EvalFrameDefault</code> 函数——一个<strong>巨大的 C 语言 switch-case 循环</strong>，每次迭代取出一条字节码指令，根据 opcode 跳转到对应的处理分支执行。这就是所谓的<strong>解释器循环（eval loop）</strong>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// 极度简化的伪代码示意</span><br><span class="hljs-keyword">for</span> (;;) {<br>    opcode = *next_instr++;<br>    <span class="hljs-keyword">switch</span> (opcode) {<br>        <span class="hljs-keyword">case</span> LOAD_FAST:<br>            PUSH(fastlocals[oparg]);<br>            <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> BINARY_OP:<br>            right = POP();<br>            left = POP();<br>            result = PyNumber_Add(left, right);  <span class="hljs-comment">// 调用对象的 __add__</span><br>            PUSH(result);<br>            <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> RETURN_VALUE:<br>            retval = POP();<br>            <span class="hljs-keyword">goto</span> return_or_yield;<br>        <span class="hljs-comment">// ...数百个 case</span><br>    }<br>}<br></code></pre></td></tr></table></figure>
+
+<p>注意 <code>BINARY_OP</code> 的处理：<code>a + b</code> 并不是直接的 CPU 加法，而是调用 <code>PyNumber_Add</code>，后者再查找左操作数类型的 <code>nb_add</code> 函数指针（通过 <code>ob_type</code>），最终才执行实际加法。这条路径上有<strong>多次 C 函数调用、类型查找、引用计数更新</strong>，开销远高于一条原生机器指令。</p>
+<h3 id="2-4-为什么-Python-慢"><a href="#2-4-为什么-Python-慢" class="headerlink" title="2.4 为什么 Python 慢"></a>2.4 为什么 Python 慢</h3><p>CPython 的执行慢，本质原因不是 Python 程序员写的算法不好，而是<strong>每一步操作的指令数远超原生语言</strong>：</p>
+<ol>
+<li><strong>动态类型</strong>：<code>a + b</code> 在执行时才知道类型，每次都要查 <code>ob_type</code> 再间接调用；而 C 编译器在编译期就知道类型，直接生成一条 <code>ADD</code> 指令。</li>
+<li><strong>对象开销</strong>：Python 的 <code>int</code> 是堆上的 PyObject，而 C 的 <code>int</code> 直接在寄存器里；加法的结果还要分配一个新 PyObject。</li>
+<li><strong>引用计数</strong>：每次对象被引用或解除引用，都要修改 <code>ob_refcnt</code>——即内存写操作，会破坏 CPU 缓存行。</li>
+<li><strong>字节码解释</strong>：一条 Python 字节码背后有多次 C 函数调用和内存访问，而 JIT 语言（Java、JS V8）可以把热路径编译成本地机器码直接执行。</li>
+</ol>
+<p>Python 3.11 引入了<strong>自适应解释器（adaptive interpreter）</strong>，对热字节码进行”专化（specialization）”（比如知道是整数加法就走快路径）；Python 3.13 正在推进的 JIT 编译器也是对这个根本瓶颈的正面迎击。但到目前为止，CPython 的执行模型仍以解释执行为主。</p>
+<h3 id="2-5-设计哲学回望"><a href="#2-5-设计哲学回望" class="headerlink" title="2.5 设计哲学回望"></a>2.5 设计哲学回望</h3><p>Python 选择字节码解释执行，是”开发效率高于运行效率”哲学的直接体现。字节码编译使模块可以缓存（<code>.pyc</code> 文件），动态特性（运行期修改类、动态 import）得以保留——这些在 AOT 编译语言里很难低成本实现。CPython 的另一个优先级是<strong>可移植性与可嵌入性</strong>：一个 C 实现的解释器循环，比 JIT 编译器更容易在各种平台和嵌入场景中运行。性能让位于灵活性，这在 Python 的历史上是一贯的选择。</p>
+<hr>
+<h2 id="三、引用计数-分代-GC：内存管理的双保险"><a href="#三、引用计数-分代-GC：内存管理的双保险" class="headerlink" title="三、引用计数 + 分代 GC：内存管理的双保险"></a>三、引用计数 + 分代 GC：内存管理的双保险</h2><h3 id="3-1-引用计数：即时回收的代价"><a href="#3-1-引用计数：即时回收的代价" class="headerlink" title="3.1 引用计数：即时回收的代价"></a>3.1 引用计数：即时回收的代价</h3><p>Python 的主要内存管理机制是<strong>引用计数（Reference Counting）</strong>：每个 PyObject 的 <code>ob_refcnt</code> 记录了当前有多少个引用指向它。每次一个新引用建立（<code>Py_INCREF</code>），计数加一；引用消失（<code>Py_DECREF</code>），计数减一。当计数降为零，对象立即被销毁，内存立即归还。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> sys<br><br>a = []          <span class="hljs-comment"># 创建列表，refcount = 1</span><br>b = a           <span class="hljs-comment"># 新引用，refcount = 2</span><br><span class="hljs-built_in">print</span>(sys.getrefcount(a))  <span class="hljs-comment"># 输出 3（getrefcount 调用本身也是一个临时引用）</span><br><br><span class="hljs-keyword">del</span> b           <span class="hljs-comment"># 引用减少，refcount = 1</span><br><span class="hljs-keyword">del</span> a           <span class="hljs-comment"># 引用减少，refcount = 0 → 对象立即被销毁</span><br></code></pre></td></tr></table></figure>
+
+<p>引用计数的最大优势是<strong>确定性（determinism）</strong>：对象何时被销毁是完全可预测的——当最后一个引用消失时，立即销毁。这让 Python 的资源管理非常直观，<code>with</code> 语句（<code>__enter__</code>/<code>__exit__</code>）能可靠地在代码块结束时立即释放资源（文件、锁、连接），不像 Java 的 <code>try-with-resources</code> 依赖于 GC 的不确定时机。</p>
+<h3 id="3-2-循环引用：引用计数的致命盲区"><a href="#3-2-循环引用：引用计数的致命盲区" class="headerlink" title="3.2 循环引用：引用计数的致命盲区"></a>3.2 循环引用：引用计数的致命盲区</h3><p>引用计数有一个众所周知的致命弱点：<strong>无法处理循环引用</strong>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs python">a = []<br>b = []<br>a.append(b)   <span class="hljs-comment"># a 引用 b，b 的 refcount = 1</span><br>b.append(a)   <span class="hljs-comment"># b 引用 a，a 的 refcount = 1（加上变量 a 本身是 2）</span><br><br><span class="hljs-keyword">del</span> a<br><span class="hljs-keyword">del</span> b<br><span class="hljs-comment"># 此时 a、b 变量不存在了，但两个列表对象互相持有对方的引用</span><br><span class="hljs-comment"># 两者 refcount 都是 1（非零），引用计数永远无法降为 0</span><br><span class="hljs-comment"># → 内存泄漏</span><br></code></pre></td></tr></table></figure>
+
+<p>这是 Python 需要额外 GC 的根本原因。</p>
+<h3 id="3-3-分代-GC：循环引用的清道夫"><a href="#3-3-分代-GC：循环引用的清道夫" class="headerlink" title="3.3 分代 GC：循环引用的清道夫"></a>3.3 分代 GC：循环引用的清道夫</h3><p>CPython 在引用计数之上，叠加了一个基于<strong>分代（generational）<strong>的循环引用检测 GC（<code>gc</code> 模块）。它把堆上的</strong>容器对象</strong>（能持有对其他对象的引用的对象，如 list、dict、class 实例）分为三代：</p>
+<figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs tap">第<span class="hljs-number"> 0 </span>代（youngest）：新创建的对象<br>第<span class="hljs-number"> 1 </span>代（middle）：  经历一次 GC 收集后仍存活的对象<br>第<span class="hljs-number"> 2 </span>代（oldest）：  经历两次 GC 收集后仍存活的对象<br></code></pre></td></tr></table></figure>
+
+<p>GC 的触发条件：<strong>第 0 代中对象数量超过阈值（默认 700）时</strong>，触发一次第 0 代收集；第 0 代收集到一定次数后，连带收集第 1 代；再累积到一定次数，才收集第 2 代。默认阈值可通过 <code>gc.get_threshold()</code> 查看（通常是 <code>(700, 10, 10)</code>）。</p>
+<p>循环引用检测的核心算法是”<strong>引用计数差值法</strong>“：遍历所有第 0 代对象，把每个对象的实际引用计数减去”来自代内对象的引用数”，如果差值为零，说明只有代内循环引用在维系它的存活——即垃圾，可以回收。</p>
+<p>分代假说（弱分代假设）在 Python 世界同样成立：<strong>绝大多数对象生命周期很短，不会产生循环引用；长期存活的对象（第 2 代）很少，GC 很少需要扫描它们</strong>。这样，昂贵的循环引用检测只需在小范围的第 0 代上频繁运行，兼顾了正确性和性能。</p>
+<h3 id="3-4-为什么用引用计数而不是纯-GC"><a href="#3-4-为什么用引用计数而不是纯-GC" class="headerlink" title="3.4 为什么用引用计数而不是纯 GC"></a>3.4 为什么用引用计数而不是纯 GC</h3><p>Python 选择引用计数作为主要机制，而不是像 Java/Go 那样使用纯追踪式 GC，原因有几个：</p>
+<ul>
+<li><strong>确定性析构</strong>：<code>__del__</code> 方法和 <code>with</code> 语句能在对象引用消失时立即执行，而追踪式 GC 无法保证析构时机，这对 Python 的 RAII 惯用法至关重要。</li>
+<li><strong>实现简单</strong>：在 CPython 诞生的年代（1990s），引用计数比并发 GC 实现简单得多，契合 Python”保持简单”的哲学。</li>
+<li><strong>增量性</strong>：引用计数把回收开销分散到每次引用操作上，没有大的 STW 停顿——尽管这些小开销加起来未必更少，但延迟特性更平滑。</li>
+</ul>
+<p>代价则是：引用计数每次修改 <code>ob_refcnt</code> 都是内存写操作，对 CPU 缓存不友好；且它与 GIL 深度绑定（下一节详述），是制约 Python 多线程性能的关键因素之一。</p>
+<h3 id="3-5-设计哲学回望"><a href="#3-5-设计哲学回望" class="headerlink" title="3.5 设计哲学回望"></a>3.5 设计哲学回望</h3><p>引用计数 + 分代 GC 的组合，体现了 Python 惯常的”先用简单方案，再补丁覆盖边缘案例”的思路：引用计数解决 99% 的对象回收问题，分代 GC 专门处理引用计数无力的循环引用。两套机制各司其职，整体复杂度低于单一的并发 GC 实现。<strong>确定性与简单性，是 Python 内存管理选择的核心准则</strong>。</p>
+<hr>
+<h2 id="四、GIL：全局解释器锁的前因后果"><a href="#四、GIL：全局解释器锁的前因后果" class="headerlink" title="四、GIL：全局解释器锁的前因后果"></a>四、GIL：全局解释器锁的前因后果</h2><h3 id="4-1-GIL-是什么，为什么存在"><a href="#4-1-GIL-是什么，为什么存在" class="headerlink" title="4.1 GIL 是什么，为什么存在"></a>4.1 GIL 是什么，为什么存在</h3><p>GIL（Global Interpreter Lock，全局解释器锁）是 CPython 解释器持有的一把互斥锁，<strong>在任意时刻，只有持有 GIL 的线程才能执行 Python 字节码</strong>。即便你的机器有 32 个 CPU 核，运行多线程 Python 程序时，同一时刻也只有一个线程在真正运行 Python 代码。</p>
+<p>GIL 存在的直接原因是<strong>引用计数的线程安全</strong>。<code>ob_refcnt</code> 的自增/自减不是原子操作（在 CPU 层面是 read-modify-write）。如果两个线程同时修改同一个对象的引用计数而不加锁，就会产生数据竞争：</p>
+<figure class="highlight abnf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs abnf">线程<span class="hljs-number">1</span> 读取 ob_refcnt <span class="hljs-operator">=</span> <span class="hljs-number">5</span><br>线程<span class="hljs-number">2</span> 读取 ob_refcnt <span class="hljs-operator">=</span> <span class="hljs-number">5</span><br>线程<span class="hljs-number">1</span> 写入 ob_refcnt <span class="hljs-operator">=</span> <span class="hljs-number">6</span><br>线程<span class="hljs-number">2</span> 写入 ob_refcnt <span class="hljs-operator">=</span> <span class="hljs-number">6</span>  ← 应该是 <span class="hljs-number">7</span>，发生了丢失更新<br></code></pre></td></tr></table></figure>
+
+<p>对象提前被销毁，或者本该销毁的对象没被销毁，结果是悬垂指针或内存泄漏——即解释器崩溃或静默损坏。</p>
+<p>一个直接的解决方案是为每个对象的引用计数加一把细粒度锁，但这会带来极大的锁开销（每次对象引用操作都要获取/释放锁），以及可能的死锁风险。GIL 是一个粗粒度但极其简单的解法：<strong>用一把全局锁替代千万把细粒度锁，保证在任何时刻只有一个线程在读写引用计数</strong>。这在 Python 早期的使用场景（单核为主、大量 C 扩展）下是完全合理的工程选择。</p>
+<h3 id="4-2-GIL-的调度机制"><a href="#4-2-GIL-的调度机制" class="headerlink" title="4.2 GIL 的调度机制"></a>4.2 GIL 的调度机制</h3><p>GIL 的持有不是永久的。CPython 有一个机制确保线程切换：</p>
+<ul>
+<li><strong>Python 3.2 之前</strong>：每执行 100 条字节码指令（sys.getcheckinterval()），强制释放 GIL，让其他线程有机会获取。</li>
+<li><strong>Python 3.2 之后</strong>：切换到基于<strong>时间的抢占</strong>，默认每 5 毫秒（<code>sys.getswitchinterval()</code>，默认值 0.005 秒）尝试让出 GIL。持有 GIL 的线程会检查是否有其他线程在等待，如果有，则主动释放。</li>
+</ul>
+<p>此外，当一个线程进入<strong>阻塞的系统调用</strong>（如 I/O、<code>time.sleep</code>、等待锁），它会主动<strong>释放 GIL</strong>，让其他线程继续运行 Python 代码，等系统调用返回后再重新竞争 GIL。这是 Python 多线程在 I/O 密集型场景下仍然有效的原因。</p>
+<h3 id="4-3-I-O-密集-vs-CPU-密集"><a href="#4-3-I-O-密集-vs-CPU-密集" class="headerlink" title="4.3 I/O 密集 vs CPU 密集"></a>4.3 I/O 密集 vs CPU 密集</h3><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs css">CPU 密集型任务（如矩阵计算）：<br>  线程<span class="hljs-selector-tag">A</span> <span class="hljs-selector-attr">[持有GIL，运算]</span> → 让出GIL → 线程<span class="hljs-selector-tag">B</span> <span class="hljs-selector-attr">[持有GIL，运算]</span> → ...<br>  两线程实际是串行运行，不比单线程快，甚至更慢（切换开销）<br><br><span class="hljs-selector-tag">I</span>/O 密集型任务（如并发网络请求）：<br>  线程<span class="hljs-selector-tag">A</span> <span class="hljs-selector-attr">[持有GIL，发起网络请求]</span> → 释放GIL（等待<span class="hljs-selector-tag">I</span>/O）<br>  线程<span class="hljs-selector-tag">B</span> <span class="hljs-selector-attr">[持有GIL，处理其他请求]</span> → 释放GIL<br>  → 两线程"同时"在等不同的 <span class="hljs-selector-tag">I</span>/O，真正并发<br></code></pre></td></tr></table></figure>
+
+<p>因此，Python 多线程适合 I/O 密集型场景；CPU 密集型并行应使用 <code>multiprocessing</code>（每个进程有自己的 GIL）或将计算下沉到释放了 GIL 的 C 扩展（NumPy 的很多操作正是如此）。</p>
+<h3 id="4-4-为什么难以移除"><a href="#4-4-为什么难以移除" class="headerlink" title="4.4 为什么难以移除"></a>4.4 为什么难以移除</h3><p>既然 GIL 限制了多核 CPU 的利用，为什么不直接删掉它？这个问题困扰了 Python 社区二十年，原因有几层：</p>
+<ol>
+<li><strong>引用计数语义依赖</strong>：移除 GIL，要么换掉引用计数（破坏确定性析构），要么把所有引用计数操作改成原子操作（需要 CPU 原子指令，有性能损失）。</li>
+<li><strong>C 扩展兼容性</strong>：大量 C 扩展（包括 NumPy、pandas 的底层）假设 GIL 存在，它们的 C 代码不是线程安全的。移除 GIL 会使这些扩展全部损坏，需要重写。</li>
+<li><strong>单线程性能回归</strong>：为了支持无 GIL 运行，需要引入额外的原子操作和同步机制，这些在单线程场景下是纯开销。</li>
+</ol>
+<h3 id="4-5-no-GIL-的进展：PEP-703"><a href="#4-5-no-GIL-的进展：PEP-703" class="headerlink" title="4.5 no-GIL 的进展：PEP 703"></a>4.5 no-GIL 的进展：PEP 703</h3><p>2023 年，Sam Gross 提出的 <strong>PEP 703（Making the Global Interpreter Lock Optional）</strong> 被 Python 指导委员会接受，目标是在保持向后兼容的前提下，让 GIL 变成可选项（最终可能默认关闭）。</p>
+<p>PEP 703 的核心技术路线包括：把引用计数操作改为<strong>原子操作</strong>（利用 CPU 的原子加减指令），以及引入**”immortal objects”（不朽对象）机制**——对于永远不会被销毁的对象（如小整数缓存、内置类型），直接跳过引用计数更新，消除最热路径上的原子操作开销。</p>
+<p>Python 3.13 已实验性支持 <code>--disable-gil</code> 构建选项。这是 CPython 历史上影响最深远的架构变化之一，但完整落地仍需数年。</p>
+<h3 id="4-6-设计哲学回望"><a href="#4-6-设计哲学回望" class="headerlink" title="4.6 设计哲学回望"></a>4.6 设计哲学回望</h3><p>GIL 是”简单性”哲学在并发安全领域付出代价的典型案例。它用一个极简的全局锁解决了本来极复杂的多线程引用计数问题，在 1990 年代的工程权衡下完全合理，并让 CPython 能快速迭代功能。三十年后，当多核成为标准配置、Python 进入高性能计算领域，这个”早期的简单选择”成为了最难偿还的技术债。<strong>PEP 703 是 Python 第一次认真地正视这笔债，也是 Python 社区”在保持向后兼容的前提下演进”哲学最高难度的一次实践</strong>。</p>
+<hr>
+<h2 id="五、属性查找与-MRO：动态性的核心机制"><a href="#五、属性查找与-MRO：动态性的核心机制" class="headerlink" title="五、属性查找与 MRO：动态性的核心机制"></a>五、属性查找与 MRO：动态性的核心机制</h2><h3 id="5-1-实例属性与类属性的查找顺序"><a href="#5-1-实例属性与类属性的查找顺序" class="headerlink" title="5.1 实例属性与类属性的查找顺序"></a>5.1 实例属性与类属性的查找顺序</h3><p>Python 的属性查找（<code>obj.attr</code>）是动态性最集中的体现，也是 Python 比静态语言慢的重要原因之一。每次属性访问都要走一套多步骤的查找协议：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs markdown">obj.attr 的查找步骤：<br><br><span class="hljs-bullet">1.</span> 在 type(obj).<span class="hljs-strong">__mro__</span> 链上，查找 attr 是否是"数据描述符"（有 <span class="hljs-strong">__get__</span> 和 <span class="hljs-strong">__set__</span>）<br>   如果是，描述符优先（无论实例 <span class="hljs-strong">__dict__</span> 里有没有）<br><br><span class="hljs-bullet">2.</span> 在 obj.<span class="hljs-strong">__dict__</span> 里查找<br><br><span class="hljs-bullet">3.</span> 在 type(obj).<span class="hljs-strong">__mro__</span> 链上，查找 attr 是否是"非数据描述符"或普通类属性<br><br><span class="hljs-bullet">4.</span> 都没有，调用 <span class="hljs-strong">__getattr__</span>（如果定义了）<br><br><span class="hljs-bullet">5.</span> 仍没有，抛出 AttributeError<br></code></pre></td></tr></table></figure>
+
+<p>对比 Go 或 C++：访问一个结构体字段，编译期就确定了内存偏移量，运行时是一条加法指令。Python 的每次 <code>.attr</code> 访问，背后是哈希表查找（<code>__dict__</code> 是一个 dict）加上 MRO 遍历，开销高出两到三个数量级。</p>
+<h3 id="5-2-MRO-与-C3-线性化"><a href="#5-2-MRO-与-C3-线性化" class="headerlink" title="5.2 MRO 与 C3 线性化"></a>5.2 MRO 与 C3 线性化</h3><p>Python 支持多重继承，同一个属性名可能存在于多个父类中。<strong>MRO（Method Resolution Order，方法解析顺序）</strong> 决定了沿哪条顺序搜索父类。</p>
+<p>Python 3 采用 <strong>C3 线性化算法</strong>，它保证了几个重要性质：</p>
+<ul>
+<li><strong>局部优先级</strong>：子类总是排在父类前面；</li>
+<li><strong>单调性</strong>：若 B 在 A 之前，则在任何扩展后的 MRO 里，B 也在 A 之前；</li>
+<li><strong>拒绝不一致的继承图</strong>：如果类继承图本身有矛盾（”菱形继承”的某些形式），C3 会直接报错，而不是悄悄选一个错误的顺序。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">A</span>: <span class="hljs-keyword">pass</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">B</span>(<span class="hljs-title class_ inherited__">A</span>): <span class="hljs-keyword">pass</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">C</span>(<span class="hljs-title class_ inherited__">A</span>): <span class="hljs-keyword">pass</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">D</span>(B, C): <span class="hljs-keyword">pass</span><br><br><span class="hljs-built_in">print</span>(D.__mro__)<br><span class="hljs-comment"># (&lt;class 'D'&gt;, &lt;class 'B'&gt;, &lt;class 'C'&gt;, &lt;class 'A'&gt;, &lt;class 'object'&gt;)</span><br></code></pre></td></tr></table></figure>
+
+<p>C3 算法保证了 <code>D</code> 的 MRO 是 <code>[D, B, C, A, object]</code>，而不是 <code>[D, B, A, C, object]</code>（如果 MRO 先走完 B 的继承链，<code>A</code> 就会排在 <code>C</code> 前面，而 <code>C</code> 在 <code>D.__bases__</code> 里排在 <code>B</code> 之后，不满足局部优先级）。这个看似细节的语义保证，让多重继承在实践中相对可控（尽管仍需谨慎使用）。</p>
+<h3 id="5-3-slots：省内存的代价"><a href="#5-3-slots：省内存的代价" class="headerlink" title="5.3 slots：省内存的代价"></a>5.3 <strong>slots</strong>：省内存的代价</h3><p>默认情况下，每个 Python 实例都有一个 <code>__dict__</code>——一个哈希表——用来存储实例属性。这给了极大的灵活性（随时可以添加新属性），但代价是<strong>每个实例多了一个字典的内存开销</strong>，以及哈希表查找的时间开销。</p>
+<p><code>__slots__</code> 是一种性能优化：在类定义时声明允许的属性名，CPython 就不再为实例分配 <code>__dict__</code>，而是像 C 结构体一样，用<strong>固定偏移量</strong>的槽位（slot）存储属性。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Point</span>:<br>    __slots__ = (<span class="hljs-string">'x'</span>, <span class="hljs-string">'y'</span>)  <span class="hljs-comment"># 声明允许的属性</span><br><br>p = Point()<br>p.x = <span class="hljs-number">1.0</span><br>p.y = <span class="hljs-number">2.0</span><br><span class="hljs-comment"># p.__dict__  → AttributeError，没有 __dict__</span><br><span class="hljs-comment"># p.z = 3.0  → AttributeError，不能添加未声明的属性</span><br></code></pre></td></tr></table></figure>
+
+<p><code>__slots__</code> 的内存节省相当可观：一个有 <code>__dict__</code> 的实例，仅字典本身就要几百字节；用 <code>__slots__</code> 后，每个槽位只是一个指针（8 字节）。对于需要创建数百万个实例的场景（如数据处理中的行对象），<code>__slots__</code> 是实际工程中常用的优化手段。</p>
+<p>代价是<strong>失去了动态添加属性的能力</strong>，与 Python “一切皆动态”的哲学有所背离——<code>__slots__</code> 本质上是在局部向 C 结构体的静态布局妥协，以换取性能。</p>
+<h3 id="5-4-设计哲学回望"><a href="#5-4-设计哲学回望" class="headerlink" title="5.4 设计哲学回望"></a>5.4 设计哲学回望</h3><p>MRO 的存在表明 Python 认真对待了多重继承的语义问题——它没有回避，而是用 C3 算法给出了一个严格、可预期的答案。属性查找的多步协议（描述符 → 实例字典 → 类属性 → <code>__getattr__</code>）是”动态性优先”的实现代价：这套协议让 Python 能在运行期拦截和定制几乎每一次属性访问，为元类、ORM、框架提供了极大的扩展空间。<strong><code>__slots__</code> 则是对这套动态性的局部收紧，是 Python 在表达力与性能之间保留的一个”逃生舱”</strong>。</p>
+<hr>
+<h2 id="六、描述符协议：Python-属性机制的统一底层"><a href="#六、描述符协议：Python-属性机制的统一底层" class="headerlink" title="六、描述符协议：Python 属性机制的统一底层"></a>六、描述符协议：Python 属性机制的统一底层</h2><h3 id="6-1-什么是描述符"><a href="#6-1-什么是描述符" class="headerlink" title="6.1 什么是描述符"></a>6.1 什么是描述符</h3><p>描述符（descriptor）是 Python 对象模型中最深层的魔法之一，却也是最被忽视的机制。<strong>只要一个类定义了 <code>__get__</code>、<code>__set__</code>、<code>__delete__</code> 中的至少一个方法，这个类的实例就是描述符。</strong> 当描述符作为类属性存在时，对它的访问会触发这些特殊方法，而不是直接返回描述符对象本身。</p>
+<p>描述符分两种：</p>
+<ul>
+<li><strong>数据描述符（data descriptor）</strong>：同时定义了 <code>__get__</code> 和 <code>__set__</code>（或 <code>__delete__</code>），优先级高于实例 <code>__dict__</code>；</li>
+<li><strong>非数据描述符（non-data descriptor）</strong>：只定义了 <code>__get__</code>，优先级低于实例 <code>__dict__</code>。</li>
+</ul>
+<h3 id="6-2-property、方法、classmethod-都是描述符"><a href="#6-2-property、方法、classmethod-都是描述符" class="headerlink" title="6.2 property、方法、classmethod 都是描述符"></a>6.2 property、方法、classmethod 都是描述符</h3><p>Python 的很多核心语言特性，底层都是描述符——这正是”统一机制”哲学的体现：</p>
+<p><strong><code>property</code> 是数据描述符</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Circle</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, radius</span>):<br>        <span class="hljs-variable language_">self</span>._radius = radius<br><br><span class="hljs-meta">    @property</span><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">radius</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>._radius<br><br><span class="hljs-meta">    @radius.setter</span><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">radius</span>(<span class="hljs-params">self, value</span>):<br>        <span class="hljs-keyword">if</span> value &lt; <span class="hljs-number">0</span>:<br>            <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">"radius must be non-negative"</span>)<br>        <span class="hljs-variable language_">self</span>._radius = value<br><br>c = Circle(<span class="hljs-number">5</span>)<br><span class="hljs-built_in">print</span>(c.radius)   <span class="hljs-comment"># 触发 property.__get__(c, Circle) → 调用 getter</span><br>c.radius = <span class="hljs-number">10</span>     <span class="hljs-comment"># 触发 property.__set__(c, 10) → 调用 setter</span><br></code></pre></td></tr></table></figure>
+
+<p><code>property</code> 对象是一个数据描述符，它的 <code>__get__</code> 调用 getter，<code>__set__</code> 调用 setter，<code>__delete__</code> 调用 deleter。整个 <code>@property</code> 语法糖背后，就是描述符协议。</p>
+<p><strong>普通方法是非数据描述符</strong>：函数对象在 Python 中定义了 <code>__get__</code> 方法。当通过实例访问一个方法时，<code>function.__get__(instance, type)</code> 被调用，返回一个**绑定方法（bound method）**对象，这个对象把 <code>instance</code> 绑定为第一个参数。这就是为什么 <code>obj.method()</code> 等价于 <code>Type.method(obj)</code> 的底层原理。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Foo</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">bar</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-keyword">pass</span><br><br>foo = Foo()<br><span class="hljs-built_in">print</span>(<span class="hljs-built_in">type</span>(Foo.bar))    <span class="hljs-comment"># &lt;class 'function'&gt;</span><br><span class="hljs-built_in">print</span>(<span class="hljs-built_in">type</span>(foo.bar))    <span class="hljs-comment"># &lt;class 'method'&gt;，通过描述符协议创建的绑定方法</span><br></code></pre></td></tr></table></figure>
+
+<p><strong><code>classmethod</code> 和 <code>staticmethod</code></strong> 也是描述符：<code>classmethod.__get__</code> 返回绑定了类（而非实例）的方法；<code>staticmethod.__get__</code> 直接返回原始函数，不做任何绑定。</p>
+<h3 id="6-3-描述符如何统一了属性访问"><a href="#6-3-描述符如何统一了属性访问" class="headerlink" title="6.3 描述符如何统一了属性访问"></a>6.3 描述符如何统一了属性访问</h3><p>描述符协议让 Python 用一套一致的机制，统一了原本千头万绪的属性访问场景：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs python">obj.attr 的本质，是：<br>  <span class="hljs-built_in">type</span>(obj).__mro__ 中找到 attr 对应的对象 X<br><br>  <span class="hljs-keyword">if</span> <span class="hljs-built_in">hasattr</span>(X, <span class="hljs-string">'__get__'</span>):<br>      <span class="hljs-keyword">if</span> <span class="hljs-built_in">hasattr</span>(X, <span class="hljs-string">'__set__'</span>) <span class="hljs-keyword">or</span> <span class="hljs-built_in">hasattr</span>(X, <span class="hljs-string">'__delete__'</span>):<br>          <span class="hljs-keyword">return</span> X.__get__(obj, <span class="hljs-built_in">type</span>(obj))  <span class="hljs-comment"># 数据描述符，优先返回</span><br>      <span class="hljs-comment"># else 非数据描述符，先看 obj.__dict__</span><br>  <br>  <span class="hljs-keyword">if</span> <span class="hljs-string">'attr'</span> <span class="hljs-keyword">in</span> obj.__dict__:<br>      <span class="hljs-keyword">return</span> obj.__dict__[<span class="hljs-string">'attr'</span>]           <span class="hljs-comment"># 实例属性</span><br>  <br>  <span class="hljs-keyword">if</span> <span class="hljs-built_in">hasattr</span>(X, <span class="hljs-string">'__get__'</span>):<br>      <span class="hljs-keyword">return</span> X.__get__(obj, <span class="hljs-built_in">type</span>(obj))      <span class="hljs-comment"># 非数据描述符（如方法）</span><br>  <br>  <span class="hljs-keyword">return</span> X                                  <span class="hljs-comment"># 普通类属性</span><br></code></pre></td></tr></table></figure>
+
+<p>正是这个统一协议，让 <code>property</code>（一个 Python 内置类型）能与语言无缝集成，而无需特殊的编译器支持；让 ORM 框架（如 SQLAlchemy）能写出 <code>User.name == 'Alice'</code> 返回 SQL 条件对象而非布尔值这样的魔法；让各种框架能透明地在属性访问上插入验证、懒加载、代理等逻辑。</p>
+<p><strong>描述符是 Python”元编程不需要特殊语法”的秘密</strong>：只要实现几个特殊方法，你就能接管属性访问的全部行为。</p>
+<h3 id="6-4-设计哲学回望"><a href="#6-4-设计哲学回望" class="headerlink" title="6.4 设计哲学回望"></a>6.4 设计哲学回望</h3><p>描述符协议是 Python “一切皆对象 + 协议优于继承” 哲学最精深的体现。Python 没有在解释器里为 property、方法、classmethod 写三套特殊逻辑，而是设计了一个通用协议，让这些特性全部成为普通 Python 对象，通过协议接入语言核心。这样，任何用户定义的类都能实现同样的效果——<strong>语言内置与用户代码之间没有特权差异，这是 Python 扩展性极强的根本原因之一。</strong></p>
+<hr>
+<h2 id="七、鸭子类型与动态性：代价与自由"><a href="#七、鸭子类型与动态性：代价与自由" class="headerlink" title="七、鸭子类型与动态性：代价与自由"></a>七、鸭子类型与动态性：代价与自由</h2><h3 id="7-1-鸭子类型：协议胜过继承"><a href="#7-1-鸭子类型：协议胜过继承" class="headerlink" title="7.1 鸭子类型：协议胜过继承"></a>7.1 鸭子类型：协议胜过继承</h3><blockquote>
+<p>“If it walks like a duck and quacks like a duck, then it’s a duck.”</p>
+</blockquote>
+<p>Python 的类型系统是<strong>鸭子类型（duck typing）</strong>：不检查对象的类型，只检查它是否支持所需的操作（协议）。这与静态语言的 nominal typing（名义类型系统）截然不同。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">process</span>(<span class="hljs-params">data</span>):<br>    <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> data:   <span class="hljs-comment"># 只需要 data 支持迭代协议（__iter__）</span><br>        <span class="hljs-built_in">print</span>(item)<br><br>process([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>])           <span class="hljs-comment"># list</span><br>process((<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>))           <span class="hljs-comment"># tuple</span><br>process({<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>})           <span class="hljs-comment"># set</span><br>process(<span class="hljs-string">"abc"</span>)               <span class="hljs-comment"># str（每个字符）</span><br>process(<span class="hljs-built_in">range</span>(<span class="hljs-number">3</span>))            <span class="hljs-comment"># range</span><br><br><span class="hljs-comment"># 自定义类型，只要实现 __iter__，同样有效：</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">EvenNumbers</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__iter__</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-keyword">yield</span> <span class="hljs-number">2</span>; <span class="hljs-keyword">yield</span> <span class="hljs-number">4</span>; <span class="hljs-keyword">yield</span> <span class="hljs-number">6</span><br><br>process(EvenNumbers())       <span class="hljs-comment"># 工作正常</span><br></code></pre></td></tr></table></figure>
+
+<p><code>process</code> 函数不关心参数是什么类型，只关心它是否”可迭代”。这是 Python 生态高度互操作性的基础：标准库的大多数函数接受”任何可迭代对象”、”任何文件类对象”、”任何序列”，而不是具体的 <code>list</code> 或 <code>File</code>。</p>
+<h3 id="7-2-运行期一切可改：monkey-patching"><a href="#7-2-运行期一切可改：monkey-patching" class="headerlink" title="7.2 运行期一切可改：monkey patching"></a>7.2 运行期一切可改：monkey patching</h3><p>Python 的动态性不止于此——<strong>一个模块、类、实例的属性，在运行期的任何时刻都可以被修改或替换</strong>，这就是所谓的 monkey patching：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> json<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">fast_dumps</span>(<span class="hljs-params">obj</span>):<br>    <span class="hljs-string">"""假设这是一个更快的 JSON 序列化实现"""</span><br>    ...<br><br>json.dumps = fast_dumps   <span class="hljs-comment"># 替换标准库函数！</span><br><span class="hljs-comment"># 之后所有调用 json.dumps 的代码都会用 fast_dumps</span><br></code></pre></td></tr></table></figure>
+
+<p>这在测试中极为有用（mock/stub 不需要特殊框架，直接替换属性即可），在运行时修复第三方库的 bug 也可以用这个技巧。Python 的测试框架（如 <code>unittest.mock</code>）大量依赖 monkey patching 实现。</p>
+<h3 id="7-3-getattr-与动态属性"><a href="#7-3-getattr-与动态属性" class="headerlink" title="7.3 getattr 与动态属性"></a>7.3 <strong>getattr</strong> 与动态属性</h3><p>Python 提供了几个特殊方法来拦截属性访问，实现动态属性：</p>
+<ul>
+<li><code>__getattr__(self, name)</code>：当普通属性查找失败时调用（仅在找不到时触发）；</li>
+<li><code>__getattribute__(self, name)</code>：拦截所有属性访问（每次都触发，实现时需小心无限递归）；</li>
+<li><code>__setattr__(self, name, value)</code>：拦截所有属性设置；</li>
+<li><code>__missing__(self, key)</code>：dict 子类中，<code>key</code> 不存在时调用（<code>defaultdict</code> 用的正是这个）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LazyLoader</span>:<br>    <span class="hljs-string">"""访问属性时才动态加载模块"""</span><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__getattr__</span>(<span class="hljs-params">self, name</span>):<br>        <span class="hljs-keyword">import</span> importlib<br>        module = importlib.import_module(name)<br>        <span class="hljs-built_in">setattr</span>(<span class="hljs-variable language_">self</span>, name, module)   <span class="hljs-comment"># 缓存，下次直接访问</span><br>        <span class="hljs-keyword">return</span> module<br><br>lazy = LazyLoader()<br>lazy.json    <span class="hljs-comment"># 第一次：动态导入 json 模块</span><br>lazy.json    <span class="hljs-comment"># 第二次：从实例 __dict__ 直接返回（__getattr__ 不再被调用）</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="7-4-动态性的代价"><a href="#7-4-动态性的代价" class="headerlink" title="7.4 动态性的代价"></a>7.4 动态性的代价</h3><p>动态性带来了表达力，代价是：</p>
+<ol>
+<li><strong>性能</strong>：每次属性访问都是运行期查找，无法像静态语言那样在编译期确定偏移量；</li>
+<li><strong>可静态分析性</strong>：类型检查器（mypy、pyright）难以推断动态类型，错误在运行前无法发现；</li>
+<li><strong>可读性边界</strong>：过度使用 monkey patching 和动态属性会让代码行为难以追踪，对大型团队协作是挑战。</li>
+</ol>
+<p>Python 3.5+ 引入的**类型注解（type hints）**和静态类型检查器（mypy），正是对动态性代价的局部补救——它们不改变运行时行为，只在开发阶段提供类型安全保障，是”可选的静态类型层”。</p>
+<h3 id="7-5-设计哲学回望"><a href="#7-5-设计哲学回望" class="headerlink" title="7.5 设计哲学回望"></a>7.5 设计哲学回望</h3><p>鸭子类型和运行期动态性，是 Python “表达力优先”哲学最极端的体现。Python 相信程序员知道自己在做什么（”我们都是成年人”），不需要编译器在每一步都拦下来做类型检查。这种信任换来了极低的写代码摩擦力——你可以快速组合任意对象、灵活修改系统行为、在 REPL 里即时实验。代价是”运行时才知道哪里出了错”，这在大型系统中是真实的工程风险。类型注解体系是 Python 社区对这个代价的迟来但诚恳的承认，也是”不破坏已有代码前提下向更严格演进”的典型 Python 式解法。</p>
+<hr>
+<h2 id="结语：代价与自由，Python-的取舍账本"><a href="#结语：代价与自由，Python-的取舍账本" class="headerlink" title="结语：代价与自由，Python 的取舍账本"></a>结语：代价与自由，Python 的取舍账本</h2><p>回看全文，Python 的底层机制构成了一套高度自洽的取舍体系：</p>
+<p><strong>“一切皆对象”</strong>：PyObject 统一了所有类型，换来了表达力和互操作性，代价是对象开销、引用计数操作、以及每次操作都要通过类型指针间接调用。</p>
+<p><strong>“动态性优先”</strong>：属性查找走多步协议、变量是运行期的名字绑定、类型在运行期可变——这些让 Python 极其灵活，代价是无法在编译期做任何优化假设，解释执行的每一步都慢于静态语言。</p>
+<p><strong>GIL</strong>：用一把全局锁保护引用计数，用三十年的工程简单性换来了今日多核时代的瓶颈，PEP 703 正在偿还这笔债。</p>
+<p><strong>引用计数</strong>：确定性析构和即时回收，代价是循环引用和高频计数操作。</p>
+<p>如果把三门语言的取舍账本并排摆放：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Python</th>
+<th>Go</th>
+<th>C++</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心取舍</td>
+<td>开发效率 vs 性能</td>
+<td>工程可维护性 vs 表达力</td>
+<td>零成本抽象 vs 学习曲线</td>
+</tr>
+<tr>
+<td>内存管理</td>
+<td>引用计数 + 分代GC，确定性析构</td>
+<td>并发三色GC，低延迟</td>
+<td>手动管理/RAII，零运行时开销</td>
+</tr>
+<tr>
+<td>并发</td>
+<td>GIL 限制，多进程或异步</td>
+<td>goroutine + GMP，原生高并发</td>
+<td>线程，自己管同步</td>
+</tr>
+<tr>
+<td>类型系统</td>
+<td>动态+可选注解</td>
+<td>静态，简单</td>
+<td>静态，复杂（模板/concept）</td>
+</tr>
+</tbody></table>
+<p>Python 在这张表上的每一列，都选择了”对开发者最友好”的方向。它从未宣称自己是最快的语言，却成为了科学计算、AI/ML、自动化、Web 脚本最常见的选择——因为在这些领域，<strong>人的时间比机器的时间更贵</strong>，而 Python 把”节省人的时间”发挥到了极致。</p>
+<p>Guido 的那句话，现在或许有了更深的含义：</p>
+<blockquote>
+<p><strong>人生苦短，我用 Python。</strong></p>
+</blockquote>
+<p>不只是因为语法简洁，更因为它愿意用机器的每一分性能损耗，来换取程序员每一分心智的解放。</p>
+<hr>
+<blockquote>
+<p>本文是「编程语言」专栏的一篇。同系列：<a href="/2026/08/16/lang/Go%E8%AF%AD%E8%A8%80%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E4%B8%8E%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/">Go 语言设计哲学与底层原理</a>。</p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" class="category-chain-item">编程语言</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/Python/" class="category-chain-item">Python</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" class="print-no-link">#底层原理</a>
+      
+        <a href="/tags/Python/" class="print-no-link">#Python</a>
+      
+        <a href="/tags/CPython/" class="print-no-link">#CPython</a>
+      
+        <a href="/tags/GIL/" class="print-no-link">#GIL</a>
+      
+        <a href="/tags/%E5%AF%B9%E8%B1%A1%E6%A8%A1%E5%9E%8B/" class="print-no-link">#对象模型</a>
+      
+        <a href="/tags/%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0/" class="print-no-link">#引用计数</a>
+      
+        <a href="/tags/%E6%8F%8F%E8%BF%B0%E7%AC%A6/" class="print-no-link">#描述符</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Python 语言设计哲学与底层原理 —— 一切皆对象的代价与自由</div>
+      <div>https://w2ongq6.github.io/2026/08/16/lang/Python语言设计哲学与底层原理/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月16日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/16/agent/Agent%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/" title="AI Agent 全景专题 —— 从能力基石到模型、harness 与应用">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AI Agent 全景专题 —— 从能力基石到模型、harness 与应用</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/16/lang/C++%E8%AF%AD%E8%A8%80%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E4%B8%8E%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" title="C++ 语言设计哲学与底层原理 —— 零成本抽象的代价与荣耀">
+                        <span class="hidden-mobile">C++ 语言设计哲学与底层原理 —— 零成本抽象的代价与荣耀</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

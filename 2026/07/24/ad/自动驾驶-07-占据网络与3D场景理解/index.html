@@ -19,15 +19,15 @@
   <meta name="author" content="Kaiyun.li">
   <meta name="keywords" content="">
   
-    <meta name="description" content="7. 占据网络与 3D 场景理解7.1 Tesla Occupancy Network (2022)背景：Tesla AI Day 2022 上提出占据网络（Occupancy Network）的概念，预测 3D 空间中每个体素是否被占据、以及占据物的语义和运动属性。这一概念极大地推动了 3D 场景理解从基于边界框的检测向稠密占据预测的范式转移。  7.2 SurroundOcc (2023) 论">
+    <meta name="description" content="7. 占据网络与 3D 场景理解 本篇在主线中的位置：这是表示线的又一次深化，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为边界框——而框有一个致命的假设：你得先知道”这是一类什么东西”才能框它。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。 占据网络（">
 <meta property="og:type" content="article">
 <meta property="og:title" content="自动驾驶-07：占据网络与 3D 场景理解">
 <meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-07-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/index.html">
 <meta property="og:site_name" content="Kaiyun&#39;s Blog">
-<meta property="og:description" content="7. 占据网络与 3D 场景理解7.1 Tesla Occupancy Network (2022)背景：Tesla AI Day 2022 上提出占据网络（Occupancy Network）的概念，预测 3D 空间中每个体素是否被占据、以及占据物的语义和运动属性。这一概念极大地推动了 3D 场景理解从基于边界框的检测向稠密占据预测的范式转移。  7.2 SurroundOcc (2023) 论">
+<meta property="og:description" content="7. 占据网络与 3D 场景理解 本篇在主线中的位置：这是表示线的又一次深化，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为边界框——而框有一个致命的假设：你得先知道”这是一类什么东西”才能框它。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。 占据网络（">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:07:00.000Z">
-<meta property="article:modified_time" content="2026-07-25T11:05:55.844Z">
+<meta property="article:modified_time" content="2026-08-15T13:53:49.966Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="3D场景理解">
 <meta property="article:tag" content="Occupancy">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          4.3k 字
+          7k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          37 分钟
+          59 分钟
         
       </span>
     
@@ -500,30 +500,45 @@ mjx-container[display="true"] + br {
             
               <div class="markdown-body">
                 
-                <h2 id="7-占据网络与-3D-场景理解"><a href="#7-占据网络与-3D-场景理解" class="headerlink" title="7. 占据网络与 3D 场景理解"></a>7. 占据网络与 3D 场景理解</h2><h3 id="7-1-Tesla-Occupancy-Network-2022"><a href="#7-1-Tesla-Occupancy-Network-2022" class="headerlink" title="7.1 Tesla Occupancy Network (2022)"></a>7.1 Tesla Occupancy Network (2022)</h3><p><strong>背景</strong>：Tesla AI Day 2022 上提出占据网络（Occupancy Network）的概念，预测 3D 空间中每个体素是否被占据、以及占据物的语义和运动属性。这一概念极大地推动了 3D 场景理解从基于边界框的检测向稠密占据预测的范式转移。</p>
+                <h2 id="7-占据网络与-3D-场景理解"><a href="#7-占据网络与-3D-场景理解" class="headerlink" title="7. 占据网络与 3D 场景理解"></a>7. 占据网络与 3D 场景理解</h2><blockquote>
+<p><strong>本篇在主线中的位置</strong>：这是<strong>表示线的又一次深化</strong>，直接承接第 2 篇 BEV 留下的墙。BEV 让感知与规划共享了俯视坐标系，但 BEV 里的物体仍被表示为<strong>边界框</strong>——而框有一个致命的假设：<strong>你得先知道”这是一类什么东西”才能框它</strong>。可现实道路上最危险的往往是”无类别”的东西：翻倒的纸箱、洒落的货物、施工护栏、路肩碎石。检测器没这个类别，就当它不存在，直接开过去。</p>
+<p>占据网络（Occupancy Network）的核心思想是把问题<strong>从”这是什么框”改成”每个体素有没有被占、是什么”</strong>。这样任意形状、任意类别的障碍都能被表达——这是 Tesla 2022 年 AI Day 点燃、随后被学术界迅速标准化（Occ3D 基准）的范式转移。本篇内部的演进，本质是一场**”精度—算力—标注成本”的三方拉锯**：</p>
+<ul>
+<li><strong>稠密占据能力强但太贵</strong>：SurroundOcc、Occ3D 确立了稠密体素预测与评测；</li>
+<li><strong>于是想尽办法稀疏化</strong>：SparseOcc 全稀疏、TPVFormer 三视图把 3D 卷积降成 3 个 2D、GaussianFormer 用高斯球——因为”世界大部分是空的”，稠密体素是巨大浪费；</li>
+<li><strong>再攻标注成本</strong>：占据标注比检测框贵一个数量级，于是 OccNeRF、SelfOcc、RenderOcc 用<strong>神经渲染做自监督</strong>，摆脱对 3D 真值的依赖。</li>
+</ul>
+<p>最后 Cam4DOcc、Drive-OccWorld 把占据从”当前帧重建”推向”<strong>未来帧预测</strong>“——这一步直接与第 6 篇世界模型合流（OccWorld 就是”在占据空间里的世界模型”）。可以看到：表示线的终点，正是主线一与主线二在世界模型处的会师。</p>
+</blockquote>
+<h3 id="7-1-Tesla-Occupancy-Network-2022"><a href="#7-1-Tesla-Occupancy-Network-2022" class="headerlink" title="7.1 Tesla Occupancy Network (2022)"></a>7.1 Tesla Occupancy Network (2022)</h3><p><strong>背景</strong>：Tesla AI Day 2022 上提出占据网络（Occupancy Network）的概念，将 3D 空间划分为细粒度体素网格，逐体素预测是否被占据、语义类别及运动属性（速度向量）。系统完全基于多路摄像头图像，无 LiDAR 依赖，利用 Transformer 将多视角特征提升至统一 BEV 体积空间，再逐层解码为稠密占据场。</p>
+<p>这一方案的革命性在于彻底消除了传统检测器的”类别前提假设”——框只能框你认识的东西，但体素可以标记任何被占据的空间，无论那里是什么。翻倒的货箱、碎裂的轮胎、未知障碍物，只要体素被占了就能被感知、被规避。Tesla 在量产路况中展示的稠密 3D 占据输出，直接点燃了整个学术界对这一方向的热情，随后 Occ3D、SurroundOcc 等工作在短短几个月内相继涌现，将这一工业直觉快速标准化为可量化评测的研究课题。可以说，没有 Tesla 的这次公开演示，占据网络不会在 2023 年成为自动驾驶感知的最热门赛道。</p>
 <hr>
 <h3 id="7-2-SurroundOcc-2023"><a href="#7-2-SurroundOcc-2023" class="headerlink" title="7.2 SurroundOcc (2023)"></a>7.2 SurroundOcc (2023)</h3><blockquote>
 <p><strong>论文</strong>：Wei, Y. et al. “SurroundOcc: Multi-Camera 3D Occupancy Prediction for Autonomous Driving.” <em>ICCV 2023</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：从多视角图像预测稠密 3D 占据网格。核心应用价值在于：3D 占据表示可以描述任意形状、任意类别（超越预定义类别）的物体，包括施工锥、护栏、路肩碎石、甚至飞散的纸箱——这些都是传统检测无法处理但对安全至关重要的物体。用交叉注意力做 2D→3D 特征提升。</p>
+<p><strong>中文摘要</strong>：SurroundOcc 是 Tesla AI Day 点燃热潮后最早一批将占据网络推向学术规范的工作之一。它搭建了一条完整的纯视觉稠密占据预测流水线：多视角图像经骨干网络提取 2D 特征，再通过层次化的交叉注意力机制（Spatial Cross-Attention）将特征逐层投影至 3D 体素空间，最终逐体素预测占据状态与语义类别。核心贡献还包括提出基于 LiDAR 点云与多帧融合的离线稠密占据标注流程——这解决了学术研究一直缺乏的稠密 3D 真值问题。</p>
+<p>在意义层面，SurroundOcc 确立了”多视角图像→稠密 3D 占据”这条纯视觉路线的可行性，让后续工作有了一个结构清晰、可复现的基线。它展示的”体素可以表达施工锥、护栏碎片等无类别障碍物”的特性，正是占据网络相对检测框的核心优势。SurroundOcc v2（2024）在此基础上引入稠密深度监督与多尺度占据头，将 mIoU 从 35.2% 提升至 42.9%，延续了这条技术路线。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.09516">arXiv:2303.09516</a></p>
 <hr>
 <h3 id="7-3-Occ3D-2023"><a href="#7-3-Occ3D-2023" class="headerlink" title="7.3 Occ3D (2023)"></a>7.3 Occ3D (2023)</h3><blockquote>
 <p><strong>论文</strong>：Tian, X. et al. “Occ3D: A Large-Scale 3D Occupancy Prediction Benchmark for Autonomous Driving.” <em>NeurIPS 2023 Datasets and Benchmarks</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：为 nuScenes 数据集构建了大规模的 3D 占据预测标注基准（Occ3D-nuScenes），定义了 17 类语义占据标签（包括一般障碍物类别）。该基准使得占据预测可以像检测任务一样标准化评测，极大推动了占据网络的研究，成为领域标准评测集。</p>
+<p><strong>中文摘要</strong>：Occ3D 做的事情是”给占据网络这个赛道装上尺子”。在它出现之前，各种占据预测工作用的标注方式、评测指标、划分协议五花八门，论文之间几乎无法横向比较。Occ3D 利用 nuScenes 和 Waymo 的多帧 LiDAR 扫描，通过点云积累与可见性过滤，构建出覆盖 17 个语义类别（含”通用障碍物”这一关键类）的稠密体素真值，并定义了 mIoU 作为主指标——既评测语义识别质量，又惩罚几何重建的遗漏与误报。</p>
+<p>这份基准的历史地位堪比检测领域的 COCO：它固定了游戏规则，让占据网络研究进入了”可比较、可排名、可超越”的良性竞争阶段。此后几乎所有重要方法——SurroundOcc v2、TPVFormer、SparseOcc、GaussianFormer——都在 Occ3D-nuScenes 上汇报成绩，使其成为衡量占据预测技术进步的标准温度计。Occ3D 还揭示了一个关键工程洞见：稠密真值的质量高度依赖”可见性掩码”的设计——把相机和 LiDAR 都看不到的体素排除在评测之外，才能得到公平可信的指标。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2304.14365">arXiv:2304.14365</a></p>
 <hr>
 <h3 id="7-4-SparseOcc-2024"><a href="#7-4-SparseOcc-2024" class="headerlink" title="7.4 SparseOcc (2024)"></a>7.4 SparseOcc (2024)</h3><blockquote>
 <p><strong>论文</strong>：Liu, H. et al. “Fully Sparse 3D Occupancy Prediction.” <em>ECCV 2024</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：全稀疏 3D 占据预测网络。使用 mask 引导的稀疏采样避免昂贵的稠密体素特征，使 3D 占据预测可以达到 17.3 FPS 实时推理。同时提出 RayIoU 新指标，解决传统体素级 mIoU 在深度轴方向评估不一致的问题。</p>
+<p><strong>中文摘要</strong>：SparseOcc 直击稠密占据网络的根本矛盾：自动驾驶场景中 95% 以上的体素是空的，但稠密方法却对每一个体素都投入同等计算——这既是算力浪费，也是车载部署的瓶颈。SparseOcc 用 mask 引导的稀疏采样策略，在图像特征空间里先识别”可能有物体”的候选区域，只在这些稀疏候选点上构建 3D 体素特征并执行注意力计算，彻底跳过空体素。最终实现 17.3 FPS 的实时推理速度，将稠密方法推向量产可行的效率区间。</p>
+<p>SparseOcc 的另一个重要贡献是提出 RayIoU 指标，揭示了传统体素级 mIoU 的评估盲点——沿深度轴方向，预测的体素如果在空间位置上整体偏移半格，mIoU 会给出非常差的分数，但实际感知质量可能并无大碍；RayIoU 改为沿射线方向评估命中率，更贴近实际驾驶决策的需求。这一指标提出后被多个后续工作采纳，标志着占据评测体系本身也在走向成熟。SparseOcc 与 SelfOcc、GaussianFormer 共同构成了”把占据网络做得更实用”这一技术方向的三条路线。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.17118">arXiv:2312.17118</a></p>
 <hr>
 <h3 id="7-5-OccNeRF-2023"><a href="#7-5-OccNeRF-2023" class="headerlink" title="7.5 OccNeRF (2023)"></a>7.5 OccNeRF (2023)</h3><blockquote>
 <p><strong>论文</strong>：Zhang, C. et al. “OccNeRF: Advancing 3D Occupancy Prediction in LiDAR-Free Environments.” <em>arXiv:2312.09243</em>, 2023.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：无需 LiDAR 监督的 3D 占据预测方法。用神经辐射场（NeRF）参数化占据场，利用多帧光度一致性作为自监督信号，完全摆脱对 LiDAR 真值的依赖。在 nuScenes 和 SemanticKITTI 上展示了强大的自监督深度估计和语义占据效果，使纯视觉占据预测成为可能。</p>
+<p><strong>中文摘要</strong>：OccNeRF 攻克的是占据网络研究链条上成本最高的环节——3D 标注。产出一帧高质量的稠密占据真值，需要多帧 LiDAR 点云融合、人工校验、语义标注，成本比检测框高一个数量级。OccNeRF 的思路是把占据场用神经辐射场（NeRF）参数化：体素的占据概率对应 NeRF 里的体积密度，语义类别附加在各体素上，整个占据场通过体积渲染公式投影回 2D 图像平面，以渲染图和实际图像的光度一致性作为训练信号——不需要任何 3D 标注。</p>
+<p>OccNeRF 的意义在于打开了”用行车视频自监督训练占据网络”的大门。现实世界的视频数据是几乎无限的，一旦不再依赖稀缺的 3D 标注，模型的训练规模和泛化能力就能得到本质提升。这一思路与 SelfOcc、RenderOcc 形成了同期的自监督占据预测研究浪潮，共同指向同一个终极目标：在大规模无标注视频上预训练出具有强 3D 几何理解能力的占据模型。OccNeRF 在 nuScenes 和 SemanticKITTI 上的验证也表明，神经渲染提供的自监督信号足够强，不仅能学出几何结构，还能初步分离出语义信息。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.09243">arXiv:2312.09243</a></p>
 <hr>
 <h3 id="7-6-其他占据网络工作"><a href="#7-6-其他占据网络工作" class="headerlink" title="7.6 其他占据网络工作"></a>7.6 其他占据网络工作</h3><table>
@@ -608,7 +623,8 @@ mjx-container[display="true"] + br {
 <h3 id="7-12-RenderOcc-2024"><a href="#7-12-RenderOcc-2024" class="headerlink" title="7.12 RenderOcc (2024)"></a>7.12 RenderOcc (2024)</h3><blockquote>
 <p><strong>论文</strong>：Pan, M. et al. “RenderOcc: Vision-Centric 3D Occupancy Prediction via 2D Rendering Supervision.” <em>ICRA 2024</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：使用 2D 渲染监督替代 3D 占据标签做训练的占据预测方法。核心创新：预测 3D 占据网格后，通过可微的体积渲染将其投影回 2D 图像平面生成深度图和语义图，以这些渲染结果和 2D 标签（来自 LiDAR 投影的深度或 2D 语义分割）的差异作为训练信号。这样模型不需要 3D 占据标签——只需要更易获取的 2D 深度和语义标签。架起了 2D 感知和 3D 占据之间的桥梁，使大规模占据预训练成为可能。</p>
+<p><strong>中文摘要</strong>：RenderOcc 的核心洞察是：3D 占据标签稀缺昂贵，但 2D 深度图和语义分割标签相对廉价，而且这两种 2D 标签本质上是 3D 占据场的投影——只要渲染过程可微，就可以用 2D 标签反向训练 3D 占据场。具体地，RenderOcc 在预测出 3D 体素占据场后，通过可微体积渲染将其投影回各视角图像平面，生成预测深度图和语义分割图，再以这些渲染结果与 2D 真值（来自 LiDAR 点云投影的深度或已有 2D 语义分割模型的标签）的差异监督整个网络，完全绕开了 3D 体素真值。</p>
+<p>RenderOcc 在方法论上的贡献是连接了两个研究领域：它把神经渲染领域的可微渲染工具引入了 3D 感知的训练范式，证明了”从 2D 渲染监督 3D 结构”这条路的通达性。这与 OccNeRF、SelfOcc 形成互补——后两者侧重完全无标注的自监督，RenderOcc 则利用了更易获取的 2D 标签，在精度与标注成本之间找到了实用的平衡点。对于希望在大规模无 3D 标注数据集上预训练占据模型的工业应用来说，RenderOcc 提供了一条可行路线。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.12032">arXiv:2402.12032</a></p>
 <hr>
 <h3 id="7-13-UniOcc-2024"><a href="#7-13-UniOcc-2024" class="headerlink" title="7.13 UniOcc (2024)"></a>7.13 UniOcc (2024)</h3><blockquote>
@@ -621,7 +637,8 @@ mjx-container[display="true"] + br {
 <p><strong>论文</strong>：Ma, J. et al. “Cam4DOcc: Benchmark for Camera-Only 4D Occupancy Forecasting in Autonomous Driving Applications.” <em>CVPR 2024 Workshop</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
-<p><strong>中文摘要</strong>：首个面向纯视觉 4D 占据预测的基准。核心任务定义：给定多视角图像序列（过去/现在），预测未来若干秒内的 3D 占据演变（哪些区域将被占据/清空/保持）。这与”占据世界模型”（OccWorld）的理念一致但提供了标准化评测。Cam4DOcc 基准包括 nuScenes、Waymo 和 KITTI 上的数据，评测指标涵盖几何精度和时序一致性。为占据预测从”当前帧重建”升级到”未来帧预测”建立了评测标准，推动了占据预测与运动预测的融合。</p>
+<p><strong>中文摘要</strong>：Cam4DOcc 完成了占据预测领域一次重要的任务升级——从”当前时刻 3D 重建”迈向”未来时刻 3D 预测”。原有的占据网络（SurroundOcc、Occ3D 等）本质上是重建任务：给定当前帧图像，输出当前时刻的 3D 占据场；而 Cam4DOcc 的任务定义是：给定过去若干帧的多视角图像，预测未来若干秒内的 3D 占据演变——哪些区域会被新物体占据、哪些占据区域将消失、哪些保持不变。这是一个时序理解与空间预测的联合挑战。</p>
+<p>Cam4DOcc 为这一任务建立了标准化基准（覆盖 nuScenes、Waymo 等主流数据集），并设计了同时评测几何精度和时序一致性的指标体系。在意义层面，它把占据网络与运动预测、世界模型两条技术线直接对接：4D 占据预测本质上是在占据空间里做世界建模——预测世界未来状态而非重建当前状态，这与第 6 篇世界模型的终极目标一脉相承。Cam4DOcc 的出现为 OccWorld、Drive-OccWorld 等占据世界模型工作提供了评测框架，标志着占据网络研究正式进入”预测性感知”阶段。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2311.17663">arXiv:2311.17663</a></p>
 <hr>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-06-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">下一篇 →</a></p>

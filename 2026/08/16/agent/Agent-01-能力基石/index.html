@@ -1,0 +1,1101 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="一、引子：Agent 不是新模型，而是 LLM + 循环在理解 Agent 之前，先想清楚”静态 LLM”到底缺什么。 一个标准的 LLM 推理过程是：给定输入 token 序列，输出一段文字，然后停止。这个架构在问答、写作、代码补全上已经非常强大，但它有三个根本局限，恰好堵死了”自主执行复杂任务”的路： 局限一：单步、无状态。 每次调用是独立的。模型不知道自己上一步做了什么，不知道环境现在是什么">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Agent-01：能力基石 —— 一个 LLM 如何变成 Agent">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/16/agent/Agent-01-%E8%83%BD%E5%8A%9B%E5%9F%BA%E7%9F%B3/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="一、引子：Agent 不是新模型，而是 LLM + 循环在理解 Agent 之前，先想清楚”静态 LLM”到底缺什么。 一个标准的 LLM 推理过程是：给定输入 token 序列，输出一段文字，然后停止。这个架构在问答、写作、代码补全上已经非常强大，但它有三个根本局限，恰好堵死了”自主执行复杂任务”的路： 局限一：单步、无状态。 每次调用是独立的。模型不知道自己上一步做了什么，不知道环境现在是什么">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-16T06:01:00.000Z">
+<meta property="article:modified_time" content="2026-08-16T13:17:42.090Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Memory">
+<meta property="article:tag" content="Planning">
+<meta property="article:tag" content="ReAct">
+<meta property="article:tag" content="Reflection">
+<meta property="article:tag" content="Tool Use">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Agent-01：能力基石 —— 一个 LLM 如何变成 Agent - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Agent-01：能力基石 —— 一个 LLM 如何变成 Agent"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-16 14:01" pubdate>
+          2026年8月16日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          75 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Agent-01：能力基石 —— 一个 LLM 如何变成 Agent</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="一、引子：Agent-不是新模型，而是-LLM-循环"><a href="#一、引子：Agent-不是新模型，而是-LLM-循环" class="headerlink" title="一、引子：Agent 不是新模型，而是 LLM + 循环"></a>一、引子：Agent 不是新模型，而是 LLM + 循环</h2><p>在理解 Agent 之前，先想清楚”静态 LLM”到底缺什么。</p>
+<p>一个标准的 LLM 推理过程是：给定输入 token 序列，输出一段文字，然后停止。这个架构在问答、写作、代码补全上已经非常强大，但它有三个根本局限，恰好堵死了”自主执行复杂任务”的路：</p>
+<p><strong>局限一：单步、无状态。</strong> 每次调用是独立的。模型不知道自己上一步做了什么，不知道环境现在是什么状态，也不能主动去拿新信息。问”查一下今天天气再帮我写邮件”——它只能假装知道天气，或者承认不知道，但它无法真正”去查”。</p>
+<p><strong>局限二：无法与环境交互。</strong> LLM 是文字处理器，输入输出都是 token。它不能执行代码、不能读文件、不能调 API、不能打开浏览器。换句话说，它的”行动”只存在于文字层面，落不到现实世界。</p>
+<p><strong>局限三：不能自我纠错。</strong> 单次推理一旦输出就结束了。如果中间哪步出了错——前提假设错误、工具结果异常、中途遇到意外——模型没有机会回头检查、重试或重新规划。</p>
+<p>Agent 要解决的，正是这三个局限。它的本质不是换一个更大的模型，而是<strong>给 LLM 套上一个”感知—决策—行动—反馈”的循环（loop）</strong>：</p>
+<figure class="highlight ada"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs ada">┌─────────────────────────────────────────────┐<br>│                  Agent <span class="hljs-keyword">Loop</span>                 │<br>│                                             │<br>│   感知(Observe)                              │<br>│       ↓                                     │<br>│   推理/决策(Think)  ←── LLM 在这里           │<br>│       ↓                                     │<br>│   行动(Act)                                 │<br>│       ↓                                     │<br>│   观察结果(Observe) ─── 写回上下文 ──→ 循环  │<br>└─────────────────────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<p>这个循环是 Agent 的骨骼。循环运行多少轮，取决于任务复杂度；每轮里 LLM 负责”想”，外部工具/环境负责”做”，结果再喂回给 LLM。</p>
+<p>本文的任务是讲清楚支撑这个循环的<strong>四大能力</strong>——ReAct（执行框架）、Planning（规划）、Tool Use（工具使用）、Memory（记忆）、Reflection（反思）——并且讲清楚每个能力”解决了什么问题、创新在哪里、上限在哪里”。这是理解后面一切的地基。</p>
+<hr>
+<h2 id="二、ReAct：Reasoning-Acting-交替，Agent-的骨架"><a href="#二、ReAct：Reasoning-Acting-交替，Agent-的骨架" class="headerlink" title="二、ReAct：Reasoning + Acting 交替，Agent 的骨架"></a>二、ReAct：Reasoning + Acting 交替，Agent 的骨架</h2><h3 id="2-1-纯-Chain-of-Thought-的瓶颈"><a href="#2-1-纯-Chain-of-Thought-的瓶颈" class="headerlink" title="2.1 纯 Chain-of-Thought 的瓶颈"></a>2.1 纯 Chain-of-Thought 的瓶颈</h3><p>2022 年 CoT（Chain-of-Thought）论文展示了一件令人振奋的事：让模型在给出最终答案之前先”一步步推理”，准确率大幅提升。但 CoT 有一个致命约束——它是<strong>封闭的</strong>：整条推理链都在模型脑子里，无法访问外部信息，无法执行代码，无法验证中间结论。碰到需要”查资料再推理”或”计算再推理”的任务，CoT 只能在幻觉里绕圈。</p>
+<h3 id="2-2-ReAct-的核心思路"><a href="#2-2-ReAct-的核心思路" class="headerlink" title="2.2 ReAct 的核心思路"></a>2.2 ReAct 的核心思路</h3><p>2022 年 Yao 等人的论文 <em>ReAct: Synergizing Reasoning and Acting in Language Models</em> 提出了一个简洁但深刻的改变：<strong>把”想（Thought）”和”做（Action）”交替嵌入同一个 token 序列</strong>，并在每次 Action 之后把环境返回的 Observation 也写进序列，供下一轮 Thought 参考。</p>
+<p>一个典型的 ReAct 轨迹长这样（以问答任务为例）：</p>
+<figure class="highlight avrasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs avrasm"><span class="hljs-symbol">Thought:</span> 我需要知道<span class="hljs-string">"科罗拉多州造山运动"</span>的海拔范围，先搜索一下。<br><span class="hljs-symbol">Action:</span> Search[<span class="hljs-string">"科罗拉多州造山运动"</span>]<br><span class="hljs-symbol">Observation:</span> 科罗拉多州造山运动...该地区最高峰约 <span class="hljs-number">4399</span> 米...<br><br><span class="hljs-symbol">Thought:</span> 好，现在我知道海拔范围了，需要再查这个范围内的植被带。<br><span class="hljs-symbol">Action:</span> Search[<span class="hljs-string">"海拔 4000 米植被带"</span>]<br><span class="hljs-symbol">Observation:</span> 在 <span class="hljs-number">3500</span>–<span class="hljs-number">4500</span> 米的高山带，以高山草甸和苔原为主...<br><br><span class="hljs-symbol">Thought:</span> 根据以上信息，答案应该是高山草甸/苔原。<br><span class="hljs-symbol">Action:</span> Finish[<span class="hljs-string">"高山草甸与苔原"</span>]<br></code></pre></td></tr></table></figure>
+
+<p>关键创新有两点：</p>
+<ol>
+<li><strong>Thought 让 LLM 显式表达推理意图</strong>，为后续 Action 提供语义锚点，也让轨迹可解释。</li>
+<li><strong>Observation 把真实环境反馈写回上下文</strong>，打通了模型与外部世界的信息通道——这是 CoT 做不到的。</li>
+</ol>
+<h3 id="2-3-为什么”边想边做”优于纯-CoT"><a href="#2-3-为什么”边想边做”优于纯-CoT" class="headerlink" title="2.3 为什么”边想边做”优于纯 CoT"></a>2.3 为什么”边想边做”优于纯 CoT</h3><p>原始论文的对比实验显示，在 HotpotQA（多跳问答）、Fever（事实核查）等任务上，ReAct 显著优于 CoT-only 和 Act-only（只行动不思考）。直觉上很好理解：</p>
+<ul>
+<li>只 CoT：推理正确但没有实际信息，容易产生幻觉。</li>
+<li>只 Act：盲目行动，不知道为什么这样做，遇到岔路不会推断。</li>
+<li>ReAct：推理指导行动，行动结果更新推理，形成一个有方向的搜索过程。</li>
+</ul>
+<h3 id="2-4-ReAct-是几乎所有-Agent-的骨架"><a href="#2-4-ReAct-是几乎所有-Agent-的骨架" class="headerlink" title="2.4 ReAct 是几乎所有 Agent 的骨架"></a>2.4 ReAct 是几乎所有 Agent 的骨架</h3><p>从 2023 年之后的主流 agent 框架（LangChain Agent、AutoGPT、Claude Code、OpenAI Assistants）到 2025–2026 的各类 coding agent，都可以看到 ReAct 结构的影子：一个主循环，Thought 在 LLM 内部完成，Action 发出工具调用，Observation 接收结果，写回上下文，再次调用 LLM。它是 Agent 骨架，不是可选项。</p>
+<hr>
+<h2 id="三、规划（Planning）：长程任务的骨架上加肌肉"><a href="#三、规划（Planning）：长程任务的骨架上加肌肉" class="headerlink" title="三、规划（Planning）：长程任务的骨架上加肌肉"></a>三、规划（Planning）：长程任务的骨架上加肌肉</h2><h3 id="3-1-为什么单靠-ReAct-不够"><a href="#3-1-为什么单靠-ReAct-不够" class="headerlink" title="3.1 为什么单靠 ReAct 不够"></a>3.1 为什么单靠 ReAct 不够</h3><p>ReAct 解决了”一步步走”的问题，但在复杂长程任务上，光靠逐步反应（reactive）远远不够。想象一个任务：”帮我调研竞品、写一份 20 页的分析报告、生成可视化图表、发邮件给团队”。如果没有全局规划，ReAct 很容易在某一步陷入局部循环，或者执行完一半才发现前面的结构不对，需要整体返工。</p>
+<p>规划（Planning）的核心价值是：<strong>在行动之前把任务拆解成子目标序列，形成一个可执行的计划，并在执行过程中动态调整</strong>。</p>
+<h3 id="3-2-Plan-and-Execute-范式"><a href="#3-2-Plan-and-Execute-范式" class="headerlink" title="3.2 Plan-and-Execute 范式"></a>3.2 Plan-and-Execute 范式</h3><p>最直接的规划方案是两阶段分离：</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs stylus">阶段一：Planning<br>  <span class="hljs-built_in">LLM</span>(任务描述) → <span class="hljs-selector-attr">[子目标1, 子目标2, ..., 子目标N]</span><br><br>阶段二：Execution<br>  <span class="hljs-keyword">for</span> 子目标<span class="hljs-selector-tag">i</span> <span class="hljs-keyword">in</span> 计划:<br>      result_i = <span class="hljs-built_in">ReAct_loop</span>(子目标<span class="hljs-selector-tag">i</span>, context)<br>      context<span class="hljs-selector-class">.update</span>(result_i)<br></code></pre></td></tr></table></figure>
+
+<p>这个范式的优势是：规划器和执行器可以是不同的 LLM 调用甚至不同的模型（规划用大模型，执行用小模型），降低成本。缺点是计划在执行前就固定了，环境变化时需要重新规划。</p>
+<p>改进版加入了<strong>重规划（Replanning）</strong>：每个子目标执行完，检查结果是否符合预期，如果偏差超过阈值，就重新调用规划器修改后续子目标。</p>
+<h3 id="3-3-任务分解的技巧"><a href="#3-3-任务分解的技巧" class="headerlink" title="3.3 任务分解的技巧"></a>3.3 任务分解的技巧</h3><p>任务分解本身是个难题。几个实用策略：</p>
+<p><strong>递归分解</strong>：把大任务分解为子任务，再对复杂子任务继续分解，直到每个叶节点都足够原子（可以在一个 ReAct 循环内完成）。</p>
+<p><strong>依赖图</strong>：有些子任务之间有依赖关系（B 必须在 A 完成后执行），有些是并行的（C 和 D 互相独立）。显式地建模成 DAG（有向无环图），可以安全地并行执行独立子任务，大幅提速。</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs mathematica">任务<span class="hljs-operator">:</span> 写一份技术报告<br><br>分解为<span class="hljs-operator">:</span><br>  <span class="hljs-variable">A</span><span class="hljs-operator">:</span> 检索论文 <span class="hljs-punctuation">(</span>独立<span class="hljs-punctuation">)</span><br>  <span class="hljs-variable">B</span><span class="hljs-operator">:</span> 检索竞品资料 <span class="hljs-punctuation">(</span>独立<span class="hljs-punctuation">)</span><br>  <span class="hljs-built_in">C</span><span class="hljs-operator">:</span> 整合 <span class="hljs-variable">A</span> 和 <span class="hljs-variable">B</span> 的内容 <span class="hljs-punctuation">(</span>依赖 <span class="hljs-variable">A</span>、<span class="hljs-variable">B</span><span class="hljs-punctuation">)</span><br>  <span class="hljs-built_in">D</span><span class="hljs-operator">:</span> 生成可视化图表 <span class="hljs-punctuation">(</span>依赖 <span class="hljs-built_in">C</span><span class="hljs-punctuation">)</span><br>  <span class="hljs-built_in">E</span><span class="hljs-operator">:</span> 写报告正文 <span class="hljs-punctuation">(</span>依赖 <span class="hljs-built_in">C</span><span class="hljs-punctuation">)</span><br>  <span class="hljs-variable">F</span><span class="hljs-operator">:</span> 汇总 <span class="hljs-built_in">D</span> 和 <span class="hljs-built_in">E</span> <span class="hljs-punctuation">(</span>依赖 <span class="hljs-built_in">D</span>、<span class="hljs-built_in">E</span><span class="hljs-punctuation">)</span><br><br><span class="hljs-variable">A</span>、<span class="hljs-variable">B</span> 可并行 → <span class="hljs-built_in">C</span> → <span class="hljs-built_in">D</span>、<span class="hljs-built_in">E</span> 可并行 → <span class="hljs-variable">F</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="3-4-Tree-of-Thoughts：把规划变成搜索"><a href="#3-4-Tree-of-Thoughts：把规划变成搜索" class="headerlink" title="3.4 Tree-of-Thoughts：把规划变成搜索"></a>3.4 Tree-of-Thoughts：把规划变成搜索</h3><p>2023 年的 <em>Tree of Thoughts (ToT)</em> 论文把规划推进了一步：它把推理过程建模为<strong>在一棵思维树上的搜索</strong>，而不是一条单链。每个节点是一个”中间思路状态”，从当前节点可以扩展出多个子节点（不同的下一步思路），然后用 LLM 对各个子节点打分（评估”这条路走下去有多大希望”），再用 BFS 或 DFS 策略选择继续探索哪条分支。</p>
+<figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs subunit">       根节点（初始状态）<br>      /        |        \<br>  思路A1     思路A2     思路A3    ← LLM 生成多个分支<br>  /   \        |<br>A1<span class="hljs-string">-1</span>  A1<span class="hljs-string">-2</span>   A2<span class="hljs-string">-1</span>              ← 继续扩展<br>↑分数高      ↑分数低<br>继续         剪枝<br></code></pre></td></tr></table></figure>
+
+<p>ToT 的意义在于：它让 LLM 从”贪心地一路走到底”变成了”有回溯的搜索”。在需要全局最优的问题（数学证明、代码生成中的设计决策）上，ToT 比 CoT 强很多。代价是推理成本高——每个节点都需要 LLM 评分。</p>
+<h3 id="3-5-规划的现实局限"><a href="#3-5-规划的现实局限" class="headerlink" title="3.5 规划的现实局限"></a>3.5 规划的现实局限</h3><p>规划能力目前的主要瓶颈是<strong>计划的准确性</strong>：LLM 生成的计划可能遗漏关键步骤，或者对执行难度估计不准。特别是在执行深处遇到意外时，重规划的代价很高。这就是为什么板块二（前沿模型）要专门讲”为 agentic 训练的模型”——它们会在 long-horizon 任务上做专门的微调，提升计划质量。</p>
+<hr>
+<h2 id="四、工具使用（Tool-Use）：把-LLM-接到外部世界"><a href="#四、工具使用（Tool-Use）：把-LLM-接到外部世界" class="headerlink" title="四、工具使用（Tool Use）：把 LLM 接到外部世界"></a>四、工具使用（Tool Use）：把 LLM 接到外部世界</h2><h3 id="4-1-Function-Calling-的本质"><a href="#4-1-Function-Calling-的本质" class="headerlink" title="4.1 Function Calling 的本质"></a>4.1 Function Calling 的本质</h3><p>工具使用解决了 LLM 和外部世界之间的物理隔离问题。其核心机制是 <strong>function calling（函数调用）</strong>，OpenAI 在 2023 年 6 月将其引入 GPT-4，随后成为行业标准。</p>
+<p>它的本质是：在 LLM 的输入中描述一组可用工具（工具名称、参数 schema、用途描述），让 LLM 在需要时输出一个结构化的”调用意图”而不是自然语言。外部 runtime 解析这个意图，执行真实工具，把结果返回给 LLM。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 工具描述（传给 LLM 的 system 层）</span><br>tools = [<br>    {<br>        <span class="hljs-string">"name"</span>: <span class="hljs-string">"search_web"</span>,<br>        <span class="hljs-string">"description"</span>: <span class="hljs-string">"搜索互联网，返回相关页面摘要"</span>,<br>        <span class="hljs-string">"parameters"</span>: {<br>            <span class="hljs-string">"type"</span>: <span class="hljs-string">"object"</span>,<br>            <span class="hljs-string">"properties"</span>: {<br>                <span class="hljs-string">"query"</span>: {<span class="hljs-string">"type"</span>: <span class="hljs-string">"string"</span>, <span class="hljs-string">"description"</span>: <span class="hljs-string">"搜索关键词"</span>}<br>            },<br>            <span class="hljs-string">"required"</span>: [<span class="hljs-string">"query"</span>]<br>        }<br>    },<br>    {<br>        <span class="hljs-string">"name"</span>: <span class="hljs-string">"run_python"</span>,<br>        <span class="hljs-string">"description"</span>: <span class="hljs-string">"执行 Python 代码，返回 stdout 和 stderr"</span>,<br>        <span class="hljs-string">"parameters"</span>: {<br>            <span class="hljs-string">"type"</span>: <span class="hljs-string">"object"</span>,<br>            <span class="hljs-string">"properties"</span>: {<br>                <span class="hljs-string">"code"</span>: {<span class="hljs-string">"type"</span>: <span class="hljs-string">"string"</span>, <span class="hljs-string">"description"</span>: <span class="hljs-string">"要执行的 Python 代码"</span>}<br>            },<br>            <span class="hljs-string">"required"</span>: [<span class="hljs-string">"code"</span>]<br>        }<br>    }<br>]<br><br><span class="hljs-comment"># LLM 输出的调用意图（结构化 JSON，而非自然语言）</span><br>{<br>    <span class="hljs-string">"name"</span>: <span class="hljs-string">"run_python"</span>,<br>    <span class="hljs-string">"arguments"</span>: {<span class="hljs-string">"code"</span>: <span class="hljs-string">"import math\nprint(math.sqrt(1764))"</span>}<br>}<br><br><span class="hljs-comment"># Runtime 执行后返回</span><br>{<span class="hljs-string">"stdout"</span>: <span class="hljs-string">"42.0\n"</span>, <span class="hljs-string">"stderr"</span>: <span class="hljs-string">""</span>}<br></code></pre></td></tr></table></figure>
+
+<p>这里有一个关键设计：<strong>LLM 的输出不再是最终答案，而是一个”下一步做什么”的指令</strong>。执行权在 runtime，LLM 负责决策。这个分离是 agent 可靠性的重要基础——工具真正执行前可以插入权限检查、沙箱隔离等安全层。</p>
+<h3 id="4-2-工具生态带来的能力飞跃"><a href="#4-2-工具生态带来的能力飞跃" class="headerlink" title="4.2 工具生态带来的能力飞跃"></a>4.2 工具生态带来的能力飞跃</h3><p>有了可靠的工具调用，LLM 能做的事情从”生成文字”扩展到几乎一切：</p>
+<ul>
+<li><strong>检索增强（RAG）</strong>：搜索向量库或互联网，把实时信息喂给模型，消灭知识截止日期的限制。</li>
+<li><strong>代码执行</strong>：生成代码然后真正运行，看到真实结果——调试、数据分析、自动化任务。</li>
+<li><strong>文件系统/数据库操作</strong>：读写文件、查询数据库，agent 因此能处理真实业务数据。</li>
+<li><strong>浏览器/GUI 操作</strong>：通过 computer use API 操控网页和桌面应用，打开了”自动化一切人机界面”的可能。</li>
+<li><strong>API 调用</strong>：对接任意第三方服务（天气、支付、日历、邮件……），让 agent 能融入已有的数字基础设施。</li>
+</ul>
+<h3 id="4-3-工具调用的可靠性挑战"><a href="#4-3-工具调用的可靠性挑战" class="headerlink" title="4.3 工具调用的可靠性挑战"></a>4.3 工具调用的可靠性挑战</h3><p>工具使用不是万能的，有几个现实挑战：</p>
+<p><strong>格式错误</strong>：LLM 有时生成的 JSON 不合法，或者参数名拼错，导致 runtime 无法解析。这在早期 GPT-4 时代是常见问题，现代模型好很多，但未完全消除。解决方案包括：用 grammar-constrained decoding 强制输出合法 JSON，或者在 runtime 层做自动修复重试。</p>
+<p><strong>工具选择错误</strong>：有多个工具时，LLM 可能选错工具（比如该用精确数学库却去搜索互联网）。缓解方案：给工具加清晰的描述和示例，限制同时可见的工具数量。</p>
+<p><strong>并发工具调用</strong>：复杂任务里经常需要同时调多个工具（并行搜索多个关键词）。现代模型支持在单次响应中输出多个工具调用，runtime 并行执行，再把所有结果一起返回。这对延迟优化很重要。</p>
+<p><strong>工具结果的置信度</strong>：工具返回的信息不一定可信（搜索结果可能过时、代码执行可能有 side effect）。模型需要有一定的怀疑精神，不能盲目信任工具输出。</p>
+<hr>
+<h2 id="五、记忆（Memory）：让-Agent-不失忆"><a href="#五、记忆（Memory）：让-Agent-不失忆" class="headerlink" title="五、记忆（Memory）：让 Agent 不失忆"></a>五、记忆（Memory）：让 Agent 不失忆</h2><h3 id="5-1-上下文窗口的本质局限"><a href="#5-1-上下文窗口的本质局限" class="headerlink" title="5.1 上下文窗口的本质局限"></a>5.1 上下文窗口的本质局限</h3><p>LLM 的”工作记忆”就是上下文窗口（context window）。当前顶级模型的上下文窗口已经达到 100K–200K token，但这依然是有上限的。更重要的是：<strong>上下文窗口在每次会话结束后就清空了</strong>。一个需要跨天、跨会话工作的 agent，没有持久化记忆就是失忆症患者——每次启动都从零开始。</p>
+<p>记忆系统要解决两个问题：（1）当前会话内，如何在有限上下文里高效管理信息；（2）跨会话，如何持久化并检索过去的经验。</p>
+<h3 id="5-2-记忆的四种类型"><a href="#5-2-记忆的四种类型" class="headerlink" title="5.2 记忆的四种类型"></a>5.2 记忆的四种类型</h3><p>借鉴认知科学，agent 的记忆可以分成四类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>类比</th>
+<th>存储位置</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>短期记忆</td>
+<td>工作记忆</td>
+<td>上下文窗口</td>
+<td>快速访问，容量有限，会话结束即消失</td>
+</tr>
+<tr>
+<td>长期记忆</td>
+<td>情景记忆</td>
+<td>向量数据库（如 Chroma、Faiss、Weaviate）</td>
+<td>持久化，语义检索，容量无上限</td>
+</tr>
+<tr>
+<td>实体记忆</td>
+<td>语义记忆</td>
+<td>结构化存储（KV 或图数据库）</td>
+<td>存储关于特定实体（人、项目、文件）的属性</td>
+</tr>
+<tr>
+<td>程序记忆</td>
+<td>程序性记忆</td>
+<td>代码/函数定义</td>
+<td>通过工具调用固化的”技能”</td>
+</tr>
+</tbody></table>
+<h3 id="5-3-记忆的三个阶段"><a href="#5-3-记忆的三个阶段" class="headerlink" title="5.3 记忆的三个阶段"></a>5.3 记忆的三个阶段</h3><p>无论哪种长期记忆，完整的记忆系统都经历三个阶段：</p>
+<p><strong>存储（Storage）</strong>：把什么信息写入长期记忆？一个重要设计决策。如果全部写入，检索噪声大；只写重要信息，需要判断”什么重要”。常见策略：对话摘要写入（而非逐字写入）、关键结论和决策写入、错误经验写入。</p>
+<p><strong>反思（Consolidation）</strong>：写入前，对原始信息做抽象和提炼。类似人类睡眠中的记忆巩固。将原始轨迹（”搜索了 A，返回了 B，发现 B 不对，改用 C”）提炼为结论性知识（”在任务 X 中，工具 C 比 B 可靠”）。</p>
+<p><strong>利用（Retrieval）</strong>：需要记忆时，用当前任务的语义相似度从向量库检索，把最相关的 K 条记忆注入上下文窗口。检索质量直接影响 agent 的表现——检索到无关记忆比没有记忆更有害（浪费上下文、引入噪声）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 简化的记忆利用流程</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">agent_step</span>(<span class="hljs-params">task: <span class="hljs-built_in">str</span>, memory_store: VectorDB</span>) -&gt; <span class="hljs-built_in">str</span>:<br>    <span class="hljs-comment"># 1. 检索相关记忆</span><br>    relevant_memories = memory_store.search(query=task, top_k=<span class="hljs-number">5</span>)<br><br>    <span class="hljs-comment"># 2. 构建带记忆的上下文</span><br>    context = <span class="hljs-string">f"""</span><br><span class="hljs-string">    [相关历史经验]</span><br><span class="hljs-string">    <span class="hljs-subst">{format_memories(relevant_memories)}</span></span><br><span class="hljs-string"></span><br><span class="hljs-string">    [当前任务]</span><br><span class="hljs-string">    <span class="hljs-subst">{task}</span></span><br><span class="hljs-string">    """</span><br><br>    <span class="hljs-comment"># 3. LLM 决策</span><br>    response = llm.call(context)<br><br>    <span class="hljs-comment"># 4. 把本次经验写回记忆</span><br>    memory_store.add(summarize(task, response))<br>    <span class="hljs-keyword">return</span> response<br></code></pre></td></tr></table></figure>
+
+<h3 id="5-4-为什么长程-Agent-必须有记忆"><a href="#5-4-为什么长程-Agent-必须有记忆" class="headerlink" title="5.4 为什么长程 Agent 必须有记忆"></a>5.4 为什么长程 Agent 必须有记忆</h3><p>没有记忆的 agent 在长程任务上会犯两种错：一是<strong>重复劳动</strong>——每次都重新探索已经解决过的子问题；二是<strong>忘记约束</strong>——早期确认的设计决策在上下文被截断后消失，导致后期工作与早期矛盾。</p>
+<p>记忆系统是把 agent 从”一次性工具”变成”长期协作伙伴”的关键。这正是 Claude Code 等生产级 agent 花大力气做跨会话记忆（CLAUDE.md、项目记忆文件）的原因——工程决策和项目上下文沉淀下来，agent 才能像熟悉代码库的人类工程师一样工作，而不是每次都重新读一遍所有文件。</p>
+<hr>
+<h2 id="六、反思（Reflection）：闭环纠错，自主性的关键"><a href="#六、反思（Reflection）：闭环纠错，自主性的关键" class="headerlink" title="六、反思（Reflection）：闭环纠错，自主性的关键"></a>六、反思（Reflection）：闭环纠错，自主性的关键</h2><h3 id="6-1-没有反思的-Agent-会怎样"><a href="#6-1-没有反思的-Agent-会怎样" class="headerlink" title="6.1 没有反思的 Agent 会怎样"></a>6.1 没有反思的 Agent 会怎样</h3><p>前面四个能力（ReAct、Planning、Tool Use、Memory）已经让 agent 能”走下去”。但走下去不等于走对。特别是在开放任务里，agent 很容易陷入一个错误假设，然后在错误的方向上越走越远——每一步都合理，但整体偏了。</p>
+<p>反思（Reflection）要解决的是：<strong>agent 如何识别自己的错误，并从中学习、纠正</strong>。这是自主性的关键——能自我纠错的系统，才不需要人类时刻监督。</p>
+<h3 id="6-2-Reflexion：从失败轨迹中提炼语言反思"><a href="#6-2-Reflexion：从失败轨迹中提炼语言反思" class="headerlink" title="6.2 Reflexion：从失败轨迹中提炼语言反思"></a>6.2 Reflexion：从失败轨迹中提炼语言反思</h3><p>2023 年 Shinn 等人提出的 <em>Reflexion</em> 是这个方向最有代表性的工作。它的核心思路是：</p>
+<ol>
+<li>Agent 尝试完成任务，产生一条完整轨迹（Thought-Action-Observation 序列）。</li>
+<li>如果任务失败（或者评估器认为结果不够好），让一个”反思 LLM”分析这条轨迹，用自然语言总结”哪里出了问题、下次应该怎么做”。</li>
+<li>把这条反思文字存入记忆（持久化）。</li>
+<li>下次再执行相同或类似任务时，把历史反思注入上下文，引导 agent 避开同样的坑。</li>
+</ol>
+<figure class="highlight nestedtext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs nestedtext"><span class="hljs-attribute">第一次尝试</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">Thought</span><span class="hljs-punctuation">:</span> <span class="hljs-string">我来写个排序函数</span><br>  <span class="hljs-attribute">Action</span><span class="hljs-punctuation">:</span> <span class="hljs-string">run_python("def sort(arr): return arr.sort()")</span><br>  <span class="hljs-attribute">Observation</span><span class="hljs-punctuation">:</span> <span class="hljs-string">测试失败，返回 None 而非排序后的列表</span><br><br><span class="hljs-attribute">反思</span><span class="hljs-punctuation">:</span><br>  "list.sort() 是原地排序，返回 None。应该用 sorted() 或 return arr[:] 后再 .sort()。<br>   <span class="hljs-attribute">下次写排序时注意返回值。"</span><br><span class="hljs-attribute"></span><br><span class="hljs-attribute">第二次尝试（注入反思）</span><span class="hljs-punctuation">:</span><br>  <span class="hljs-attribute">[记忆] 上次犯了 list.sort() 返回 None 的错误</span><br><span class="hljs-attribute">  Thought</span><span class="hljs-punctuation">:</span> <span class="hljs-string">这次用 sorted() 确保有返回值</span><br>  <span class="hljs-attribute">Action</span><span class="hljs-punctuation">:</span> <span class="hljs-string">run_python("def sort(arr): return sorted(arr)")</span><br>  <span class="hljs-attribute">Observation</span><span class="hljs-punctuation">:</span> <span class="hljs-string">所有测试通过 ✓</span><br></code></pre></td></tr></table></figure>
+
+<p>Reflexion 在 HumanEval（编程任务）上通过多轮反思迭代，最终通过率显著高于单次尝试——这说明”反思+重试”比”一次出对”更可靠，也更符合人类解决复杂问题的方式。</p>
+<h3 id="6-3-Self-Refine：迭代精炼输出"><a href="#6-3-Self-Refine：迭代精炼输出" class="headerlink" title="6.3 Self-Refine：迭代精炼输出"></a>6.3 Self-Refine：迭代精炼输出</h3><p>另一个思路是 <em>Self-Refine</em>（2023）：对同一个任务，让模型先生成一个初始输出，然后让同一个（或另一个）模型对这个输出打分并提出改进建议，再根据建议生成新版本，循环若干轮。</p>
+<figure class="highlight isbl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs isbl">输出<span class="hljs-variable">_0</span> = <span class="hljs-function"><span class="hljs-title">LLM</span>(任务)</span><br><span class="hljs-variable">for</span> <span class="hljs-variable">i</span> <span class="hljs-variable"><span class="hljs-keyword">in</span></span> <span class="hljs-function"><span class="hljs-title">range</span>(<span class="hljs-variable">max_iterations</span>):</span><br><span class="hljs-function">    反馈 = <span class="hljs-title">LLM</span>(<span class="hljs-variable">f</span><span class="hljs-string">"评估以下输出并指出不足:\n{输出_i}"</span>)</span><br>    <span class="hljs-variable"><span class="hljs-keyword">if</span></span> 反馈 == <span class="hljs-string">"已足够好"</span>:<br>        <span class="hljs-variable">break</span><br>    输出<span class="hljs-variable">_</span>{<span class="hljs-variable">i</span>+<span class="hljs-number">1</span>} = <span class="hljs-function"><span class="hljs-title">LLM</span>(<span class="hljs-variable">f</span><span class="hljs-string">"根据以下反馈改进输出:\n反馈: {反馈}\n当前输出: {输出_i}"</span>)</span><br><span class="hljs-variable">return</span> 输出<span class="hljs-variable">_i</span><br></code></pre></td></tr></table></figure>
+
+<p>Self-Refine 不需要外部评估器或真实执行结果，只用 LLM 自身的判断力来迭代，适用于开放生成任务（文本、代码、摘要）。弱点是：如果 LLM 本身对”好”的判断有系统性偏差，Self-Refine 会把偏差放大而非纠正。</p>
+<h3 id="6-4-反思的三个层次"><a href="#6-4-反思的三个层次" class="headerlink" title="6.4 反思的三个层次"></a>6.4 反思的三个层次</h3><p>可以把反思分成三个层次，由浅到深：</p>
+<p><strong>即时反思（Immediate）</strong>：在当前任务执行中，发现单步错误立即重试。例如工具调用格式错误，runtime 报错，LLM 立刻重新生成正确调用。最浅，但最常用。</p>
+<p><strong>轨迹反思（Trajectory）</strong>：任务结束后（无论成功还是失败），对整条执行轨迹做复盘，提炼经验存入记忆。Reflexion 属于这一层。</p>
+<p><strong>元反思（Meta）</strong>：跨任务地分析自己的系统性弱点（比如”我在涉及时间计算的任务上总是出错”），修改自己的工作方式。这一层目前主要由人类来做（比如通过 prompt 优化或 fine-tuning），agent 完全自主的元反思还是研究前沿。</p>
+<h3 id="6-5-反思的局限"><a href="#6-5-反思的局限" class="headerlink" title="6.5 反思的局限"></a>6.5 反思的局限</h3><p>反思的有效性高度依赖反思质量本身。如果 LLM 生成的”反思”是错误的（对失败原因的误判），那这条反思非但没帮助，还会在未来污染上下文。此外，反思增加了每个任务的计算开销——每次失败都要额外调用 LLM 来分析。在高频、低容错的生产场景里，反思的收益和代价需要权衡。</p>
+<hr>
+<h2 id="七、小结：四大能力正交但需协同"><a href="#七、小结：四大能力正交但需协同" class="headerlink" title="七、小结：四大能力正交但需协同"></a>七、小结：四大能力正交但需协同</h2><p>回顾一下这五个机制，它们之间的关系：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs scss">                  ┌─────────────────────────────┐<br>                  │        Agent 循环            │<br>                  │                             │<br>Memory ─────────→│  Thought (LLM)              │<br>(检索相关经验)    │      ↓                      │<br>                  │  Plan (规划子任务)          │←── Planning<br>                  │      ↓                      │<br>                  │  Act (工具调用)             │←── Tool <span class="hljs-selector-tag">Use</span><br>                  │      ↓                      │<br>                  │  Observe (结果)             │<br>                  │      ↓                      │<br>Memory ←──────────│  Reflect (反思/存储)        │←── Reflection<br>(写入新经验)      │      ↓                      │<br>                  │  循环 or 结束               │<br>                  └─────────────────────────────┘<br>                            ↑<br>                         ReAct 是骨架<br></code></pre></td></tr></table></figure>
+
+<p><strong>ReAct</strong> 是骨架，定义了 Thought-Action-Observation 的基本节拍。</p>
+<p><strong>Planning</strong> 是肌肉，在骨架上加上长程方向感——知道整体要走哪里，而不是每步只看眼前。</p>
+<p><strong>Tool Use</strong> 是手脚，让 agent 真正能碰触外部世界，而不只是在 token 空间里打转。</p>
+<p><strong>Memory</strong> 是海马体，让 agent 能从历史中学习，而不是每次从零开始。</p>
+<p><strong>Reflection</strong> 是前额叶，让 agent 能审视自己的行为，识别错误，迭代改进。</p>
+<p>这五个能力不是互相替代的，而是正交的——缺少任何一个，agent 在某类任务上就会明显变弱。但它们协同工作也面临工程挑战：记忆检索如果太慢，会成为每步推理的瓶颈；反思如果每步都触发，计算成本倍增；工具太多，LLM 的选择准确率下降。</p>
+<p><strong>这些上限，正是后续要突破的瓶颈</strong>。板块二（前沿模型）要讲的，是 Anthropic、OpenAI、DeepSeek 等如何在训练阶段就把这四个能力内化到模型权重里——让模型天生更擅长当 agent，而不是靠 prompt 技巧”外挂”这些能力。板块三（Harness 工程）要讲的，是当模型能力就位之后，如何通过工程手段把这四个能力在生产环境里稳定地发挥出来。</p>
+<p>这是整个专题的内生逻辑起点：<strong>静态 LLM 加上循环，造就了 Agent 雏形；雏形暴露的上限，推动着接下来的一切演化。</strong></p>
+<hr>
+<p><strong>Agent 专题导航</strong>：<a href="/2026/08/16/agent/Agent%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/">[目录]</a> | <a href="/2026/08/16/agent/Agent-02-%E5%89%8D%E6%B2%BF%E6%A8%A1%E5%9E%8B/">下一篇：前沿模型 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Agent/" class="category-chain-item">Agent</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Agent/%E8%83%BD%E5%8A%9B%E5%9F%BA%E7%9F%B3/" class="category-chain-item">能力基石</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Planning/" class="print-no-link">#Planning</a>
+      
+        <a href="/tags/Agent/" class="print-no-link">#Agent</a>
+      
+        <a href="/tags/ReAct/" class="print-no-link">#ReAct</a>
+      
+        <a href="/tags/Tool-Use/" class="print-no-link">#Tool Use</a>
+      
+        <a href="/tags/Memory/" class="print-no-link">#Memory</a>
+      
+        <a href="/tags/Reflection/" class="print-no-link">#Reflection</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Agent-01：能力基石 —— 一个 LLM 如何变成 Agent</div>
+      <div>https://w2ongq6.github.io/2026/08/16/agent/Agent-01-能力基石/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月16日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/16/agent/Agent-02-%E5%89%8D%E6%B2%BF%E6%A8%A1%E5%9E%8B/" title="Agent-02：前沿模型 —— 为 agentic 而生的军备竞赛">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Agent-02：前沿模型 —— 为 agentic 而生的军备竞赛</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/16/agent/Agent%E5%85%A8%E6%99%AF%E5%AF%BC%E8%88%AA/" title="AI Agent 全景专题 —— 从能力基石到模型、harness 与应用">
+                        <span class="hidden-mobile">AI Agent 全景专题 —— 从能力基石到模型、harness 与应用</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

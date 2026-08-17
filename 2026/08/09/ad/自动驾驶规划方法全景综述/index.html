@@ -1,0 +1,1183 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引言：规划是自动驾驶的「决策大脑」如果说感知回答「世界是什么样」，预测回答「别人会怎么动」，那么规划（Planning） 回答的是最终问题——「我该怎么开」。它把感知与预测的结果，转化为一条安全、舒适、高效、合规的自车轨迹（或直接的控制指令）。规划是自动驾驶价值链的终点，也是最能体现「驾驶智能」的环节。 过去二十年，规划方法经历了一条清晰而曲折的演进主线：从手工规则，到搜索与优化，到数据驱动的模仿">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自动驾驶规划方法全景综述 —— 从规则到端到端与大模型">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/09/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%A7%84%E5%88%92%E6%96%B9%E6%B3%95%E5%85%A8%E6%99%AF%E7%BB%BC%E8%BF%B0/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="引言：规划是自动驾驶的「决策大脑」如果说感知回答「世界是什么样」，预测回答「别人会怎么动」，那么规划（Planning） 回答的是最终问题——「我该怎么开」。它把感知与预测的结果，转化为一条安全、舒适、高效、合规的自车轨迹（或直接的控制指令）。规划是自动驾驶价值链的终点，也是最能体现「驾驶智能」的环节。 过去二十年，规划方法经历了一条清晰而曲折的演进主线：从手工规则，到搜索与优化，到数据驱动的模仿">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-09T05:40:00.000Z">
+<meta property="article:modified_time" content="2026-08-11T15:45:38.800Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Planning">
+<meta property="article:tag" content="VLM">
+<meta property="article:tag" content="nuPlan">
+<meta property="article:tag" content="模仿学习">
+<meta property="article:tag" content="端到端">
+<meta property="article:tag" content="自动驾驶">
+<meta property="article:tag" content="规划">
+<meta property="article:tag" content="闭环评测">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>自动驾驶规划方法全景综述 —— 从规则到端到端与大模型 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="自动驾驶规划方法全景综述 —— 从规则到端到端与大模型"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-09 13:40" pubdate>
+          2026年8月9日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          42 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">自动驾驶规划方法全景综述 —— 从规则到端到端与大模型</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="引言：规划是自动驾驶的「决策大脑」"><a href="#引言：规划是自动驾驶的「决策大脑」" class="headerlink" title="引言：规划是自动驾驶的「决策大脑」"></a>引言：规划是自动驾驶的「决策大脑」</h2><p>如果说感知回答「世界是什么样」，预测回答「别人会怎么动」，那么<strong>规划（Planning）</strong> 回答的是最终问题——<strong>「我该怎么开」</strong>。它把感知与预测的结果，转化为一条安全、舒适、高效、合规的自车轨迹（或直接的控制指令）。规划是自动驾驶价值链的终点，也是最能体现「驾驶智能」的环节。</p>
+<p>过去二十年，规划方法经历了一条清晰而曲折的演进主线：<strong>从手工规则，到搜索与优化，到数据驱动的模仿学习，再到全栈可微分的端到端，直至今日的生成式规划与大模型驾驶</strong>。有意思的是，这条演进并非简单的「新范式碾压旧范式」——在最新的闭环基准 nuPlan 上，<strong>朴素的规则方法一度反超学习方法</strong>，引发了整个领域对「我们是否在正确地评测规划」的深刻反思。</p>
+<p>本文以综述视角，梳理规划方法的完整版图、核心分类、评测困境与前沿方向。它与本系列已有的 <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/">03 端到端规划</a>、<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/">04 扩散模型与生成式规划</a> 互补——那两篇按论文逐一精读，本篇则提供跨范式的全局脉络与批判性视角。</p>
+<span id="more"></span>
+
+<hr>
+<h2 id="一、规划问题的定义与分类体系"><a href="#一、规划问题的定义与分类体系" class="headerlink" title="一、规划问题的定义与分类体系"></a>一、规划问题的定义与分类体系</h2><h3 id="1-1-规划的层级"><a href="#1-1-规划的层级" class="headerlink" title="1.1 规划的层级"></a>1.1 规划的层级</h3><p>自动驾驶的规划通常分为三个层级：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>职责</th>
+<th>时间尺度</th>
+<th>典型方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>路由规划（Routing）</strong></td>
+<td>全局路径（A 到 B 走哪条路）</td>
+<td>分钟级</td>
+<td>地图 + Dijkstra/A*</td>
+</tr>
+<tr>
+<td><strong>行为决策（Behavior）</strong></td>
+<td>高层动作（变道/跟车/让行）</td>
+<td>秒级</td>
+<td>有限状态机、POMDP、学习</td>
+</tr>
+<tr>
+<td><strong>运动规划（Motion）</strong></td>
+<td>具体轨迹（每一时刻的位姿）</td>
+<td>毫秒–秒级</td>
+<td>采样、优化、学习</td>
+</tr>
+</tbody></table>
+<p>本文聚焦后两者——<strong>行为决策与运动规划</strong>，这是「规划智能」的核心战场。</p>
+<h3 id="1-2-按技术范式的分类"><a href="#1-2-按技术范式的分类" class="headerlink" title="1.2 按技术范式的分类"></a>1.2 按技术范式的分类</h3><table>
+<thead>
+<tr>
+<th>#</th>
+<th>范式</th>
+<th>核心思想</th>
+<th>代表方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>规则式（Rule-based）</strong></td>
+<td>人工设计规则与代价函数</td>
+<td>FSM、IDM、PDM-Closed</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>搜索与采样</strong></td>
+<td>在轨迹空间中采样并择优</td>
+<td>Lattice Planner、A*、RRT*</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>优化式</strong></td>
+<td>把规划写成带约束的优化问题</td>
+<td>MPC、二次规划、时空联合优化</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>模仿学习（IL）</strong></td>
+<td>从人类驾驶数据学策略</td>
+<td>ChauffeurNet、PLUTO、PlanTF</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>端到端（E2E）</strong></td>
+<td>感知-预测-规划全栈可微分</td>
+<td>UniAD、VAD、VADv2</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>生成式</strong></td>
+<td>用扩散/流建模多模态轨迹分布</td>
+<td>DiffusionDrive、GenAD</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>大模型驱动（VLM/LLM）</strong></td>
+<td>用语言模型做常识推理与决策</td>
+<td>GPT-Driver、DriveVLM、EMMA</td>
+</tr>
+</tbody></table>
+<p>下文沿这条脉络逐层展开。</p>
+<hr>
+<h2 id="二、经典范式：规则、搜索与优化"><a href="#二、经典范式：规则、搜索与优化" class="headerlink" title="二、经典范式：规则、搜索与优化"></a>二、经典范式：规则、搜索与优化</h2><h3 id="2-1-规则式规划"><a href="#2-1-规则式规划" class="headerlink" title="2.1 规则式规划"></a>2.1 规则式规划</h3><p>最早期、也是至今量产车上仍大量使用的方法。核心是<strong>人工设计的规则与代价函数</strong>：</p>
+<ul>
+<li><strong>有限状态机（FSM）</strong>：把驾驶行为离散为「巡航/跟车/变道/停车」等状态，用手工条件触发状态转移。</li>
+<li><strong>IDM（Intelligent Driver Model）</strong>：经典的跟车模型，用解析公式描述加速度与前车距离/速度差的关系。</li>
+</ul>
+<p><strong>优点</strong>：可解释、可预测、易于调试和加安全兜底。<strong>缺点</strong>：规则爆炸——真实道路的长尾场景无穷无尽，手工规则维护成本随场景数指数增长，难以覆盖复杂交互。</p>
+<h3 id="2-2-搜索与采样式规划"><a href="#2-2-搜索与采样式规划" class="headerlink" title="2.2 搜索与采样式规划"></a>2.2 搜索与采样式规划</h3><p>把连续的轨迹空间<strong>离散采样</strong>，再用代价函数评分择优：</p>
+<ul>
+<li><strong>Lattice Planner</strong>：在 Frenet 坐标系（沿车道的纵向 s + 横向 l）下，采样一组时空轨迹候选，用平滑性、安全性、效率等代价选最优。</li>
+<li><strong>A* / 混合 A*</strong>：在栅格化空间中做启发式搜索，常用于泊车等非结构化场景。</li>
+<li><strong>RRT*</strong>：随机采样构建搜索树，适合高维、复杂约束空间。</li>
+</ul>
+<p><strong>特点</strong>：轨迹质量依赖采样密度与代价函数设计，本质仍是「人工代价 + 搜索」。</p>
+<h3 id="2-3-优化式规划"><a href="#2-3-优化式规划" class="headerlink" title="2.3 优化式规划"></a>2.3 优化式规划</h3><p>把规划显式写成<strong>带约束的数值优化问题</strong>：</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -2.641ex;" xmlns="http://www.w3.org/2000/svg" width="80.723ex" height="4.84ex" role="img" focusable="false" viewBox="0 -972 35679.4 2139.4"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+\min_{\tau} \; J(\tau) = \sum_t \big( w_1 \|a_t\|^2 + w_2 \|j_t\|^2 + w_3 c_{\text{lane}} + \dots \big) \quad \text{s.t. 动力学、碰撞、边界约束}
+"><g data-mml-node="munder" data-latex="\min_{\tau}"><g data-mml-node="mo" data-latex="\min"><path data-c="6D" d="M315 413C361 413 384 378 384 307L384 79C384 60 381 48 374 44C367 40 344 38 307 38L307 0L423 3L538 0L538 38C501 38 479 40 472 44C465 48 461 60 461 79L461 259C461 339 513 413 590 413C637 413 660 378 660 307L660 79C660 60 656 48 649 44C642 40 619 38 582 38L582 0L698 3L813 0L813 38C781 38 760 39 750 42C740 45 736 52 736 64L736 251C736 298 734 331 731 350C721 411 676 442 597 442C534 442 487 413 455 354C441 413 397 442 322 442C259 442 211 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L148 3L263 0L263 38C226 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 238 413 315 413Z"></path><path data-c="69" d="M194 601C194 631 169 657 139 657C109 657 83 631 83 601C83 571 108 544 138 544C169 544 194 570 194 601M143 3L247 0L247 39C214 39 194 41 188 45C182 49 180 60 180 78L180 445L37 433L37 395C70 395 91 392 98 387C105 382 108 368 108 345L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z" transform="translate(833,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(1111,0)"></path></g><g data-mml-node="TeXAtom" transform="translate(652.8,-600) scale(0.707)" data-latex="{\tau}" data-mjx-texclass="ORD"><g data-mml-node="mi" data-latex="\tau"><path data-c="1D70F" d="M468 431L192 431C139 431 91 397 47 330C34 310 27 297 27 292C30 284 31 279 43 279C50 279 56 283 62 292C94 341 134 366 183 366L260 366L165 56C158 34 155 21 155 18C155-2 166-12 187-12C198-12 208-9 214-3C227 9 228 12 232 33L297 366L459 366C494 366 511 378 511 403C511 426 493 431 468 431Z"></path></g></g></g><g data-mml-node="mspace" data-latex="\;" transform="translate(1667,0)"></g><g data-mml-node="mi" data-latex="J" transform="translate(2111.7,0)"><path data-c="1D43D" d="M633 667C633 678 627 683 615 683C596 683 525 680 506 680L361 683C344 683 336 675 336 659C336 649 349 644 374 644C419 644 446 642 453 637C456 635 457 632 457 627C457 624 456 617 454 607L340 153C324 89 273 8 202 8C157 8 128 25 114 60L120 60C156 60 188 91 188 127C188 158 172 173 141 173C97 173 71 134 71 90C71 20 132-22 205-22C255-22 301-6 344 26C387 58 415 97 427 144L542 606C551 642 555 644 602 644C623 644 633 646 633 667Z"></path></g><g data-mml-node="mo" data-latex="(" transform="translate(2744.7,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mi" data-latex="\tau" transform="translate(3133.7,0)"><path data-c="1D70F" d="M468 431L192 431C139 431 91 397 47 330C34 310 27 297 27 292C30 284 31 279 43 279C50 279 56 283 62 292C94 341 134 366 183 366L260 366L165 56C158 34 155 21 155 18C155-2 166-12 187-12C198-12 208-9 214-3C227 9 228 12 232 33L297 366L459 366C494 366 511 378 511 403C511 426 493 431 468 431Z"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(3644.7,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(4311.4,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="munder" data-latex="\sum_t" transform="translate(5367.2,0)"><g data-mml-node="mo" data-latex="\sum"><path data-c="2211" d="M1265-450L1389-124L1355-124C1336-174 1304-216 1258-250C1145-334 1000-356 791-356L200-356L700 232C707 239 710 246 710 251L244 894L781 894C970 894 1127 870 1230 804C1290 766 1332 719 1356 663L1389 663L1265 950L88 950C70 950 60 947 57 941C56 938 56 926 56 905L581 187L68-415C61-423 57-430 57-435C57-445 67-450 88-450Z"></path></g><g data-mml-node="mi" transform="translate(594.4,-1059.6) scale(0.707)" data-latex="t"><path data-c="1D461" d="M330 419C330 428 320 433 299 433L218 433C244 537 257 591 257 595C257 616 246 626 225 626C202 626 188 613 182 587L145 433L56 433C34 433 23 432 23 411C23 400 33 395 54 395L135 395C86 200 62 97 62 84C62 28 100-11 156-11C194-11 227 6 256 41C280 70 297 98 308 125C312 136 314 142 314 145C314 154 309 159 299 159C291 159 285 154 281 143C247 60 206 19 157 19C140 19 131 33 131 60C131 75 133 91 137 107L208 395L297 395C323 395 330 397 330 419Z"></path></g></g><g data-mml-node="TeXAtom" data-latex="\big(" data-mjx-texclass="ORD" transform="translate(6977.9,0)"><g data-mml-node="mo"><path data-c="28" d="M444-472C455-472 461-466 461-455C461-449 459-445 454-442C382-387 325-294 282-164C245-53 226 57 226 164L226 336C226 443 245 552 282 664C325 793 382 886 454 942C459 945 461 949 461 955C461 966 455 972 444 972C440 972 437 971 434 968C353 905 285 809 232 681C181 560 156 445 156 336L156 164C156 55 181-60 232-181C285-310 353-405 434-468C437-471 440-472 444-472Z"></path></g></g><g data-mml-node="msub" data-latex="w_1" transform="translate(7500.9,0)"><g data-mml-node="mi" data-latex="w"><path data-c="1D464" d="M590 391C590 382 595 372 606 362C629 340 641 313 641 281C641 264 635 237 623 198C586 78 539 18 482 18C435 18 412 45 412 100C412 119 416 142 423 171C441 243 460 314 477 387C479 394 480 398 480 401C480 421 469 431 447 431C427 431 414 421 407 401L367 245C352 187 341 167 341 115C341 107 341 101 342 98C319 45 290 18 255 18C205 18 180 47 180 104C180 141 197 204 231 293C242 323 248 344 248 357C248 406 212 442 163 442C118 442 84 417 59 367C39 328 29 301 29 287C29 278 34 273 45 273C58 273 60 279 64 293C88 373 120 413 160 413C174 413 181 403 181 384C181 369 175 347 164 317C127 220 108 154 108 117C108 32 165-11 252-11C294-11 328 10 355 53C375 10 416-11 479-11C541-11 590 30 625 112C648 164 691 302 691 369C691 384 690 394 689 399C685 418 666 442 644 442C618 442 590 417 590 391Z"></path></g><g data-mml-node="mn" transform="translate(749,-150) scale(0.707)" data-latex="1"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g></g><g data-mml-node="mo" data-latex="\|" transform="translate(8653.4,0)"><path data-c="2016" d="M264-250C279-250 287-242 287-226L287 726C287 742 279 750 264 750C249 750 241 742 241 726L241-226C241-242 249-250 264-250M134-250C149-250 157-242 157-226L157 726C157 742 149 750 134 750C119 750 111 742 111 726L111-226C111-242 119-250 134-250Z"></path></g><g data-mml-node="msub" data-latex="a_t" transform="translate(9051.4,0)"><g data-mml-node="mi" data-latex="a"><path data-c="1D44E" d="M498 144C498 153 493 158 482 158C474 158 468 151 465 137C445 58 421 18 394 18C377 18 368 32 368 60C368 73 372 97 381 132L438 357C443 376 445 387 445 392C445 412 434 422 412 422C391 422 377 410 370 387C349 424 319 442 281 442C216 442 159 409 109 343C63 281 40 217 40 150C40 63 91-11 175-11C218-11 260 12 300 58C311 20 345-11 392-11C461-11 482 70 498 144M341 374C350 353 355 339 355 330C355 326 354 321 353 314L304 122C301 111 294 99 285 87C248 41 212 18 177 18C138 18 118 48 118 107C118 131 124 167 136 215C157 300 187 357 224 388C244 405 263 413 282 413C309 413 329 400 341 374Z"></path></g><g data-mml-node="mi" transform="translate(562,-150) scale(0.707)" data-latex="t"><path data-c="1D461" d="M330 419C330 428 320 433 299 433L218 433C244 537 257 591 257 595C257 616 246 626 225 626C202 626 188 613 182 587L145 433L56 433C34 433 23 432 23 411C23 400 33 395 54 395L135 395C86 200 62 97 62 84C62 28 100-11 156-11C194-11 227 6 256 41C280 70 297 98 308 125C312 136 314 142 314 145C314 154 309 159 299 159C291 159 285 154 281 143C247 60 206 19 157 19C140 19 131 33 131 60C131 75 133 91 137 107L208 395L297 395C323 395 330 397 330 419Z"></path></g></g><g data-mml-node="msup" data-latex="\|^2" transform="translate(9918.7,0)"><g data-mml-node="mo" data-latex="\|"><path data-c="2016" d="M264-250C279-250 287-242 287-226L287 726C287 742 279 750 264 750C249 750 241 742 241 726L241-226C241-242 249-250 264-250M134-250C149-250 157-242 157-226L157 726C157 742 149 750 134 750C119 750 111 742 111 726L111-226C111-242 119-250 134-250Z"></path></g><g data-mml-node="mn" transform="translate(431,413) scale(0.707)" data-latex="2"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g></g><g data-mml-node="mo" data-latex="+" transform="translate(10975.5,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="msub" data-latex="w_2" transform="translate(11975.7,0)"><g data-mml-node="mi" data-latex="w"><path data-c="1D464" d="M590 391C590 382 595 372 606 362C629 340 641 313 641 281C641 264 635 237 623 198C586 78 539 18 482 18C435 18 412 45 412 100C412 119 416 142 423 171C441 243 460 314 477 387C479 394 480 398 480 401C480 421 469 431 447 431C427 431 414 421 407 401L367 245C352 187 341 167 341 115C341 107 341 101 342 98C319 45 290 18 255 18C205 18 180 47 180 104C180 141 197 204 231 293C242 323 248 344 248 357C248 406 212 442 163 442C118 442 84 417 59 367C39 328 29 301 29 287C29 278 34 273 45 273C58 273 60 279 64 293C88 373 120 413 160 413C174 413 181 403 181 384C181 369 175 347 164 317C127 220 108 154 108 117C108 32 165-11 252-11C294-11 328 10 355 53C375 10 416-11 479-11C541-11 590 30 625 112C648 164 691 302 691 369C691 384 690 394 689 399C685 418 666 442 644 442C618 442 590 417 590 391Z"></path></g><g data-mml-node="mn" transform="translate(749,-150) scale(0.707)" data-latex="2"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g></g><g data-mml-node="mo" data-latex="\|" transform="translate(13128.3,0)"><path data-c="2016" d="M264-250C279-250 287-242 287-226L287 726C287 742 279 750 264 750C249 750 241 742 241 726L241-226C241-242 249-250 264-250M134-250C149-250 157-242 157-226L157 726C157 742 149 750 134 750C119 750 111 742 111 726L111-226C111-242 119-250 134-250Z"></path></g><g data-mml-node="msub" data-latex="j_t" transform="translate(13526.3,0)"><g data-mml-node="mi" data-latex="j"><path data-c="1D457" d="M397 621C397 648 383 661 356 661C328 661 300 633 300 605C300 578 313 565 340 565C368 565 397 593 397 621M267 444C214 444 169 404 147 369C120 326 107 299 107 287C107 278 112 274 122 274C127 274 130 275 133 276C138 284 141 291 144 296C176 375 216 414 264 414C282 414 291 400 291 373C291 358 289 341 284 323L192-46C178-104 138-175 75-175C66-175 57-174 48-171C73-161 85-143 85-118C85-92 71-79 44-79C12-79-13-108-13-140C-13-184 30-205 77-205C120-205 160-190 197-160C232-131 254-94 265-51L356 311C359 324 361 337 361 349C361 404 322 444 267 444Z"></path></g><g data-mml-node="mi" transform="translate(445,-150) scale(0.707)" data-latex="t"><path data-c="1D461" d="M330 419C330 428 320 433 299 433L218 433C244 537 257 591 257 595C257 616 246 626 225 626C202 626 188 613 182 587L145 433L56 433C34 433 23 432 23 411C23 400 33 395 54 395L135 395C86 200 62 97 62 84C62 28 100-11 156-11C194-11 227 6 256 41C280 70 297 98 308 125C312 136 314 142 314 145C314 154 309 159 299 159C291 159 285 154 281 143C247 60 206 19 157 19C140 19 131 33 131 60C131 75 133 91 137 107L208 395L297 395C323 395 330 397 330 419Z"></path></g></g><g data-mml-node="msup" data-latex="\|^2" transform="translate(14276.5,0)"><g data-mml-node="mo" data-latex="\|"><path data-c="2016" d="M264-250C279-250 287-242 287-226L287 726C287 742 279 750 264 750C249 750 241 742 241 726L241-226C241-242 249-250 264-250M134-250C149-250 157-242 157-226L157 726C157 742 149 750 134 750C119 750 111 742 111 726L111-226C111-242 119-250 134-250Z"></path></g><g data-mml-node="mn" transform="translate(431,413) scale(0.707)" data-latex="2"><path data-c="32" d="M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z"></path></g></g><g data-mml-node="mo" data-latex="+" transform="translate(15333.3,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="msub" data-latex="w_3" transform="translate(16333.5,0)"><g data-mml-node="mi" data-latex="w"><path data-c="1D464" d="M590 391C590 382 595 372 606 362C629 340 641 313 641 281C641 264 635 237 623 198C586 78 539 18 482 18C435 18 412 45 412 100C412 119 416 142 423 171C441 243 460 314 477 387C479 394 480 398 480 401C480 421 469 431 447 431C427 431 414 421 407 401L367 245C352 187 341 167 341 115C341 107 341 101 342 98C319 45 290 18 255 18C205 18 180 47 180 104C180 141 197 204 231 293C242 323 248 344 248 357C248 406 212 442 163 442C118 442 84 417 59 367C39 328 29 301 29 287C29 278 34 273 45 273C58 273 60 279 64 293C88 373 120 413 160 413C174 413 181 403 181 384C181 369 175 347 164 317C127 220 108 154 108 117C108 32 165-11 252-11C294-11 328 10 355 53C375 10 416-11 479-11C541-11 590 30 625 112C648 164 691 302 691 369C691 384 690 394 689 399C685 418 666 442 644 442C618 442 590 417 590 391Z"></path></g><g data-mml-node="mn" transform="translate(749,-150) scale(0.707)" data-latex="3"><path data-c="33" d="M303 353C369 378 431 441 431 526C431 569 410 604 369 631C333 654 292 666 246 666C201 666 162 654 127 631C88 605 68 571 68 528C68 495 90 472 122 472C154 472 176 495 176 527C176 560 157 578 119 580C145 615 186 633 242 633C302 633 332 598 332 527C332 485 324 450 309 421C282 373 245 364 183 364C171 362 165 357 165 348C165 333 172 333 192 333L235 333C310 333 348 280 348 173C348 88 317 14 241 14C176 14 128 36 99 80C134 79 160 105 160 139C160 173 135 198 101 198C62 198 42 178 42 137C42 88 64 49 108 18C147-9 193-22 244-22C301-22 350-3 393 34C436 71 457 117 457 173C457 267 383 332 303 353Z"></path></g></g><g data-mml-node="msub" data-latex="c_{\text{lane}}" transform="translate(17486.1,0)"><g data-mml-node="mi" data-latex="c"><path data-c="1D450" d="M328 325C328 300 341 287 368 287C404 287 427 318 427 354C427 410 368 442 308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 61 106-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 121 53 121 122C121 184 150 274 174 317C198 361 249 413 308 413C346 413 372 402 386 381C355 378 328 358 328 325Z"></path></g><g data-mml-node="TeXAtom" transform="translate(466,-150) scale(0.707)" data-latex="{\text{lane}}" data-mjx-texclass="ORD"><g data-mml-node="mtext" data-latex="\text{lane}"><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z"></path><path data-c="61" d="M483 91L483 150L451 150L451 91C451 52 440 32 419 32C399 32 387 57 387 77L387 274C387 309 383 335 376 353C352 412 283 448 213 448C136 448 60 405 60 333C60 300 77 283 110 283C143 283 159 299 159 332C159 361 144 378 113 381C135 406 168 419 211 419C273 419 311 362 311 297L311 264C233 259 174 247 133 228C66 197 32 154 32 97C32 71 42 49 61 32C93 3 137-11 193-11C252-11 294 14 320 65C327 27 355-6 398-6C451-6 483 36 483 91M200 18C154 18 116 52 116 98C116 191 213 231 311 236L311 141C311 74 267 18 200 18Z" transform="translate(278,0)"></path><path data-c="6E" d="M314 413C359 413 382 378 382 307L382 79C382 60 379 48 372 44C365 40 343 38 306 38L306 0L421 3L535 0L535 38C503 38 482 39 472 42C462 45 458 52 458 64L458 251C458 298 457 331 454 350C444 411 399 442 320 442C257 442 210 412 179 352L179 442L32 431L32 393C68 393 90 390 98 384C106 378 109 365 109 342L109 79C109 60 105 48 98 44C91 40 69 38 32 38L32 0L147 3L261 0L261 38C224 38 203 40 196 44C189 48 185 60 185 79L185 259C185 340 236 413 314 413Z" transform="translate(778,0)"></path><path data-c="65" d="M415 251C415 366 348 448 236 448C176 448 126 425 85 378C47 334 28 281 28 220C28 157 49 104 91 58C133 12 185-11 247-11C304-11 348 9 378 48C403 81 415 105 415 121C415 131 409 136 398 136C390 136 385 131 382 120C360 54 317 21 253 21C208 21 173 42 146 85C127 116 118 163 117 227L387 227C409 227 415 229 415 251M326 349C337 316 342 284 342 255L118 255C121 321 138 366 168 389C193 409 215 419 236 419C281 419 311 396 326 349Z" transform="translate(1334,0)"></path></g></g></g><g data-mml-node="mo" data-latex="+" transform="translate(19481.5,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mo" transform="translate(20481.8,0)"><path data-c="2026" d="M751 53C751 83 725 106 695 106C664 106 638 83 638 53C638 23 664 0 695 0C725 0 751 23 751 53M475 53C475 83 449 106 419 106C388 106 363 83 363 53C363 23 388 0 419 0C449 0 475 23 475 53M200 53C200 83 174 106 143 106C113 106 87 83 87 53C87 23 113 0 143 0C173 0 200 23 200 53Z"></path></g><g data-mml-node="TeXAtom" data-latex="\big)" data-mjx-texclass="ORD" transform="translate(21485.4,0)"><g data-mml-node="mo"><path data-c="29" d="M89-468C170-405 238-310 291-181C342-60 367 55 367 164L367 336C367 445 342 560 291 681C238 810 170 905 89 968C85 971 82 972 79 972C68 972 62 966 62 955C62 950 64 945 68 942C140 887 198 795 241 664C278 552 297 443 297 336L297 164C297 57 278-52 241-164C198-295 140-387 68-442C64-445 62-450 62-455C62-466 68-472 79-472C82-472 86-471 89-468Z"></path></g></g><g data-mml-node="mspace" data-latex="\quad" transform="translate(22008.4,0)"></g><g data-mml-node="mtext" data-latex="\text{s.t. 动力学、碰撞、边界约束}" transform="translate(23008.4,0)"><path data-c="73" d="M360 130C360 206 308 254 205 274C158 283 128 294 112 305C96 316 88 332 88 351C88 398 123 421 193 421C261 421 298 383 303 306C304 298 309 294 319 294C330 294 336 303 336 321L336 420C336 439 331 448 321 448C310 448 295 430 285 422C260 439 229 448 193 448C104 448 33 408 33 323C33 289 47 260 76 237C111 208 144 202 207 191C272 178 305 149 305 104C305 47 270 18 199 18C130 18 86 64 67 155C64 168 59 175 50 175C39 175 33 165 33 146L33 17C33-2 38-11 48-11C51-11 56-8 64-1C82 15 74 12 92 30C121 3 157-11 199-11C294-11 360 38 360 130Z"></path><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z" transform="translate(394,0)"></path><path data-c="74" d="M332 126L332 186L300 186L300 128C300 78 282 22 238 22C197 22 177 56 177 124L177 395L316 395L316 433L177 433L177 615L145 615C144 582 141 553 134 527C117 461 78 427 19 424L19 395L102 395L102 126C102 67 120 29 155 10C182-4 207-11 232-11C298-11 332 55 332 126Z" transform="translate(672,0)"></path><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z" transform="translate(1061,0)"></path><path data-c="20" d="" transform="translate(1339,0)"></path><text data-variant="normal" transform="translate(1671,0) scale(1,-1)" font-size="884px" font-family="serif">动力学、碰撞、边界约束</text></g></g></g></svg></mjx-container></p>
+<ul>
+<li><strong>MPC（模型预测控制）</strong>：在滚动时域内反复求解上述优化，兼顾预测与反馈。</li>
+<li><strong>时空联合优化 / QP</strong>：把轨迹的时间维与空间维联合优化，处理动态障碍物。</li>
+</ul>
+<p><strong>优点</strong>：能显式编码舒适性、动力学、安全约束，轨迹平滑。<strong>缺点</strong>：非凸问题易陷局部最优；代价权重仍需人工调参；对交互博弈建模有限。</p>
+<p><strong>小结</strong>：经典范式的共同基因是「<strong>人工先验 + 显式代价/约束</strong>」，可解释、可控，但泛化与交互能力受限于人的设计。这为数据驱动方法留下了空间。</p>
+<hr>
+<h2 id="三、模仿学习：从人类驾驶中学策略"><a href="#三、模仿学习：从人类驾驶中学策略" class="headerlink" title="三、模仿学习：从人类驾驶中学策略"></a>三、模仿学习：从人类驾驶中学策略</h2><p>模仿学习（Imitation Learning, IL）是数据驱动规划的主流路线——<strong>把人类驾驶轨迹当作专家示范，让模型学会「像人一样开」</strong>。</p>
+<h3 id="3-1-ChauffeurNet（Waymo-2019）——-IL-的经典与困境"><a href="#3-1-ChauffeurNet（Waymo-2019）——-IL-的经典与困境" class="headerlink" title="3.1 ChauffeurNet（Waymo, 2019）—— IL 的经典与困境"></a>3.1 ChauffeurNet（Waymo, 2019）—— IL 的经典与困境</h3><blockquote>
+<p><strong>论文</strong>：Bansal, M. et al. “ChauffeurNet: Learning to Drive by Imitating the Best and Synthesizing the Worst.” 2019.</p>
+</blockquote>
+<p><strong>核心贡献</strong>：不仅用行为克隆（Behavior Cloning）模仿好的驾驶，还<strong>主动合成「坏」场景</strong>（如偏离车道、逼近碰撞）并给出纠正监督，缓解 IL 最致命的问题——<strong>协变量偏移（covariate shift）</strong>：模型在训练时只见过专家的「好」状态，一旦推理时犯了小错进入没见过的状态，误差就会累积发散。ChauffeurNet 用数据增强 + 辅助损失（碰撞、上路缘）来对抗这一点，是理解 IL 规划的必读经典。</p>
+<h3 id="3-2-现代-IL-规划器：PLUTO、PlanTF"><a href="#3-2-现代-IL-规划器：PLUTO、PlanTF" class="headerlink" title="3.2 现代 IL 规划器：PLUTO、PlanTF"></a>3.2 现代 IL 规划器：PLUTO、PlanTF</h3><p>在 nuPlan 基准推动下，2024 年涌现出一批强大的纯学习 IL 规划器：</p>
+<ul>
+<li><strong>PLUTO</strong>（Pushing the Limit of Imitation Learning-based Planning，<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.14327">arXiv:2404.14327</a>）：通过精心的模型设计、对比学习式的数据增强和辅助损失，让<strong>纯模仿学习</strong>首次在 nuPlan 闭环上达到 SOTA，逼平甚至超越规则方法。它证明了「IL 打不过规则」并非本质缺陷，而是设计不到位。</li>
+<li><strong>PlanTF / PDM-Hybrid</strong>：探索 Transformer 规划骨架，以及「学习 + 规则」的混合架构。</li>
+</ul>
+<h3 id="3-3-模仿学习的三大顽疾"><a href="#3-3-模仿学习的三大顽疾" class="headerlink" title="3.3 模仿学习的三大顽疾"></a>3.3 模仿学习的三大顽疾</h3><ol>
+<li><strong>协变量偏移</strong>：训练分布 ≠ 部署分布，小误差累积发散。</li>
+<li><strong>因果混淆（causal confusion）</strong>：模型可能学到虚假相关（如「前车刹车灯亮 → 我也刹车」中真正因果被混淆），著名的反例是「历史轨迹外推」——只看自车历史速度就能在开环指标上作弊。</li>
+<li><strong>多模态坍缩</strong>：人类在同一场景可能有多种合理选择（左绕/右绕），简单回归会把它们平均成一条危险的「中间」轨迹。这正是生成式方法（第五节）要解决的核心问题。</li>
+</ol>
+<hr>
+<h2 id="四、端到端规划：全栈可微分"><a href="#四、端到端规划：全栈可微分" class="headerlink" title="四、端到端规划：全栈可微分"></a>四、端到端规划：全栈可微分</h2><p>端到端（E2E）范式把感知、预测、规划<strong>统一进一个可联合优化的网络</strong>，让规划目标的梯度能一路回传到原始传感器输入。本系列 <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/">03</a> 已详解代表作，此处提炼其范式意义：</p>
+<ul>
+<li><strong>UniAD（CVPR 2023 最佳论文）</strong>：首次将检测、跟踪、建图、预测、占据、规划全栈统一，提出「规划导向」哲学——前端任务应服务于最终规划效果，而非各自刷点。</li>
+<li><strong>VAD / VADv2</strong>：用<strong>矢量化（vectorized）</strong> 场景表示替代稠密栅格，大幅提速；VADv2 引入<strong>概率规划</strong>，输出轨迹的概率分布而非单一轨迹，向多模态迈进。</li>
+</ul>
+<p><strong>端到端的优势</strong>：避免模块间信息损失与误差累积，联合优化全局最优。<strong>代价</strong>：可解释性下降、需要海量数据、安全兜底更难加。当下量产界的务实选择往往是「端到端主干 + 规则安全层」的混合。</p>
+<hr>
+<h2 id="五、生成式规划：拥抱多模态"><a href="#五、生成式规划：拥抱多模态" class="headerlink" title="五、生成式规划：拥抱多模态"></a>五、生成式规划：拥抱多模态</h2><p>为根治 IL 的「多模态坍缩」，生成式规划用<strong>概率生成模型直接建模轨迹的多模态分布</strong>。本系列 <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/">04</a> 有专文，此处提炼脉络：</p>
+<ul>
+<li><strong>DiffusionDrive</strong>：用<strong>扩散模型</strong>从噪声中逐步去噪生成多条候选轨迹，天然表达「左绕/右绕/减速」等多种模式，再择优执行。相比回归式的单点输出，扩散生成能覆盖决策的多样性。</li>
+<li><strong>截断扩散 / 流匹配</strong>：为满足实时性，用截断扩散、流匹配（Flow Matching）等减少去噪步数，把生成式规划压到可上车的延迟。</li>
+</ul>
+<p><strong>核心价值</strong>：把「规划」从「回归一条轨迹」重新定义为「从轨迹分布中采样」，与人类决策的多可能性更契合。</p>
+<hr>
+<h2 id="六、大模型驱动：VLM-LLM-的常识推理"><a href="#六、大模型驱动：VLM-LLM-的常识推理" class="headerlink" title="六、大模型驱动：VLM/LLM 的常识推理"></a>六、大模型驱动：VLM/LLM 的常识推理</h2><p>最新前沿是把<strong>视觉语言模型（VLM）/大语言模型（LLM）</strong> 引入规划，借其世界知识与常识推理处理长尾与复杂语义场景。本系列 <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-05-VLM-LLM%E9%A9%BE%E9%A9%B6/">05</a> 有专文，脉络如下：</p>
+<ul>
+<li><strong>GPT-Driver / DriveGPT4</strong>：把规划重构为「语言任务」——用 LLM 以文本形式输出驾驶决策与轨迹，并给出<strong>思维链解释</strong>。</li>
+<li><strong>DriveVLM</strong>：提出「慢系统（VLM 做场景理解与决策）+ 快系统（传统规划器保实时）」的双系统架构，兼顾常识推理与实时性。</li>
+<li><strong>EMMA（Waymo）</strong>：端到端多模态大模型，直接从传感器 + 文本指令生成轨迹，展示了 VLM 端到端驾驶的规模化潜力。</li>
+</ul>
+<p><strong>价值与挑战</strong>：VLM 带来了处理「施工绕行」「交警手势」「模糊语义」等长尾场景的常识能力，但<strong>幻觉、实时性、空间精度</strong>仍是上车的三大障碍。当前多用「双系统」折中。</p>
+<hr>
+<h2 id="七、评测困境：开环-vs-闭环，我们真的会评规划吗？"><a href="#七、评测困境：开环-vs-闭环，我们真的会评规划吗？" class="headerlink" title="七、评测困境：开环 vs 闭环，我们真的会评规划吗？"></a>七、评测困境：开环 vs 闭环，我们真的会评规划吗？</h2><p>规划方法的评测，是本领域<strong>最深刻、最被低估的问题</strong>。</p>
+<h3 id="7-1-开环评测（Open-Loop）及其陷阱"><a href="#7-1-开环评测（Open-Loop）及其陷阱" class="headerlink" title="7.1 开环评测（Open-Loop）及其陷阱"></a>7.1 开环评测（Open-Loop）及其陷阱</h3><p><strong>开环</strong>：在数据集上，把模型预测轨迹与人类真值轨迹比对（L2 距离、碰撞率）。<strong>致命缺陷</strong>：</p>
+<ul>
+<li><strong>不反映闭环表现</strong>：预测轨迹不真正驱动车辆，无法体现误差累积。</li>
+<li><strong>可被历史外推「作弊」</strong>：著名的 <strong>AD-MLP</strong> 工作证明——<strong>只用自车历史状态、完全不看感知输入</strong>的极简 MLP，在 nuScenes 开环 L2/碰撞率上竟能媲美复杂端到端模型。这暴露了开环指标的巨大漏洞：它奖励「惯性外推」而非「真正决策」。</li>
+</ul>
+<h3 id="7-2-闭环评测（Closed-Loop）与-nuPlan-的震撼"><a href="#7-2-闭环评测（Closed-Loop）与-nuPlan-的震撼" class="headerlink" title="7.2 闭环评测（Closed-Loop）与 nuPlan 的震撼"></a>7.2 闭环评测（Closed-Loop）与 nuPlan 的震撼</h3><p><strong>闭环</strong>：模型输出真正驱动仿真中的车辆，其他 agent 有反应，滚动推演整段驾驶，度量驾驶分数、碰撞、进度、舒适度。这才逼近真实。</p>
+<p><strong>nuPlan</strong> 是首个大规模真实数据的闭环规划基准。它带来一个震撼结论（<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2404.07569">arXiv:2404.07569</a> 等）：</p>
+<blockquote>
+<p>在 nuPlan 闭环上，<strong>朴素的规则方法 PDM-Closed 反超了当时几乎所有学习方法</strong>，逼近专家水平。</p>
+</blockquote>
+<p>这记重锤让整个领域反思：<strong>过去在开环指标上的「进步」，很多是虚假的。</strong> 它推动了 PLUTO（用强 IL 追平规则）、Mosaic（<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2604.13853">arXiv:2604.13853</a>，组合规则与学习）等一批「真正为闭环而设计」的工作。</p>
+<h3 id="7-3-主流基准对比"><a href="#7-3-主流基准对比" class="headerlink" title="7.3 主流基准对比"></a>7.3 主流基准对比</h3><table>
+<thead>
+<tr>
+<th>基准</th>
+<th>类型</th>
+<th>数据</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>nuScenes（开环规划）</strong></td>
+<td>开环</td>
+<td>真实</td>
+<td>常用但易被历史外推作弊</td>
+</tr>
+<tr>
+<td><strong>nuPlan</strong></td>
+<td>闭环</td>
+<td>真实（log-replay/reactive）</td>
+<td>规则反超学习，主流闭环基准</td>
+</tr>
+<tr>
+<td><strong>CARLA Leaderboard</strong></td>
+<td>闭环</td>
+<td>仿真</td>
+<td>传感器到控制全链路，长期端到端主战场</td>
+</tr>
+<tr>
+<td><strong>Bench2Drive</strong></td>
+<td>闭环</td>
+<td>仿真</td>
+<td>面向端到端的多能力细粒度闭环评测</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>：<strong>闭环 &gt; 开环</strong>已成共识；但即便 nuPlan 也「多为常规场景、缺长尾」，如何构造真正考验交互与长尾的闭环基准（如 interPlan），仍是开放问题。</p>
+<hr>
+<h2 id="八、挑战与展望"><a href="#八、挑战与展望" class="headerlink" title="八、挑战与展望"></a>八、挑战与展望</h2><p><strong>核心挑战</strong>：</p>
+<ul>
+<li><strong>评测</strong>：闭环仿真的真实性（其他 agent 的反应性）、长尾覆盖仍不足。</li>
+<li><strong>多模态与交互</strong>：博弈式交互（谁先谁后）建模仍不成熟。</li>
+<li><strong>安全保证</strong>：学习方法缺乏形式化安全保证，量产仍需规则兜底。</li>
+<li><strong>长尾与常识</strong>：VLM 有潜力但幻觉/实时性待解。</li>
+</ul>
+<p><strong>未来方向</strong>：</p>
+<ol>
+<li><strong>规则与学习的深度融合</strong>：Mosaic 式可组合框架——用学习提供先验、规则保底线，取二者之长。</li>
+<li><strong>闭环训练</strong>：从「模仿静态数据」转向「在可微/反应式仿真中闭环训练」，直击协变量偏移。</li>
+<li><strong>世界模型 + 规划</strong>：用<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-06-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">世界模型</a>做「想象式」的推演与规划（model-based planning）。</li>
+<li><strong>VLM 双系统上车</strong>：慢系统推理 + 快系统执行，把大模型常识真正落到实时闭环。</li>
+<li><strong>生成式 + 强化学习</strong>：用扩散建模多模态、用 RL 在闭环中对齐驾驶奖励，是当下最被看好的组合。</li>
+</ol>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>自动驾驶规划走过了一条从「<strong>人工规则</strong>」到「<strong>数据驱动</strong>」再到「<strong>大模型智能</strong>」的演进之路：经典的规则/搜索/优化方法可解释、可控但难泛化；模仿学习能从人类数据学策略却受困于协变量偏移与多模态坍缩；端到端实现全栈可微分但牺牲可解释性；生成式方法拥抱多模态；VLM/LLM 带来常识推理。</p>
+<p>而贯穿始终、最值得铭记的一课是<strong>评测</strong>：nuPlan 上「规则反超学习」的震撼，以及 AD-MLP 揭穿的开环陷阱，共同提醒我们——<strong>在规划领域，选对评测方式，比刷高某个指标更重要。</strong> 一个方法只有在真实、反应式、覆盖长尾的<strong>闭环</strong>中经得起考验，才算真正的进步。规划的未来，属于那些既懂融合规则与学习、又敢在闭环中真刀真枪检验自己的方法。</p>
+<hr>
+<blockquote>
+<p><strong>说明</strong>：本文为综述性整理，与本系列 03/04/05/06 篇互为补充；论文引用信息以对应会议/arXiv 正式版为准。</p>
+</blockquote>
+<p><strong>相关阅读</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">自动驾驶经典论文全景指南</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/">端到端规划</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/">扩散模型与生成式规划</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-05-VLM-LLM%E9%A9%BE%E9%A9%B6/">VLM/LLM 驱动的驾驶</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="category-chain-item">自动驾驶</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/%E8%A7%84%E5%88%92/" class="category-chain-item">规划</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
+      
+        <a href="/tags/VLM/" class="print-no-link">#VLM</a>
+      
+        <a href="/tags/%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0/" class="print-no-link">#模仿学习</a>
+      
+        <a href="/tags/%E8%A7%84%E5%88%92/" class="print-no-link">#规划</a>
+      
+        <a href="/tags/Planning/" class="print-no-link">#Planning</a>
+      
+        <a href="/tags/%E7%AB%AF%E5%88%B0%E7%AB%AF/" class="print-no-link">#端到端</a>
+      
+        <a href="/tags/nuPlan/" class="print-no-link">#nuPlan</a>
+      
+        <a href="/tags/%E9%97%AD%E7%8E%AF%E8%AF%84%E6%B5%8B/" class="print-no-link">#闭环评测</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>自动驾驶规划方法全景综述 —— 从规则到端到端与大模型</div>
+      <div>https://w2ongq6.github.io/2026/08/09/ad/自动驾驶规划方法全景综述/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月9日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/09/rl/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/" title="强化学习经典论文全景指南（1989–2026）">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">强化学习经典论文全景指南（1989–2026）</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/09/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8%E5%85%A8%E6%99%AF%E7%BB%BC%E8%BF%B0/" title="自动驾驶自动标注全景综述 —— 从离线感知到数据引擎">
+                        <span class="hidden-mobile">自动驾驶自动标注全景综述 —— 从离线感知到数据引擎</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

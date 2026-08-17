@@ -19,15 +19,15 @@
   <meta name="author" content="Kaiyun.li">
   <meta name="keywords" content="">
   
-    <meta name="description" content="4. 扩散模型与生成式规划4.1 DiffusionDrive (2025) 论文：Liao, B. et al. “DiffusionDrive: Truncated Diffusion Model for End-to-End Autonomous Driving.” CVPR 2025.  📌 推荐 中文摘要：将扩散模型引入端到端驾驶轨迹生成，并实现了关键的效率突破。相比于需要 20 步去">
+    <meta name="description" content="4. 扩散模型与生成式规划 本篇在主线中的位置：这是决策线从”点估计”转向”分布”的关键一跳。第 3 篇末尾留下的墙是：全栈可微分网络再强，规划头也只回归单条确定性轨迹，而驾驶决策天生多模态——路口左转、直行、减速等待可能都对。用 L2 损失去回归多个正确答案，网络只能取它们的平均，结果是一条既不左也不右、甚至可能冲上隔离带的”平均轨迹”，同时还伴随方向盘抖动。这就是模态坍缩。 生成式规划的核心思">
 <meta property="og:type" content="article">
 <meta property="og:title" content="自动驾驶-04：扩散模型与生成式规划">
 <meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/index.html">
 <meta property="og:site_name" content="Kaiyun&#39;s Blog">
-<meta property="og:description" content="4. 扩散模型与生成式规划4.1 DiffusionDrive (2025) 论文：Liao, B. et al. “DiffusionDrive: Truncated Diffusion Model for End-to-End Autonomous Driving.” CVPR 2025.  📌 推荐 中文摘要：将扩散模型引入端到端驾驶轨迹生成，并实现了关键的效率突破。相比于需要 20 步去">
+<meta property="og:description" content="4. 扩散模型与生成式规划 本篇在主线中的位置：这是决策线从”点估计”转向”分布”的关键一跳。第 3 篇末尾留下的墙是：全栈可微分网络再强，规划头也只回归单条确定性轨迹，而驾驶决策天生多模态——路口左转、直行、减速等待可能都对。用 L2 损失去回归多个正确答案，网络只能取它们的平均，结果是一条既不左也不右、甚至可能冲上隔离带的”平均轨迹”，同时还伴随方向盘抖动。这就是模态坍缩。 生成式规划的核心思">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:04:00.000Z">
-<meta property="article:modified_time" content="2026-07-25T11:05:55.811Z">
+<meta property="article:modified_time" content="2026-08-15T13:49:08.328Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="DiffusionDrive">
 <meta property="article:tag" content="扩散模型">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          3.9k 字
+          6.5k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          33 分钟
+          55 分钟
         
       </span>
     
@@ -500,35 +500,54 @@ mjx-container[display="true"] + br {
             
               <div class="markdown-body">
                 
-                <h2 id="4-扩散模型与生成式规划"><a href="#4-扩散模型与生成式规划" class="headerlink" title="4. 扩散模型与生成式规划"></a>4. 扩散模型与生成式规划</h2><h3 id="4-1-DiffusionDrive-2025"><a href="#4-1-DiffusionDrive-2025" class="headerlink" title="4.1 DiffusionDrive (2025)"></a>4.1 DiffusionDrive (2025)</h3><blockquote>
+                <h2 id="4-扩散模型与生成式规划"><a href="#4-扩散模型与生成式规划" class="headerlink" title="4. 扩散模型与生成式规划"></a>4. 扩散模型与生成式规划</h2><blockquote>
+<p><strong>本篇在主线中的位置</strong>：这是<strong>决策线从”点估计”转向”分布”的关键一跳</strong>。第 3 篇末尾留下的墙是：全栈可微分网络再强，规划头也只回归<strong>单条确定性轨迹</strong>，而驾驶决策<strong>天生多模态</strong>——路口左转、直行、减速等待可能都对。用 L2 损失去回归多个正确答案，网络只能取它们的平均，结果是一条既不左也不右、甚至可能冲上隔离带的”平均轨迹”，同时还伴随方向盘抖动。这就是<strong>模态坍缩</strong>。</p>
+<p>生成式规划的核心思想，是<strong>不再预测”那条正确轨迹”，而是建模”所有合理轨迹构成的分布”，再从中采样</strong>。扩散模型天然适合这件事——它本就是学习从噪声还原出一个复杂分布。本篇的内在逻辑有两条并行的推进：</p>
+<ul>
+<li><strong>让生成又快又准</strong>：标准扩散要几十步去噪，太慢。DiffusionDrive 用聚类锚点把去噪<strong>截断到 2 步</strong>、MeanFuser 追求<strong>一步生成</strong>、GuideFlow 用<strong>流匹配</strong>——一条”把生成式方法压进实时预算”的效率线；</li>
+<li><strong>让生成”天生安全”</strong>：SafeDiffuser、GuideFlow 把碰撞避免、车道约束以控制障碍函数/约束速度场的形式<strong>注入去噪的每一步</strong>，实现从”先生成后校验”到”生成即安全”的范式转变。</li>
+</ul>
+<p>更深一层，Decision Diffuser 证明了一件影响深远的事：<strong>条件生成建模可以直接替代强化学习做决策</strong>。这把生成式方法从”轨迹生成技巧”提升为”决策范式”，也呼应了第 9 篇学习线里”生成式决策”的支线。但扩散模型仍只从驾驶数据里学，<strong>没有常识、读不懂语言指令</strong>——这正是第 5 篇要补的短板。</p>
+</blockquote>
+<h3 id="4-1-DiffusionDrive-2025"><a href="#4-1-DiffusionDrive-2025" class="headerlink" title="4.1 DiffusionDrive (2025)"></a>4.1 DiffusionDrive (2025)</h3><blockquote>
 <p><strong>论文</strong>：Liao, B. et al. “DiffusionDrive: Truncated Diffusion Model for End-to-End Autonomous Driving.” <em>CVPR 2025</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
-<p><strong>中文摘要</strong>：将扩散模型引入端到端驾驶轨迹生成，并实现了关键的效率突破。相比于需要 20 步去噪的标准扩散模型，DiffusionDrive 提出”截断扩散”策略：利用从训练数据中聚类得到的多模态先验锚点轨迹（prior multi-mode anchors），将去噪步数大幅砍至仅 2 步。在 NAVSIM 上取得 88.1 PDMS，推理速度达 45 FPS（NVIDIA 4090），在精度和效率上同时突破。</p>
+<p><strong>中文摘要</strong>：DiffusionDrive 是将扩散模型真正带入端到端自动驾驶规划的代表作，核心贡献在于同时解决了”为什么用扩散”和”为什么用得起扩散”这两个问题。</p>
+<p><strong>核心创新——截断扩散（Truncated Diffusion）</strong>：标准扩散模型需要从纯噪声开始，经过数十步迭代才能还原出有意义的轨迹，在自动驾驶的实时预算下完全不可行。DiffusionDrive 的关键洞察是：不必从噪声出发，而是从有意义的锚点出发。方法是先对训练集中的驾驶轨迹做聚类，提取出一组覆盖主要驾驶模态（直行、左转、右转、减速等）的先验锚点轨迹（prior multi-mode anchors）。推理时，扩散过程直接从这些锚点附近启动，而非从纯高斯噪声启动——相当于把扩散链”截断”，只保留还原局部细节的最后几步。这使去噪步数从标准的二十余步压缩到仅 2 步，同时多模态先验保证了候选轨迹在语义层面已经覆盖了各种驾驶意图。</p>
+<p><strong>领域意义</strong>：在 NAVSIM 上取得 88.1 PDMS、推理速度 45 FPS（NVIDIA 4090），首次证明扩散式生成规划可以在实际帧率下运行。此前端到端规划头普遍回归单条确定性轨迹，面对路口、汇流等本质多模态场景只能预测一条”平均轨迹”——既不安全也不合理；而 DiffusionDrive 将多模态分布建模与实时性同时做到，奠定了生成式规划在 NAVSIM 排行榜上的竞争地位，也直接启发了后续的 MeanFuser（追求一步生成）和 GuideFlow（约束引导流匹配）等工作沿着”更快、更安全”两条轴继续进化。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://openaccess.thecvf.com/content/CVPR2025/html/Liao_DiffusionDrive_Truncated_Diffusion_Model_for_End-to-End_Autonomous_Driving_CVPR_2025_paper.html">论文链接</a></p>
 <hr>
 <h3 id="4-2-MomAD-2025"><a href="#4-2-MomAD-2025" class="headerlink" title="4.2 MomAD (2025)"></a>4.2 MomAD (2025)</h3><blockquote>
 <p><strong>论文</strong>：Song, Z. et al. “Don’t Shake the Wheel: Momentum-Aware Planning in End-to-End Autonomous Driving.” <em>CVPR 2025</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：解决端到端规划中”方向盘乱抖”的问题。引入轨迹动量（相邻帧输出轨迹应平滑变化）和感知动量（相邻帧对场景的理解应时序一致）两个动量约束，稳定多步轨迹预测。在弯道密集的 Turning-nuScenes 场景中，碰撞率降低 26%，轨迹平滑度大幅提升。</p>
+<p><strong>中文摘要</strong>：MomAD 瞄准端到端规划中一个被长期忽视但对乘客体验和安全至关重要的问题——帧间抖动（jitter）：模型对相邻帧输出在时序上缺乏一致性，导致规划轨迹在时间维度上剧烈震荡，表现为”方向盘乱抖”。</p>
+<p><strong>核心创新——双动量约束</strong>：MomAD 从物理动量的概念出发，定义了两个互补的动量约束。其一是<strong>轨迹动量</strong>：相邻时刻的输出轨迹不应突变，通过在 loss 中引入对连续帧轨迹差分的惩罚，迫使网络输出时序平滑的轨迹序列。其二是<strong>感知动量</strong>：场景理解的特征表示也应在相邻帧间保持一致——如果网络对同一障碍物的感知特征在不同帧之间差异悬殊，规划头的输入分布就会不稳定。通过对相邻帧感知特征施加时序一致性约束，从根源上稳定规划输入。两个约束协同作用，从轨迹输出端和感知表示端双向消除抖动。</p>
+<p><strong>领域意义</strong>：端到端规划领域早期工作（如 UniAD、VAD）的评测指标以 L2 距离和碰撞率为主，对时序平滑性关注不足；而弯道、紧急变道等动态场景中的抖动问题在闭环部署时会被急剧放大。MomAD 在 Turning-nuScenes 这一弯道密集基准上将碰撞率降低了 26%，揭示了平滑性约束对安全性的直接影响，也推动了端到端驾驶评测体系将时序一致性纳入标准评估维度。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://openaccess.thecvf.com/content/CVPR2025/html/Song_Dont_Shake_the_Wheel_Momentum-Aware_Planning_in_End-to-End_Autonomous_Driving_CVPR_2025_paper.html">论文链接</a></p>
 <hr>
 <h3 id="4-3-BridgeAD-2025"><a href="#4-3-BridgeAD-2025" class="headerlink" title="4.3 BridgeAD (2025)"></a>4.3 BridgeAD (2025)</h3><blockquote>
 <p><strong>论文</strong>：Zhang, B. et al. “Bridging Past and Future: End-to-End Autonomous Driving with Historical Prediction and Planning.” <em>CVPR 2025</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：将运动/规划 query 重新定义为多步 query，桥接过去与未来。过去的预测帮助当前规划利用历史信息（如障碍物运动趋势），未来的预测帮助长时序一致性。在多时间步分别应用历史预测和未来规划，在 nuScenes 的开环和闭环设定中均取得 SOTA。</p>
+<p><strong>中文摘要</strong>：BridgeAD 解决的是端到端规划中的时序信息利用问题——现有方法大多将规划视为一个”当前帧到未来轨迹”的单向映射，而忽视了历史帧蕴含的丰富动态信息。</p>
+<p><strong>核心创新——多步 query 桥接机制</strong>：BridgeAD 将运动 query 和规划 query 重新设计为跨越多个时间步的统一表示。具体做法是双向利用时序信息：一方面，过去若干帧的预测结果（障碍物运动轨迹的历史、感知特征的时序变化）通过 query 传播机制”灌入”当前规划步，使规划头能感知到障碍物的速度趋势、加速度模式等时序动态；另一方面，未来多步的规划目标反向约束当前规划，确保长时序轨迹的全局一致性，而不是贪心地优化下一步。这种双向桥接使模型在单次前向传播中同时具备”回望过去感知趋势”和”前瞻未来保持一致”的能力。</p>
+<p><strong>领域意义</strong>：在 nuScenes 开环和闭环两套评测体系上均取得 SOTA，特别是在需要预判他人意图的复杂交互场景（如跟车、并道）中优势明显。BridgeAD 的工作提醒社区：端到端驾驶并不应该是”瞬时感知到瞬时控制”的无记忆映射，时序上下文的充分利用是从实验室指标走向真实闭环部署的关键一步。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://openaccess.thecvf.com/content/CVPR2025/html/Zhang_Bridging_Past_and_Future_End-to-End_Autonomous_Driving_with_Historical_Prediction_CVPR_2025_paper.html">论文链接</a></p>
 <hr>
 <h3 id="4-4-GuideFlow-2026"><a href="#4-4-GuideFlow-2026" class="headerlink" title="4.4 GuideFlow (2026)"></a>4.4 GuideFlow (2026)</h3><blockquote>
 <p><strong>论文</strong>：”GuideFlow: Constraint-Guided Flow Matching for End-to-End Autonomous Driving.” <em>CVPR 2026</em>.</p>
 </blockquote>
 <p>📌 <strong>前沿</strong></p>
-<p><strong>中文摘要</strong>：将安全约束直接”编织”进轨迹生成过程。使用约束引导的流匹配（Constraint-Guided Flow Matching），在 Continuous Normalizing Flow 框架中引入约束速度场，使生成的每条轨迹天然满足安全约束（如碰撞避免、车道保持）。在 NavSim 上取得 43.0 EPDMS（使用 scorer 评测下的 SOTA），代表了从”先生成后检验”到”生成即安全”的范式转变。</p>
+<p><strong>中文摘要</strong>：GuideFlow 是”生成即安全”范式的进一步进化，同时也代表了生成式规划从扩散模型向流匹配（Flow Matching）迁移的技术方向。</p>
+<p><strong>核心创新——约束引导流匹配</strong>：流匹配（Continuous Normalizing Flow / Flow Matching）相比扩散模型的优势在于它直接学习从噪声到数据的确定性常微分方程（ODE）轨道，推理时一次积分即可生成样本，比需要多步 Langevin 采样的扩散更高效。GuideFlow 在此基础上引入约束引导机制：在 ODE 的速度场（velocity field）中叠加一个约束速度分量，该分量由安全约束（如障碍物碰撞避免的控制障碍函数 CBF、车道边界的有符号距离场）推导得出。这样，流匹配的每一步积分都沿着”既朝向目标分布又远离危险区域”的方向推进，生成的轨迹天然满足约束，无需事后过滤或惩罚项。</p>
+<p><strong>领域意义</strong>：在 NavSim 使用 scorer 评测的设定下取得 43.0 EPDMS（SOTA 水准），同时保持了流匹配的高效推理特性。GuideFlow 代表了扩散/流匹配系工作的两个融合趋势：一是用更高效的生成模型族（流匹配）替代扩散以降低推理延迟；二是将安全性作为一等公民内嵌入生成过程而非后处理步骤。这与同期 SafeDiffuser（CBF 注入扩散去噪）的思路高度一致，共同确立了”约束感知生成”作为安全驾驶规划的主流范式。</p>
 <hr>
 <h3 id="4-5-MeanFuser-2026"><a href="#4-5-MeanFuser-2026" class="headerlink" title="4.5 MeanFuser (2026)"></a>4.5 MeanFuser (2026)</h3><blockquote>
 <p><strong>论文</strong>：Wang et al. “MeanFuser: Fast One-Step Multi-Modal Trajectory Generation and Adaptive Reconstruction via MeanFlow for End-to-End Autonomous Driving.” <em>CVPR 2026</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：实现一步生成多模态轨迹。使用高斯混合噪声和 MeanFlow 恒等映射替代需要多步去噪的扩散，消除离散锚点 vocabulary，在 NAVSIM 上表现突出。将轨迹生成推向”单步推理”的极致效率。</p>
+<p><strong>中文摘要</strong>：MeanFuser 代表了生成式规划在推理效率方向的极致探索——将多模态轨迹生成压缩到单步完成，彻底消除扩散/流匹配需要多步迭代的固有开销。</p>
+<p><strong>核心创新——MeanFlow 恒等映射与高斯混合噪声</strong>：MeanFuser 的出发点是 MeanFlow 理论：在特定条件下，ODE 的”平均速度场”可以直接从噪声到数据点建立恒等映射（identity mapping），即无需数值积分多步，一次神经网络前向传播就完成整个生成过程。为了在一步推理中保留多模态性，MeanFuser 用高斯混合模型（Gaussian Mixture）作为初始噪声分布，不同混合分量对应不同的驾驶意图先验，从而在单步生成中天然输出覆盖多种模态的候选轨迹集合。这一设计还消除了 DiffusionDrive 依赖预聚类锚点 vocabulary 的限制——不需要离散的模态词典，直接用连续高斯混合编码意图多样性。</p>
+<p><strong>领域意义</strong>：MeanFuser 是 DiffusionDrive”截断到 2 步”的逻辑延伸，将生成步数推向理论下限（1 步）。在 NAVSIM 评测上取得有竞争力的结果，验证了一步生成框架的可行性。从 20 步扩散（MotionDiffuser）→ 2 步截断扩散（DiffusionDrive）→ 1 步流匹配（MeanFuser/GuideFlow）这条效率进化线清晰勾勒出该方向的发展脉络，并表明生成式规划的推理延迟问题已基本得到解决，后续工作将重心转向安全性和泛化能力。</p>
 <hr>
 <h3 id="4-6-扩散-生成式规划相关重要工作"><a href="#4-6-扩散-生成式规划相关重要工作" class="headerlink" title="4.6 扩散/生成式规划相关重要工作"></a>4.6 扩散/生成式规划相关重要工作</h3><table>
 <thead>

@@ -1,0 +1,1175 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引言：为什么自动标注是自动驾驶的「隐形引擎」自动驾驶的能力，归根结底建立在数据之上。一套端到端或感知模型要想在长尾场景中稳健工作，需要海量、高质量、多模态的标注数据——3D 检测框、跟踪轨迹、车道线、占据栅格、可行驶区域……而这些标注若全部依赖人工，成本高到无法承受：一帧 LiDAR 点云的 3D 框人工标注可能耗时数分钟，一辆车一天就能采集数百万帧。 自动标注（Auto-Labeling） 正是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自动驾驶自动标注全景综述 —— 从离线感知到数据引擎">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/09/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8%E5%85%A8%E6%99%AF%E7%BB%BC%E8%BF%B0/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="引言：为什么自动标注是自动驾驶的「隐形引擎」自动驾驶的能力，归根结底建立在数据之上。一套端到端或感知模型要想在长尾场景中稳健工作，需要海量、高质量、多模态的标注数据——3D 检测框、跟踪轨迹、车道线、占据栅格、可行驶区域……而这些标注若全部依赖人工，成本高到无法承受：一帧 LiDAR 点云的 3D 框人工标注可能耗时数分钟，一辆车一天就能采集数百万帧。 自动标注（Auto-Labeling） 正是">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-09T05:20:00.000Z">
+<meta property="article:modified_time" content="2026-08-11T15:42:41.861Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="4D重建">
+<meta property="article:tag" content="Auto-Labeling">
+<meta property="article:tag" content="占据标注">
+<meta property="article:tag" content="数据引擎">
+<meta property="article:tag" content="离线感知">
+<meta property="article:tag" content="自动标注">
+<meta property="article:tag" content="自动驾驶">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>自动驾驶自动标注全景综述 —— 从离线感知到数据引擎 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="自动驾驶自动标注全景综述 —— 从离线感知到数据引擎"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-09 13:20" pubdate>
+          2026年8月9日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5.6k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          47 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">自动驾驶自动标注全景综述 —— 从离线感知到数据引擎</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="引言：为什么自动标注是自动驾驶的「隐形引擎」"><a href="#引言：为什么自动标注是自动驾驶的「隐形引擎」" class="headerlink" title="引言：为什么自动标注是自动驾驶的「隐形引擎」"></a>引言：为什么自动标注是自动驾驶的「隐形引擎」</h2><p>自动驾驶的能力，归根结底建立在数据之上。一套端到端或感知模型要想在长尾场景中稳健工作，需要海量、高质量、多模态的标注数据——3D 检测框、跟踪轨迹、车道线、占据栅格、可行驶区域……而这些标注若全部依赖人工，成本高到无法承受：一帧 LiDAR 点云的 3D 框人工标注可能耗时数分钟，一辆车一天就能采集数百万帧。</p>
+<p><strong>自动标注（Auto-Labeling）</strong> 正是为破解这一瓶颈而生。它的核心思想是：<strong>用「不计算力、不计延迟、可看未来」的离线大模型，去自动生成接近甚至超越人工质量的标签</strong>，再用这些标签训练车端的实时小模型。这构成了现代自动驾驶「数据引擎（Data Engine）」的心脏——Tesla、Waymo、地平线、华为等玩家的核心竞争力，很大程度上就藏在各自的自动标注流水线里。</p>
+<p>本文以综述视角，系统梳理自动标注的技术脉络：从<strong>离线 3D 检测</strong>的奠基，到 <strong>4D 时空重建</strong>，再到<strong>基础模型驱动的开放词表标注</strong>、<strong>占据与轨迹标注</strong>，最后落到<strong>数据引擎的闭环</strong>与<strong>评测基准</strong>。</p>
+<span id="more"></span>
+
+<hr>
+<h2 id="一、自动标注的问题定义与分类体系"><a href="#一、自动标注的问题定义与分类体系" class="headerlink" title="一、自动标注的问题定义与分类体系"></a>一、自动标注的问题定义与分类体系</h2><h3 id="1-1-什么是「自动标注」"><a href="#1-1-什么是「自动标注」" class="headerlink" title="1.1 什么是「自动标注」"></a>1.1 什么是「自动标注」</h3><p>自动标注区别于车端感知（onboard perception）的关键，在于它放松了三个约束：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>车端感知（Onboard）</th>
+<th>自动标注（Offboard/Auto-Labeling）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>算力</strong></td>
+<td>严格受限（车规芯片）</td>
+<td>几乎无限（云端集群）</td>
+</tr>
+<tr>
+<td><strong>延迟</strong></td>
+<td>实时（&lt;100ms）</td>
+<td>离线（可跑数小时）</td>
+</tr>
+<tr>
+<td><strong>时序</strong></td>
+<td>只能看过去+当前</td>
+<td>可看<strong>完整序列（过去+未来）</strong></td>
+</tr>
+<tr>
+<td><strong>目标</strong></td>
+<td>驱动实车行驶</td>
+<td>生成高质量<strong>训练标签</strong></td>
+</tr>
+</tbody></table>
+<p>正是「可看未来」这一点，让自动标注能够利用整段轨迹的信息去反推每一帧的精确状态——例如一辆被短暂遮挡的车，其位置可以由遮挡前后的观测插值/优化得到。这是车端实时感知永远做不到的。</p>
+<h3 id="1-2-分类体系"><a href="#1-2-分类体系" class="headerlink" title="1.2 分类体系"></a>1.2 分类体系</h3><p>按标注对象与技术路线，自动标注可分为以下几个方向：</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>方向</th>
+<th>核心问题</th>
+<th>代表方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>离线 3D 检测</strong></td>
+<td>如何用序列点云生成高精度 3D 框？</td>
+<td>3D Auto Labeling、Auto4D、DetZero</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>4D 时空重建</strong></td>
+<td>如何联合优化目标的尺寸与运动轨迹？</td>
+<td>Auto4D、CTRL、静态/动态解耦重建</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>基础模型标注</strong></td>
+<td>如何用 SAM/CLIP 做开放词表、零样本标注？</td>
+<td>SAM、Grounding DINO、OpenAnnotate3D</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>占据栅格标注</strong></td>
+<td>如何自动生成稠密 3D 占据真值？</td>
+<td>Occ3D、SurroundOcc 的标注管线</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>轨迹/运动标注</strong></td>
+<td>如何为预测任务生成干净的历史/未来轨迹？</td>
+<td>基于离线检测+跟踪的轨迹重建</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>数据引擎闭环</strong></td>
+<td>如何用模型自动挖掘长尾、迭代标注？</td>
+<td>Tesla Data Engine、主动学习闭环</td>
+</tr>
+</tbody></table>
+<p>下文逐一展开。</p>
+<hr>
+<h2 id="二、离线-3D-检测：自动标注的奠基"><a href="#二、离线-3D-检测：自动标注的奠基" class="headerlink" title="二、离线 3D 检测：自动标注的奠基"></a>二、离线 3D 检测：自动标注的奠基</h2><p>自动标注最成熟、研究最充分的方向，是<strong>离线 3D 目标检测</strong>——为 LiDAR 点云中的每个目标生成高精度 3D 边界框。</p>
+<h3 id="2-1-3D-Auto-Labeling（Waymo-2021）——-开创性工作"><a href="#2-1-3D-Auto-Labeling（Waymo-2021）——-开创性工作" class="headerlink" title="2.1 3D Auto Labeling（Waymo, 2021）—— 开创性工作"></a>2.1 3D Auto Labeling（Waymo, 2021）—— 开创性工作</h3><blockquote>
+<p><strong>论文</strong>：Qi, C. R. et al. “Offboard 3D Object Detection from Point Cloud Sequences.” <em>CVPR 2021</em>.</p>
+</blockquote>
+<p>🏆 <strong>奠基之作</strong> | 📌 <strong>必读</strong></p>
+<p><strong>核心思想</strong>：这是第一个系统性提出「离线 3D 自动标注」范式的工作。它的流水线分为三步：</p>
+<ol>
+<li><strong>多帧检测 + 跟踪</strong>：先用 3D 检测器逐帧检测，再通过多目标跟踪把同一目标跨帧关联，得到每个目标的完整轨迹。</li>
+<li><strong>目标为中心的点云聚合</strong>：把同一目标在所有帧的点云，按其轨迹对齐到目标坐标系，聚合成一个「稠密」的目标点云——单帧可能只有几十个点，聚合后可达上千点。</li>
+<li><strong>两分支精修</strong>：用「静态目标分支」和「动态目标分支」分别对聚合点云做框回归，得到远超单帧检测的精度。</li>
+</ol>
+<p><strong>意义</strong>：在 Waymo Open Dataset 上，其自动生成的标签质量接近人工标注，证明了「用序列点云 + 离线大模型自动标注」这条路线的可行性，奠定了后续所有工作的基本范式。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2103.05073">arXiv:2103.05073</a></p>
+<h3 id="2-2-Auto4D（Uber-ATG-2021）——-4D-标签的解耦"><a href="#2-2-Auto4D（Uber-ATG-2021）——-4D-标签的解耦" class="headerlink" title="2.2 Auto4D（Uber ATG, 2021）—— 4D 标签的解耦"></a>2.2 Auto4D（Uber ATG, 2021）—— 4D 标签的解耦</h3><blockquote>
+<p><strong>论文</strong>：Yang, B. et al. “Auto4D: Learning to Label 4D Objects from Sequential Point Clouds.” 2021.</p>
+</blockquote>
+<p><strong>核心思想</strong>：提出「4D 标注」的概念，并给出一个优雅的分解——<strong>把 4D 目标标签拆成两部分</strong>：</p>
+<ul>
+<li><strong>3D 尺寸（size）</strong>：对刚体目标，其尺寸在整个时序中是<strong>恒定</strong>的，可由所有帧联合估计一个最准的尺寸。</li>
+<li><strong>运动路径（motion path）</strong>：描述目标 pose 随时间的演化。</li>
+</ul>
+<p>先用「目标尺寸分支」聚合全序列点云估计固定尺寸，再用「运动路径分支」在固定尺寸约束下精修每帧位姿。这种「尺寸-运动解耦」的思想极大提升了时序一致性，成为 4D 自动标注的经典设计。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.06586">arXiv:2101.06586</a></p>
+<h3 id="2-3-DetZero（2023）——-长时序-属性精修的集大成"><a href="#2-3-DetZero（2023）——-长时序-属性精修的集大成" class="headerlink" title="2.3 DetZero（2023）—— 长时序 + 属性精修的集大成"></a>2.3 DetZero（2023）—— 长时序 + 属性精修的集大成</h3><blockquote>
+<p><strong>论文</strong>：Ma, T. et al. “DetZero: Rethinking Offboard 3D Object Detection with Long-term Sequential Point Clouds.” <em>ICCV 2023</em>.</p>
+</blockquote>
+<p>🏆 <strong>Waymo 3D 检测榜首</strong></p>
+<p><strong>核心思想</strong>：DetZero 重新审视了离线检测的模块化流水线，提出三大改进：</p>
+<ol>
+<li><strong>上界跟踪（upper-bound tracking）</strong>：尽可能完整地关联目标轨迹，为后续聚合提供最全的时序信息。</li>
+<li><strong>注意力精修模块（attention-based refining）</strong>：用 Transformer 分别精修目标的<strong>几何（框）、位置、置信度</strong>三类属性，而非单一回归。</li>
+<li><strong>长时序点云聚合</strong>：充分利用长达数百帧的序列。</li>
+</ol>
+<p>在 Waymo Open Dataset 上，DetZero 首次让<strong>自动标注的检测精度超过所有车端和离线基线</strong>，L2 mAPH 登顶榜首，标志离线自动标注在检测精度上正式超越人工基线水平。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2306.06023">arXiv:2306.06023</a></p>
+<h3 id="2-4-离线检测的通用范式总结"><a href="#2-4-离线检测的通用范式总结" class="headerlink" title="2.4 离线检测的通用范式总结"></a>2.4 离线检测的通用范式总结</h3><p>综合上述工作，离线 3D 自动标注已形成一套稳定的四段式范式：</p>
+<figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs scss">逐帧检测  →  多目标跟踪  →  目标为中心的序列聚合  →  时序精修<br>(粗标签)     (关联轨迹)      (稠密化点云)            (尺寸/位姿/属性)<br></code></pre></td></tr></table></figure>
+
+<p>其威力来源于三个「离线特权」：<strong>看未来</strong>（用后续帧修正当前帧）、<strong>无限聚合</strong>（把稀疏单帧变稠密）、<strong>大模型</strong>（不受车规算力约束）。</p>
+<hr>
+<h2 id="三、基础模型驱动的开放词表标注"><a href="#三、基础模型驱动的开放词表标注" class="headerlink" title="三、基础模型驱动的开放词表标注"></a>三、基础模型驱动的开放词表标注</h2><p>上述离线检测多针对<strong>闭集类别</strong>（车、人、骑行者）。而真实道路充满长尾物体——施工牌、掉落轮胎、异形车辆。2023 年后，视觉基础模型（Foundation Models）为<strong>开放词表、零样本标注</strong>打开了新大门。</p>
+<h3 id="3-1-关键积木：SAM-与-Grounding-DINO"><a href="#3-1-关键积木：SAM-与-Grounding-DINO" class="headerlink" title="3.1 关键积木：SAM 与 Grounding DINO"></a>3.1 关键积木：SAM 与 Grounding DINO</h3><ul>
+<li><strong>SAM（Segment Anything Model）</strong>：Meta 的可提示分割大模型，能对任意图像生成高质量实例掩码。在自动标注中，它把「像素级分割」这一最耗人力的环节几乎变成免费——给一个点/框提示即可得到精确掩码。</li>
+<li><strong>Grounding DINO</strong>：开放词表检测器，输入任意文本（如 “traffic cone”）即可框出对应物体。与 SAM 串联（Grounded-SAM）后，可实现「文本 → 检测框 → 分割掩码」的全自动开放词表标注。</li>
+</ul>
+<p>这些 2D 基础模型的输出，可通过相机-LiDAR 标定投影到 3D，为点云提供语义先验，实现 2D→3D 的标签迁移。</p>
+<h3 id="3-2-OpenAnnotate3D-与零样本离线标注"><a href="#3-2-OpenAnnotate3D-与零样本离线标注" class="headerlink" title="3.2 OpenAnnotate3D 与零样本离线标注"></a>3.2 OpenAnnotate3D 与零样本离线标注</h3><blockquote>
+<p><strong>代表工作</strong>：OpenAnnotate3D、Zero-shot Offboard Panoptic Perception（<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2411.05311">arXiv:2411.05311</a>）等。</p>
+</blockquote>
+<p><strong>核心思想</strong>：把「LLM 理解语义 + VLM/SAM 分割 + 点云几何」三者结合，构建<strong>开放词表的离线全景标注</strong>系统。给定一句自然语言描述，系统能自动在多模态数据中定位、分割、并生成 3D 标签，且<strong>无需为新类别重新训练</strong>。这直接攻克了长尾类别标注的痛点——传统闭集方法遇到没见过的类别只能重新标、重新训，而基础模型方法可以「即插即用」。</p>
+<p><strong>意义</strong>：标注范式正从「闭集监督」走向「开放词表 + 零样本」，大模型的世界知识成为标注长尾的关键杠杆。</p>
+<hr>
+<h2 id="四、占据栅格与稠密标注"><a href="#四、占据栅格与稠密标注" class="headerlink" title="四、占据栅格与稠密标注"></a>四、占据栅格与稠密标注</h2><p>近年 <strong>占据网络（Occupancy Network）</strong> 成为感知热点（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-07-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">本系列 07</a>），而它的真值——稠密的 3D 占据栅格——同样高度依赖自动标注。</p>
+<h3 id="4-1-Occ3D-SurroundOcc-的标注管线"><a href="#4-1-Occ3D-SurroundOcc-的标注管线" class="headerlink" title="4.1 Occ3D / SurroundOcc 的标注管线"></a>4.1 Occ3D / SurroundOcc 的标注管线</h3><p>单帧 LiDAR 点云是稀疏的，无法直接作为稠密占据真值。主流做法是一套<strong>多帧聚合 + 网格化</strong>的自动标注管线：</p>
+<ol>
+<li><strong>动静分离</strong>：先用 3D 检测/跟踪把动态目标与静态背景分开。</li>
+<li><strong>静态背景稠密化</strong>：把多帧（甚至整段序列）的静态点云，按自车位姿对齐叠加，得到稠密的静态场景。</li>
+<li><strong>动态目标重建</strong>：把每个动态目标的多帧点云在其自身坐标系聚合后，再放回各帧对应位置。</li>
+<li><strong>体素化 + 网格填充</strong>：将稠密点云体素化为占据栅格，并用泊松重建/光线投射等方法补全被遮挡区域，生成语义占据真值。</li>
+</ol>
+<p>Occ3D、SurroundOcc、OpenOccupancy 等基准的真值，正是通过这类自动管线生成的——它们本身就是「占据自动标注」的工程结晶。</p>
+<h3 id="4-2-NeRF-3DGS-驱动的重建式标注"><a href="#4-2-NeRF-3DGS-驱动的重建式标注" class="headerlink" title="4.2 NeRF / 3DGS 驱动的重建式标注"></a>4.2 NeRF / 3DGS 驱动的重建式标注</h3><p>更前沿的方向是用 <strong>NeRF / 3D Gaussian Splatting</strong> 对整段驾驶序列做神经重建，得到高保真的连续场景表示，再从中「渲染」出任意视角的深度、语义、占据标签。这种「重建即标注」的思路，让标签的几何一致性和稠密度进一步提升，是占据/深度自动标注的新范式。</p>
+<hr>
+<h2 id="五、轨迹与运动标注"><a href="#五、轨迹与运动标注" class="headerlink" title="五、轨迹与运动标注"></a>五、轨迹与运动标注</h2><p>轨迹预测任务（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">本系列 08</a>）需要每个交通参与者<strong>干净、平滑、完整</strong>的历史与未来轨迹作为真值。而车端跟踪输出的轨迹往往有抖动、断裂、ID 切换。</p>
+<p><strong>自动标注方案</strong>：以离线 3D 检测（如 DetZero）的高精度框为基础，做<strong>离线全局跟踪 + 轨迹平滑优化</strong>：</p>
+<ul>
+<li>用整段序列做双向关联，消除 ID 切换；</li>
+<li>用运动学模型（如恒定转率速度模型）+ 样条平滑，去除抖动；</li>
+<li>对遮挡段用轨迹插值补全。</li>
+</ul>
+<p>由此得到的轨迹真值，其平滑性和完整性远超车端实时跟踪，是运动预测模型训练的理想监督信号。这也再次体现「看未来」的离线特权——预测任务的「未来真值」本质就是把序列的后半段当作监督。</p>
+<hr>
+<h2 id="六、数据引擎：自动标注的闭环化"><a href="#六、数据引擎：自动标注的闭环化" class="headerlink" title="六、数据引擎：自动标注的闭环化"></a>六、数据引擎：自动标注的闭环化</h2><p>单点的自动标注算法之上，是<strong>数据引擎（Data Engine）</strong> 这一系统级闭环——它把自动标注嵌入「采集 → 挖掘 → 标注 → 训练 → 部署 → 再采集」的飞轮。</p>
+<h3 id="6-1-Tesla-式数据引擎"><a href="#6-1-Tesla-式数据引擎" class="headerlink" title="6.1 Tesla 式数据引擎"></a>6.1 Tesla 式数据引擎</h3><p>Tesla 在多届 AI Day 上披露的数据引擎，是自动标注工业化的标杆：</p>
+<ol>
+<li><strong>影子模式挖掘长尾</strong>：量产车队在影子模式下运行模型，当模型预测与实际驾驶行为不一致时，自动上传该场景（如罕见障碍物、模型误判处）。</li>
+<li><strong>离线自动标注</strong>：云端用重建 + 大模型对上传的 clip 做 4D 自动标注（多车轨迹联合重建静态世界 + 动态目标）。</li>
+<li><strong>单元测试式回归</strong>：把标注好的长尾场景加入「单元测试集」，确保新模型不退化。</li>
+<li><strong>闭环迭代</strong>：新标注数据训练新模型，再部署回车队挖掘新长尾。</li>
+</ol>
+<p>其精髓在于：<strong>用车队规模自动发现「模型不会的场景」，用离线大模型自动标注这些场景，形成自我改进的飞轮。</strong> 人工只在极少数疑难样本上介入。</p>
+<h3 id="6-2-主动学习与不确定性挖掘"><a href="#6-2-主动学习与不确定性挖掘" class="headerlink" title="6.2 主动学习与不确定性挖掘"></a>6.2 主动学习与不确定性挖掘</h3><p>在算法层面，数据引擎依赖<strong>主动学习（Active Learning）</strong>：用模型的不确定性（熵、集成分歧、置信度）自动筛选「最值得标注」的样本，把有限的标注预算（无论自动还是人工）花在信息量最大的数据上，避免对海量冗余的简单场景重复标注。</p>
+<hr>
+<h2 id="七、评测：如何衡量自动标注的质量"><a href="#七、评测：如何衡量自动标注的质量" class="headerlink" title="七、评测：如何衡量自动标注的质量"></a>七、评测：如何衡量自动标注的质量</h2><p>自动标注的评测有其特殊性——目标不是「实时精度」，而是「标签质量」及「对下游模型的增益」：</p>
+<table>
+<thead>
+<tr>
+<th>评测维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>与人工标注的一致性</strong></td>
+<td>用 3D IoU、mAP 等对比自动标签与人工真值的吻合度</td>
+</tr>
+<tr>
+<td><strong>下游模型增益</strong></td>
+<td>用自动标签训练车端模型，看其在标准 benchmark 上的提升（最终指标）</td>
+</tr>
+<tr>
+<td><strong>标注-人工对比成本</strong></td>
+<td>达到同等下游性能，自动标注节省了多少人工工时</td>
+</tr>
+<tr>
+<td><strong>时序一致性</strong></td>
+<td>轨迹平滑度、ID 一致性、尺寸稳定性</td>
+</tr>
+</tbody></table>
+<p>常用数据集：<strong>Waymo Open Dataset</strong>（离线检测标注的主战场）、<strong>nuScenes</strong>（多模态、占据标注）、<strong>Argoverse 2</strong>（长时序、轨迹）。值得注意的是，DetZero 等工作已证明自动标签在检测精度上可超越人工基线——这意味着自动标注不只是「省钱」，在某些维度上还能「更准」。</p>
+<hr>
+<h2 id="八、挑战与展望"><a href="#八、挑战与展望" class="headerlink" title="八、挑战与展望"></a>八、挑战与展望</h2><p><strong>当前挑战</strong>：</p>
+<ul>
+<li><strong>长尾与开放世界</strong>：闭集方法难覆盖罕见类别；基础模型标注虽有潜力，但 3D 精度仍待提升。</li>
+<li><strong>多模态一致性</strong>：相机、LiDAR、地图标签间的对齐与融合仍易出错。</li>
+<li><strong>质量的自动校验</strong>：如何在无人工真值时自动发现并修正标注错误（label noise），是规模化的关键。</li>
+<li><strong>动态与形变目标</strong>：行人、可形变物体不满足刚体假设，尺寸-运动解耦不再成立。</li>
+</ul>
+<p><strong>未来方向</strong>：</p>
+<ol>
+<li><strong>基础模型深度融入 3D</strong>：把 SAM/VLM 的开放语义与点云几何深度耦合，实现真正的开放词表 4D 标注。</li>
+<li><strong>重建式标注（NeRF/3DGS）</strong> 成为主流：以神经重建为中介，统一深度、占据、语义、轨迹的标注。</li>
+<li><strong>世界模型即标注器</strong>：用驾驶世界模型（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-06-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">本系列 06</a>）同时生成数据与标签，模糊「仿真」与「标注」的边界。</li>
+<li><strong>端到端时代的「轨迹自动标注」</strong>：随着端到端方案兴起，如何自动标注「优质人类驾驶轨迹」作为模仿目标，成为新焦点。</li>
+</ol>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>自动标注是自动驾驶「数据飞轮」的隐形引擎。它从 <strong>3D Auto Labeling</strong> 的离线检测范式起步，经 <strong>Auto4D</strong> 的尺寸-运动解耦、<strong>DetZero</strong> 的长时序精修达到超越人工的精度，又在 <strong>SAM/Grounding DINO</strong> 等基础模型的加持下走向开放词表与零样本，并延伸到占据、轨迹等稠密标注，最终在 <strong>数据引擎</strong> 中闭环化、工业化。</p>
+<p>一句话概括其本质：<strong>用「可看未来、不计算力」的离线大模型，把稀疏、含噪的原始数据，自动转化为稠密、干净、可训练的标签。</strong> 谁的自动标注飞轮转得更快、更省、更准，谁就在自动驾驶的数据竞赛中占得先机。</p>
+<hr>
+<blockquote>
+<p><strong>说明</strong>：本文为综述性整理，部分方法（尤其工业界数据引擎）的实现细节以各公司公开分享为准；论文引用信息以对应会议/arXiv 正式版为准。</p>
+</blockquote>
+<p><strong>相关阅读</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">自动驾驶经典论文全景指南</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-07-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">占据网络与 3D 场景理解</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">轨迹预测与运动预测</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="category-chain-item">自动驾驶</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8/" class="category-chain-item">自动标注</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8/" class="print-no-link">#自动标注</a>
+      
+        <a href="/tags/Auto-Labeling/" class="print-no-link">#Auto-Labeling</a>
+      
+        <a href="/tags/%E7%A6%BB%E7%BA%BF%E6%84%9F%E7%9F%A5/" class="print-no-link">#离线感知</a>
+      
+        <a href="/tags/4D%E9%87%8D%E5%BB%BA/" class="print-no-link">#4D重建</a>
+      
+        <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BC%95%E6%93%8E/" class="print-no-link">#数据引擎</a>
+      
+        <a href="/tags/%E5%8D%A0%E6%8D%AE%E6%A0%87%E6%B3%A8/" class="print-no-link">#占据标注</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>自动驾驶自动标注全景综述 —— 从离线感知到数据引擎</div>
+      <div>https://w2ongq6.github.io/2026/08/09/ad/自动驾驶-自动标注全景综述/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月9日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/09/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%A7%84%E5%88%92%E6%96%B9%E6%B3%95%E5%85%A8%E6%99%AF%E7%BB%BC%E8%BF%B0/" title="自动驾驶规划方法全景综述 —— 从规则到端到端与大模型">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">自动驾驶规划方法全景综述 —— 从规则到端到端与大模型</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/09/deepseek/DeepSeek%E4%B8%93%E9%A2%98-08-%E9%AB%98%E6%95%88%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%89%8D%E6%B2%BF%E6%8E%A2%E7%B4%A2/" title="DeepSeek专题-08：高效注意力与前沿探索 —— NSA、DSA 与光学压缩">
+                        <span class="hidden-mobile">DeepSeek专题-08：高效注意力与前沿探索 —— NSA、DSA 与光学压缩</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

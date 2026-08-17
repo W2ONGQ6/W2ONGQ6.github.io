@@ -19,15 +19,15 @@
   <meta name="author" content="Kaiyun.li">
   <meta name="keywords" content="">
   
-    <meta name="description" content="9. 模仿学习与强化学习9.1 核心综述：超越行为克隆 论文：Karkus, P. et al. “Beyond Behavior Cloning in Autonomous Driving: A Survey of Closed-Loop Training Techniques.” TechRxiv, 2025.  📌 推荐 中文摘要：系统综述了超越简单行为克隆的闭环训练技术。提出三维分类法：">
+    <meta name="description" content="9. 模仿学习与强化学习 本篇在主线中的位置：这是学习线的正面战场。前面各篇讲的是”网络长什么样、用什么表示”，本篇回答的是那个贯穿始终、最致命的问题——用什么信号训练它。第 1 篇就埋下的协变量偏移（网络只见过专家的完美轨迹，一旦自己开偏就无数据可依、误差滚雪球）在这里被正面拆解。 整章其实是围绕”如何摆脱对专家轨迹的依赖”展开的一条突围史：  **纯行为克隆（BC）**是原点，简单但有协变量偏">
 <meta property="og:type" content="article">
 <meta property="og:title" content="自动驾驶-09：模仿学习与强化学习">
 <meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-09-%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/index.html">
 <meta property="og:site_name" content="Kaiyun&#39;s Blog">
-<meta property="og:description" content="9. 模仿学习与强化学习9.1 核心综述：超越行为克隆 论文：Karkus, P. et al. “Beyond Behavior Cloning in Autonomous Driving: A Survey of Closed-Loop Training Techniques.” TechRxiv, 2025.  📌 推荐 中文摘要：系统综述了超越简单行为克隆的闭环训练技术。提出三维分类法：">
+<meta property="og:description" content="9. 模仿学习与强化学习 本篇在主线中的位置：这是学习线的正面战场。前面各篇讲的是”网络长什么样、用什么表示”，本篇回答的是那个贯穿始终、最致命的问题——用什么信号训练它。第 1 篇就埋下的协变量偏移（网络只见过专家的完美轨迹，一旦自己开偏就无数据可依、误差滚雪球）在这里被正面拆解。 整章其实是围绕”如何摆脱对专家轨迹的依赖”展开的一条突围史：  **纯行为克隆（BC）**是原点，简单但有协变量偏">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:09:00.000Z">
-<meta property="article:modified_time" content="2026-07-25T11:05:55.871Z">
+<meta property="article:modified_time" content="2026-08-15T14:00:12.713Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="IL">
 <meta property="article:tag" content="RL">
@@ -446,7 +446,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          4.6k 字
+          7.8k 字
         
       </span>
     
@@ -457,7 +457,7 @@ mjx-container[display="true"] + br {
         
         
         
-          39 分钟
+          65 分钟
         
       </span>
     
@@ -501,27 +501,46 @@ mjx-container[display="true"] + br {
             
               <div class="markdown-body">
                 
-                <h2 id="9-模仿学习与强化学习"><a href="#9-模仿学习与强化学习" class="headerlink" title="9. 模仿学习与强化学习"></a>9. 模仿学习与强化学习</h2><h3 id="9-1-核心综述：超越行为克隆"><a href="#9-1-核心综述：超越行为克隆" class="headerlink" title="9.1 核心综述：超越行为克隆"></a>9.1 核心综述：超越行为克隆</h3><blockquote>
+                <h2 id="9-模仿学习与强化学习"><a href="#9-模仿学习与强化学习" class="headerlink" title="9. 模仿学习与强化学习"></a>9. 模仿学习与强化学习</h2><blockquote>
+<p><strong>本篇在主线中的位置</strong>：这是<strong>学习线的正面战场</strong>。前面各篇讲的是”网络长什么样、用什么表示”，本篇回答的是那个贯穿始终、最致命的问题——<strong>用什么信号训练它</strong>。第 1 篇就埋下的<strong>协变量偏移</strong>（网络只见过专家的完美轨迹，一旦自己开偏就无数据可依、误差滚雪球）在这里被正面拆解。</p>
+<p>整章其实是围绕”如何摆脱对专家轨迹的依赖”展开的一条突围史：</p>
+<ul>
+<li>**纯行为克隆（BC）**是原点，简单但有协变量偏移的死穴；</li>
+<li><strong>对抗式模仿</strong>（GAIL/InfoGAIL）不再逐点拟合动作，而是让判别器分不出”像不像专家在开”，缓解误差累积；</li>
+<li><strong>把 RL 请进来</strong>：RoCA 用 RL 微调补模仿学习的 OOD 崩塌；但在线 RL 在真车上试错代价高到不可接受，于是转向<strong>离线 RL</strong>——IQL、CQL、SAVED 的核心都在解决同一个技术难题：<strong>如何在不能与环境交互的情况下，避免对”数据里没出现过的动作”高估价值</strong>；</li>
+<li><strong>把决策重述为序列建模</strong>：Decision Transformer、RvS、BeT 把”条件在高回报上生成动作”变成有监督学习，绕开价值函数——这与第 4 篇 Decision Diffuser 是同一思潮的不同分支；</li>
+<li><strong>用扩散做策略</strong>：Diffusion Policy、IBC 用能量/扩散天然表达多模态动作——又一次与第 4、8 篇的”分布化”主线合流。</li>
+</ul>
+<p>而 9.1 的闭环训练综述点出了终局方向：真正的解药是<strong>闭环训练</strong>——让模型在”自己开出来的状态”里学习。这需要一个能响应任意动作的环境，而那个环境正是第 6 篇的世界模型。<strong>学习线的最前沿，因此再次落回世界模型</strong>；至于”闭环为什么必要”，则由第 10、11 篇的评测演进（主线四）给出答案。</p>
+</blockquote>
+<h3 id="9-1-核心综述：超越行为克隆"><a href="#9-1-核心综述：超越行为克隆" class="headerlink" title="9.1 核心综述：超越行为克隆"></a>9.1 核心综述：超越行为克隆</h3><blockquote>
 <p><strong>论文</strong>：Karkus, P. et al. “Beyond Behavior Cloning in Autonomous Driving: A Survey of Closed-Loop Training Techniques.” <em>TechRxiv</em>, 2025.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
-<p><strong>中文摘要</strong>：系统综述了超越简单行为克隆的闭环训练技术。提出三维分类法：(1) 动作生成方式（策略 rollout vs. 扰动演示）；(2) 环境响应生成方式（真实数据、仿真器、生成式视频、隐式世界模型）；(3) 训练目标（闭环模仿、强化学习、混合目标）。深入分析 on-policy vs. on-expert 动作的取舍、环境保真度 vs. 成本和专家目标 vs. 奖励目标的权衡。</p>
+<p><strong>中文摘要</strong>：这篇综述的核心价值在于：它把”怎么训才能闭环”这个问题拆成三个彼此独立、可自由组合的设计维度，从而为整个领域提供了一张清晰的地图。(1) <strong>动作生成</strong>：是让模型自己 rollout 产生 on-policy 数据，还是在专家轨迹上加扰动产生 DAgger 风格的数据——前者能看到自身的错误，后者保证动作质量；(2) <strong>环境响应</strong>：用真实采集数据回放（最真实但不响应）、传统仿真器（可交互但视觉域差）、生成式视频（高保真但慢且不精确控制）还是隐式世界模型（轻量但当时成熟度低）——这实际上是”要仿真保真度还是要训练效率”的一张谱系图；(3) <strong>训练目标</strong>：闭环模仿（让自己的 rollout 接近专家）、纯 RL（设计奖励函数，自由探索）还是混合（IL 初始化后用 RL 微调）——对应的数据需求和超参数风险截然不同。</p>
+<p>该综述深入分析了三个核心权衡：on-policy 数据采集 vs. on-expert 数据质量、环境保真度 vs. 训练成本、专家目标 vs. 标量奖励。这三个权衡正是本章 9.2-9.12 中各方法做出不同选择的根本原因，因此这篇综述读下来像是一张”定位图”——在它的坐标系里，GAIL 属于闭环对抗模仿、RoCA 属于 RL 微调补 OOD、IQL/CQL 属于离线 RL 避免高估。对于想系统理解这个领域演进路线的读者，建议把它当作导读配合其他论文一起阅读。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://www.techrxiv.org/doi/full/10.36227/techrxiv.176591565.57674132/v1">TechRxiv</a></p>
 <hr>
 <h3 id="9-2-GAIL-InfoGAIL-2016-2017"><a href="#9-2-GAIL-InfoGAIL-2016-2017" class="headerlink" title="9.2 GAIL / InfoGAIL (2016-2017)"></a>9.2 GAIL / InfoGAIL (2016-2017)</h3><blockquote>
 <p><strong>论文</strong>：Ho, J. &amp; Ermon, S. “Generative Adversarial Imitation Learning.” <em>NeurIPS 2016</em>.<br><strong>论文</strong>：Li, Y. et al. “InfoGAIL: Interpretable Imitation Learning from Visual Demonstrations.” <em>NeurIPS 2017</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：生成对抗模仿学习——用 GAN 的框架做模仿学习，生成器是待训练的策略（产生类人行为），判别器区分策略行为和专家行为。InfoGAIL 进一步引入隐变量来分离和解释行为的不同模式（如不同驾驶风格）。在自动驾驶中用于学习多样化的驾驶策略。</p>
+<p><strong>中文摘要</strong>：GAIL 是模仿学习领域的一次范式级跃迁。传统行为克隆（BC）的目标是逐帧对齐——让策略在每个状态下输出的动作尽量贴近专家，这相当于把模仿学习退化为监督学习。GAIL 看到了 BC 的根本缺陷：协变量偏移（covariate shift）。BC 只在专家覆盖的状态分布上训练，一旦策略走偏产生训练集外的状态，就会因无数据可依而误差雪崩。GAIL 的解法：不再逐点拟合动作，而是对抗地拟合<strong>状态-动作轨迹的占用度量（occupancy measure）</strong>——判别器无法区分”专家的（s, a）对”和”策略产生的（s, a）对”时，说明策略在行为层面达到了和专家相同的分布。这种对”行为分布”而非”逐帧动作”的对齐，使得策略不再依赖专家覆盖的状态，对偏差有天然的容忍。技术上 GAIL 将 IRL（逆强化学习）中”先推断奖励、再 RL 优化”的两步过程合并为一个对抗更新循环，避免了 IRL 的嵌套优化代价。</p>
+<p>InfoGAIL 在 GAIL 基础上引入互信息最大化（借鉴 InfoGAN），为隐变量 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.057ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 467 453"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="z"><g data-mml-node="mi" data-latex="z"><path data-c="1D467" d="M162 92L145 90C193 137 230 171 255 194L351 283C374 304 398 330 421 359C452 397 467 420 467 428C467 437 462 442 452 442C445 442 439 438 434 429C409 388 386 368 364 368C342 368 326 386 317 398C293 427 269 442 246 442C220 442 193 430 165 404C137 378 123 352 123 326C123 316 128 311 139 311C146 311 152 316 156 325C167 354 194 368 235 368C249 368 269 363 296 354C320 345 343 340 364 339C308 284 265 244 234 217L145 134C130 119 111 99 90 74C59 35 43 12 43 3C43-6 48-11 59-11C65-11 71-6 78 4C103 43 130 63 158 63C174 63 192 51 212 26C232 1 255-11 278-11C312-11 346 7 382 42C418 77 436 111 436 144C436 153 431 158 420 158C413 158 407 153 402 143C387 100 344 63 288 63C264 63 186 92 162 92Z"></path></g></g></g></svg></mjx-container> 和生成轨迹之间的互信息设置正则项，迫使不同 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.057ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 467 453"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="z"><g data-mml-node="mi" data-latex="z"><path data-c="1D467" d="M162 92L145 90C193 137 230 171 255 194L351 283C374 304 398 330 421 359C452 397 467 420 467 428C467 437 462 442 452 442C445 442 439 438 434 429C409 388 386 368 364 368C342 368 326 386 317 398C293 427 269 442 246 442C220 442 193 430 165 404C137 378 123 352 123 326C123 316 128 311 139 311C146 311 152 316 156 325C167 354 194 368 235 368C249 368 269 363 296 354C320 345 343 340 364 339C308 284 265 244 234 217L145 134C130 119 111 99 90 74C59 35 43 12 43 3C43-6 48-11 59-11C65-11 71-6 78 4C103 43 130 63 158 63C174 63 192 51 212 26C232 1 255-11 278-11C312-11 346 7 382 42C418 77 436 111 436 144C436 153 431 158 420 158C413 158 407 153 402 143C387 100 344 63 288 63C264 63 186 92 162 92Z"></path></g></g></g></svg></mjx-container> 对应可解释的、不同的行为模式（如”防御性低速”vs”激进超车”vs”规范汇流”）。这对自动驾驶尤为重要：真实人类驾驶行为本质上是多模态的，专家数据里同一个路口会出现多种合理应对，InfoGAIL 提供了一种分离和可控地学习这些模式的机制。</p>
+<p>GAIL/InfoGAIL 的历史地位体现在两个方向上：一是作为对抗式模仿的奠基工作，它的框架被后续几乎所有”不用奖励函数学策略”的方法所继承；二是它的”占用度量”视角在理论层面解释了为什么 GAN 风格的目标比 BC 的 L2 目标更能抵抗协变量偏移，这一理论洞察至今仍是设计闭环训练目标的重要出发点。</p>
 <hr>
 <h3 id="9-3-RoCA-2025"><a href="#9-3-RoCA-2025" class="headerlink" title="9.3 RoCA (2025)"></a>9.3 RoCA (2025)</h3><blockquote>
 <p><strong>论文</strong>：”RoCA: Robust Cross-Domain End-to-End Autonomous Driving via Reinforcement Learning.” <em>2025</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：针对端到端模型跨域泛化的鲁棒框架。在源域（训练仿真器）和多目标域（未见过的天气、城市、道路结构）之间做域自适应，通过 RL 微调使模型适应分布外环境。证明额外的 RL 微调可以大幅缓解纯模仿学习在 OOD 场景中的性能崩塌。</p>
+<p><strong>中文摘要</strong>：RoCA 针对的是端到端驾驶模型在跨域部署时的一个实际工程困境：模型在仿真器 A（如 CARLA）上训练达到优秀指标，但换一个城市、换一种天气或换一套路网结构后性能急剧下降。这种”领域崩塌”在纯模仿学习框架下尤其严重——BC 训练的模型只见过源域的状态分布，无力应对目标域的分布偏移。</p>
+<p>RoCA 的核心设计是分阶段跨域适应：先用源域的专家数据做模仿学习初始化，再在目标域用在线 RL 微调——这一步是关键。RL 微调的意义在于：它允许模型在目标域自己 rollout，看到模仿阶段从未暴露的 OOD 状态，并通过奖励信号获得反馈；相比于直接在目标域重新收集专家数据并 BC（代价高昂），RL 只需要环境能够评估动作好坏（即一个奖励函数），不需要专家演示。这正是 RL 相对于 IL 的根本优势——它能从自身经验而非专家经验学习。</p>
+<p>RoCA 在多个目标域（跨仿真器、不同天气、不同地图结构）上验证了这一思路：RL 微调阶段显著收窄了性能差距，而不是单纯依赖数据增强或域随机化。其价值是方法论层面的——它证明了”IL 打基础 + RL 适应”的混合管线在跨域问题上是可行且有效的实用路径，而不只是理论构想。这一思路与 RvS、Decision Transformer 等把 RL 问题转化为条件生成问题的方向形成对比：RoCA 坚持在线 RL 的主动探索，付出采样代价换来对 OOD 状态的真实适应能力。</p>
 <hr>
 <h3 id="9-4-Pseudo-Expert-Regularized-Offline-RL-2026"><a href="#9-4-Pseudo-Expert-Regularized-Offline-RL-2026" class="headerlink" title="9.4 Pseudo-Expert Regularized Offline RL (2026)"></a>9.4 Pseudo-Expert Regularized Offline RL (2026)</h3><blockquote>
 <p><strong>论文</strong>：”Pseudo-Expert Regularized Offline RL for End-to-End Autonomous Driving.” <em>CVPR 2026 Findings</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：纯视觉离线 RL 做端到端驾驶。利用伪专家轨迹（从历史数据中挖掘的高质量轨迹段）对 RL 策略做行为正则化，避免离线 RL 中常见的分布外动作导致的价值高估问题。在碰撞率和路径完成率上显著提升，证明了离线 RL 在有限真数据下的应用潜力。</p>
+<p><strong>中文摘要</strong>：这篇论文解决的是离线 RL 在真实驾驶数据上落地时的一个核心技术矛盾：离线 RL 需要对”数据里没出现过的动作”估计价值，而任何价值网络在 OOD 动作上都倾向于给出过高的外推值（over-estimation），进而把策略引向危险的低频极端动作。CQL 和 IQL 的解法是从优化目标侧加保守约束，本文的路线则不同——从<strong>数据侧</strong>入手，通过构造”伪专家轨迹”来缩小策略分布与高质量数据分布之间的间隔。</p>
+<p>具体而言，论文从现有历史数据集中挖掘高质量片段（碰撞率低、路径完成率高、行驶平顺），将这些片段标记为”伪专家轨迹”，然后把它们作为额外的行为正则化信号加入 RL 目标——在奖励最大化的同时，施加策略不能偏离伪专家行为太远的约束。这种正则化在直觉上类似于 KL 约束或 BC 惩罚项，但关键差异在于参考分布不是全体数据（其中包含次优或危险行为），而是数据集中质量最高的子集。</p>
+<p>该工作的领域意义在于，它证明了在纯视觉输入（无激光雷达、无 HD 地图辅助）的严格设定下，离线 RL 能够通过数据质量筛选而不只是算法保守性来抑制外推错误，为在有限真实数据下训练端到端驾驶策略提供了一条实用的工程路径。碰撞率和路径完成率的同步提升说明伪专家正则化没有以牺牲激进性换取安全性，而是在两个指标上同时给出了更好的平衡。</p>
 <hr>
 <h3 id="9-5-学习方法相关综述推荐"><a href="#9-5-学习方法相关综述推荐" class="headerlink" title="9.5 学习方法相关综述推荐"></a>9.5 学习方法相关综述推荐</h3><table>
 <thead>
@@ -584,7 +603,9 @@ mjx-container[display="true"] + br {
 <h3 id="9-10-RvS-Reinforcement-Learning-via-Supervised-Learning-2024"><a href="#9-10-RvS-Reinforcement-Learning-via-Supervised-Learning-2024" class="headerlink" title="9.10 RvS: Reinforcement Learning via Supervised Learning (2024)"></a>9.10 RvS: Reinforcement Learning via Supervised Learning (2024)</h3><blockquote>
 <p><strong>论文</strong>：Emmons, S. et al. “RvS: What is Essential for Offline RL via Supervised Learning?” <em>ICLR 2022</em>.<br><strong>论文</strong>：Emmons, S. et al. “RvS for Driving: Supervised Learning as an Alternative to RL for Autonomous Driving.” <em>2024</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：将离线 RL 简化为有监督学习的范式。核心思想：将回报（reward）或目标（goal）作为条件输入策略网络，通过最大似然估计拟合训练数据中的（状态，动作，回报/目标）分布。推理时设置高回报/高目标值，策略会输出与此匹配的动作。与 CQL/IQL 等需要价值函数的方法不同，RvS 不需要价值估计，避免了价值高估或低估的陷阱。在驾驶中，可以通过”目标到达时间”或”碰撞次数”等指标替代抽象回报，使条件信号更直观。训练简洁、超参少、对数据质量要求低于传统离线 RL。</p>
+<p><strong>中文摘要</strong>：RvS 提出了一个颠覆性的简单结论：传统离线 RL 方法（CQL、IQL、TD3+BC 等）相对于”加了条件的监督学习”的优势，在 D4RL 基准测试上被大幅高估了。作者通过系统消融实验揭示，当监督学习策略被正确地以<strong>回报</strong>（return-to-go）或<strong>目标状态</strong>（goal state）作为条件时，其表现可以匹敌乃至超过复杂的离线 RL 算法，且实现代价只是一个标准的最大似然训练目标。</p>
+<p>核心机制直白但有力：把回报或目标拼接进策略网络的输入，用 BC 目标在数据集上训练（状态, 目标/回报) → 动作）的映射。推理时条件在高回报值上，策略自然生成与高质量轨迹对应的动作。绕开价值函数后，所有离线 RL 的硬伤——价值高估、分布外外推、Bellman 残差不稳定——都从根本上被规避，因为没有任何显式的 Q 值需要估计。</p>
+<p>在自动驾驶场景中，这套框架尤其适用：条件信号可以设计得比抽象回报更直观，例如”5 秒内是否碰撞”（0/1）、”目标点到达时间”、”行驶是否平顺”。这种可解释的条件信号既易于从数据中标注，又便于在推理时进行干预（改变条件值即改变驾驶风格）。RvS 的领域影响体现在：它和 Decision Transformer 共同确立了”条件生成”作为离线序列决策的主流范式之一，并对”复杂度越高越好”的离线 RL 研究风气提出了实质性质疑，推动了对基线方法更严格的对比评估。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2112.10751">arXiv:2112.10751</a></p>
 <hr>
 <h3 id="9-11-Behavior-Transformer-BeT-2024"><a href="#9-11-Behavior-Transformer-BeT-2024" class="headerlink" title="9.11 Behavior Transformer (BeT) (2024)"></a>9.11 Behavior Transformer (BeT) (2024)</h3><blockquote>
@@ -597,7 +618,9 @@ mjx-container[display="true"] + br {
 <h3 id="9-12-Waypoint-Transformer-2024"><a href="#9-12-Waypoint-Transformer-2024" class="headerlink" title="9.12 Waypoint Transformer (2024)"></a>9.12 Waypoint Transformer (2024)</h3><blockquote>
 <p><strong>论文</strong>：Amini, A. et al. “Wayformer-Based Driving Policy Learning with Goal-Conditioned Transformers.” <em>2024</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：基于航路点（waypoint）的 Transformer 驾驶策略学习。将规划重新定义为”航路点序列预测”任务——给定历史场景特征和导航目标（goal），用 Transformer 自回归地预测未来 5-10 秒内的航路点坐标序列，然后用 PID 控制器跟踪这些航路点。航路点表示相比于直接输出控制信号（油门/转向）的优势：(1) 时空可解释——每个航路点对应一个具体位置和时间；(2) 模块化——航路点输出后可以用任何控制器（MPC、PID、纯跟踪）执行，解耦了规划和控制的工程实现；(3) 更容易结合地图几何约束。在 nuScenes 和 CARLA 上展示了简单架构的竞争力。</p>
+<p><strong>中文摘要</strong>：航路点（waypoint）序列作为策略输出的中间表示，是端到端驾驶架构中的一个关键设计选择，本文系统研究了这一方案在 Transformer 骨干上的实现。策略网络接收场景编码特征和导航目标（goal），用带因果掩码的 Transformer 自回归地预测未来 N 步的航路点坐标序列；轨迹执行则由 PID 或 MPC 完成，航路点充当规划层和控制层之间的接口。</p>
+<p>这种设计的结构优势值得展开：相比于直接输出低级控制信号（油门、转向角），航路点的监督信号在空间上分布在时序维度上，模型必须理解”位置序列的整体形状”而不只是下一时刻的动作——这迫使策略在表征层面学到更高层的驾驶意图。更重要的是解耦性：规划网络只需输出几何序列，与车辆动力学模型的解耦使得同一个规划网络可以部署在不同车型上，控制器差异由执行层处理，工程维护成本显著降低。</p>
+<p>与 BeT、IBC 等直接输出动作的方法相比，航路点方案在多模态能力上天然受限（同一时刻只输出一条轨迹），但在可解释性和工程集成度上占优。本文的贡献在于系统量化了这一方案在 nuScenes 和 CARLA 上的表现，确认了基于 goal-conditioned Transformer 的航路点预测在有合理训练数据量的情况下能以简洁的架构匹敌复杂的多模态方法，为后续大量以”预测多条候选轨迹”为核心的运动规划工作提供了一个可靠的单轨迹基线。</p>
 <hr>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-10-%E5%AE%89%E5%85%A8%E9%B2%81%E6%A3%92%E6%80%A7%E4%B8%8E%E6%B3%9B%E5%8C%96/">下一篇 →</a></p>
 

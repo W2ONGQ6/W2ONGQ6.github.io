@@ -19,15 +19,15 @@
   <meta name="author" content="Kaiyun.li">
   <meta name="keywords" content="">
   
-    <meta name="description" content="3. 端到端规划：从模块化到全栈可微分3.1 TransFuser (2021) 论文：Prakash, A. et al. “Multi-Modal Fusion Transformer for End-to-End Autonomous Driving.” CVPR 2021.  📌 推荐入门 | ⭐ 代码清晰 中文摘要：首个利用 Transformer 进行多模态（前视 RGB 图像 +">
+    <meta name="description" content="3. 端到端规划：从模块化到全栈可微分 本篇在主线中的位置：这是决策线的里程碑，也是表示线（第 2 篇 BEV）与决策线的第一次合流。第 1 篇证明了端到端可行但只是个黑盒小网络；工业界当时的主流仍是模块化级联（感知→预测→规划，每个模块单独训练）——它可解释、可调试，却有两个致命弱点：误差沿流水线层层累积，且上游只顾自己的指标、不为最终规划服务（检测把远处小目标漏了，规划却最需要它）。 本篇讲的">
 <meta property="og:type" content="article">
 <meta property="og:title" content="自动驾驶-03：端到端规划 —— 从模块化到全栈可微分">
 <meta property="og:url" content="https://w2ongq6.github.io/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/index.html">
 <meta property="og:site_name" content="Kaiyun&#39;s Blog">
-<meta property="og:description" content="3. 端到端规划：从模块化到全栈可微分3.1 TransFuser (2021) 论文：Prakash, A. et al. “Multi-Modal Fusion Transformer for End-to-End Autonomous Driving.” CVPR 2021.  📌 推荐入门 | ⭐ 代码清晰 中文摘要：首个利用 Transformer 进行多模态（前视 RGB 图像 +">
+<meta property="og:description" content="3. 端到端规划：从模块化到全栈可微分 本篇在主线中的位置：这是决策线的里程碑，也是表示线（第 2 篇 BEV）与决策线的第一次合流。第 1 篇证明了端到端可行但只是个黑盒小网络；工业界当时的主流仍是模块化级联（感知→预测→规划，每个模块单独训练）——它可解释、可调试，却有两个致命弱点：误差沿流水线层层累积，且上游只顾自己的指标、不为最终规划服务（检测把远处小目标漏了，规划却最需要它）。 本篇讲的">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:03:00.000Z">
-<meta property="article:modified_time" content="2026-07-25T11:05:55.800Z">
+<meta property="article:modified_time" content="2026-08-15T13:49:41.399Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="TransFuser">
 <meta property="article:tag" content="UniAD">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          5.7k 字
+          8.5k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          48 分钟
+          72 分钟
         
       </span>
     
@@ -500,55 +500,74 @@ mjx-container[display="true"] + br {
             
               <div class="markdown-body">
                 
-                <h2 id="3-端到端规划：从模块化到全栈可微分"><a href="#3-端到端规划：从模块化到全栈可微分" class="headerlink" title="3. 端到端规划：从模块化到全栈可微分"></a>3. 端到端规划：从模块化到全栈可微分</h2><h3 id="3-1-TransFuser-2021"><a href="#3-1-TransFuser-2021" class="headerlink" title="3.1 TransFuser (2021)"></a>3.1 TransFuser (2021)</h3><blockquote>
+                <h2 id="3-端到端规划：从模块化到全栈可微分"><a href="#3-端到端规划：从模块化到全栈可微分" class="headerlink" title="3. 端到端规划：从模块化到全栈可微分"></a>3. 端到端规划：从模块化到全栈可微分</h2><blockquote>
+<p><strong>本篇在主线中的位置</strong>：这是<strong>决策线的里程碑</strong>，也是表示线（第 2 篇 BEV）与决策线的<strong>第一次合流</strong>。第 1 篇证明了端到端可行但只是个黑盒小网络；工业界当时的主流仍是<strong>模块化级联</strong>（感知→预测→规划，每个模块单独训练）——它可解释、可调试，却有两个致命弱点：<strong>误差沿流水线层层累积</strong>，且<strong>上游只顾自己的指标、不为最终规划服务</strong>（检测把远处小目标漏了，规划却最需要它）。</p>
+<p>本篇讲的就是如何在保留”可微分端到端”红利的同时，拿掉模块化的这两个弱点。请注意这条内在演进：</p>
+<ol>
+<li><strong>先把多模态在中间层融合</strong>：TransFuser 用 Transformer 融合 RGB+LiDAR，NEAT/InterFuser/TCP 探索注意力场、可解释中间表示、轨迹-控制双分支——都还是”感知到规划”的局部改进；</li>
+<li><strong>再把整条链缝成一个可联合优化的网络</strong>：<strong>UniAD</strong> 是转折点，它把检测、跟踪、建图、预测、占据、规划全部统一进一个网络，并提出**”规划导向”哲学——前端任务不追求自身精度，而追求服务于最终轨迹**。这是”全栈可微分”思想的成熟标志；</li>
+<li><strong>然后反思”稠密表示是否必要”</strong>：VAD/VADv2、SparseDrive、SparseAD 发现<strong>稀疏的向量/query 表示比稠密 BEV 更适合规划</strong>，既提速一个数量级又不掉精度——这是”表示为决策服务”的进一步纯化。</li>
+</ol>
+<p>但无论 UniAD 还是 VAD，规划头最终<strong>回归出的都是单条确定性轨迹</strong>。而真实路口”左转或直行都对”，回归会把这些正确答案平均成一条谁都不对的中间轨迹——这堵”模态坍缩”的墙，正是第 4 篇生成式规划要拆的。</p>
+</blockquote>
+<h3 id="3-1-TransFuser-2021"><a href="#3-1-TransFuser-2021" class="headerlink" title="3.1 TransFuser (2021)"></a>3.1 TransFuser (2021)</h3><blockquote>
 <p><strong>论文</strong>：Prakash, A. et al. “Multi-Modal Fusion Transformer for End-to-End Autonomous Driving.” <em>CVPR 2021</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐入门</strong> | ⭐ <strong>代码清晰</strong></p>
-<p><strong>中文摘要</strong>：首个利用 Transformer 进行多模态（前视 RGB 图像 + 单线 LiDAR BEV）融合的端到端自动驾驶工作。通过多个交叉注意力模块在中间特征层级融合两种模态，输出航路点轨迹。在 CARLA Leaderboard 上获得 2021 年冠军。代码结构清晰，被后续大量端到端工作作为 baseline 或参考实现，是入门端到端自动驾驶最推荐阅读和动手的论文之一。</p>
+<p><strong>中文摘要</strong>：首个将 Transformer 注意力机制引入多模态端到端驾驶的工作，技术核心在于<strong>跨模态中间层融合</strong>：前视 RGB 图像与 BEV 化的单线 LiDAR 分别经卷积骨干提取特征金字塔，随后在多个空间分辨率层级通过交叉注意力互相查询对方特征——图像为 LiDAR 提供纹理与颜色线索，LiDAR 为图像提供精确的深度与遮挡信息。融合后的联合表示经 GRU 解码输出未来航路点序列，再由 PID 控制器转换为方向盘/油门/刹车指令。</p>
+<p><strong>领域意义</strong>：TransFuser 解决的核心困境是”纯图像缺深度、纯 LiDAR 缺语义”的经典二元对立——而前人的融合方案要么在输入层做简单拼接（破坏各模态的感受野特性），要么在输出层做晚融合（融合过晚已丧失细节）。TransFuser 的中间层交叉注意力融合成为此后多模态端到端驾驶的标准范式，被 InterFuser、CARLA-Garage、UniAD 等后续大量工作直接沿用或改进。其 CARLA Leaderboard 2021 冠军成绩、清晰的代码实现与详细的消融实验，使其至今仍是端到端自动驾驶的首选入门论文和 baseline 参考实现。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2104.09224">arXiv:2104.09224</a> | ⭐ <a target="_blank" rel="noopener" href="https://github.com/autonomousvision/transfuser">代码</a></p>
 <hr>
 <h3 id="3-2-NEAT-2021"><a href="#3-2-NEAT-2021" class="headerlink" title="3.2 NEAT (2021)"></a>3.2 NEAT (2021)</h3><blockquote>
 <p><strong>论文</strong>：Chitta, K. et al. “NEAT: Neural Attention Fields for End-to-End Autonomous Driving.” <em>ICCV 2021</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：提出”神经注意力场”，使用可微分的注意力机制在 BEV 空间中聚合多传感器特征。route planner 提供的高层导航信息以”路由注意力”方式注入规划网络，引导航路点预测。与 TransFuser 同期，在 CARLA 闭环评测中表现优异，是早期探索 BEV 隐式表示做规划的代表工作。</p>
+<p><strong>中文摘要</strong>：提出”神经注意力场”（Neural Attention Fields）这一新颖概念：将 BEV 平面上的每一个查询位置视为一个”场”，通过可微分的注意力机制从多视角图像和 LiDAR 特征中按需聚合信息，而非预先生成稠密的 BEV 特征图。高层导航指令（左转、右转、直行）以”路由注意力”方式直接调制查询权重，使规划网络能够根据当前意图动态地”看”场景中更相关的区域。</p>
+<p><strong>领域意义</strong>：NEAT 与 TransFuser 几乎同期，但走了一条不同的路：TransFuser 重在多模态融合，NEAT 重在<strong>隐式场表示与导航注入</strong>。它率先把”注意力机制本身可以是一种空间表示”这一洞察引入驾驶规划，比后来大量”以 query 作为表示”工作早了约两年。其路由注意力的设计思路被后续条件式规划方法广泛借鉴，是早期 BEV 隐式表示驾驶的重要基础工作之一。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2106.12756">arXiv:2106.12756</a> | <a target="_blank" rel="noopener" href="https://github.com/autonomousvision/neat">代码</a></p>
 <hr>
 <h3 id="3-3-InterFuser-2022"><a href="#3-3-InterFuser-2022" class="headerlink" title="3.3 InterFuser (2022)"></a>3.3 InterFuser (2022)</h3><blockquote>
 <p><strong>论文</strong>：Shao, H. et al. “Safety-Enhanced Autonomous Driving via Interpretable Sensor Fusion Transformer.” <em>CoRL 2022</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：基于 Transformer 的安全感知端到端规划器。通过多模态交叉注意力融合多视角图像和 LiDAR，输出可解释的中间表示（包括目标检测框、占据图、安全距离图），最后基于这些安全表示生成轨迹。在 CARLA Leaderboard 上取得了 Top-1 的综合驾驶分数，尤其强调在复杂交互场景中的碰撞避免。</p>
+<p><strong>中文摘要</strong>：以”安全可解释”为出发点重新设计端到端规划器。技术上，InterFuser 在 TransFuser 的多模态融合基础上加了两个关键改造：一是<strong>多视角融合</strong>——同时接入前视、左前、右前等多路摄像头，Transformer 的全局注意力自然地将多视角信息对齐到统一的 BEV 空间；二是<strong>可解释中间表示</strong>——网络被监督输出明确的检测框、占据图和安全距离图，而非只输出黑盒轨迹。这些中间表示既作为辅助监督信号约束特征学习，也在推理时提供可供工程师审查的中间状态。</p>
+<p><strong>领域意义</strong>：InterFuser 在 CARLA Leaderboard 取得当时最高的综合驾驶分数，尤其在复杂交叉路口的碰撞避免上大幅领先同期方法。更重要的是，它回答了产业界的顾虑——端到端黑盒系统到底”看的是什么”？通过可解释中间表示的设计，InterFuser 证明了高性能与可审查性不是非此即彼的对立，这一思路被 UniAD 和后续注重安全的端到端方法继承。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2207.14024">arXiv:2207.14024</a> | <a target="_blank" rel="noopener" href="https://github.com/opendilab/InterFuser">代码</a></p>
 <hr>
 <h3 id="3-4-TCP-2022"><a href="#3-4-TCP-2022" class="headerlink" title="3.4 TCP (2022)"></a>3.4 TCP (2022)</h3><blockquote>
 <p><strong>论文</strong>：Wu, P. et al. “Trajectory-guided Control Prediction for End-to-End Autonomous Driving: A Simple yet Strong Baseline.” <em>NeurIPS 2022</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：提出”轨迹 + 控制”双分支架构。轨迹分支预测航路点（由 GRU 解码器解码 BEV 特征），控制分支直接输出油门/刹车/转向。两个分支共享 BEV 编码器但互补——轨迹分支擅长长期规划，控制分支擅长短期反应。两个分支的融合使闭环性能超越此前所有 CARLA Leaderboard 方法仅使用单一轨迹/控制输出的方案。</p>
+<p><strong>中文摘要</strong>：TCP 的核心洞察是：轨迹预测和底层控制是两件本质上不同的事——轨迹分支（GRU 解码航路点）擅长<strong>长程规划和避障</strong>，控制分支（直接输出油门/刹车/转向）擅长<strong>短时精确跟踪</strong>。两个分支共享同一个 BEV 特征编码器，但在解码器层面完全独立。最终输出时，不是简单取其一，而是通过学到的置信度权重对两个分支动态融合——在高速公路直线段让控制分支主导（反应快），在复杂交叉路口让轨迹分支主导（规划稳）。</p>
+<p><strong>领域意义</strong>：TCP 以极少的参数增量就超越了当时所有只用单一分支的 CARLA Leaderboard 方法，验证了”规划头不一定只能选一种输出形式”。更深层的影响在于，它显式地将<strong>长期语义规划</strong>与<strong>短时精确控制</strong>的张力建模出来，这一二元视角被后续多分支、多模态规划架构广泛沿用，是 NeurIPS 2022 上设计最简洁、洞察最清晰的端到端驾驶论文之一。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2206.08129">arXiv:2206.08129</a> | <a target="_blank" rel="noopener" href="https://github.com/OpenPerceptionX/TCP">代码</a></p>
 <hr>
 <h3 id="3-5-ST-P3-2022"><a href="#3-5-ST-P3-2022" class="headerlink" title="3.5 ST-P3 (2022)"></a>3.5 ST-P3 (2022)</h3><blockquote>
 <p><strong>论文</strong>：Hu, S. et al. “ST-P3: End-to-End Vision-Based Autonomous Driving via Spatial-Temporal Feature Learning.” <em>ECCV 2022</em>.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：首个系统性地研究<strong>时空特征学习</strong>对端到端视觉驾驶的影响。提出时空特征编码器来学习时序一致的场景表示，并引入可解释的中间表示（语义分割、深度、BEV 占据）作为辅助监督，最终在可微分的 cost volume 中选择最优轨迹。证明时序信息对于闭环驾驶的安全性和平滑性至关重要。</p>
+<p><strong>中文摘要</strong>：ST-P3 系统性地回答了一个此前被忽视的问题：<strong>时序信息对端到端视觉驾驶究竟有多重要？</strong> 技术上，它设计了分层时空特征编码器——浅层通过空间变换对齐连续帧的自我运动（ego-motion compensation），深层通过时序注意力建模动态物体的运动状态，确保历史帧特征与当前帧在语义层和几何层都是对齐而非错位的。规划阶段在可微分的 cost volume 中对多条候选轨迹评分，融合语义安全代价（与障碍物的距离）和效率代价（沿目标方向的进度），选取总代价最低的轨迹执行。</p>
+<p><strong>领域意义</strong>：此前多数端到端驾驶方法仅使用单帧或简单堆叠帧作为输入，ST-P3 的消融实验明确量化了时序建模的收益——在闭环评测中，移除时序模块后碰撞率显著上升，尤其在被遮挡目标重新出现的场景中。其辅助监督设计（语义分割、深度、BEV 占据共同约束特征学习）也成为后来 UniAD 等全栈方法的参考范式，是 2022 年 ECCV 上时序驾驶感知与规划协同优化的代表作。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2207.07601">arXiv:2207.07601</a></p>
 <hr>
 <h3 id="3-6-UniAD-2023"><a href="#3-6-UniAD-2023" class="headerlink" title="3.6 UniAD (2023)"></a>3.6 UniAD (2023)</h3><blockquote>
 <p><strong>论文</strong>：Hu, Y. et al. “Planning-Oriented Autonomous Driving.” <em>CVPR 2023</em>.</p>
 </blockquote>
 <p>🏆 <strong>CVPR 2023 最佳论文</strong> | 📌 <strong>必读</strong></p>
-<p><strong>中文摘要</strong>：端到端自动驾驶的里程碑式工作。首次将全栈驾驶任务——目标检测、多目标跟踪、在线建图、轨迹预测、占据网格预测和运动规划——统一在一个可联合优化的网络中。所有模块通过 BEV 特征和可微分的 query 传递信息，实现端到端的梯度回传。核心哲学是”规划导向”——前端任务不应只追求自身精度，而应服务于最终的规划效果。在 nuScenes 上以大幅优势刷新多项任务记录，标志着端到端自动驾驶从”可行”走向”性能优异”。</p>
+<p><strong>中文摘要</strong>：端到端自动驾驶的里程碑，CVPR 2023 年度最佳论文。在此之前，业界的全栈方案要么是<strong>模块化级联</strong>（各模块独立训练、误差逐级放大），要么是<strong>部分端到端</strong>（只融合了感知和规划中的某几个模块）。UniAD 首次将完整驾驶链——目标检测、多目标跟踪、在线高精地图构建、轨迹预测、三维占据预测、运动规划——全部纳入<strong>一个可联合优化的 Transformer 网络</strong>，所有模块通过 BEV 特征图和结构化 query（AgentQ、MapQ、OccQ）传递中间信息，梯度从规划损失一路回传到感知骨干。</p>
+<p>核心哲学是**”规划导向”**（Planning-Oriented）：前端任务不是追求各自的 mAP 或 ADE 最高，而是追求对最终规划轨迹最有帮助——若某个前景目标在当前路径上构成风险，即使它很小很远，感知也应捕捉它。这一哲学通过联合训练的端到端梯度自然实现：规划损失会”告诉”感知哪些目标值得关注。</p>
+<p><strong>领域意义</strong>：UniAD 的发布从根本上改变了端到端自动驾驶的研究格局。此前领域内的争论是”端到端是否比模块化更好”，UniAD 用 nuScenes 上全面优于模块化方法的实验数据终结了这场争论。它证明了<strong>全栈可微分是可行且有效的</strong>，并将”规划导向”确立为端到端驾驶的主流设计原则。此后 VAD、SparseDrive、Hydra-MDP 等工作均以 UniAD 为基准和出发点，OpenDriveLab 围绕其建立了规范的 nuScenes 端到端评测体系，使整个领域进入有据可循、横向可比的新阶段。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2212.10156">arXiv:2212.10156</a> | <a target="_blank" rel="noopener" href="https://github.com/OpenDriveLab/UniAD">代码</a></p>
 <hr>
 <h3 id="3-7-VAD-2023"><a href="#3-7-VAD-2023" class="headerlink" title="3.7 VAD (2023)"></a>3.7 VAD (2023)</h3><blockquote>
 <p><strong>论文</strong>：Jiang, B. et al. “VAD: Vectorized Scene Representation for Efficient Autonomous Driving.” <em>ICCV 2023</em>.</p>
 </blockquote>
 <p>📌 <strong>必读</strong></p>
-<p><strong>中文摘要</strong>：提出向量化的场景表示方法替代稠密的 BEV 特征图。核心创新是将驾驶场景建模为向量化的智能体运动（agent motion）和向量化的地图元素（vectorized map），通过 Transformer 的交叉注意力在这些紧凑的向量表示上规划轨迹，大幅降低计算开销。VAD 在保持或超越 UniAD 性能的同时，推理速度更快，证明了”稀疏表示比稠密表示更适合规划”这一关键洞察。</p>
+<p><strong>中文摘要</strong>：VAD 的核心问题是：UniAD 虽然统一了全栈，但它依赖<strong>稠密 BEV 特征图</strong>作为内部表示——这意味着每一帧都要生成一张高分辨率的 BEV 栅格，计算量随分辨率平方增长，推理速度难以满足实车部署。VAD 的回答是：<strong>规划本质上不需要稠密表示，只需要场景中”有意义的结构”</strong>。具体实现上，它将驾驶场景建模为两类向量化实体：<strong>向量化智能体</strong>（每个周围车辆/行人用若干折线段表示其历史轨迹和朝向）和<strong>向量化地图</strong>（道路边界、车道线、人行横道用一组有序折线段编码）。规划 Transformer 在这些紧凑的向量 token 上做交叉注意力，直接生成未来轨迹序列，彻底跳过稠密 BEV 的生成与存储。</p>
+<p><strong>领域意义</strong>：VAD 以接近或超过 UniAD 的规划精度实现了数倍的推理加速，直接证明了”<strong>稀疏向量化表示比稠密 BEV 更适合规划</strong>“这一关键洞察——它不是对 UniAD 的修补，而是对”全栈端到端应该用什么内部语言”的范式级重新回答。此后 SparseDrive、SparseAD、GaussianAD 等一系列稀疏化工作均沿着这条路径展开，VAD 是稀疏端到端驾驶这一分支的直接起点。在工业界，向量化场景表示也因此从离线地图格式蔓延到在线实时感知的核心数据结构。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.12077">arXiv:2303.12077</a> | <a target="_blank" rel="noopener" href="https://github.com/hustvl/VAD">代码</a></p>
 <hr>
 <h3 id="3-8-VADv2-2024"><a href="#3-8-VADv2-2024" class="headerlink" title="3.8 VADv2 (2024)"></a>3.8 VADv2 (2024)</h3><blockquote>
 <p><strong>论文</strong>：Chen, S. et al. “VADv2: End-to-End Vectorized Autonomous Driving via Probabilistic Planning.” <em>arXiv:2403.12077</em>, 2024.</p>
 </blockquote>
-<p><strong>中文摘要</strong>：VAD 的升级版。核心改进是引入<strong>概率规划</strong>模块，用多模态分布（高斯混合模型）对行为不确定性进行建模，而非输出单一确定性轨迹。同时优化了建图模块和时序融合策略。在 NAVSIM 闭环评测中获得冠军成绩，证明了概率化建模对未来不确定性的价值。</p>
+<p><strong>中文摘要</strong>：VADv2 在 VAD 向量化场景表示的基础上，直击端到端规划的一个根本缺陷：<strong>回归单条确定性轨迹会将多种合理行为平均成一条错误轨迹</strong>（经典的”模态坍缩”问题）。VADv2 的改进是将规划头从点估计升级为<strong>概率规划</strong>：用高斯混合模型对轨迹分布建模，每个混合分量对应一种驾驶行为模式（跟车、变道、减速让行等），网络同时预测各分量的均值、方差和混合权重。推理时可按概率采样多条候选轨迹，或取最高权重分量作为确定性输出。此外还优化了在线建图模块的精度和多帧时序融合策略。</p>
+<p><strong>领域意义</strong>：VADv2 在 NAVSIM 闭环评测中获得冠军，是”稀疏表示 + 概率规划”路线的成熟验证。它标志着端到端规划从”输出一条轨迹”向”建模轨迹分布”演进，为后续生成式规划（第 4 篇）埋下伏笔——与其用扩散模型等生成模型建模分布，VADv2 用的是更轻量的混合高斯，在实时性和不确定性建模之间取得了工程上的平衡。</p>
 <hr>
 <h3 id="3-9-其他重要端到端规划工作"><a href="#3-9-其他重要端到端规划工作" class="headerlink" title="3.9 其他重要端到端规划工作"></a>3.9 其他重要端到端规划工作</h3><table>
 <thead>
