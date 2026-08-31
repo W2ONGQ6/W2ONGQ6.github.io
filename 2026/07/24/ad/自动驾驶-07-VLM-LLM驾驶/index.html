@@ -27,7 +27,7 @@
 <meta property="og:description" content="7. VLM&#x2F;LLM 驱动的驾驶 本篇在主线中的位置：这是决策线注入”认知”的一跳。前四篇的模型——无论回归还是生成——都只从驾驶数据里学，因此撞上一堵它们结构上无法翻越的墙：它们没有世界常识。看到”前方学校””地上有洒落的货物””交警在打手势”，纯驾驶模型无从理解这些从未被标注过、却是人类一眼就懂的长尾语义；它们也读不懂自然语言指令，更说不出”我为什么这样开”（第 1 篇的黑盒原罪一直没解决）。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:07:00.000Z">
-<meta property="article:modified_time" content="2026-08-17T08:39:31.118Z">
+<meta property="article:modified_time" content="2026-08-30T08:30:11.376Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="DriveGPT4">
 <meta property="article:tag" content="GPT-Driver">
@@ -446,7 +446,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          10k 字
+          11k 字
         
       </span>
     
@@ -457,7 +457,7 @@ mjx-container[display="true"] + br {
         
         
         
-          87 分钟
+          93 分钟
         
       </span>
     
@@ -509,8 +509,13 @@ mjx-container[display="true"] + br {
 <li><strong>走向多模态与可解释</strong>：DriveGPT4、DriveVLM 直接吃图像并同时输出<strong>动作 + 自然语言解释</strong>，链式推理”场景描述→分析→规划”，第一次正面回应了黑盒问题；</li>
 <li><strong>走向端到端与闭环</strong>：LMDrive 闭环、EMMA（Waymo 用 Gemini 做纯端到端）标志<strong>行业巨头的战略转向</strong>；DrivePI、MindDriver 把推理模型的”思维链”与轻量化结合。</li>
 </ol>
-<p>但本篇也诚实地划出了边界——GPT-4V 评测（5.14）揭示 VLM <strong>常识推理强、精确 3D 与时序理解弱</strong>，且推理慢、难实时。这两条短板指向两个方向：精确的空间-时序理解要靠更好的表示（回到占据、第 3 篇），而”预测动作在物理世界的后果”要靠<strong>世界模型</strong>——这正是第 8 篇。注意本篇 5.11–5.13 的 GAIA-2、PRISM-1 等已经是”VLM 与世界模型融合”的过渡形态。</p>
+<p>但本篇也诚实地划出了边界——GPT-4V 评测（7.14）揭示 VLM <strong>常识推理强、精确 3D 与时序理解弱</strong>，且推理慢、难实时。这两条短板指向两个方向：精确的空间-时序理解要靠更好的表示（回到占据、第 3 篇），而”预测动作在物理世界的后果”要靠<strong>世界模型</strong>——这正是第 8 篇。注意本篇 7.11–7.13 的 GAIA-2、PRISM-1 等已经是”VLM 与世界模型融合”的过渡形态。</p>
 </blockquote>
+<span id="more"></span>
+
+<h2 id="发展时间线"><a href="#发展时间线" class="headerlink" title="发展时间线"></a>发展时间线</h2><figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">2023 </span> GPT-Driver             把轨迹和驾驶理由转成语言序列<br><span class="hljs-symbol">2024 </span> DriveGPT4 / DriveVLM   视觉、语言、规划联合建模<br><span class="hljs-symbol">2024 </span> LMDrive / EMMA         从研究原型走向大规模端到端训练<br><span class="hljs-symbol">2025 </span> Lingo / PRISM-<span class="hljs-number">1</span>        强化场景描述、交互与生成能力<br><span class="hljs-symbol">2026 </span> DrivePI / MindDriver   探索推理链、反馈训练与实时折中<br></code></pre></td></tr></table></figure>
+
+<p>阅读时要区分三种输出：语言解释、高层驾驶意图和可执行轨迹。前两者可以帮助理解与沟通，但并不自动保证最后的几何控制是正确的。</p>
 <h3 id="7-1-GPT-Driver-2023"><a href="#7-1-GPT-Driver-2023" class="headerlink" title="7.1 GPT-Driver (2023)"></a>7.1 GPT-Driver (2023)</h3><blockquote>
 <p><strong>论文</strong>：Mao, J. et al. “GPT-Driver: Learning to Drive with GPT.” <em>NeurIPS 2024 Workshop</em>.</p>
 </blockquote>
@@ -566,7 +571,7 @@ mjx-container[display="true"] + br {
 <p><strong>中文摘要</strong>：dVLM-AD 瞄准 VLM 驾驶模型一个常被忽视的内部矛盾：自回归 VLM 逐 token 生成推理链和动作，导致中间推理步骤与最终输出动作在语义上可能漂移——模型”说的理由”和”做的动作”未必因果一致。其核心创新是将离散扩散过程引入 VLM 的生成流程：推理链和驾驶动作不再是独立自回归生成的两条输出流，而是通过扩散的去噪过程在同一语义空间中联合生成，每一步去噪同时约束推理 token 和动作 token 的联合分布，强制二者保持因果对齐。</p>
 <p>这一设计的工程价值在于：它不需要更大的模型或更多的数据，而是通过改变生成机制本身来提升”行为-解释一致性”——这是安全审计和监管合规层面日益重要的指标。行为-轨迹一致性比自回归基线提升 9%，意味着模型输出的驾驶理由更可信，可作为事故回溯和责任认定的依据。dVLM-AD 也代表了一类思路：将图像生成领域成熟的扩散技术迁移到语言-动作联合生成，是模态融合的新方向。</p>
 <hr>
-<h3 id="7-9-更多-VLM-LLM-驾驶工作"><a href="#7-9-更多-VLM-LLM-驾驶工作" class="headerlink" title="7.9 更多 VLM/LLM 驾驶工作"></a>7.9 更多 VLM/LLM 驾驶工作</h3><table>
+<h3 id="7-9-三条架构分岔：语言接口、具身代理与世界模型融合"><a href="#7-9-三条架构分岔：语言接口、具身代理与世界模型融合" class="headerlink" title="7.9 三条架构分岔：语言接口、具身代理与世界模型融合"></a>7.9 三条架构分岔：语言接口、具身代理与世界模型融合</h3><table>
 <thead>
 <tr>
 <th>论文</th>
@@ -687,6 +692,9 @@ mjx-container[display="true"] + br {
 <p><strong>中文摘要</strong>：DiMO 解决了 VLM 驾驶研究中一个根本性的训练-测试不一致问题：现有 VLM 驾驶模型在推理时产生的文字推理链（”因为前方有障碍物，我决定减速”）和最终驾驶结果之间缺乏闭环梯度连接，模型无法从”这次推理导致了碰撞”这样的反馈中学习改进推理策略。DiMO 的核心创新是构建了一个可微分驾驶仿真器作为”差分执行器”：VLM 的文本输出（推理链 + 控制决策）通过一个可微分的场景动力学模拟器执行，产生未来状态并计算安全损失，梯度再通过”软 token 嵌入”的路径反向传播回 VLM 的生成策略中。这使 VLM 不只是”知道怎么推理语言上合理的驾驶理由”，还通过反馈信号学会”哪种推理路径在真实物理约束下导向安全结果”。</p>
 <p>其领域意义在于提出了一条将 VLM 推理与物理闭环反馈结合的训练范式，填补了”LLM 产生文字决策”到”决策在物理世界的后果评估”之间的梯度断层。这一思路与世界模型（第 8 篇）的目标高度契合——世界模型正是要建立”动作→物理后果”的可预测模拟，DiMO 可以视为在训练时将简化版世界模型的反馈直接注入 VLM 策略优化的一种实现。在 CARLA 复杂交互场景中超越固定推理链基线，验证了反馈驱动的推理策略优化对驾驶泛化能力的提升价值。</p>
 <hr>
+<h2 id="小结：语言能解释和设定目标，不能替代驾驶闭环"><a href="#小结：语言能解释和设定目标，不能替代驾驶闭环" class="headerlink" title="小结：语言能解释和设定目标，不能替代驾驶闭环"></a>小结：语言能解释和设定目标，不能替代驾驶闭环</h2><p>VLM/LLM 给驾驶系统补上了三种能力：把图像、地图和驾驶状态转换为可讨论的语义；理解”在下一个路口靠右”这类高层意图；用自然语言给出决策理由，便于诊断和人机协作。GPT-Driver、DriveVLM、EMMA 等工作分别代表了将语言模型接到规划、视觉和多任务接口上的不同方式。</p>
+<p>但语言输出本身不是可执行控制。一个”前方有行人，应减速”的判断，仍要落到精确的空间定位、时序预测和满足车辆约束的轨迹上。因此更稳妥的系统分工是：VLM 处理语义理解、规则解释和高层意图，专用感知与规划模块负责米级几何和实时控制。GAIA-2、PRISM-1 等融合工作则进一步提出：让模型先预测动作带来的可观察后果，再评价决策。</p>
+<p>下一篇介绍世界模型，这里的关键不再是生成一段逼真视频，而是回答”采取这个动作之后，世界会怎样变化”。</p>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-06-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">下一篇 →</a></p>
 
                 

@@ -27,7 +27,7 @@
 <meta property="og:description" content="9. 模仿学习与强化学习 本篇在主线中的位置：这是学习线的正面战场。前面各篇讲的是”网络长什么样、用什么表示”，本篇回答的是那个贯穿始终、最致命的问题——用什么信号训练它。第 1 篇就埋下的协变量偏移（网络只见过专家的完美轨迹，一旦自己开偏就无数据可依、误差滚雪球）在这里被正面拆解。 整章其实是围绕”如何摆脱对专家轨迹的依赖”展开的一条突围史：  **纯行为克隆（BC）**是原点，简单但有协变量偏">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:09:00.000Z">
-<meta property="article:modified_time" content="2026-08-17T08:39:31.241Z">
+<meta property="article:modified_time" content="2026-08-30T08:30:53.325Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="IL">
 <meta property="article:tag" content="RL">
@@ -446,7 +446,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          7.8k 字
+          8.4k 字
         
       </span>
     
@@ -457,7 +457,7 @@ mjx-container[display="true"] + br {
         
         
         
-          65 分钟
+          71 分钟
         
       </span>
     
@@ -513,6 +513,11 @@ mjx-container[display="true"] + br {
 </ul>
 <p>而 9.1 的闭环训练综述点出了终局方向：真正的解药是<strong>闭环训练</strong>——让模型在”自己开出来的状态”里学习。这需要一个能响应任意动作的环境，而那个环境正是第 8 篇的世界模型。<strong>学习线的最前沿，因此再次落回世界模型</strong>；至于”闭环为什么必要”，则由第 10、11 篇的评测演进（主线四）给出答案。</p>
 </blockquote>
+<span id="more"></span>
+
+<h2 id="发展时间线"><a href="#发展时间线" class="headerlink" title="发展时间线"></a>发展时间线</h2><figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">2016 </span> GAIL / InfoGAIL          从逐帧模仿转向匹配行为分布<br><span class="hljs-symbol">2021 </span> IQL / CQL                在固定驾驶数据上保守地学习价值<br><span class="hljs-symbol">2021 </span> Decision Transformer     把决策改写为条件序列生成<br><span class="hljs-symbol">2024 </span> Diffusion Policy / BeT   用生成策略表达多模态动作<br><span class="hljs-symbol">2025 </span> RoCA                     用在线 RL 适应分布外驾驶状态<br><span class="hljs-symbol">2026 </span> 伪专家正则化            在有限数据下约束离线 RL 的风险<br></code></pre></td></tr></table></figure>
+
+<p>本篇先解释行为克隆为什么会失败，再比较闭环模仿、在线 RL、离线 RL 和序列建模。每种方法都在改变训练信号，也都引入新的数据、仿真或安全成本。</p>
 <h3 id="9-1-核心综述：超越行为克隆"><a href="#9-1-核心综述：超越行为克隆" class="headerlink" title="9.1 核心综述：超越行为克隆"></a>9.1 核心综述：超越行为克隆</h3><blockquote>
 <p><strong>论文</strong>：Karkus, P. et al. “Beyond Behavior Cloning in Autonomous Driving: A Survey of Closed-Loop Training Techniques.” <em>TechRxiv</em>, 2025.</p>
 </blockquote>
@@ -622,6 +627,9 @@ mjx-container[display="true"] + br {
 <p>这种设计的结构优势值得展开：相比于直接输出低级控制信号（油门、转向角），航路点的监督信号在空间上分布在时序维度上，模型必须理解”位置序列的整体形状”而不只是下一时刻的动作——这迫使策略在表征层面学到更高层的驾驶意图。更重要的是解耦性：规划网络只需输出几何序列，与车辆动力学模型的解耦使得同一个规划网络可以部署在不同车型上，控制器差异由执行层处理，工程维护成本显著降低。</p>
 <p>与 BeT、IBC 等直接输出动作的方法相比，航路点方案在多模态能力上天然受限（同一时刻只输出一条轨迹），但在可解释性和工程集成度上占优。本文的贡献在于系统量化了这一方案在 nuScenes 和 CARLA 上的表现，确认了基于 goal-conditioned Transformer 的航路点预测在有合理训练数据量的情况下能以简洁的架构匹敌复杂的多模态方法，为后续大量以”预测多条候选轨迹”为核心的运动规划工作提供了一个可靠的单轨迹基线。</p>
 <hr>
+<h2 id="小结：训练信号决定策略会在什么状态下学会驾驶"><a href="#小结：训练信号决定策略会在什么状态下学会驾驶" class="headerlink" title="小结：训练信号决定策略会在什么状态下学会驾驶"></a>小结：训练信号决定策略会在什么状态下学会驾驶</h2><p>行为克隆最直接：照着专家动作学，却会在自己的小失误后走到训练集没有覆盖的状态。GAIL、RoCA 和闭环训练综述沿着同一问题推进，分别尝试从分布匹配、反事实或实际 rollout 中让策略见到自己的后果。强化学习则允许用安全、效率和舒适等长期目标来修正模仿，但在线探索昂贵且危险，因此离线 RL 和伪专家正则化试图只利用既有数据完成改进。</p>
+<p>另一条路线把决策改写为条件生成或序列建模：Decision Transformer、RvS 按高回报条件生成动作，BeT 先选离散行为模式再做连续微调，扩散策略则直接表达多种动作方案。它们与第 6 篇的生成式规划共享一个观点：不必先精确估计价值函数，也能从数据中生成高质量决策。真正的闭环训练仍需要环境对动作作出可信响应，这也是世界模型的重要意义。</p>
+<p>不过，能在训练数据或模拟中跑通并不意味着可以安全部署。下一篇从捷径特征、困难场景到运行时降级，讨论如何审视并限制系统的失效方式。</p>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-10-%E5%AE%89%E5%85%A8%E9%B2%81%E6%A3%92%E6%80%A7%E4%B8%8E%E6%B3%9B%E5%8C%96/">下一篇 →</a></p>
 
                 

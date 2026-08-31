@@ -27,7 +27,7 @@
 <meta property="og:description" content="1. 开山之作：端到端自动驾驶的起源 本篇在主线中的位置：这是决策线的起点。核心思想只有一句话——驾驶可以不靠人写规则，而由一个神经网络直接从传感器学到”感知→控制”的映射。1989 年的 ALVINN 用一个三层网络证明了它可行，2016 年 NVIDIA 借 GPU 算力让它复活。但这条最朴素的路一上来就撞上三堵墙，后续三十年的几乎所有工作都是在拆这三堵墙：  黑盒不可解释——网络为什么这样打">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:01:00.000Z">
-<meta property="article:modified_time" content="2026-08-17T08:39:31.031Z">
+<meta property="article:modified_time" content="2026-08-29T15:07:24.047Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="ALVINN">
 <meta property="article:tag" content="NVIDIA">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          6.7k 字
+          7.2k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          56 分钟
+          61 分钟
         
       </span>
     
@@ -503,19 +503,24 @@ mjx-container[display="true"] + br {
                 <h2 id="1-开山之作：端到端自动驾驶的起源"><a href="#1-开山之作：端到端自动驾驶的起源" class="headerlink" title="1. 开山之作：端到端自动驾驶的起源"></a>1. 开山之作：端到端自动驾驶的起源</h2><blockquote>
 <p><strong>本篇在主线中的位置</strong>：这是<strong>决策线的起点</strong>。核心思想只有一句话——<strong>驾驶可以不靠人写规则，而由一个神经网络直接从传感器学到”感知→控制”的映射</strong>。1989 年的 ALVINN 用一个三层网络证明了它可行，2016 年 NVIDIA 借 GPU 算力让它复活。但这条最朴素的路一上来就撞上三堵墙，后续三十年的几乎所有工作都是在拆这三堵墙：</p>
 <ol>
-<li><strong>黑盒不可解释</strong>——网络为什么这样打方向？无法回答，安全关键系统难以接受（→ 催生第 7 篇的语言解释、第 4 篇 InterFuser 的可解释中间表示）；</li>
+<li><strong>黑盒不可解释</strong>——网络为什么这样打方向？无法回答，安全关键系统难以接受（→ 催生第 7 篇的语言解释、第 5 篇 InterFuser 的可解释中间表示）；</li>
 <li><strong>模仿学习的协变量偏移</strong>——网络只见过专家开对的轨迹，一旦自己开偏就进入训练分布之外的状态，无数据可依、误差滚雪球（→ 催生本篇 1.5 的特权蒸馏、1.7 的 RL 教练，以及第 9 篇整章）；</li>
 <li><strong>因果混淆</strong>——网络可能学到的是”路面纹理””刹车灯亮起”这类捷径，而非真正的因果（→ 催生第 10 篇 Hidden Biases 的批判）。</li>
 </ol>
 <p>本篇内部本身就是一条小型演进史：从<strong>直接回归像素→控制</strong>（ALVINN、NVIDIA），到<strong>用导航指令做条件</strong>（CIL）解决”同一路口该左还是该右”的歧义，到<strong>用语义中间表示替代原始像素</strong>（ChauffeurNet）、<strong>用能作弊的老师蒸馏学生</strong>（LbC）、<strong>用 RL 教练注入探索能力</strong>（Roach）——每一步都在打上面三堵墙中的某一堵。</p>
 </blockquote>
-<h3 id="1-1-ALVINN-1989"><a href="#1-1-ALVINN-1989" class="headerlink" title="1.1 ALVINN (1989)"></a>1.1 ALVINN (1989)</h3><blockquote>
+<span id="more"></span>
+
+<h2 id="发展时间线"><a href="#发展时间线" class="headerlink" title="发展时间线"></a>发展时间线</h2><figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">1989 </span> ALVINN                 直接从传感器回归转向<br><span class="hljs-symbol">2016 </span> NVIDIA CNN             GPU 时代重新验证端到端<br><span class="hljs-symbol">2018 </span> CIL                    用导航命令消除行为歧义<br><span class="hljs-symbol">2019 </span> ChauffeurNet           用语义目标和扰动缓解分布偏移<br><span class="hljs-symbol">2020 </span> Learning by Cheating   特权教师蒸馏给可部署学生<br><span class="hljs-symbol">2022 </span> Roach / PlanT          引入 RL、结构化场景表示<br></code></pre></td></tr></table></figure>
+
+<p>阅读下面论文时，重点观察两个变量：模型输出从低级控制逐渐变成航路点/轨迹，训练数据也从“只模仿专家”逐渐变成包含错误恢复和闭环反馈。</p>
+<h3 id="1-1-直接从传感器回归控制：ALVINN-1989"><a href="#1-1-直接从传感器回归控制：ALVINN-1989" class="headerlink" title="1.1 直接从传感器回归控制：ALVINN (1989)"></a>1.1 直接从传感器回归控制：ALVINN (1989)</h3><blockquote>
 <p><strong>论文</strong>：Pomerleau, D.A. “ALVINN: An Autonomous Land Vehicle in a Neural Network.” <em>NIPS 1988</em>.</p>
 </blockquote>
 <p><strong>中文摘要</strong>：端到端自动驾驶的开山之作，比深度学习主流化早了整整二十年。其核心创新在于彻底绕开了当时占主导的”手工特征 + 规则树”范式：用一个仅有三层的全连接网络，把激光测距仪和摄像机的低分辨率图像（30×32 像素）直接映射为方向盘转角，中间无任何车道线检测、障碍物分类等显式中间步骤。训练方式同样极简——反向传播作用于驾驶员操作与网络输出之差，整个学习过程不需要人工标注特征。在 CMU NavLab 测试车上，这个不足千个参数的网络实现了最高 90 km/h 的公路行驶。</p>
 <p>ALVINN 的历史地位远超其技术本身的复杂度。它第一次用实验证明了”感知→控制”的端到端映射在真实物理世界中可行，等于在 1989 年就打下了一枚地基桩。但受限于算力，这个思路随后被搁置近三十年，直到 GPU 算力爆炸后才被 NVIDIA 的 2016 年工作重新拾起并规模化。ALVINN 还暴露了端到端驾驶最根本的脆弱性——协变量偏移：网络只见过专家沿中线行驶的样本，一旦测试时偏离就会进入分布之外，误差持续累积。这个问题此后驱动了 DAgger、LbC、Roach 等一系列方法的诞生，直至今日仍是该领域最核心的挑战之一。</p>
 <hr>
-<h3 id="1-2-NVIDIA-End-to-End-CNN-2016"><a href="#1-2-NVIDIA-End-to-End-CNN-2016" class="headerlink" title="1.2 NVIDIA End-to-End CNN (2016)"></a>1.2 NVIDIA End-to-End CNN (2016)</h3><blockquote>
+<h3 id="1-2-GPU-时代的重新验证：NVIDIA-End-to-End-CNN-2016"><a href="#1-2-GPU-时代的重新验证：NVIDIA-End-to-End-CNN-2016" class="headerlink" title="1.2 GPU 时代的重新验证：NVIDIA End-to-End CNN (2016)"></a>1.2 GPU 时代的重新验证：NVIDIA End-to-End CNN (2016)</h3><blockquote>
 <p><strong>论文</strong>：Bojarski, M. et al. “End to End Learning for Self-Driving Cars.” <em>arXiv:1604.07316</em>, 2016.</p>
 </blockquote>
 <p>🏆 <strong>里程碑</strong></p>
@@ -523,34 +528,34 @@ mjx-container[display="true"] + br {
 <p>这篇工作的核心意义不在于算法创新，而在于<strong>时机</strong>与<strong>规模化验证</strong>：它在深度学习基础设施（GPU、大规模数据采集、自动化仿真）已具备的节点上，以工业级规模重演了 ALVINN 的思想，证明端到端范式在真实道路上同样适用。论文发布后迅速成为端到端自动驾驶的标准 baseline，CARLA Leaderboard 的许多后续工作都以”超越 NVIDIA CNN”作为出发点。它也将”能否去掉中间模块”变成了整个领域的核心研究问题，直接催生了后续关于中间表示、可解释性、因果关系的系列工作。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1604.07316">arXiv:1604.07316</a></p>
 <hr>
-<h3 id="1-3-Conditional-Imitation-Learning-2018"><a href="#1-3-Conditional-Imitation-Learning-2018" class="headerlink" title="1.3 Conditional Imitation Learning (2018)"></a>1.3 Conditional Imitation Learning (2018)</h3><blockquote>
+<h3 id="1-3-用导航条件消除歧义：Conditional-Imitation-Learning-2018"><a href="#1-3-用导航条件消除歧义：Conditional-Imitation-Learning-2018" class="headerlink" title="1.3 用导航条件消除歧义：Conditional Imitation Learning (2018)"></a>1.3 用导航条件消除歧义：Conditional Imitation Learning (2018)</h3><blockquote>
 <p><strong>论文</strong>：Codevilla, F. et al. “End-to-End Driving via Conditional Imitation Learning.” <em>ICRA 2018</em>.</p>
 </blockquote>
 <p><strong>中文摘要</strong>：为端到端驾驶引入”条件分支”机制，解决了 NVIDIA CNN 范式中一个根本性歧义：在同一路口，”直行”和”左转”是截然不同的驾驶策略，但 NVIDIA CNN 的单一网络无法从视觉输入本身区分两者的意图，必须依赖外部信息——导航指令。CIL 的核心设计是将高层导航指令（直行、左转、右转、跟随车道）作为网络的第二输入，并为每条指令分配独立的策略分支（policy head），路由网络在推理时根据指令激活对应分支。这套机制使驾驶策略从”无条件反射”升级为”目标感知决策”。</p>
 <p>CIL 是 CARLA 仿真器生态中影响最深远的基础工作之一。它不仅是后续 CARLA Leaderboard 众多方法的直接出发点，更确立了”导航指令作为驾驶网络条件输入”的标准范式。后续的 LbC、Roach、TransFuser 等几乎所有 CARLA 评测工作都沿用了 CIL 定义的四方向导航指令接口；其多分支条件架构的思想也延伸至后来用大语言模型作为高层规划者的工作中——导航意图的建模方式从离散指令扩展到了自然语言。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1810.09344">arXiv:1810.09344</a></p>
 <hr>
-<h3 id="1-4-ChauffeurNet-2019"><a href="#1-4-ChauffeurNet-2019" class="headerlink" title="1.4 ChauffeurNet (2019)"></a>1.4 ChauffeurNet (2019)</h3><blockquote>
+<h3 id="1-4-用中间目标和扰动学习恢复能力：ChauffeurNet-2019"><a href="#1-4-用中间目标和扰动学习恢复能力：ChauffeurNet-2019" class="headerlink" title="1.4 用中间目标和扰动学习恢复能力：ChauffeurNet (2019)"></a>1.4 用中间目标和扰动学习恢复能力：ChauffeurNet (2019)</h3><blockquote>
 <p><strong>论文</strong>：Bansal, M. et al. “ChauffeurNet: Learning to Drive by Imitating the Best and Synthesizing the Worst.” <em>CoRL 2019</em>.</p>
 </blockquote>
 <p><strong>中文摘要</strong>：Waymo 出品的工业级端到端驾驶系统，代表了从”原始像素端到端”到”结构化中间表示端到端”的重要转向。与 NVIDIA CNN 直接消费原始图像不同，ChauffeurNet 的输入是经过感知系统处理后的<strong>语义渲染图</strong>——道路拓扑、车道线、红绿灯状态、动态障碍物边界框、历史轨迹等信息被渲染为多通道的鸟瞰图像，剥离了像素级噪声，保留了驾驶决策所需的几何和语义结构。模型输出未来的航路点序列，再由独立的控制器跟踪执行。</p>
 <p>最具创新性的是其训练策略——“模仿最好的，合成最坏的”：除了模仿人类专家轨迹，还通过数据增强注入合成的危险扰动（碰撞轨迹、偏离车道、过激切入等），强迫模型学会”这种行为会发生碰撞”的隐性知识，从根本上提升了模型在分布外（out-of-distribution）场景中的安全性。这一思路后来被许多安全关键的数据增强方法所继承。ChauffeurNet 为业界展示了”感知-规划分开，但规划仍可端到端”的可行路径，是将工业级感知系统与端到端学习接合的参考范式。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1812.03079">arXiv:1812.03079</a></p>
 <hr>
-<h3 id="1-5-Learning-by-Cheating-2020"><a href="#1-5-Learning-by-Cheating-2020" class="headerlink" title="1.5 Learning by Cheating (2020)"></a>1.5 Learning by Cheating (2020)</h3><blockquote>
+<h3 id="1-5-用特权教师训练可部署学生：Learning-by-Cheating-2020"><a href="#1-5-用特权教师训练可部署学生：Learning-by-Cheating-2020" class="headerlink" title="1.5 用特权教师训练可部署学生：Learning by Cheating (2020)"></a>1.5 用特权教师训练可部署学生：Learning by Cheating (2020)</h3><blockquote>
 <p><strong>论文</strong>：Chen, D. et al. “Learning by Cheating.” <em>CoRL 2020</em>.</p>
 </blockquote>
 <p><strong>中文摘要</strong>：提出 Teacher-Student 两阶段蒸馏范式，从根本上切开了端到端驾驶中”部署约束”与”学习效率”之间的矛盾。第一阶段训练一个”作弊”teacher：它能直接访问 CARLA 仿真器提供的特权信息——精确的 BEV 语义分割、所有车辆的精确位置和速度、路线信息——以这些理想输入驾驶，几乎可以达到仿真器所允许的性能上界。第二阶段，student 模型仅使用前视 RGB 摄像机和单线 LiDAR 作为输入，通过模仿 teacher 在相同状态下给出的动作来学习，而不是去模仿人类演示——这使 student 能接收到比人类示范密集得多的、覆盖更多边缘状态的训练信号。</p>
 <p>LbC 的领域影响在于它将”特权蒸馏”确立为端到端驾驶的核心训练技巧。在 LbC 之前，训练数据只能来自人类驾驶员，受限于人类的驾驶时间和风险偏好；LbC 之后，可以先在仿真器中训练出一个”全知”的 teacher 生成无限数据，再蒸馏给受约束的 student，极大地解放了数据利用率。这一思路直接影响了 Roach（用 RL 教练代替特权 teacher）、InterFuser、TCP 等后续工作，并在 CARLA Leaderboard 中开创了一段”蒸馏方法”横扫榜单的时期。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1912.12294">arXiv:1912.12294</a></p>
 <hr>
-<h3 id="1-6-TransFuser-v2-2023"><a href="#1-6-TransFuser-v2-2023" class="headerlink" title="1.6 TransFuser v2 (2023)"></a>1.6 TransFuser v2 (2023)</h3><blockquote>
+<h3 id="1-6-多模态传感器融合：TransFuser-v2-2023"><a href="#1-6-多模态传感器融合：TransFuser-v2-2023" class="headerlink" title="1.6 多模态传感器融合：TransFuser v2 (2023)"></a>1.6 多模态传感器融合：TransFuser v2 (2023)</h3><blockquote>
 <p><strong>论文</strong>：Chitta, K. et al. “TransFuser: Imitation with Transformer-Based Sensor Fusion for Autonomous Driving.” <em>IEEE TPAMI 2023</em> (T-PAMI 扩展版).</p>
 </blockquote>
 <p><strong>中文摘要</strong>：TransFuser 的期刊扩展版。在原始 CVPR 2021 工作的基础上，增加了更深入的消融实验、额外的传感器配置分析和更完整的 CARLA Leaderboard 评测。系统性地分析了多模态融合中 RGB 和 LiDAR 分支在不同层级的交叉注意力效果，证明中间层融合能在保留空间细节和语义信息之间取得最佳平衡。提供了融合架构设计的实用指导：在特征金字塔的多个层级分别进行跨模态注意力比单一层级融合更有效，且 LiDAR 对夜间和恶劣光照条件下的鲁棒性提升大于 RGB 对晴朗白天的贡献。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://ieeexplore.ieee.org/document/10123935">IEEE TPAMI</a></p>
 <hr>
-<h3 id="1-7-Roach-2022"><a href="#1-7-Roach-2022" class="headerlink" title="1.7 Roach (2022)"></a>1.7 Roach (2022)</h3><blockquote>
+<h3 id="1-7-让策略在仿真中试错：Roach-2022"><a href="#1-7-让策略在仿真中试错：Roach-2022" class="headerlink" title="1.7 让策略在仿真中试错：Roach (2022)"></a>1.7 让策略在仿真中试错：Roach (2022)</h3><blockquote>
 <p><strong>论文</strong>：Zhang, Z. et al. “Roach: End-to-End Urban Driving by Imitating a Reinforcement Learning Coach.” <em>ICCV 2023</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
@@ -558,7 +563,7 @@ mjx-container[display="true"] + br {
 <p>Roach 解决的核心问题是协变量偏移的本质来源：纯模仿学习只见过”专家成功轨迹”，从未见过”偏离后如何恢复”，而 RL 教练因为探索了大量非专家状态，其行为数据天然覆盖了这些恢复场景。将 RL 教练的覆盖优势通过蒸馏传给 student，间接让 student 获得了”恢复能力”。相较于 LbC 的特权 teacher，Roach 的 RL 教练进一步提升了在稀疏奖励、高风险场景中的策略质量，成为此后 CARLA Leaderboard 众多顶榜方法的标准 teacher 来源，尤其对需要强鲁棒性的闭环评测（closed-loop）意义更为突出。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2208.01867">arXiv:2208.01867</a> | <a target="_blank" rel="noopener" href="https://github.com/zhejz/carla-roach">代码</a></p>
 <hr>
-<h3 id="1-8-PlanT-2022"><a href="#1-8-PlanT-2022" class="headerlink" title="1.8 PlanT (2022)"></a>1.8 PlanT (2022)</h3><blockquote>
+<h3 id="1-8-从像素转向结构化场景：PlanT-2022"><a href="#1-8-从像素转向结构化场景：PlanT-2022" class="headerlink" title="1.8 从像素转向结构化场景：PlanT (2022)"></a>1.8 从像素转向结构化场景：PlanT (2022)</h3><blockquote>
 <p><strong>论文</strong>：Renz, K. et al. “PlanT: Explainable Planning Transformers via Object-Level Representations.” <em>CoRL 2022</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
@@ -566,14 +571,14 @@ mjx-container[display="true"] + br {
 <p>PlanT 的领域意义体现在两个方向：一是将”可解释性”从事后分析工具变为架构内生属性，为安全关键系统的审计与调试提供了直接抓手；二是它的物体级编码思路与后续大语言模型驾驶工作（如 DriveVLM、DriveLM）深度契合——当 LLM 需要推理”前方蓝色SUV是否会变道”时，物体级表示是天然的接口，比像素特征或栅格 BEV 更易与语言空间对齐。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2209.11888">arXiv:2209.11888</a> | <a target="_blank" rel="noopener" href="https://github.com/autonomousvision/plant">代码</a></p>
 <hr>
-<h3 id="1-9-MILE-2022"><a href="#1-9-MILE-2022" class="headerlink" title="1.9 MILE (2022)"></a>1.9 MILE (2022)</h3><blockquote>
+<h3 id="1-9-在隐空间中学习驾驶：MILE-2022"><a href="#1-9-在隐空间中学习驾驶：MILE-2022" class="headerlink" title="1.9 在隐空间中学习驾驶：MILE (2022)"></a>1.9 在隐空间中学习驾驶：MILE (2022)</h3><blockquote>
 <p><strong>论文</strong>：Hu, A. et al. “Model-Based Imitation Learning for Urban Driving.” <em>NeurIPS 2022</em>.</p>
 </blockquote>
 <p><strong>中文摘要</strong>：首次将隐式世界模型与模仿学习深度融合用于城市自动驾驶，将”预测未来”和”学习驾驶”统一到同一个训练目标中。MILE 包含三个组件：图像编码器将逐帧观测映射至紧凑的隐状态；动力学模型在隐空间中预测下一个隐状态（即世界的”内部演化”）；控制策略从当前隐状态解码驾驶动作。三者以 KL 散度损失联合训练，约束隐状态分布与”未来观测编码”一致，迫使隐空间不再是单纯的像素压缩器，而是编码驾驶相关语义（车辆位置趋势、红绿灯变化等）。</p>
 <p>MILE 的关键突破是实现了”无高精地图、无显式路由”的泛化驾驶：模型从历史传感器序列推断当前隐状态，隐状态本身承担了地图和场景记忆的角色。这使系统在 CARLA 中完成了未见城镇（unseen town）的驾驶泛化，而不依赖预先构建的 HD 地图。作为 Wayve 团队的早期工作，MILE 是后来更大规模的 GAIA-1 世界模型和 LINGO 语言驾驶系统的方法前身，代表了”世界模型驱动端到端驾驶”这条技术路线的重要奠基工作。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2210.07744">arXiv:2210.07744</a></p>
 <hr>
-<h3 id="1-10-LAV-2022"><a href="#1-10-LAV-2022" class="headerlink" title="1.10 LAV (2022)"></a>1.10 LAV (2022)</h3><blockquote>
+<h3 id="1-10-用语言和动作连接驾驶任务：LAV-2022"><a href="#1-10-用语言和动作连接驾驶任务：LAV-2022" class="headerlink" title="1.10 用语言和动作连接驾驶任务：LAV (2022)"></a>1.10 用语言和动作连接驾驶任务：LAV (2022)</h3><blockquote>
 <p><strong>论文</strong>：Chen, D. et al. “Learning from All Vehicles.” <em>CVPR 2022</em>.</p>
 </blockquote>
 <p>📌 <strong>推荐</strong></p>
@@ -581,7 +586,7 @@ mjx-container[display="true"] + br {
 <p>LAV 的领域影响体现在两个层面：算法层面，它将”多智能体联合预测”与”单一自车规划”统一在同一个特征编码器下，相互强化；数据层面，它将有效训练数据的密度提升了一个数量级，尤其改善了拥堵和强交互场景下的表现——恰恰是传统模仿学习最脆弱的场景。”所有路面参与者均可作为监督信号”这一思路后来在大规模真实路测数据训练的工作中得到延伸，成为扩展端到端模型训练数据的重要策略。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2112.07634">arXiv:2112.07634</a></p>
 <hr>
-<h3 id="1-11-Think2Drive-2024"><a href="#1-11-Think2Drive-2024" class="headerlink" title="1.11 Think2Drive (2024)"></a>1.11 Think2Drive (2024)</h3><blockquote>
+<h3 id="1-11-先想象再行动：Think2Drive-2024"><a href="#1-11-先想象再行动：Think2Drive-2024" class="headerlink" title="1.11 先想象再行动：Think2Drive (2024)"></a>1.11 先想象再行动：Think2Drive (2024)</h3><blockquote>
 <p><strong>论文</strong>：Li, X. et al. “Think2Drive: Efficient Reinforcement Learning by Thinking in Latent World Model for Autonomous Driving (in CARLA-v2).” <em>ECCV 2024</em>.</p>
 </blockquote>
 <p>📌 <strong>前沿</strong></p>
@@ -589,7 +594,9 @@ mjx-container[display="true"] + br {
 <p>Think2Drive 针对 CARLA v2（更复杂的路网和交通规则）进行了设计和评测，在远少于此前方法的环境交互步数内达到了具有竞争力的表现。它代表了端到端驾驶从”只用模仿学习”向”高效 RL 探索”演进的最新方向，也是 Dreamer 系列世界模型方法在自动驾驶任务上的有力应用实例。该工作揭示的规律——“先在世界模型中想清楚再去做”——与人类驾驶员面对复杂路况时的认知过程高度吻合，为后续将显式推理模块（如 LLM chain-of-thought）与隐式世界模型结合提供了先验支撑。</p>
 <p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2402.01159">arXiv:2402.01159</a></p>
 <hr>
-<p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-02-BEV%E6%84%9F%E7%9F%A5/">下一篇 →</a></p>
+<h2 id="小结：端到端不是终点，而是一种接口选择"><a href="#小结：端到端不是终点，而是一种接口选择" class="headerlink" title="小结：端到端不是终点，而是一种接口选择"></a>小结：端到端不是终点，而是一种接口选择</h2><p>端到端路线证明了传感器可以直接驱动驾驶策略，但也暴露出三个长期问题：几何表示不适合规划、专家数据覆盖不了自己的错误、单一动作输出难以解释和验证。后续技术并没有简单放弃端到端，而是逐步加入 BEV/占据表示、结构化中间变量、闭环训练和世界模型。下一篇从最关键的几何补丁开始：为什么自动驾驶需要 BEV。</p>
+<hr>
+<p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-02-BEV%E6%84%9F%E7%9F%A5/">下一篇：BEV 感知 →</a></p>
 
                 
               </div>

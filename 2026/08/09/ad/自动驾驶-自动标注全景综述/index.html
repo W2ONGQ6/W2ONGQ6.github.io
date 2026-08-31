@@ -27,7 +27,7 @@
 <meta property="og:description" content="引言：为什么自动标注是自动驾驶的「隐形引擎」自动驾驶的能力，归根结底建立在数据之上。一套端到端或感知模型要想在长尾场景中稳健工作，需要海量、高质量、多模态的标注数据——3D 检测框、跟踪轨迹、车道线、占据栅格、可行驶区域……而这些标注若全部依赖人工，成本高到无法承受：一帧 LiDAR 点云的 3D 框人工标注可能耗时数分钟，一辆车一天就能采集数百万帧。 自动标注（Auto-Labeling） 正是">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-08-09T05:20:00.000Z">
-<meta property="article:modified_time" content="2026-08-17T08:39:31.244Z">
+<meta property="article:modified_time" content="2026-08-29T14:59:27.019Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="4D重建">
 <meta property="article:tag" content="Auto-Labeling">
@@ -641,7 +641,7 @@ mjx-container[display="true"] + br {
 <p><strong>核心思想</strong>：把「LLM 理解语义 + VLM/SAM 分割 + 点云几何」三者结合，构建<strong>开放词表的离线全景标注</strong>系统。给定一句自然语言描述，系统能自动在多模态数据中定位、分割、并生成 3D 标签，且<strong>无需为新类别重新训练</strong>。这直接攻克了长尾类别标注的痛点——传统闭集方法遇到没见过的类别只能重新标、重新训，而基础模型方法可以「即插即用」。</p>
 <p><strong>意义</strong>：标注范式正从「闭集监督」走向「开放词表 + 零样本」，大模型的世界知识成为标注长尾的关键杠杆。</p>
 <hr>
-<h2 id="四、占据栅格与稠密标注"><a href="#四、占据栅格与稠密标注" class="headerlink" title="四、占据栅格与稠密标注"></a>四、占据栅格与稠密标注</h2><p>近年 <strong>占据网络（Occupancy Network）</strong> 成为感知热点（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">本系列 07</a>），而它的真值——稠密的 3D 占据栅格——同样高度依赖自动标注。</p>
+<h2 id="四、占据栅格与稠密标注"><a href="#四、占据栅格与稠密标注" class="headerlink" title="四、占据栅格与稠密标注"></a>四、占据栅格与稠密标注</h2><p>近年 <strong>占据网络（Occupancy Network）</strong> 成为感知热点（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">本系列 03</a>），而它的真值——稠密的 3D 占据栅格——同样高度依赖自动标注。</p>
 <h3 id="4-1-Occ3D-SurroundOcc-的标注管线"><a href="#4-1-Occ3D-SurroundOcc-的标注管线" class="headerlink" title="4.1 Occ3D / SurroundOcc 的标注管线"></a>4.1 Occ3D / SurroundOcc 的标注管线</h3><p>单帧 LiDAR 点云是稀疏的，无法直接作为稠密占据真值。主流做法是一套<strong>多帧聚合 + 网格化</strong>的自动标注管线：</p>
 <ol>
 <li><strong>动静分离</strong>：先用 3D 检测/跟踪把动态目标与静态背景分开。</li>
@@ -652,7 +652,7 @@ mjx-container[display="true"] + br {
 <p>Occ3D、SurroundOcc、OpenOccupancy 等基准的真值，正是通过这类自动管线生成的——它们本身就是「占据自动标注」的工程结晶。</p>
 <h3 id="4-2-NeRF-3DGS-驱动的重建式标注"><a href="#4-2-NeRF-3DGS-驱动的重建式标注" class="headerlink" title="4.2 NeRF / 3DGS 驱动的重建式标注"></a>4.2 NeRF / 3DGS 驱动的重建式标注</h3><p>更前沿的方向是用 <strong>NeRF / 3D Gaussian Splatting</strong> 对整段驾驶序列做神经重建，得到高保真的连续场景表示，再从中「渲染」出任意视角的深度、语义、占据标签。这种「重建即标注」的思路，让标签的几何一致性和稠密度进一步提升，是占据/深度自动标注的新范式。</p>
 <hr>
-<h2 id="五、轨迹与运动标注"><a href="#五、轨迹与运动标注" class="headerlink" title="五、轨迹与运动标注"></a>五、轨迹与运动标注</h2><p>轨迹预测任务（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-05-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">本系列 08</a>）需要每个交通参与者<strong>干净、平滑、完整</strong>的历史与未来轨迹作为真值。而车端跟踪输出的轨迹往往有抖动、断裂、ID 切换。</p>
+<h2 id="五、轨迹与运动标注"><a href="#五、轨迹与运动标注" class="headerlink" title="五、轨迹与运动标注"></a>五、轨迹与运动标注</h2><p>轨迹预测任务（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">本系列 04</a>）需要每个交通参与者<strong>干净、平滑、完整</strong>的历史与未来轨迹作为真值。而车端跟踪输出的轨迹往往有抖动、断裂、ID 切换。</p>
 <p><strong>自动标注方案</strong>：以离线 3D 检测（如 DetZero）的高精度框为基础，做<strong>离线全局跟踪 + 轨迹平滑优化</strong>：</p>
 <ul>
 <li>用整段序列做双向关联，消除 ID 切换；</li>
@@ -710,7 +710,7 @@ mjx-container[display="true"] + br {
 <ol>
 <li><strong>基础模型深度融入 3D</strong>：把 SAM/VLM 的开放语义与点云几何深度耦合，实现真正的开放词表 4D 标注。</li>
 <li><strong>重建式标注（NeRF/3DGS）</strong> 成为主流：以神经重建为中介，统一深度、占据、语义、轨迹的标注。</li>
-<li><strong>世界模型即标注器</strong>：用驾驶世界模型（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">本系列 06</a>）同时生成数据与标签，模糊「仿真」与「标注」的边界。</li>
+<li><strong>世界模型即标注器</strong>：用驾驶世界模型（参见<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-08-%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B/">本系列 08</a>）同时生成数据与标签，模糊「仿真」与「标注」的边界。</li>
 <li><strong>端到端时代的「轨迹自动标注」</strong>：随着端到端方案兴起，如何自动标注「优质人类驾驶轨迹」作为模仿目标，成为新焦点。</li>
 </ol>
 <hr>
@@ -720,7 +720,7 @@ mjx-container[display="true"] + br {
 <blockquote>
 <p><strong>说明</strong>：本文为综述性整理，部分方法（尤其工业界数据引擎）的实现细节以各公司公开分享为准；论文引用信息以对应会议/arXiv 正式版为准。</p>
 </blockquote>
-<p><strong>相关阅读</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">自动驾驶经典论文全景指南</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">占据网络与 3D 场景理解</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-05-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">轨迹预测与运动预测</a></p>
+<p><strong>相关阅读</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">自动驾驶经典论文全景指南</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-03-%E5%8D%A0%E6%8D%AE%E7%BD%91%E7%BB%9C%E4%B8%8E3D%E5%9C%BA%E6%99%AF%E7%90%86%E8%A7%A3/">占据网络与 3D 场景理解</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">轨迹预测与运动预测</a></p>
 
                 
               </div>
