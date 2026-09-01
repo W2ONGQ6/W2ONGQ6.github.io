@@ -1,0 +1,1116 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="写在前面：分布式存储的核心不是“把数据放到多台机器”把一份数据复制到多台机器并不难；真正困难的是：节点宕机、网络分区、请求重试和并发写入同时发生时，系统仍要对用户兑现某种可解释的承诺。文件系统承诺 POSIX，数据库承诺事务和 SQL，对象存储承诺 key–value 与耐久性，日志系统承诺顺序追加和可回放——不同系统的外观差异，最终都来自它们选择兑现的语义不同。 因此，本篇不按产品名堆砌，而按一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式存储经典工作全景 —— 从文件、复制到云原生数据库">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/08/09/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%BB%8F%E5%85%B8%E5%B7%A5%E4%BD%9C%E5%85%A8%E6%99%AF/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="写在前面：分布式存储的核心不是“把数据放到多台机器”把一份数据复制到多台机器并不难；真正困难的是：节点宕机、网络分区、请求重试和并发写入同时发生时，系统仍要对用户兑现某种可解释的承诺。文件系统承诺 POSIX，数据库承诺事务和 SQL，对象存储承诺 key–value 与耐久性，日志系统承诺顺序追加和可回放——不同系统的外观差异，最终都来自它们选择兑现的语义不同。 因此，本篇不按产品名堆砌，而按一">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-09T04:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-31T07:12:04.117Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Ceph">
+<meta property="article:tag" content="Dynamo">
+<meta property="article:tag" content="GFS">
+<meta property="article:tag" content="Raft">
+<meta property="article:tag" content="RocksDB">
+<meta property="article:tag" content="Spanner">
+<meta property="article:tag" content="分布式存储">
+<meta property="article:tag" content="综述">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>分布式存储经典工作全景 —— 从文件、复制到云原生数据库 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="分布式存储经典工作全景 —— 从文件、复制到云原生数据库"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-08-09 12:00" pubdate>
+          2026年8月9日 中午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          62 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">分布式存储经典工作全景 —— 从文件、复制到云原生数据库</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="写在前面：分布式存储的核心不是“把数据放到多台机器”"><a href="#写在前面：分布式存储的核心不是“把数据放到多台机器”" class="headerlink" title="写在前面：分布式存储的核心不是“把数据放到多台机器”"></a>写在前面：分布式存储的核心不是“把数据放到多台机器”</h2><p>把一份数据复制到多台机器并不难；真正困难的是：节点宕机、网络分区、请求重试和并发写入同时发生时，系统仍要对用户兑现某种可解释的承诺。文件系统承诺 POSIX，数据库承诺事务和 SQL，对象存储承诺 key–value 与耐久性，日志系统承诺顺序追加和可回放——<strong>不同系统的外观差异，最终都来自它们选择兑现的语义不同。</strong></p>
+<p>因此，本篇不按产品名堆砌，而按一条问题链组织重要工作：</p>
+<blockquote>
+<p><strong>先解决“如何在会坏的机器上保存大数据” → 再解决“副本如何达成一致” → 再解决“数据和请求如何分片、定位、扩容” → 接着解决“读写延迟与事务如何共存” → 最后在云与 NVMe 条件下，把本地 LSM、对象存储、共识组和无状态计算组合成现代系统。</strong></p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="一、总时间线：每一代系统都在重写一个边界"><a href="#一、总时间线：每一代系统都在重写一个边界" class="headerlink" title="一、总时间线：每一代系统都在重写一个边界"></a>一、总时间线：每一代系统都在重写一个边界</h2><table>
+<thead>
+<tr>
+<th>时期</th>
+<th>代表工作</th>
+<th>重画的边界</th>
+<th>留下的问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1980s–1990s</td>
+<td>NFS、AFS、LFS、LSM-Tree</td>
+<td>远程文件访问、客户端缓存、追加写</td>
+<td>单点元数据、跨机一致性与随机写放大</td>
+</tr>
+<tr>
+<td>2001–2006</td>
+<td>Chord、GFS、BigTable、Ceph/CRUSH</td>
+<td>去中心定位、分布式文件与宽表、算法化放置</td>
+<td>强一致事务昂贵，副本协调复杂</td>
+</tr>
+<tr>
+<td>2007–2014</td>
+<td>Dynamo、Spanner、Raft</td>
+<td>最终一致的高可用 KV、全球事务、可理解共识</td>
+<td>语义与成本难以兼得</td>
+</tr>
+<tr>
+<td>2011–2018</td>
+<td>RocksDB、FoundationDB、TiKV</td>
+<td>高性能本地 LSM、事务层与存储层解耦、Raft 分片</td>
+<td>运维、热点、跨地域延迟仍复杂</td>
+</tr>
+<tr>
+<td>2018 至今</td>
+<td>JuiceFS、对象存储表格式、3FS</td>
+<td>云原生组合、对象存储 POSIX 化、为 NVMe/RDMA 重设路径</td>
+<td>多云一致性、成本与治理成为新瓶颈</td>
+</tr>
+</tbody></table>
+<p>这张表有一个很重要的阅读顺序：不要先问“Ceph 和 JuiceFS 谁更强”，而要先问“它们各自把哪一层交给了谁”。Ceph 自己管理对象、放置、恢复和多种接口；JuiceFS 将数据放在对象存储、把元数据交给外部数据库、由富客户端重建文件语义；3FS 则针对 AI 训练重新设计数据链和 RDMA 路径。它们的差异首先是架构分工，而不是功能清单。</p>
+<hr>
+<h2 id="二、文件系统的起点：缓存、追加写与“大文件优先”"><a href="#二、文件系统的起点：缓存、追加写与“大文件优先”" class="headerlink" title="二、文件系统的起点：缓存、追加写与“大文件优先”"></a>二、文件系统的起点：缓存、追加写与“大文件优先”</h2><h3 id="2-1-NFS-与-AFS：远程文件访问首先是缓存一致性问题"><a href="#2-1-NFS-与-AFS：远程文件访问首先是缓存一致性问题" class="headerlink" title="2.1 NFS 与 AFS：远程文件访问首先是缓存一致性问题"></a>2.1 NFS 与 AFS：远程文件访问首先是缓存一致性问题</h3><blockquote>
+<p><strong>工作</strong>：Sun NFS（1984）；Carnegie Mellon AFS（1980s）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：NFS 让远程目录看起来像本地目录，以 RPC 和无状态服务端换取简单故障恢复；但客户端缓存会带来陈旧读，因此早期 NFS 采用 close-to-open 一类较弱语义。AFS 则用 callback 机制：服务器在其他客户端修改文件时主动撤销本地缓存。两者共同揭示了一个后来反复出现的事实：文件系统性能很大程度取决于客户端敢缓存多少，而缓存得越激进，一致性协议就越复杂。</p>
+<p>这正是 POSIX 在分布式环境里昂贵的原因。<code>rename</code>、<code>fsync</code>、原子追加、文件大小可见性等看似普通的调用，背后都要求元数据与数据副本在特定时刻达成协调。后来的 CephFS、JuiceFS 和 3FS 并不是“重新发明文件”，而是在更大规模、更高吞吐环境下重新选择缓存与一致性的边界。</p>
+<hr>
+<h3 id="2-2-LFS-与-LSM-Tree：把随机写改写为顺序追加"><a href="#2-2-LFS-与-LSM-Tree：把随机写改写为顺序追加" class="headerlink" title="2.2 LFS 与 LSM-Tree：把随机写改写为顺序追加"></a>2.2 LFS 与 LSM-Tree：把随机写改写为顺序追加</h3><blockquote>
+<p><strong>论文</strong>：Rosenblum, M. and Ousterhout, J. “The Design and Implementation of a Log-Structured File System.” <em>SOSP 1991</em>；O’Neil, P. et al. “The Log-Structured Merge-Tree.” <em>Acta Informatica 1996</em>.</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：LFS 的洞察是，磁盘写入常常比读取更昂贵且更随机；因此系统不在原位置修改，而是把更新顺序追加到日志尾部，后续再通过 cleaner 回收旧段。LSM-Tree 将这一想法用于键值索引：内存 MemTable 接收写入，刷盘形成有序不可变 SST，后台 compaction 把多个层级合并。写入因此转化为顺序 IO，代价则转移为读取时需要查多层文件、后台 compaction 消耗带宽、空间/写/读放大彼此制约。</p>
+<p>这条“追加写 + 后台整理”的技术线贯穿今天的 RocksDB、LevelDB、Cassandra、HBase、TiKV，甚至也能在 Kafka 日志和对象存储上的 Copy-on-Write 文件系统中看到。理解 LSM 的 RUM 三角（Read/Update/Memory）后，就能理解为什么没有一种 compaction 策略能在所有负载下都最优。</p>
+<hr>
+<h2 id="三、Google-与-Ceph：从中心元数据到算法化数据放置"><a href="#三、Google-与-Ceph：从中心元数据到算法化数据放置" class="headerlink" title="三、Google 与 Ceph：从中心元数据到算法化数据放置"></a>三、Google 与 Ceph：从中心元数据到算法化数据放置</h2><h3 id="3-1-GFS（2003）：把故障当成常态"><a href="#3-1-GFS（2003）：把故障当成常态" class="headerlink" title="3.1 GFS（2003）：把故障当成常态"></a>3.1 GFS（2003）：把故障当成常态</h3><blockquote>
+<p><strong>论文</strong>：Ghemawat, S. et al. “The Google File System.” <em>SOSP 2003</em>.</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：GFS 以一个 Master 管理命名空间和 chunk 元数据，多个 ChunkServer 保存大块文件的副本；客户端只从 Master 获取位置，随后直接读写数据节点。它面向的是大文件、顺序读、批量追加与频繁故障，而不是通用 POSIX 负载。三副本、租约和 record append 共同保证：即使节点不断失效，系统仍能持续写入并恢复数据。</p>
+<p>GFS 的真正贡献是承认规模会改变设计前提。单 Master 在元数据量远小于数据量时可以极其简单高效，数据复制则被视为软件责任而不是昂贵硬件的附属能力。它直接启发 HDFS，也把“集中元数据会不会成为瓶颈”这一问题留给了后来的 CephFS、分布式元数据服务和外部 KV 元数据引擎。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://research.google/pubs/the-google-file-system/">Google Research</a></p>
+<hr>
+<h3 id="3-2-BigTable（2006）：文件之上需要可分裂的结构化索引"><a href="#3-2-BigTable（2006）：文件之上需要可分裂的结构化索引" class="headerlink" title="3.2 BigTable（2006）：文件之上需要可分裂的结构化索引"></a>3.2 BigTable（2006）：文件之上需要可分裂的结构化索引</h3><blockquote>
+<p><strong>论文</strong>：Chang, F. et al. “Bigtable: A Distributed Storage System for Structured Data.” <em>OSDI 2006</em>.</p>
+</blockquote>
+<p><strong>中文摘要</strong>：BigTable 将数据表示为按 row key 排序的稀疏多维映射，并将表切为 tablet。它把 SSTable 文件放在 GFS 上，借助 Chubby 协调 tablet server、schema 和元数据。这个设计说明，分布式存储不能只解决“文件在哪”；一旦需要按 key 查找、范围扫描和在线更新，就必须再引入分片、索引、元数据和协调协议。</p>
+<p>BigTable 催生 HBase 等宽表系统，也影响了现代数据库的分层：底层文件负责耐久与有序扫描，上层负责把逻辑键空间划分为可迁移的分片。热点 key、tablet split 和 metadata root 的管理，都是此后所有 range-sharded 数据库必须面对的问题。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://research.google/pubs/bigtable-a-distributed-storage-system-for-structured-data/">Google Research</a></p>
+<hr>
+<h3 id="3-3-Ceph-与-CRUSH（2006）：不靠中心查表，靠规则定位"><a href="#3-3-Ceph-与-CRUSH（2006）：不靠中心查表，靠规则定位" class="headerlink" title="3.3 Ceph 与 CRUSH（2006）：不靠中心查表，靠规则定位"></a>3.3 Ceph 与 CRUSH（2006）：不靠中心查表，靠规则定位</h3><blockquote>
+<p><strong>论文</strong>：Weil, S. A. et al. “CRUSH: Controlled, Scalable, Decentralized Placement of Replicated Data.” <em>SC 2006</em>.</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：传统分布式文件系统往往依赖中心元数据服务告诉客户端“数据在哪”。CRUSH 的回答是：给定对象名、集群拓扑和放置规则，客户端可以算法化地计算对象应落在哪些 OSD，而不必查询中心位置表。CRUSH Map 将机架、主机、磁盘等故障域编码进规则，使副本或纠删码分片能主动跨故障域放置。</p>
+<p>Ceph 在 CRUSH 之上加入 RADOS、Placement Group、OSD 和 Monitor：PG 让对象映射和恢复管理具有合适粒度，MON 维护集群 map，OSD 在故障后自治恢复。它的核心价值不是“提供块、文件、对象三种接口”，而是用同一个对象层和放置机制支撑三种语义。代价是 PG 数量、恢复流量、CRUSH 规则和小对象开销都需要精细运维。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://ceph.com/assets/pdfs/weil-crush-sc06.pdf">CRUSH 论文</a></p>
+<hr>
+<h2 id="四、复制的一次分叉：Dynamo-的可用性与-Spanner-的事务"><a href="#四、复制的一次分叉：Dynamo-的可用性与-Spanner-的事务" class="headerlink" title="四、复制的一次分叉：Dynamo 的可用性与 Spanner 的事务"></a>四、复制的一次分叉：Dynamo 的可用性与 Spanner 的事务</h2><h3 id="4-1-Dynamo（2007）：宁可冲突，也不要拒绝写入"><a href="#4-1-Dynamo（2007）：宁可冲突，也不要拒绝写入" class="headerlink" title="4.1 Dynamo（2007）：宁可冲突，也不要拒绝写入"></a>4.1 Dynamo（2007）：宁可冲突，也不要拒绝写入</h3><blockquote>
+<p><strong>论文</strong>：DeCandia, G. et al. “Dynamo: Amazon’s Highly Available Key-value Store.” <em>SOSP 2007</em>.</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：Dynamo 面向购物车等“写入可用性优先”的服务。它用一致性哈希在虚拟节点间分布 key，用 N/R/W quorum 控制读写副本数，以 vector clock 识别并发版本，以 sloppy quorum 和 hinted handoff 在部分节点不可用时继续接受写入，再通过 anti-entropy 修复副本差异。它没有让所有副本在写入时立即达成单一顺序，而是把一部分冲突交给读取端或业务逻辑合并。</p>
+<p>这项工作最重要的贡献是把一致性从“系统全局的开关”改写为可按业务选择的策略。Dynamo 不是宣称最终一致性总是更好，而是清楚展示了：当跨地域可用性比单 key 的立即一致更重要时，允许短暂分歧可以避免网络分区把写路径整体拒绝。Cassandra、Riak 等系统继承了这条路线；但账户、库存、唯一约束等业务通常不能仅靠应用层合并冲突。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">论文 PDF</a></p>
+<hr>
+<h3 id="4-2-Spanner（2012）：用时间和-Paxos-让全球事务可解释"><a href="#4-2-Spanner（2012）：用时间和-Paxos-让全球事务可解释" class="headerlink" title="4.2 Spanner（2012）：用时间和 Paxos 让全球事务可解释"></a>4.2 Spanner（2012）：用时间和 Paxos 让全球事务可解释</h3><blockquote>
+<p><strong>论文</strong>：Corbett, J. C. et al. “Spanner: Becoming a SQL System.” <em>SIGMOD 2017</em>；Spanner 初始系统论文发表于 <em>OSDI 2012</em>。</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：Spanner 选择了与 Dynamo 相反的方向：用 Paxos 复制每个分片，以 TrueTime 提供带不确定性界的物理时间，再以 commit wait 确保外部一致性（external consistency）。这使跨分片事务不仅能串行化，而且能与真实时间顺序一致：若事务 A 在事务 B 开始前已向客户端返回，那么 B 的读不会看到一个早于 A 的世界。</p>
+<p>Spanner 证明强语义不是不可能，而是要为它建立昂贵基础设施：全球复制组、2PC、Paxos、时间 API 和等待预算缺一不可。它直接影响 CockroachDB、YugabyteDB、TiDB 等 NewSQL 系统，但各系统对全局时钟、复制协议和跨地域延迟的取舍不同。这里最重要的教训是：事务隔离级别、共识和时钟精度必须作为一个整体理解。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://research.google/pubs/spanner-becoming-a-sql-system/">Google Research</a></p>
+<hr>
+<h3 id="4-3-Raft（2014）：把共识变成可工程化的模块"><a href="#4-3-Raft（2014）：把共识变成可工程化的模块" class="headerlink" title="4.3 Raft（2014）：把共识变成可工程化的模块"></a>4.3 Raft（2014）：把共识变成可工程化的模块</h3><blockquote>
+<p><strong>论文</strong>：Ongaro, D. and Ousterhout, J. “In Search of an Understandable Consensus Algorithm.” <em>USENIX ATC 2014</em>.</p>
+</blockquote>
+<p>🏆 <strong>里程碑</strong></p>
+<p><strong>中文摘要</strong>：Paxos 提供了强大的安全性证明，但工程实现长期容易出错。Raft 以强 leader、任期、日志匹配和多数派提交为中心，将共识拆成领导者选举、日志复制和成员变更。Leader 只追加日志，Follower 只接受来自 Leader 的复制；当一条日志被多数副本持久化，才可以提交给状态机。这样的限制减少了状态空间，也让线性一致读、快照和流水线复制更容易落地。</p>
+<p>Raft 并不自动解决分片、事务或热点问题；它只保证一个复制状态机组对操作顺序达成一致。现代分布式数据库通常会把数据切为许多 range/shard，每个分片一个 Raft group，再在跨分片事务上叠加 2PC、MVCC 与时间戳服务。把“Raft 能做什么”与“数据库还需要什么”分开，是理解 TiKV、CockroachDB 和 braft 的关键。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf">USENIX 论文</a></p>
+<hr>
+<h2 id="五、本地引擎成为标准件：RocksDB、FoundationDB-与-TiKV"><a href="#五、本地引擎成为标准件：RocksDB、FoundationDB-与-TiKV" class="headerlink" title="五、本地引擎成为标准件：RocksDB、FoundationDB 与 TiKV"></a>五、本地引擎成为标准件：RocksDB、FoundationDB 与 TiKV</h2><h3 id="5-1-RocksDB：将-LSM-的权衡工程化"><a href="#5-1-RocksDB：将-LSM-的权衡工程化" class="headerlink" title="5.1 RocksDB：将 LSM 的权衡工程化"></a>5.1 RocksDB：将 LSM 的权衡工程化</h3><blockquote>
+<p><strong>工作</strong>：Facebook RocksDB（2012 起）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：RocksDB 在 LevelDB 基础上面向多核、SSD 和服务端负载扩展：写入先进入 WAL 与 MemTable，flush 后变成 SST，后台 compaction 控制层间重叠。Bloom filter、block cache、prefix filter、column family、写组提交与多种 compaction 策略共同决定读放大、写放大、空间放大和尾延迟。</p>
+<p>它在分布式存储中的地位类似“发动机”：TiKV、CockroachDB 的部分版本、Ceph BlueStore 的周边组件以及大量状态服务都会把复杂的本地持久化交给它。这样上层可以把精力放在复制、事务与分片；代价是 compaction 写停顿和磁盘放大仍会向上层传播，不能因为底层是 RocksDB 就忽略文件布局和资源隔离。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://rocksdb.org/">RocksDB</a></p>
+<hr>
+<h3 id="5-2-FoundationDB：把事务层与存储层彻底分离"><a href="#5-2-FoundationDB：把事务层与存储层彻底分离" class="headerlink" title="5.2 FoundationDB：把事务层与存储层彻底分离"></a>5.2 FoundationDB：把事务层与存储层彻底分离</h3><blockquote>
+<p><strong>工作</strong>：FoundationDB（2012 起，开源于 2018）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：FoundationDB 将“提供严格串行化事务”的责任集中在一层事务处理架构中，底层存储服务器只保存有序 KV 数据。客户端通过代理读取、计算 read/write conflict range，事务系统用全局顺序与冲突检测决定提交；分片和迁移则在不改变客户端事务接口的情况下进行。它展示了一个强有力的分层思想：上层不需要直接面对复制、数据迁移和冲突细节，只要面对一套有序 KV + 事务 API。</p>
+<p>这条路线特别适合作为元数据底座。JuiceFS 可以把 inode、目录项和 slice 映射交给事务型 KV；3FS 也使用 FoundationDB 作为无状态元数据服务的事务来源。它们不是“把文件存进 FDB”，而是把最需要原子性的小而热的元数据交给 FDB，把大数据放进对象存储或自管 NVMe。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://www.foundationdb.org/">FoundationDB</a></p>
+<hr>
+<h3 id="5-3-TiKV：Raft-分片与-MVCC-的可扩展组合"><a href="#5-3-TiKV：Raft-分片与-MVCC-的可扩展组合" class="headerlink" title="5.3 TiKV：Raft 分片与 MVCC 的可扩展组合"></a>5.3 TiKV：Raft 分片与 MVCC 的可扩展组合</h3><blockquote>
+<p><strong>工作</strong>：TiKV（PingCAP，2016 起）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：TiKV 将键空间切为多个 Region，每个 Region 由一个 Raft group 复制；PD 负责调度、时间戳与热点迁移，RocksDB 负责单机持久化，MVCC 负责多版本读取，跨 Region 事务再叠加 2PC。它把前文四项重要工作——LSM、本地 KV、Raft、事务时间戳——组合成一个可横向扩展的事务存储层。</p>
+<p>TiKV 的价值在于说明现代分布式数据库不是某个单独算法的胜利，而是分层组合的结果：Raft 解决副本顺序，MVCC 让读写并发，2PC 处理跨分片原子性，调度器处理 Region 迁移与热点。任何一个层的延迟、倾斜或故障都会成为整条事务路径的上限。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://tikv.org/">TiKV</a></p>
+<hr>
+<h2 id="六、云原生存储：把“大数据”和“小元数据”放在不同的地方"><a href="#六、云原生存储：把“大数据”和“小元数据”放在不同的地方" class="headerlink" title="六、云原生存储：把“大数据”和“小元数据”放在不同的地方"></a>六、云原生存储：把“大数据”和“小元数据”放在不同的地方</h2><h3 id="6-1-对象存储与-JuiceFS：数据面、元数据面、客户端三分"><a href="#6-1-对象存储与-JuiceFS：数据面、元数据面、客户端三分" class="headerlink" title="6.1 对象存储与 JuiceFS：数据面、元数据面、客户端三分"></a>6.1 对象存储与 JuiceFS：数据面、元数据面、客户端三分</h3><blockquote>
+<p><strong>工作</strong>：S3 风格对象存储；JuiceFS（2021 起）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：对象存储天然适合大量不可变对象、跨 AZ 耐久和弹性容量，却没有目录、随机写、原子 rename 或 POSIX 缓存一致性。JuiceFS 的架构将三层拆开：对象存储保存大块数据，Redis/MySQL/TiKV/FoundatonDB 等元数据引擎保存 inode 与目录事务，富客户端通过 Chunk/Slice/Block 映射、缓存和后台 compaction 将两者重新拼成文件系统。</p>
+<p>这种组合式设计的关键不是“把对象存储挂载成目录”，而是承认不同数据有不同访问规律：大数据追求低成本耐久，小元数据追求低延迟原子性，客户端缓存追求读写性能。它也带来新的边界：数据文件和元数据提交顺序、垃圾回收、缓存失效以及对象存储的列表/重命名语义，都必须由系统明确处理。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://juicefs.com/docs/community/">JuiceFS 文档</a></p>
+<hr>
+<h3 id="6-2-3FS：为-AI-训练重新安排复制、元数据与网络路径"><a href="#6-2-3FS：为-AI-训练重新安排复制、元数据与网络路径" class="headerlink" title="6.2 3FS：为 AI 训练重新安排复制、元数据与网络路径"></a>6.2 3FS：为 AI 训练重新安排复制、元数据与网络路径</h3><blockquote>
+<p><strong>工作</strong>：DeepSeek 3FS（2025）。</p>
+</blockquote>
+<p><strong>中文摘要</strong>：3FS 面向大规模 AI 训练与 KV Cache 卸载，选择与 JuiceFS 不同的路径：元数据依托 FoundationDB 事务而保持无状态扩展，数据副本采用 CRAQ 链式复制，存储服务直接管理 NVMe，并以 RDMA 和用户态 IO 降低 CPU 与内核路径开销。它试图解决的不是通用云文件共享，而是在高并发、大吞吐训练负载中把网络、SSD 和 GPU 集群的带宽真正利用起来。</p>
+<p>它说明硬件变化会再次改写存储设计：当 NVMe、RDMA 和 AI checkpoint/embedding/KV cache 成为主负载时，传统“中心元数据 + TCP + 通用文件缓存”的最优点会移动。但 3FS 也没有绕开分布式存储的基本约束：复制链仍要处理故障与恢复，FoundationDB 仍是元数据一致性的根，应用仍必须理解其 POSIX 与耐久性边界。</p>
+<hr>
+<h2 id="七、把经典工作连成一张图"><a href="#七、把经典工作连成一张图" class="headerlink" title="七、把经典工作连成一张图"></a>七、把经典工作连成一张图</h2><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs nix">语义承诺<br>  文件 POSIX ─────── NFS<span class="hljs-symbol">/AFS</span> → GFS<span class="hljs-symbol">/HDFS</span> → CephFS <span class="hljs-symbol">/</span> JuiceFS <span class="hljs-symbol">/</span> <span class="hljs-number">3</span>FS<br>  键值可用性 ─────── Dynamo → Cassandra <span class="hljs-symbol">/</span> Riak<br>  强事务 SQL ─────── BigTable 经验 → Spanner → TiKV <span class="hljs-symbol">/</span> NewSQL<br>  对象耐久 ───────── S3 → Ceph RGW <span class="hljs-symbol">/</span> 云对象存储<br>  本地持久化 ─────── LFS<span class="hljs-symbol">/LSM</span> → RocksDB<br><br>共同的底层武器<br>  数据放置：一致性哈希 <span class="hljs-symbol">/</span> Chord <span class="hljs-symbol">/</span> CRUSH <span class="hljs-symbol">/</span> range 分片<br>  副本顺序：主从、quorum、Paxos、Raft、链式复制<br>  并发正确性：WAL、MVCC、<span class="hljs-number">2</span>PC、时间戳、事务冲突检测<br>  成本控制：副本、纠删码、compaction、缓存、冷热分层<br></code></pre></td></tr></table></figure>
+
+<p>这张图也解释了三个常见误会：</p>
+<ol>
+<li><strong>Raft 不是数据库</strong>：它只为一个复制状态机确定操作顺序；分片、索引、事务和查询还需额外设计。</li>
+<li><strong>对象存储不是文件系统</strong>：它提供对象与 key，目录、随机写、rename 和 POSIX 一致性需要上层重建。</li>
+<li><strong>最终一致不等于不可靠</strong>：Dynamo 式系统以冲突处理换取分区时可写；但若业务需要唯一性、余额或跨记录不变量，就应选择事务或显式协调。</li>
+</ol>
+<hr>
+<h2 id="八、小结：选系统之前，先选语义和失败模型"><a href="#八、小结：选系统之前，先选语义和失败模型" class="headerlink" title="八、小结：选系统之前，先选语义和失败模型"></a>八、小结：选系统之前，先选语义和失败模型</h2><p>分布式存储没有“万能最优解”。如果数据是海量追加日志，GFS/HDFS/Kafka 的思路自然；如果需要对象级弹性与低成本耐久，对象存储加元数据层更合适；如果要多副本线性一致读写，Raft/Paxos 组是核心；如果要跨分片不变量，则必须为 2PC、MVCC 和时间戳服务支付代价。</p>
+<p>经典工作的真正价值，不在于记住每个系统的组件名，而在于学习它们如何明确地回答同一组问题：<strong>故障时还能否写？读到的是哪个版本？数据由谁决定位置？副本何时可见？元数据和大块数据谁负责？</strong> 能把这些问题逐一说清，面对 Ceph、TiKV、JuiceFS、3FS 或任何新系统时，就不会只停留在宣传语层面。</p>
+<hr>
+<p><strong>分布式存储专题导航</strong>：<a href="/2026/08/07/distributed-storage/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F%E4%B8%93%E9%A2%98%E6%80%BB%E8%A7%88/">[专题总览]</a> | <a href="/2026/08/09/distributed-storage/RocksDB-%E6%9E%B6%E6%9E%84%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">上一篇：RocksDB 深度解析 ←</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="category-chain-item">分布式存储</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/%E7%BB%BC%E8%BF%B0/" class="category-chain-item">综述</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%BB%BC%E8%BF%B0/" class="print-no-link">#综述</a>
+      
+        <a href="/tags/GFS/" class="print-no-link">#GFS</a>
+      
+        <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" class="print-no-link">#分布式存储</a>
+      
+        <a href="/tags/Ceph/" class="print-no-link">#Ceph</a>
+      
+        <a href="/tags/RocksDB/" class="print-no-link">#RocksDB</a>
+      
+        <a href="/tags/Raft/" class="print-no-link">#Raft</a>
+      
+        <a href="/tags/Dynamo/" class="print-no-link">#Dynamo</a>
+      
+        <a href="/tags/Spanner/" class="print-no-link">#Spanner</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>分布式存储经典工作全景 —— 从文件、复制到云原生数据库</div>
+      <div>https://w2ongq6.github.io/2026/08/09/distributed-storage/分布式存储经典工作全景/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年8月9日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/08/09/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8%E5%85%A8%E6%99%AF%E7%BB%BC%E8%BF%B0/" title="自动驾驶自动标注全景综述 —— 从离线感知到数据引擎">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">自动驾驶自动标注全景综述 —— 从离线感知到数据引擎</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/08/09/deepseek/DeepSeek%E4%B8%93%E9%A2%98-08-%E9%AB%98%E6%95%88%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%89%8D%E6%B2%BF%E6%8E%A2%E7%B4%A2/" title="DeepSeek专题-08：高效注意力与前沿探索 —— NSA、DSA 与光学压缩">
+                        <span class="hidden-mobile">DeepSeek专题-08：高效注意力与前沿探索 —— NSA、DSA 与光学压缩</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

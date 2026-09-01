@@ -27,7 +27,7 @@
 <meta property="og:description" content="5. 端到端规划：从模块化到全栈可微分 本篇在主线中的位置：这是决策线的里程碑，也是表示线（第 2 篇 BEV）与决策线的第一次合流。第 1 篇证明了端到端可行但只是个黑盒小网络；工业界当时的主流仍是模块化级联（感知→预测→规划，每个模块单独训练）——它可解释、可调试，却有两个致命弱点：误差沿流水线层层累积，且上游只顾自己的指标、不为最终规划服务（检测把远处小目标漏了，规划却最需要它）。 本篇讲的">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:04:00.000Z">
-<meta property="article:modified_time" content="2026-08-30T08:30:11.371Z">
+<meta property="article:modified_time" content="2026-08-31T06:21:27.700Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="TransFuser">
 <meta property="article:tag" content="UniAD">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          9.1k 字
+          9.8k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          77 分钟
+          82 分钟
         
       </span>
     
@@ -719,6 +719,15 @@ mjx-container[display="true"] + br {
 <h2 id="小结：端到端不等于取消中间问题"><a href="#小结：端到端不等于取消中间问题" class="headerlink" title="小结：端到端不等于取消中间问题"></a>小结：端到端不等于取消中间问题</h2><p>端到端规划的核心不是把感知、预测、规划的中间任务一笔勾销，而是让它们在同一个最终驾驶目标下共同优化。TransFuser 等工作首先证明多传感器特征可以直接服务规划；UniAD 和 VAD 则把检测、跟踪、预测、地图和规划组织到同一表示中，缓解流水线的目标错位。</p>
 <p>这条路线也形成了几种现实的工程取舍：稠密 BEV 或占据表示信息充分但计算重，SparseDrive 一类稀疏 token 更高效；完全联合训练能传递端到端目标，但 DriveAdapter 一类方法会保留成熟感知先验以降低训练风险；VADv2 的混合高斯可表达若干候选轨迹，却仍受限于预设分布形状。于是，下一步自然变成：能否直接学习复杂的轨迹分布，而不把驾驶选择压缩为单一路径？</p>
 <p>下一篇介绍扩散和流匹配如何把规划从点估计推进到生成式决策。</p>
+<h3 id="5-17-选择性时序记忆与轨迹细化：MomADv2-2026"><a href="#5-17-选择性时序记忆与轨迹细化：MomADv2-2026" class="headerlink" title="5.17 选择性时序记忆与轨迹细化：MomADv2 (2026)"></a>5.17 选择性时序记忆与轨迹细化：MomADv2 (2026)</h3><blockquote>
+<p><strong>论文</strong>：”MomADv2: Reliable Temporal Memory for End-to-End Autonomous Driving.” <em>arXiv preprint</em>, 2026.</p>
+</blockquote>
+<p>📌 <strong>前沿</strong></p>
+<p><strong>中文摘要</strong>：早期时序规划常把历史 BEV 或 query 直接累积，能够抑制抖动，却可能把“刚才准备直行”的意图错误延续到“现在要求右转”的场景。MomADv2 用当前命令与时间连续性筛选历史 planning query，再用选择性状态空间机制更新意图，使记忆成为可拒绝、可替换的状态，而非永久上下文。</p>
+<p>后端的 flow-matching residual refiner 只学习从初始轨迹到专家轨迹的细粒度修正，尽量不破坏锚点规划的稳定性。作者在 NAVSIM、Bench2Drive 和 nuScenes 上报告长时一致性改善及平均碰撞率下降。这说明端到端规划的关键不只是一帧内选对轨迹，还包括数秒滚动执行时能否及时忘掉过期意图；不同基准的分数仍应在各自协议内阅读。</p>
+<p>这一结构可以理解为“粗意图—记忆筛选—连续修正”三层：锚点负责提供对导航指令和道路拓扑稳定的初始猜测，选择性记忆提供跨帧连续性，残差模块只处理局部偏差。若把三者混在一个注意力层中，网络很难区分应当保留的惯性与应当丢弃的旧意图。对工程部署而言，这种分层还便于诊断：当规划错误时，可以分别检查命令切换、历史 query 选择或残差修正是否出了问题，而不是只能面对一个不可分解的最终轨迹。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2608.23405">arXiv:2608.23405</a></p>
+<hr>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-04-%E8%BD%A8%E8%BF%B9%E9%A2%84%E6%B5%8B%E4%B8%8E%E8%BF%90%E5%8A%A8%E9%A2%84%E6%B5%8B/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-06-%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/">下一篇 →</a></p>
 
                 

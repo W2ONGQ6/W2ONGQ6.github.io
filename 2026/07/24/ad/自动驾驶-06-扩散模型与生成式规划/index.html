@@ -27,7 +27,7 @@
 <meta property="og:description" content="6. 扩散模型与生成式规划 本篇在主线中的位置：这是决策线从”点估计”转向”分布”的关键一跳。第 5 篇末尾留下的墙是：全栈可微分网络再强，规划头也只回归单条确定性轨迹，而驾驶决策天生多模态——路口左转、直行、减速等待可能都对。用 L2 损失去回归多个正确答案，网络只能取它们的平均，结果是一条既不左也不右、甚至可能冲上隔离带的”平均轨迹”，同时还伴随方向盘抖动。这就是模态坍缩。 生成式规划的核心思">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-07-24T05:06:00.000Z">
-<meta property="article:modified_time" content="2026-08-30T08:30:11.373Z">
+<meta property="article:modified_time" content="2026-08-31T06:21:27.702Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="DiffusionDrive">
 <meta property="article:tag" content="扩散模型">
@@ -445,7 +445,7 @@ mjx-container[display="true"] + br {
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          7.2k 字
+          7.8k 字
         
       </span>
     
@@ -456,7 +456,7 @@ mjx-container[display="true"] + br {
         
         
         
-          60 分钟
+          65 分钟
         
       </span>
     
@@ -628,6 +628,15 @@ mjx-container[display="true"] + br {
 <h2 id="小结：生成式规划把”唯一答案”改成”可约束的候选集”"><a href="#小结：生成式规划把”唯一答案”改成”可约束的候选集”" class="headerlink" title="小结：生成式规划把”唯一答案”改成”可约束的候选集”"></a>小结：生成式规划把”唯一答案”改成”可约束的候选集”</h2><p>扩散规划解决的第一件事，是让模型能同时提出多条合理轨迹，而不是把左转和等待平均成一条危险的中间轨迹；第二件事，是把地图、导航、风险和其他参与者的未来作为条件，让候选并非随机多样，而是与场景一致。MTDiff 进一步说明，他车预测和自车规划也可以在同一联合分布中协调。</p>
 <p>落地时仍有两道关：采样必须足够快，安全约束必须能进入生成过程。DiffusionDrive 的截断去噪、GuideFlow 和 MeanFuser 的流匹配分别在压缩推理步数；SafeDiffuser 则把碰撞和边界约束放进每次去噪，而不是等轨迹生成后再拦截。生成模型擅长从数据中表达”有哪些可能”，却依然缺少对路牌语义、自然语言目标和常识的理解。</p>
 <p>下一篇转向 VLM/LLM：如何让驾驶系统不仅生成可行轨迹，也理解自己为何要这样驾驶。</p>
+<h3 id="6-13-用流匹配进行残差轨迹修正：MomADv2-2026"><a href="#6-13-用流匹配进行残差轨迹修正：MomADv2-2026" class="headerlink" title="6.13 用流匹配进行残差轨迹修正：MomADv2 (2026)"></a>6.13 用流匹配进行残差轨迹修正：MomADv2 (2026)</h3><blockquote>
+<p><strong>论文</strong>：”MomADv2: Reliable Temporal Memory for End-to-End Autonomous Driving.” <em>arXiv preprint</em>, 2026.</p>
+</blockquote>
+<p>📌 <strong>前沿</strong></p>
+<p><strong>中文摘要</strong>：扩散模型通常从噪声反复去噪，因此多样性强，但采样步数和延迟是车端瓶颈。MomADv2 提供了扩散之外的另一条生成式路线：用 flow matching 学习从初始轨迹到目标轨迹的连续残差修正场，可在一次或少数几次求解中完成轨迹细化。</p>
+<p>该方法不从零采样多条动作，而是接在锚点式规划之后：前端给出稳定、受导航约束的粗轨迹，生成模块消除局部偏差与长期累积误差。它说明生成式规划的“快”不只等同于减少 denoising step，还取决于条件记忆是否可靠、修正器是否破坏安全约束，以及闭环延迟如何影响下一帧状态；该残差路线仍需与多模态候选生成和显式安全筛选配合使用。</p>
+<p>从数学直觉看，扩散模型学习的是从高斯噪声回到数据分布的反向过程，常需多次迭代以保留多模态；flow matching 则直接拟合两个分布间的速度场，因此更适合“已知一个合理初值，只需平滑搬运到更优解”的场景。两者并非互斥：前者适合在路口、并线等存在多个合法决策时广泛提出候选，后者适合在选定驾驶意图后低延迟地校正轨迹。比较二者时，应同时报告采样步数、端到端延迟、候选多样性和闭环碰撞率，而不能只比较开环轨迹误差。</p>
+<p>📄 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2608.23405">arXiv:2608.23405</a></p>
+<hr>
 <p><strong>自动驾驶专题导航</strong>：<a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-05-%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%A7%84%E5%88%92/">← 上一篇</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">[目录]</a> | <a href="/2026/07/24/ad/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6-07-VLM-LLM%E9%A9%BE%E9%A9%B6/">下一篇 →</a></p>
 
                 
@@ -669,9 +678,9 @@ mjx-container[display="true"] + br {
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
-      
         <a href="/tags/%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B/" class="print-no-link">#扩散模型</a>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
       
         <a href="/tags/%E7%94%9F%E6%88%90%E5%BC%8F%E8%A7%84%E5%88%92/" class="print-no-link">#生成式规划</a>
       
