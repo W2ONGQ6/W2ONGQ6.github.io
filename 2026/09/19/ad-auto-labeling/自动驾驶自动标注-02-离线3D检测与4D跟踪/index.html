@@ -1,0 +1,1003 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="一、离线精修为什么优于简单逐帧预测单帧点云可能只扫到车身一侧，远处目标点数少，遮挡使框和 ID 不稳定。离线处理可以汇总整段轨迹中的互补观测，并联合估计目标几何与运动。 离线没有严格车端实时约束，但仍受算力、存储、数据保留和标注时效限制；“可以看未来”也不等于未来每一帧都有效。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自动驾驶自动标注-02：离线3D检测与4D跟踪">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-02-%E7%A6%BB%E7%BA%BF3D%E6%A3%80%E6%B5%8B%E4%B8%8E4D%E8%B7%9F%E8%B8%AA/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="一、离线精修为什么优于简单逐帧预测单帧点云可能只扫到车身一侧，远处目标点数少，遮挡使框和 ID 不稳定。离线处理可以汇总整段轨迹中的互补观测，并联合估计目标几何与运动。 离线没有严格车端实时约束，但仍受算力、存储、数据保留和标注时效限制；“可以看未来”也不等于未来每一帧都有效。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T04:22:00.000Z">
+<meta property="article:modified_time" content="2026-09-20T01:15:37.375Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="标签质量">
+<meta property="article:tag" content="离线感知">
+<meta property="article:tag" content="自动标注">
+<meta property="article:tag" content="自动驾驶">
+<meta property="article:tag" content="自动驾驶自动标注">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>自动驾驶自动标注-02：离线3D检测与4D跟踪 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="自动驾驶自动标注-02：离线3D检测与4D跟踪"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 12:22" pubdate>
+          2026年9月19日 中午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          15 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">自动驾驶自动标注-02：离线3D检测与4D跟踪</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="一、离线精修为什么优于简单逐帧预测"><a href="#一、离线精修为什么优于简单逐帧预测" class="headerlink" title="一、离线精修为什么优于简单逐帧预测"></a>一、离线精修为什么优于简单逐帧预测</h2><p>单帧点云可能只扫到车身一侧，远处目标点数少，遮挡使框和 ID 不稳定。离线处理可以汇总整段轨迹中的互补观测，并联合估计目标几何与运动。</p>
+<p>离线没有严格车端实时约束，但仍受算力、存储、数据保留和标注时效限制；“可以看未来”也不等于未来每一帧都有效。</p>
+<span id="more"></span>
+
+<h2 id="二、共同流水线与误差传递"><a href="#二、共同流水线与误差传递" class="headerlink" title="二、共同流水线与误差传递"></a>二、共同流水线与误差传递</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs text">多帧粗检测 → 对象关联 → 对象中心聚合 → 尺寸 / 位姿 / 置信精修<br>                ↓               ↓                   ↓<br>             关联检查         运动补偿           质量分流与复核<br></code></pre></td></tr></table></figure>
+
+<p>检测遗漏使轨迹不完整，错误关联会把两辆车的点云混在一起，位姿偏差又会污染聚合形状。因此精修不只是最后一层网络，整个链条都需要质量控制。</p>
+<p>聚合前应区分静态目标、刚体动态目标和具有明显形变的目标。车辆的刚体近似在一定条件下有效，行人肢体、车辆车门或铰接结构则需要更谨慎处理。</p>
+<h2 id="三、Offboard-3D-Object-Detection：对象中心的互补观测"><a href="#三、Offboard-3D-Object-Detection：对象中心的互补观测" class="headerlink" title="三、Offboard 3D Object Detection：对象中心的互补观测"></a>三、Offboard 3D Object Detection：对象中心的互补观测</h2><p><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2103.05073">Offboard 3D Object Detection from Point Cloud Sequences</a>，2021 年，CVPR 2021。论文中的流水线称为 3D Auto Labeling。</p>
+<p><strong>核心机制。</strong> 通过多帧检测以及对象中心的精修模型利用时序点云。不同帧看到的表面互补；将同一目标的观测对齐后，可以获得比单帧更完整的几何信息。</p>
+<p><strong>代表意义。</strong> 论文在 Waymo 数据集上展示相对车端和离线基线的增益，并通过特定的人类标签研究比较质量。这支撑离线自动标注的可行性，但不意味着全部场景、类别和任务已经达到或超过人工水平。</p>
+<p><strong>工程启发。</strong> 保存聚合来源帧与关联依据，才能发现错误标签究竟来自检测、跟踪还是精修。仅输出最终框会丢失排错证据。</p>
+<h2 id="四、Auto4D：把尺寸和运动拆开"><a href="#四、Auto4D：把尺寸和运动拆开" class="headerlink" title="四、Auto4D：把尺寸和运动拆开"></a>四、Auto4D：把尺寸和运动拆开</h2><p><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.06586">Auto4D: Learning to Label 4D Objects from Sequential Point Clouds</a>，2021 年首发。</p>
+<p><strong>核心机制。</strong> 对刚体而言，尺寸在时序中基本稳定，而位置和朝向不断变化。Auto4D 从在线检测和跟踪初始化出发，利用整条轨迹重新估计尺寸、平滑运动路径，并进行迭代精修。</p>
+<p>这可以用两个互相约束的子问题理解：聚合帮助估计稳定形状，较稳定的形状又帮助每帧定位。它不是简单把逐帧框尺寸求平均，因为可见区域和观测可靠性不同。</p>
+<p><strong>代表意义。</strong> 论文报告其数据与流程中的人工标注工作量降低，也讨论了人在环中的应用。该数字不能当作任意标签团队的通用节省比例。</p>
+<p><strong>局限。</strong> 平滑应保留真实急转、制动和遮挡边界；过强的运动先验可能让标签更平滑，却偏离真实运动。</p>
+<h2 id="五、DetZero：先获得更完整轨迹，再分解精修"><a href="#五、DetZero：先获得更完整轨迹，再分解精修" class="headerlink" title="五、DetZero：先获得更完整轨迹，再分解精修"></a>五、DetZero：先获得更完整轨迹，再分解精修</h2><p><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2306.06023">DetZero: Rethinking Offboard 3D Object Detection with Long-term Sequential Point Clouds</a>，2023 年，ICCV 2023。</p>
+<p><strong>核心机制。</strong> 多帧检测与离线跟踪重点改善轨迹完整性，再用注意力精修模块利用长时序上下文，对不同属性作分解回归。</p>
+<p><strong>为什么重要。</strong> 在线跟踪通常强调即时输出与稳定性，离线标注更需要完整观测。为标签生成重新设计跟踪目标，比直接接入现成在线 tracker 更合理。</p>
+<p><strong>怎样解读结果。</strong> 论文报告当时 Waymo 检测榜单表现与替代人工标签的相关实验。检测分数衡量对给定参考标签的符合程度，榜首本身不构成“全面超越人类标注”的证据。</p>
+<h2 id="六、三项工作怎样连起来读"><a href="#六、三项工作怎样连起来读" class="headerlink" title="六、三项工作怎样连起来读"></a>六、三项工作怎样连起来读</h2><table>
+<thead>
+<tr>
+<th>工作</th>
+<th>阅读重点</th>
+<th>复现时最该检查</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3D Auto Labeling</td>
+<td>对象中心时序观测</td>
+<td>输入窗口、动静处理、质量比较协议</td>
+</tr>
+<tr>
+<td>Auto4D</td>
+<td>尺寸与运动路径解耦</td>
+<td>刚体假设、轨迹初始化、平滑约束</td>
+</tr>
+<tr>
+<td>DetZero</td>
+<td>完整轨迹与属性精修</td>
+<td>跟踪漏关联、长序列聚合和评价划分</td>
+</tr>
+</tbody></table>
+<p>论文间的指标可能基于不同版本、输入窗口、计算预算和后处理，不宜把数字直接排列成统一质量曲线。</p>
+<h2 id="七、施工场景的失败分析与验收"><a href="#七、施工场景的失败分析与验收" class="headerlink" title="七、施工场景的失败分析与验收"></a>七、施工场景的失败分析与验收</h2><p>施工锥较小、反射特殊，远处点云可能不足；邻车遮挡又造成轨迹断裂。此时对象聚合如果把不同锥桶关联为同一目标，会生成不真实的长物体。</p>
+<p>应对每条轨迹检查尺寸稳定性、点云支持、最大时间缺口、朝向变化与 ID 切换，并对关键样本做独立复核。没有直接观测的遮挡段应带有效性或估计状态，不能和清楚可见帧同等处理。</p>
+<p>交付标签包括对象级序列、每帧状态、质量信号、参考坐标和生成版本。下一篇将从对象框转向完整空间与道路结构。</p>
+<hr>
+<p><strong>自动驾驶自动标注系列导航</strong>：<a href="/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-01-%E4%BB%BB%E5%8A%A1%E5%AE%9A%E4%B9%89%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%AF%B9%E9%BD%90/">← 上一篇：任务定义与数据对齐</a> | <a href="/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-00-%E4%B8%93%E6%A0%8F%E7%9B%AE%E5%BD%95/">专栏目录</a> | <a href="/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-03-%E5%8D%A0%E6%8D%AE%E4%B8%8E%E5%9C%B0%E5%9B%BE%E6%A0%87%E6%B3%A8/">下一篇：占据与地图标注 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="category-chain-item">自动驾驶</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8/" class="category-chain-item">自动标注</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/" class="print-no-link">#自动驾驶</a>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8/" class="print-no-link">#自动标注</a>
+      
+        <a href="/tags/%E7%A6%BB%E7%BA%BF%E6%84%9F%E7%9F%A5/" class="print-no-link">#离线感知</a>
+      
+        <a href="/tags/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8/" class="print-no-link">#自动驾驶自动标注</a>
+      
+        <a href="/tags/%E6%A0%87%E7%AD%BE%E8%B4%A8%E9%87%8F/" class="print-no-link">#标签质量</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>自动驾驶自动标注-02：离线3D检测与4D跟踪</div>
+      <div>https://w2ongq6.github.io/2026/09/19/ad-auto-labeling/自动驾驶自动标注-02-离线3D检测与4D跟踪/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-01-%E4%BB%BB%E5%8A%A1%E5%AE%9A%E4%B9%89%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%AF%B9%E9%BD%90/" title="自动驾驶自动标注-01：任务定义与数据对齐">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">自动驾驶自动标注-01：任务定义与数据对齐</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/ad-auto-labeling/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E8%87%AA%E5%8A%A8%E6%A0%87%E6%B3%A8-03-%E5%8D%A0%E6%8D%AE%E4%B8%8E%E5%9C%B0%E5%9B%BE%E6%A0%87%E6%B3%A8/" title="自动驾驶自动标注-03：占据与地图标注">
+                        <span class="hidden-mobile">自动驾驶自动标注-03：占据与地图标注</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

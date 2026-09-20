@@ -1,0 +1,1062 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="核心问题：生成一张图，与完成一份设计图像生成的难点不只在真实感。海报要求文字正确、层次清楚；编辑要求保留未修改部分；设计迭代希望可以移动标题、替换背景并调整前后遮挡。 Qwen-Image、Image-Edit 与 Image-Layered 分别处理这些需求。它们与 Qwen-VL 的联系在于视觉语言表示，但实际生成图像需要专门的潜空间、生成网络与解码管线。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-07-%E5%9B%BE%E5%83%8F%E7%94%9F%E6%88%90%E4%B8%8E%E7%BC%96%E8%BE%91/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="核心问题：生成一张图，与完成一份设计图像生成的难点不只在真实感。海报要求文字正确、层次清楚；编辑要求保留未修改部分；设计迭代希望可以移动标题、替换背景并调整前后遮挡。 Qwen-Image、Image-Edit 与 Image-Layered 分别处理这些需求。它们与 Qwen-VL 的联系在于视觉语言表示，但实际生成图像需要专门的潜空间、生成网络与解码管线。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T02:08:00.000Z">
+<meta property="article:modified_time" content="2026-09-19T14:27:25.164Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="Qwen-Image">
+<meta property="article:tag" content="Qwen专题">
+<meta property="article:tag" content="图像编辑">
+<meta property="article:tag" content="多模态">
+<meta property="article:tag" content="扩散模型">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 10:08" pubdate>
+          2026年9月19日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          24 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="核心问题：生成一张图，与完成一份设计"><a href="#核心问题：生成一张图，与完成一份设计" class="headerlink" title="核心问题：生成一张图，与完成一份设计"></a>核心问题：生成一张图，与完成一份设计</h2><p>图像生成的难点不只在真实感。海报要求文字正确、层次清楚；编辑要求保留未修改部分；设计迭代希望可以移动标题、替换背景并调整前后遮挡。</p>
+<p>Qwen-Image、Image-Edit 与 Image-Layered 分别处理这些需求。它们与 Qwen-VL 的联系在于视觉语言表示，但实际生成图像需要专门的潜空间、生成网络与解码管线。</p>
+<span id="more"></span>
+
+<h2 id="一、先区分输入输出任务"><a href="#一、先区分输入输出任务" class="headerlink" title="一、先区分输入输出任务"></a>一、先区分输入输出任务</h2><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>输入</th>
+<th>输出</th>
+<th>最关键的质量要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Text-to-Image</td>
+<td>文字描述</td>
+<td>新图像</td>
+<td>内容与文字遵循要求</td>
+</tr>
+<tr>
+<td>Image Editing</td>
+<td>原图与编辑指令</td>
+<td>编辑后的图像</td>
+<td>修改正确，同时保留其他内容</td>
+</tr>
+<tr>
+<td>Layer Decomposition</td>
+<td>一张图像</td>
+<td>多个 RGBA 图层</td>
+<td>图层分离合理、合成保真</td>
+</tr>
+</tbody></table>
+<p>这三种任务虽然相关，却不应共用同一套成功标准。一次漂亮的重绘，可能是一次失败的局部编辑；一次分层输出，也不保证生成了可直接修改字体的矢量文本层。</p>
+<h2 id="二、Qwen-Image：面向复杂文字的生成基础模型"><a href="#二、Qwen-Image：面向复杂文字的生成基础模型" class="headerlink" title="二、Qwen-Image：面向复杂文字的生成基础模型"></a>二、Qwen-Image：面向复杂文字的生成基础模型</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2508.02324">Qwen-Image Technical Report</a>，2025-08-04 首发。</li>
+<li><strong>作者 / 机构</strong>：Qwen 团队、阿里巴巴。</li>
+<li><strong>发布与实现</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Image">Qwen-Image 官方仓库</a>，初始权重于 2025-08-04 发布。</li>
+</ul>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Qwen-Image 特别关注复杂文字渲染与精确图像编辑。报告把数据管线、渐进训练与多任务表示对齐结合起来，改善英文和中文等不同书写系统中的文字生成。</p>
+<h3 id="核心创新一：文字渲染需要专门的数据工程"><a href="#核心创新一：文字渲染需要专门的数据工程" class="headerlink" title="核心创新一：文字渲染需要专门的数据工程"></a>核心创新一：文字渲染需要专门的数据工程</h3><p>绘制文字既要理解用户想写什么，也要正确生成字形、顺序和空间排列。普通图文数据里的 caption 往往只说“海报上有文字”，并不完整标注内容、位置和排版。</p>
+<p>报告的训练数据管线包括收集、过滤、标注、合成和平衡。这些步骤帮助模型把语言指令中的文字内容与图像中的具体字形对应起来，而不是只学会画出类似文字的纹理。</p>
+<h3 id="核心创新二：从简单到复杂的课程训练"><a href="#核心创新二：从简单到复杂的课程训练" class="headerlink" title="核心创新二：从简单到复杂的课程训练"></a>核心创新二：从简单到复杂的课程训练</h3><p>报告描述从不含文字的生成逐步进入文字渲染，再由简单文本扩展到复杂、段落级输入。短标语与多行中文段落的难度不同，渐进训练为较复杂排版提供学习路径。</p>
+<p>这不意味着长度增加后准确率仍然不变。文字越多，错字、漏字、重复行以及布局冲突的机会越多，实际设计仍需要逐字核对。</p>
+<h3 id="核心创新三：多任务训练对齐理解与生成表示"><a href="#核心创新三：多任务训练对齐理解与生成表示" class="headerlink" title="核心创新三：多任务训练对齐理解与生成表示"></a>核心创新三：多任务训练对齐理解与生成表示</h3><p>文本生成图像、文字加图像的编辑以及图像重建共同参与训练，帮助视觉语言表示与图像生成空间建立联系。理解侧知道“红色衣服”是什么，生成侧还需要知道怎样在潜空间里改变对应区域并还原像素。</p>
+<h3 id="代表意义"><a href="#代表意义" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen-Image 把文字准确性作为生成质量的重要维度，适合研究信息图、海报和中文设计任务。但含有大量精确数字、法定条款或后续频繁修改的文案时，程序化文字排版依然具有明确的可控性优势。</p>
+<h2 id="三、Qwen-Image-Edit：语义修改与视觉保真"><a href="#三、Qwen-Image-Edit：语义修改与视觉保真" class="headerlink" title="三、Qwen-Image-Edit：语义修改与视觉保真"></a>三、Qwen-Image-Edit：语义修改与视觉保真</h2><ul>
+<li><strong>官方发布</strong>：2025-08-18，见<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Image#news">仓库更新记录</a>。</li>
+<li><strong>模型卡</strong>：<a target="_blank" rel="noopener" href="https://huggingface.co/Qwen/Qwen-Image-Edit">Qwen-Image-Edit</a>。</li>
+<li><strong>机制来源</strong>：Qwen-Image 技术报告中的编辑框架。</li>
+</ul>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>局部编辑的核心矛盾是：模型必须改变用户指定的内容，又不能顺带重画主体、背景或其他文字。仅理解“把杯子变蓝”不足以保持杯子形状和整个画面的一致性。</p>
+<h3 id="核心创新：原图的双路径编码"><a href="#核心创新：原图的双路径编码" class="headerlink" title="核心创新：原图的双路径编码"></a>核心创新：原图的双路径编码</h3><p>报告将原图分别送入 Qwen2.5-VL 和 VAE 编码器，获取语义表示与更接近重建需求的视觉表示。前者帮助理解编辑目标，后者帮助保留外观细节。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs text">原始图像 ──→ 视觉语言编码 ──→ 语义约束 ─┐<br>    └────→ VAE 编码 ─────→ 外观信息 ─┼→ 编辑生成 → 图像解码<br>编辑指令 ─────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<p>两条路径提供的是互补条件，不是自动得到完美的像素级保护。复杂背景、遮挡和身份保持等场景仍需要实际对照测试。</p>
+<h3 id="一次可检查的编辑任务"><a href="#一次可检查的编辑任务" class="headerlink" title="一次可检查的编辑任务"></a>一次可检查的编辑任务</h3><p>例如：“把海报标题改为『秋季读书会』，保留字体风格、人物和背景。”验证时应分别检查标题是否完全正确、字符数量与位置是否合适，以及非目标区域有没有变化。</p>
+<p>如果需要连续多次编辑，最好保留每一步的输入和输出。逐轮结果可能积累偏差，不能只看最后一张图是否仍然好看。</p>
+<h3 id="后续版本"><a href="#后续版本" class="headerlink" title="后续版本"></a>后续版本</h3><p>官方仓库记录了 Image-Edit-2509、2511 以及 Image-2512 等迭代。它们属于不同 checkpoint，表现与支持管线以对应模型卡为准，不把后续版本改进全部归入初始论文的实验结果。</p>
+<h2 id="四、Qwen-Image-Layered：通过表示改变获得可编辑性"><a href="#四、Qwen-Image-Layered：通过表示改变获得可编辑性" class="headerlink" title="四、Qwen-Image-Layered：通过表示改变获得可编辑性"></a>四、Qwen-Image-Layered：通过表示改变获得可编辑性</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2512.15603">Qwen-Image-Layered: Towards Inherent Editability via Layer Decomposition</a>，2025-12-17 首发。</li>
+<li><strong>作者 / 机构</strong>：Qwen 团队、阿里巴巴。</li>
+<li><strong>权重发布</strong>：2025-12-19；<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Image-Layered">官方仓库</a>。</li>
+</ul>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>平面图像把前景、背景和文字混在同一张像素网格上，任何修改都可能影响周围内容。Layered 将单张 RGB 图像分解为多个 RGBA 图层，使每层可以独立移动、缩放或重新着色。</p>
+<h3 id="核心创新一：RGBA-VAE"><a href="#核心创新一：RGBA-VAE" class="headerlink" title="核心创新一：RGBA-VAE"></a>核心创新一：RGBA-VAE</h3><p>RGBA 在颜色之外增加透明度。模型需要学习既表达图像内容、又表达透明区域的潜空间，使前景轮廓与背景能够被分别建模。</p>
+<p>透明度使图层可以按顺序合成。简化的前景覆盖关系为：</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -0.561ex;" xmlns="http://www.w3.org/2000/svg" width="20.101ex" height="2.253ex" role="img" focusable="false" viewBox="0 -748 8884.4 996"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+C=\alpha F+(1-\alpha)B,
+"><g data-mml-node="mi" data-latex="C"><path data-c="1D436" d="M148 218C148 346 204 476 267 548C318 607 406 666 505 666C609 666 660 587 660 479C660 470 657 438 657 429C657 420 663 415 676 415C681 415 685 416 688 417C693 424 696 431 698 438L760 691C760 700 755 705 745 705C741 705 735 701 727 692L662 619C623 676 568 705 497 705C442 705 388 692 333 667C222 615 141 533 89 421C63 366 50 310 50 253C50 173 75 108 126 56C177 4 242-22 322-22C401-22 473 7 538 64C565 87 588 115 607 146C634 191 648 222 648 241C648 250 643 255 632 255C623 255 618 251 616 242C595 177 562 125 517 88C460 41 400 17 338 17C218 17 148 98 148 218Z"></path></g><g data-mml-node="mo" data-latex="=" transform="translate(1037.8,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="mi" data-latex="\alpha" transform="translate(2093.6,0)"><path data-c="1D6FC" d="M310 442C241 442 179 412 124 353C69 294 41 229 41 159C41 61 107-11 205-11C274-11 342 16 410 69C425 16 456-11 502-11C538-11 589 27 589 63C589 72 584 76 573 76C566 76 560 72 557 64C549 43 528 18 505 18C488 18 479 50 479 115C479 129 482 140 488 147C515 180 539 218 558 260C583 314 598 354 602 380L602 384C599 391 593 394 586 394C581 393 575 385 568 371C547 299 518 237 479 186L479 236C479 352 421 442 310 442M403 211C403 152 404 116 405 103C340 46 274 18 207 18C150 18 122 53 122 122C122 180 155 288 178 324C216 383 260 413 309 413C340 413 361 401 374 377C381 365 386 353 391 342C399 319 403 258 403 211Z"></path></g><g data-mml-node="mi" data-latex="F" transform="translate(2733.6,0)"><path data-c="1D439" d="M199 656C199 646 210 641 231 641C271 641 291 637 291 628C291 625 289 618 286 605L156 82C150 60 140 47 126 42C119 40 101 39 70 39C48 39 38 37 38 16C38 5 44 0 57 0L187 3L335 0C351 0 359 8 359 23C359 40 348 39 322 39C278 39 253 41 247 46C244 47 243 51 243 56L307 321L400 321C446 321 478 319 478 281C478 268 476 252 471 233C470 230 469 226 468 222C468 211 473 206 484 206C489 207 496 214 503 229L557 444C559 452 560 458 560 461C557 470 551 475 544 475C536 475 530 467 526 452C516 414 502 390 486 378C470 366 442 360 402 360L317 360L379 606C387 640 387 641 429 641L559 641C656 641 700 626 700 537C700 517 699 499 697 484C696 473 695 467 695 466C695 455 700 450 710 450C720 450 726 459 728 478L748 649C751 677 744 680 717 680L233 680C210 680 199 679 199 656Z"></path></g><g data-mml-node="mo" data-latex="+" transform="translate(3706.8,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mo" data-latex="(" transform="translate(4707,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="mn" data-latex="1" transform="translate(5096,0)"><path data-c="31" d="M269 666C228 624 168 603 89 603L89 564C141 564 184 572 217 588L217 82C217 64 213 52 204 47C195 42 170 39 130 39L95 39L95 0C120 2 174 3 257 3C340 3 394 2 419 0L419 39L384 39C343 39 318 42 310 47C302 52 297 64 297 82L297 636C297 660 295 666 269 666Z"></path></g><g data-mml-node="mo" data-latex="-" transform="translate(5818.2,0)"><path data-c="2212" d="M698 270L80 270C64 270 56 263 56 250C56 237 64 230 80 230L698 230C714 230 722 237 722 250C722 262 710 270 698 270Z"></path></g><g data-mml-node="mi" data-latex="\alpha" transform="translate(6818.4,0)"><path data-c="1D6FC" d="M310 442C241 442 179 412 124 353C69 294 41 229 41 159C41 61 107-11 205-11C274-11 342 16 410 69C425 16 456-11 502-11C538-11 589 27 589 63C589 72 584 76 573 76C566 76 560 72 557 64C549 43 528 18 505 18C488 18 479 50 479 115C479 129 482 140 488 147C515 180 539 218 558 260C583 314 598 354 602 380L602 384C599 391 593 394 586 394C581 393 575 385 568 371C547 299 518 237 479 186L479 236C479 352 421 442 310 442M403 211C403 152 404 116 405 103C340 46 274 18 207 18C150 18 122 53 122 122C122 180 155 288 178 324C216 383 260 413 309 413C340 413 361 401 374 377C381 365 386 353 391 342C399 319 403 258 403 211Z"></path></g><g data-mml-node="mo" data-latex=")" transform="translate(7458.4,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g><g data-mml-node="mi" data-latex="B" transform="translate(7847.4,0)"><path data-c="1D435" d="M756 543C756 634 666 683 568 683L236 683C213 683 203 682 203 659C203 643 223 644 235 644C265 643 283 641 288 640C293 639 295 636 295 631C295 629 294 623 291 613L159 82C154 60 144 47 129 42C122 40 104 39 73 39C52 39 42 31 42 15C42 5 52 0 73 0L426 0C491 0 551 20 608 59C671 102 703 155 703 217C703 296 638 344 567 358C655 379 756 446 756 543M554 644C623 644 658 612 658 547C658 496 638 454 596 420C554 386 507 370 456 370L317 370L377 610C385 644 385 644 427 644M582 299C596 276 603 253 603 228C603 176 583 131 542 94C501 57 455 39 402 39L267 39C257 39 250 39 246 40C240 40 237 42 237 45C237 46 237 49 238 53C269 180 293 276 309 340L493 340C536 340 565 326 582 299Z"></path></g><g data-mml-node="mo" data-latex="," transform="translate(8606.4,0)"><path data-c="2C" d="M139 106C107 106 86 82 86 50C86 20 109-5 139-5C153-5 165-1 174 8L175 0C175-63 154-117 112-160C105-168 101-174 101-178C101-188 105-193 114-193C123-193 135-181 152-158C186-110 203-57 203 0C203 53 185 106 139 106Z"></path></g></g></g></svg></mjx-container></p>
+<p>其中 <mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="1.699ex" height="1.538ex" role="img" focusable="false" viewBox="0 -680 751 680"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="F"><g data-mml-node="mi" data-latex="F"><path data-c="1D439" d="M199 656C199 646 210 641 231 641C271 641 291 637 291 628C291 625 289 618 286 605L156 82C150 60 140 47 126 42C119 40 101 39 70 39C48 39 38 37 38 16C38 5 44 0 57 0L187 3L335 0C351 0 359 8 359 23C359 40 348 39 322 39C278 39 253 41 247 46C244 47 243 51 243 56L307 321L400 321C446 321 478 319 478 281C478 268 476 252 471 233C470 230 469 226 468 222C468 211 473 206 484 206C489 207 496 214 503 229L557 444C559 452 560 458 560 461C557 470 551 475 544 475C536 475 530 467 526 452C516 414 502 390 486 378C470 366 442 360 402 360L317 360L379 606C387 640 387 641 429 641L559 641C656 641 700 626 700 537C700 517 699 499 697 484C696 473 695 467 695 466C695 455 700 450 710 450C720 450 726 459 728 478L748 649C751 677 744 680 717 680L233 680C210 680 199 679 199 656Z"></path></g></g></g></svg></mjx-container> 为前景颜色，<mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="1.717ex" height="1.545ex" role="img" focusable="false" viewBox="0 -683 759 683"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="B"><g data-mml-node="mi" data-latex="B"><path data-c="1D435" d="M756 543C756 634 666 683 568 683L236 683C213 683 203 682 203 659C203 643 223 644 235 644C265 643 283 641 288 640C293 639 295 636 295 631C295 629 294 623 291 613L159 82C154 60 144 47 129 42C122 40 104 39 73 39C52 39 42 31 42 15C42 5 52 0 73 0L426 0C491 0 551 20 608 59C671 102 703 155 703 217C703 296 638 344 567 358C655 379 756 446 756 543M554 644C623 644 658 612 658 547C658 496 638 454 596 420C554 386 507 370 456 370L317 370L377 610C385 644 385 644 427 644M582 299C596 276 603 253 603 228C603 176 583 131 542 94C501 57 455 39 402 39L267 39C257 39 250 39 246 40C240 40 237 42 237 45C237 46 237 49 238 53C269 180 293 276 309 340L493 340C536 340 565 326 582 299Z"></path></g></g></g></svg></mjx-container> 为背景颜色，<mjx-container class="MathJax" jax="SVG" overflow="overflow"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.448ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 640 453"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="\alpha"><g data-mml-node="mi" data-latex="\alpha"><path data-c="1D6FC" d="M310 442C241 442 179 412 124 353C69 294 41 229 41 159C41 61 107-11 205-11C274-11 342 16 410 69C425 16 456-11 502-11C538-11 589 27 589 63C589 72 584 76 573 76C566 76 560 72 557 64C549 43 528 18 505 18C488 18 479 50 479 115C479 129 482 140 488 147C515 180 539 218 558 260C583 314 598 354 602 380L602 384C599 391 593 394 586 394C581 393 575 385 568 371C547 299 518 237 479 186L479 236C479 352 421 442 310 442M403 211C403 152 404 116 405 103C340 46 274 18 207 18C150 18 122 53 122 122C122 180 155 288 178 324C216 383 260 413 309 413C340 413 361 401 374 377C381 365 386 353 391 342C399 319 403 258 403 211Z"></path></g></g></g></svg></mjx-container> 为不透明度。真正的多层合成还需遵循顺序和颜色空间约定。</p>
+<h3 id="核心创新二：可变图层数量的生成结构"><a href="#核心创新二：可变图层数量的生成结构" class="headerlink" title="核心创新二：可变图层数量的生成结构"></a>核心创新二：可变图层数量的生成结构</h3><p>报告提出 VLD-MMDiT，使模型能够处理不同数量的分解图层。不同图像的组成复杂度不同，固定分成相同数量的层往往不能自然表达场景。</p>
+<h3 id="核心创新三：从-PSD-获取多层训练数据"><a href="#核心创新三：从-PSD-获取多层训练数据" class="headerlink" title="核心创新三：从 PSD 获取多层训练数据"></a>核心创新三：从 PSD 获取多层训练数据</h3><p>网络图片大多已经被合成为平面，缺少图层监督。报告从 Photoshop 文档中提取和标注多层数据，并通过多阶段训练把已有生成模型适配为图层分解模型。</p>
+<h3 id="代表意义与边界"><a href="#代表意义与边界" class="headerlink" title="代表意义与边界"></a>代表意义与边界</h3><p>Layered 将一部分编辑从“让模型再画一次”转为明确的图层操作。但官方说明，发布权重专门针对图像到多层 RGBA 分解，纯文字直接生成多层图像的能力有限。输出也不等于恢复原始 PSD 中的全部字体、矢量路径或语义对象。</p>
+<h2 id="五、Qwen-Image-2-0：按公开状态理解新版本"><a href="#五、Qwen-Image-2-0：按公开状态理解新版本" class="headerlink" title="五、Qwen-Image-2.0：按公开状态理解新版本"></a>五、Qwen-Image-2.0：按公开状态理解新版本</h2><p><a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Image#news">官方仓库</a>记录了 2026-02-10 的 Qwen-Image-2.0 公告，强调专业排版、更强语义遵循、原生 2K 与生成编辑统一体验。</p>
+<p>该条公告不能单独证明某套开放权重、完整训练代码或某个本地管线已经发布。使用时应核对可下载 checkpoint 和具体 API；本文将其作为后续产品方向，不给出未在已核对材料中公开的参数规模或训练成本。</p>
+<h2 id="六、怎样搭建可重复的图像评测"><a href="#六、怎样搭建可重复的图像评测" class="headerlink" title="六、怎样搭建可重复的图像评测"></a>六、怎样搭建可重复的图像评测</h2><p>固定提示、分辨率、采样步数、随机种子、引导参数和模型版本，再按任务分别评价：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>检查方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文字正确性</td>
+<td>OCR 初筛，再逐字人工复核；记录漏字与错序</td>
+</tr>
+<tr>
+<td>指令遵循</td>
+<td>按颜色、对象数量、空间关系逐项检查</td>
+</tr>
+<tr>
+<td>编辑保真</td>
+<td>比较非目标区域与主体身份、结构</td>
+</tr>
+<tr>
+<td>分层质量</td>
+<td>重新合成后与原图对照，检查透明边缘和遮挡补全</td>
+</tr>
+<tr>
+<td>运行效率</td>
+<td>峰值显存、生成耗时、输出尺寸</td>
+</tr>
+</tbody></table>
+<p>扩散模型的采样步数、图像尺寸与语言模型的 token 长度是不同成本指标。下一篇回到整个 Qwen 生态，讨论如何选择检索模型、部署生成模型并建立统一的版本记录。</p>
+<hr>
+<p><strong>Qwen 专题系列导航</strong>：<a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-06-%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81%E4%BA%A4%E4%BA%92/">← 上一篇：06 音频与全模态交互</a> | <a href="/2026/09/19/qwen/Qwen-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">专题目录</a> | <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-08-%E6%A3%80%E7%B4%A2%E7%94%9F%E6%80%81%E4%B8%8E%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5/">下一篇：08 检索生态与部署实践 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Qwen/" class="category-chain-item">Qwen</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Qwen/%E5%9B%BE%E5%83%8F%E7%94%9F%E6%88%90/" class="category-chain-item">图像生成</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B/" class="print-no-link">#扩散模型</a>
+      
+        <a href="/tags/Qwen/" class="print-no-link">#Qwen</a>
+      
+        <a href="/tags/%E5%9B%BE%E5%83%8F%E7%BC%96%E8%BE%91/" class="print-no-link">#图像编辑</a>
+      
+        <a href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/" class="print-no-link">#多模态</a>
+      
+        <a href="/tags/Qwen%E4%B8%93%E9%A2%98/" class="print-no-link">#Qwen专题</a>
+      
+        <a href="/tags/Qwen-Image/" class="print-no-link">#Qwen-Image</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑</div>
+      <div>https://w2ongq6.github.io/2026/09/19/qwen/Qwen专题-07-图像生成与编辑/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-06-%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81%E4%BA%A4%E4%BA%92/" title="Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-08-%E6%A3%80%E7%B4%A2%E7%94%9F%E6%80%81%E4%B8%8E%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5/" title="Qwen专题-08：检索生态与部署实践 —— 从模型选型到可验证的应用">
+                        <span class="hidden-mobile">Qwen专题-08：检索生态与部署实践 —— 从模型选型到可验证的应用</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

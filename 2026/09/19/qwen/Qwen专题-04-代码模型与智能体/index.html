@@ -1,0 +1,1053 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="核心问题：会写代码，为什么还不一定会完成开发任务补全一个函数通常有明确输入输出；修改真实仓库则需要寻找入口、理解依赖、遵守既有约定、调整多个文件，并通过测试确认行为。Qwen 的代码路线从 CodeQwen1.5、Qwen2.5-Coder 逐步走向 Qwen3-Coder 与 Coder-Next，训练目标也从代码序列扩展到可执行的任务过程。  阅读重点：代码模型负责生成与决策，智能体框架负责工">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-04-%E4%BB%A3%E7%A0%81%E6%A8%A1%E5%9E%8B%E4%B8%8E%E6%99%BA%E8%83%BD%E4%BD%93/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="核心问题：会写代码，为什么还不一定会完成开发任务补全一个函数通常有明确输入输出；修改真实仓库则需要寻找入口、理解依赖、遵守既有约定、调整多个文件，并通过测试确认行为。Qwen 的代码路线从 CodeQwen1.5、Qwen2.5-Coder 逐步走向 Qwen3-Coder 与 Coder-Next，训练目标也从代码序列扩展到可执行的任务过程。  阅读重点：代码模型负责生成与决策，智能体框架负责工">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T02:05:00.000Z">
+<meta property="article:modified_time" content="2026-09-19T14:27:25.158Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Coder">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="Qwen专题">
+<meta property="article:tag" content="代码生成">
+<meta property="article:tag" content="工具调用">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 10:05" pubdate>
+          2026年9月19日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.3k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          28 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="核心问题：会写代码，为什么还不一定会完成开发任务"><a href="#核心问题：会写代码，为什么还不一定会完成开发任务" class="headerlink" title="核心问题：会写代码，为什么还不一定会完成开发任务"></a>核心问题：会写代码，为什么还不一定会完成开发任务</h2><p>补全一个函数通常有明确输入输出；修改真实仓库则需要寻找入口、理解依赖、遵守既有约定、调整多个文件，并通过测试确认行为。Qwen 的代码路线从 CodeQwen1.5、Qwen2.5-Coder 逐步走向 Qwen3-Coder 与 Coder-Next，训练目标也从代码序列扩展到可执行的任务过程。</p>
+<blockquote>
+<p>阅读重点：<strong>代码模型负责生成与决策，智能体框架负责工具、上下文和执行循环，测试环境提供反馈。</strong> 三者一起决定端到端任务表现。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="一、能力阶梯：从局部正确到任务完成"><a href="#一、能力阶梯：从局部正确到任务完成" class="headerlink" title="一、能力阶梯：从局部正确到任务完成"></a>一、能力阶梯：从局部正确到任务完成</h2><table>
+<thead>
+<tr>
+<th>层次</th>
+<th>输入</th>
+<th>期望输出</th>
+<th>常见失败</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>代码补全</td>
+<td>光标前后代码</td>
+<td>合适的中间片段</td>
+<td>语法正确但与上下文不符</td>
+</tr>
+<tr>
+<td>函数生成</td>
+<td>描述与函数签名</td>
+<td>通过测试的函数</td>
+<td>漏边界条件</td>
+</tr>
+<tr>
+<td>仓库修改</td>
+<td>需求、源码与约束</td>
+<td>多文件一致的改动</td>
+<td>只修调用方、遗漏实现或配置</td>
+</tr>
+<tr>
+<td>代码智能体</td>
+<td>需求与可操作环境</td>
+<td>经执行验证的最终结果</td>
+<td>忽略报错、重复尝试、过早结束</td>
+</tr>
+</tbody></table>
+<p>前三层主要关心产物，最后一层还关心行动过程。一个能通过函数题的模型，并不自动学会如何分析构建失败或判断任务已经完成。</p>
+<h2 id="二、CodeQwen1-5：学习代码的上下文结构"><a href="#二、CodeQwen1-5：学习代码的上下文结构" class="headerlink" title="二、CodeQwen1.5：学习代码的上下文结构"></a>二、CodeQwen1.5：学习代码的上下文结构</h2><ul>
+<li><strong>官方模型卡</strong>：<a target="_blank" rel="noopener" href="https://huggingface.co/Qwen/CodeQwen1.5-7B">CodeQwen1.5-7B</a>，2024 年代码模型节点。</li>
+<li><strong>作者 / 机构</strong>：Qwen Team，阿里巴巴。</li>
+</ul>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>CodeQwen1.5 为 Qwen 的专用代码路线建立了基础。代码语料不仅包含自然语言说明，还包含变量定义、类型、模块关系和大量重复语法结构，需要专门的数据处理与训练安排。</p>
+<h3 id="核心技术：Fill-in-the-Middle"><a href="#核心技术：Fill-in-the-Middle" class="headerlink" title="核心技术：Fill-in-the-Middle"></a>核心技术：Fill-in-the-Middle</h3><p>普通续写只根据左侧上下文预测后续；实际编辑器常需要根据前缀和后缀补全中间部分。FIM 将训练样本重排成能够利用两侧上下文的形式。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs text">前缀：def normalize_name(name):<br>缺口：需要补全的函数体<br>后缀：assert normalize_name(" Alice ") == "alice"<br></code></pre></td></tr></table></figure>
+
+<p>后缀中的断言为中间片段提供了约束。FIM token 和输入格式必须使用对应 tokenizer 的定义，不能假定所有代码模型共享同一套特殊标记。</p>
+<h3 id="代表意义"><a href="#代表意义" class="headerlink" title="代表意义"></a>代表意义</h3><p>代码模型开始从“会继续写程序文本”转向“能利用编辑位置周围的信息”。这仍然属于代码生成能力；读取文件、应用补丁和运行测试需要额外的执行框架。</p>
+<h2 id="三、Qwen2-5-Coder：数据质量、合成与能力平衡"><a href="#三、Qwen2-5-Coder：数据质量、合成与能力平衡" class="headerlink" title="三、Qwen2.5-Coder：数据质量、合成与能力平衡"></a>三、Qwen2.5-Coder：数据质量、合成与能力平衡</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2409.12186">Qwen2.5-Coder Technical Report</a>，2024-09-18 首发，后续版本补充完整尺寸矩阵。</li>
+<li><strong>作者 / 机构</strong>：Binyuan Hui 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>模型矩阵</strong>：0.5B、1.5B、3B、7B、14B、32B。</li>
+</ul>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>报告介绍基于 Qwen2.5 架构、在超过 5.5T token 代码相关语料上进行持续预训练的模型系列。重点不仅是代码生成，还包括补全、推理、修复，并尽量保留通用和数学能力。</p>
+<h3 id="核心创新一：清洗与混合比代码数量更重要"><a href="#核心创新一：清洗与混合比代码数量更重要" class="headerlink" title="核心创新一：清洗与混合比代码数量更重要"></a>核心创新一：清洗与混合比代码数量更重要</h3><p>仓库中存在重复项目、自动生成文件、压缩资源以及质量不一的代码。简单收集更多仓库会放大重复与噪声。清洗、去重和合理混合有助于模型学习有价值的结构，而不只是常见样板。</p>
+<p>保留自然语言和数学数据也有实际原因：开发需求以自然语言描述，算法复杂度和边界分析依赖数学，模型不能只擅长输出语法片段而无法理解需求。</p>
+<h3 id="核心创新二：可扩展的合成数据"><a href="#核心创新二：可扩展的合成数据" class="headerlink" title="核心创新二：可扩展的合成数据"></a>核心创新二：可扩展的合成数据</h3><p>合成数据可以构造编程问题、解答与修复示例，为稀缺任务补充训练分布。真正有价值的部分在于质量控制：代码是否可执行、测试是否与需求一致、示例是否覆盖多样语言与难度。</p>
+<p>代码执行提供比文本相似度更强的信号，但运行成功还不够。一个函数可能没有抛异常，却产生错误结果；测试样例过少也可能使错误实现通过筛选。</p>
+<h3 id="核心创新三：面向多种代码任务训练与评估"><a href="#核心创新三：面向多种代码任务训练与评估" class="headerlink" title="核心创新三：面向多种代码任务训练与评估"></a>核心创新三：面向多种代码任务训练与评估</h3><p>生成、补全和修复需要不同上下文。修复任务必须利用错误反馈，仓库场景需要理解符号之间的关系，因此不能只用单一函数生成基准评价整个系列。</p>
+<h3 id="代表意义-1"><a href="#代表意义-1" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen2.5-Coder 让专用代码模型具备较完整的尺寸与任务覆盖，也是 Qwen3 数据工程中代码合成的重要来源。它为智能体提供更好的代码底座，但本身并不包含一个自动执行任意命令的运行环境。</p>
+<h2 id="四、Qwen3-Coder：训练目标向可执行任务迁移"><a href="#四、Qwen3-Coder：训练目标向可执行任务迁移" class="headerlink" title="四、Qwen3-Coder：训练目标向可执行任务迁移"></a>四、Qwen3-Coder：训练目标向可执行任务迁移</h2><ul>
+<li><strong>官方资料</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-Coder">Qwen3-Coder 仓库</a>。</li>
+<li><strong>代表开放模型</strong>：<a target="_blank" rel="noopener" href="https://huggingface.co/Qwen/Qwen3-Coder-480B-A35B-Instruct">480B-A35B-Instruct</a>、30B-A3B-Instruct。</li>
+<li><strong>发布阶段</strong>：2025 年 7 月起；作者为 Qwen Team。</li>
+</ul>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>Qwen3-Coder 将 agentic coding 作为重点，关注工具使用、仓库理解和多步开发任务。代码质量与行动策略开始在同一工作流中评价。</p>
+<h3 id="核心创新与工程含义"><a href="#核心创新与工程含义" class="headerlink" title="核心创新与工程含义"></a>核心创新与工程含义</h3><p><strong>执行反馈进入能力训练。</strong> 模型可以依据测试、命令和环境返回值调整后续行动。对一次失败进行定位和修正，比重复生成另一段看似合理的代码更接近真实开发。</p>
+<p><strong>长上下文帮助仓库理解。</strong> 官方资料介绍原生 256K 上下文及相应外推支持。长窗口可以容纳更多接口与调用关系，但不意味着应把所有文件无差别塞进去。无关日志和构建产物仍会占用预算、干扰判断。</p>
+<p><strong>函数调用格式与框架适配。</strong> 模型需要输出框架能够解析的工具调用，而框架需要把结果以正确格式送回。模型性能相同，若模板或工具解析器不匹配，也可能表现为“只描述要做什么，却没有真正调用工具”。</p>
+<h3 id="代表意义-2"><a href="#代表意义-2" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen3-Coder 将编程任务的成功标准从单段代码拓展到行动后的结果。SWE-bench 一类仓库评测同时依赖模型、工具框架、上下文与预算，不能全部归因于权重本身。</p>
+<h2 id="五、Qwen3-Coder-Next：以混合架构支撑长任务"><a href="#五、Qwen3-Coder-Next：以混合架构支撑长任务" class="headerlink" title="五、Qwen3-Coder-Next：以混合架构支撑长任务"></a>五、Qwen3-Coder-Next：以混合架构支撑长任务</h2><ul>
+<li><strong>官方模型卡</strong>：<a target="_blank" rel="noopener" href="https://huggingface.co/Qwen/Qwen3-Coder-Next">Qwen3-Coder-Next</a>。</li>
+<li><strong>技术资料</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-Coder">官方仓库及报告入口</a>。</li>
+<li><strong>基础结构</strong>：基于 Qwen3-Next-80B-A3B-Base，80B 总参数、约 3B 激活参数。</li>
+</ul>
+<h3 id="简介-3"><a href="#简介-3" class="headerlink" title="简介"></a>简介</h3><p>Coder-Next 将 Next 的混合注意力与 MoE 结构用于代码智能体，官方描述的训练重点包括可执行任务合成、环境交互与强化学习。</p>
+<h3 id="核心创新"><a href="#核心创新" class="headerlink" title="核心创新"></a>核心创新</h3><p><strong>更低的每 token 计算与长上下文结构。</strong> 代码智能体可能反复读取较长历史和文件，降低每轮成本具有实际价值。但权重仍然是 80B 量级，“面向本地开发”不等于任何个人设备都能直接运行。</p>
+<p><strong>从失败中恢复。</strong> 修复工作流经常经历“改动 → 测试失败 → 分析 → 再修改”。训练若只包含一次成功样例，模型就缺少处理中间失败状态的经验；环境交互为这些状态提供数据。</p>
+<p><strong>适配不同执行框架。</strong> 同样的工具在不同 CLI / IDE 中可能有不同名字与参数格式，框架适配因此是可用性的一部分，而不是安装完成后的可选装饰。</p>
+<h3 id="版本边界"><a href="#版本边界" class="headerlink" title="版本边界"></a>版本边界</h3><p>模型卡明确注明 Coder-Next <strong>仅支持非思考模式</strong>。这不否定它能进行复杂任务决策，而是说明它不以该 checkpoint 的显式 Thinking 输出模式提供服务。不要因为名称里有 Qwen3，就强行套用首发 Qwen3 的模式开关。</p>
+<h2 id="六、Qwen-Agent-与-Qwen-Code：模型之外的执行系统"><a href="#六、Qwen-Agent-与-Qwen-Code：模型之外的执行系统" class="headerlink" title="六、Qwen-Agent 与 Qwen Code：模型之外的执行系统"></a>六、Qwen-Agent 与 Qwen Code：模型之外的执行系统</h2><p><a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Agent">Qwen-Agent</a>提供围绕工具调用、检索等能力的应用框架；<a target="_blank" rel="noopener" href="https://github.com/QwenLM/qwen-code">Qwen Code</a>则面向终端开发工作流。它们是软件框架，不是又一代模型权重。</p>
+<p>一个最小代码智能体可以用如下概念流程描述：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs text">需求与约束 → 模型选择下一步行动<br>                   ↓<br>              工具调用解析<br>                   ↓<br>         读取 / 修改 / 执行测试<br>                   ↓<br>            返回结果与错误信息<br>                   ↓<br>          继续处理，或验证后结束<br></code></pre></td></tr></table></figure>
+
+<p>执行系统至少需要保留工具调用 ID、参数、退出状态和相关输出。对长日志提取必要上下文，对独立任务隔离状态，对修改结果做可追溯记录。模型提出的操作还需要由运行环境按配置的范围执行。</p>
+<h2 id="七、用一个真实开发任务评测"><a href="#七、用一个真实开发任务评测" class="headerlink" title="七、用一个真实开发任务评测"></a>七、用一个真实开发任务评测</h2><p>例如“给列表接口加入分页，并保持已有调用兼容”。一个完整结果应包含参数校验、查询层调整、返回格式、调用方兼容以及必要验证。可以观察：</p>
+<ul>
+<li>是否找到已有接口与测试，还是另起一套重复实现。</li>
+<li>是否正确处理默认页码、边界值和空结果。</li>
+<li>是否根据真实执行结果修复错误。</li>
+<li>是否报告最终改动与尚未验证的部分。</li>
+</ul>
+<p>记录任务成功率、工具次数、总耗时和回归问题，比只统计生成了多少行代码更能反映生产价值。随着 Qwen3.6 / 3.8 继续强调长任务执行，这套评测方法仍然适用。</p>
+<hr>
+<p><strong>Qwen 专题系列导航</strong>：<a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-03-%E6%95%B0%E5%AD%A6%E4%B8%8E%E6%8E%A8%E7%90%86%E6%A8%A1%E5%9E%8B/">← 上一篇：03 数学与推理模型</a> | <a href="/2026/09/19/qwen/Qwen-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">专题目录</a> | <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-05-%E8%A7%86%E8%A7%89%E7%90%86%E8%A7%A3%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81%E6%8E%A8%E7%90%86/">下一篇：05 视觉理解与多模态推理 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Qwen/" class="category-chain-item">Qwen</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Qwen/%E4%BB%A3%E7%A0%81%E4%B8%8E%E6%99%BA%E8%83%BD%E4%BD%93/" class="category-chain-item">代码与智能体</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Agent/" class="print-no-link">#Agent</a>
+      
+        <a href="/tags/Qwen/" class="print-no-link">#Qwen</a>
+      
+        <a href="/tags/%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90/" class="print-no-link">#代码生成</a>
+      
+        <a href="/tags/Qwen%E4%B8%93%E9%A2%98/" class="print-no-link">#Qwen专题</a>
+      
+        <a href="/tags/Coder/" class="print-no-link">#Coder</a>
+      
+        <a href="/tags/%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8/" class="print-no-link">#工具调用</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行</div>
+      <div>https://w2ongq6.github.io/2026/09/19/qwen/Qwen专题-04-代码模型与智能体/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-03-%E6%95%B0%E5%AD%A6%E4%B8%8E%E6%8E%A8%E7%90%86%E6%A8%A1%E5%9E%8B/" title="Qwen专题-03：数学与推理模型 —— Math、QwQ 与可控思考">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Qwen专题-03：数学与推理模型 —— Math、QwQ 与可控思考</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-05-%E8%A7%86%E8%A7%89%E7%90%86%E8%A7%A3%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81%E6%8E%A8%E7%90%86/" title="Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座">
+                        <span class="hidden-mobile">Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

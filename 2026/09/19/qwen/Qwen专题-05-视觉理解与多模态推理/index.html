@@ -1,0 +1,1047 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="核心问题：图像不是一段没有分词的文本一张文档图片同时包含字符、版式和空间关系；一个视频还包含帧间变化与真实时间。视觉语言模型需要把这些信息转成语言模型可以利用的表示，并尽量避免在缩放或压缩时丢掉决定答案的细节。 Qwen-VL 系列的演进可以沿三条线阅读：视觉分辨率如何处理、位置与时间如何表达、视觉信息如何进入语言推理。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-05-%E8%A7%86%E8%A7%89%E7%90%86%E8%A7%A3%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81%E6%8E%A8%E7%90%86/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="核心问题：图像不是一段没有分词的文本一张文档图片同时包含字符、版式和空间关系；一个视频还包含帧间变化与真实时间。视觉语言模型需要把这些信息转成语言模型可以利用的表示，并尽量避免在缩放或压缩时丢掉决定答案的细节。 Qwen-VL 系列的演进可以沿三条线阅读：视觉分辨率如何处理、位置与时间如何表达、视觉信息如何进入语言推理。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T02:06:00.000Z">
+<meta property="article:modified_time" content="2026-09-19T14:27:25.160Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="MRoPE">
+<meta property="article:tag" content="OCR">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="Qwen专题">
+<meta property="article:tag" content="VLM">
+<meta property="article:tag" content="视频理解">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 10:06" pubdate>
+          2026年9月19日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          29 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="核心问题：图像不是一段没有分词的文本"><a href="#核心问题：图像不是一段没有分词的文本" class="headerlink" title="核心问题：图像不是一段没有分词的文本"></a>核心问题：图像不是一段没有分词的文本</h2><p>一张文档图片同时包含字符、版式和空间关系；一个视频还包含帧间变化与真实时间。视觉语言模型需要把这些信息转成语言模型可以利用的表示，并尽量避免在缩放或压缩时丢掉决定答案的细节。</p>
+<p>Qwen-VL 系列的演进可以沿三条线阅读：<strong>视觉分辨率如何处理、位置与时间如何表达、视觉信息如何进入语言推理。</strong></p>
+<span id="more"></span>
+
+<h2 id="一、先区分四类视觉任务"><a href="#一、先区分四类视觉任务" class="headerlink" title="一、先区分四类视觉任务"></a>一、先区分四类视觉任务</h2><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>一个例子</th>
+<th>答案依赖什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>图像描述</td>
+<td>描述街景</td>
+<td>物体、场景与关系</td>
+</tr>
+<tr>
+<td>文档解析</td>
+<td>提取发票金额与税号</td>
+<td>小字、结构、字段对应关系</td>
+</tr>
+<tr>
+<td>视觉定位</td>
+<td>给出按钮或物体坐标</td>
+<td>精确空间位置、坐标约定</td>
+</tr>
+<tr>
+<td>视频推理</td>
+<td>判断先取杯子还是先开水龙头</td>
+<td>帧顺序、时间戳、跨帧关联</td>
+</tr>
+</tbody></table>
+<p>一个模型在图像描述上表现好，不意味着它一定适合发票抽取。评估应覆盖目标任务实际依赖的信息尺度。</p>
+<h2 id="二、Qwen-VL：从视觉问答扩展到文字与定位"><a href="#二、Qwen-VL：从视觉问答扩展到文字与定位" class="headerlink" title="二、Qwen-VL：从视觉问答扩展到文字与定位"></a>二、Qwen-VL：从视觉问答扩展到文字与定位</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.12966">Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, Text Reading, and Beyond</a>，2023-08-24 首发。</li>
+<li><strong>作者 / 机构</strong>：Jinze Bai 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>实现</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-VL">Qwen-VL 官方仓库</a>。</li>
+</ul>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Qwen-VL 在 Qwen 语言模型基础上，通过视觉编码、输入输出接口与分阶段训练引入图像能力。除了描述和问答，报告还强调定位与图像文字读取。</p>
+<h3 id="核心创新"><a href="#核心创新" class="headerlink" title="核心创新"></a>核心创新</h3><p><strong>视觉与语言对齐。</strong> 视觉编码器从像素中提取特征，再将其接入语言模型。对齐训练使模型能够把特征与“哪个物体”“哪个位置”“哪些文字”等语言问题关联起来。</p>
+<p><strong>图像、文本与框的联合数据。</strong> 报告使用 image-caption-box 等信息建立语义和位置联系，让模型不仅说出“有一只猫”，还能够回答它在哪里。</p>
+<p><strong>分阶段训练。</strong> 对齐阶段与指令阶段承担不同职责：先让模态表示可以共同工作，再学习多轮问答和任务交互。不是只给纯语言模型加一个图像占位符就能获得视觉能力。</p>
+<h3 id="代表意义"><a href="#代表意义" class="headerlink" title="代表意义"></a>代表意义</h3><p>初代为后续文档理解和视觉智能体打下基础。不过，固定或受限分辨率下的视觉压缩可能使小字与细节丢失，推动后续动态分辨率设计。</p>
+<h2 id="三、Qwen2-VL：动态分辨率与-M-RoPE"><a href="#三、Qwen2-VL：动态分辨率与-M-RoPE" class="headerlink" title="三、Qwen2-VL：动态分辨率与 M-RoPE"></a>三、Qwen2-VL：动态分辨率与 M-RoPE</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2409.12191">Qwen2-VL: Enhancing Vision-Language Model’s Perception of the World at Any Resolution</a>，2024-09-18 首发。</li>
+<li><strong>作者 / 机构</strong>：Peng Wang 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>发布记录</strong>：2024 年 8 月起，见<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-VL#news">视觉系列官方仓库</a>。</li>
+</ul>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>Qwen2-VL 的关键变化是让图像分辨率与视觉 token 数动态对应，并用多模态旋转位置表示处理文本、图像和视频。</p>
+<h3 id="核心创新一：Naive-Dynamic-Resolution"><a href="#核心创新一：Naive-Dynamic-Resolution" class="headerlink" title="核心创新一：Naive Dynamic Resolution"></a>核心创新一：Naive Dynamic Resolution</h3><p>把长文档图片强行缩成小正方形会损失小字和布局。动态分辨率允许不同尺寸图像产生不同数量的视觉 token，从而保留更多原始信息。</p>
+<p>它没有消除资源约束。视觉 token 越多，语言模型需要处理的上下文越长，预填充与缓存成本也越高。实践中需要通过像素预算、裁剪或分块控制成本，不能把“任意分辨率”理解成无限制输入。</p>
+<h3 id="核心创新二：Multimodal-RoPE"><a href="#核心创新二：Multimodal-RoPE" class="headerlink" title="核心创新二：Multimodal RoPE"></a>核心创新二：Multimodal RoPE</h3><p>文本主要依赖一维顺序，图像有高度和宽度，视频还包含时间。M-RoPE 在位置表示中分别处理这些轴，让视觉结构不只依赖被展平后的 token 顺序。</p>
+<p>例如，两段文字在图像中上下对齐，可能属于同一列；若只看展平顺序，就容易把它们与旁边列中的值误配。空间位置提供了恢复关系的额外信号。</p>
+<h3 id="代表意义-1"><a href="#代表意义-1" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen2-VL 将“更清楚地看”和“更合理地编码位置”连接起来，为文档和视频任务提供共同表示基础。但位置编码本身不会完成 OCR 或事件理解，仍依赖训练数据与模型容量。</p>
+<h2 id="四、Qwen2-5-VL：高效视觉编码与真实时间"><a href="#四、Qwen2-5-VL：高效视觉编码与真实时间" class="headerlink" title="四、Qwen2.5-VL：高效视觉编码与真实时间"></a>四、Qwen2.5-VL：高效视觉编码与真实时间</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2502.13923">Qwen2.5-VL Technical Report</a>，2025-02-19 首发。</li>
+<li><strong>作者 / 机构</strong>：Shuai Bai 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>模型发布</strong>：2025-01-28 首批发布，后续增加 32B 等型号。</li>
+</ul>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>Qwen2.5-VL 继续强化文档解析、精确定位和长视频理解，并通过原生动态分辨率 ViT、窗口注意力与时间表示降低部分开销、改善时空理解。</p>
+<h3 id="核心创新一：视觉编码器中的窗口注意力"><a href="#核心创新一：视觉编码器中的窗口注意力" class="headerlink" title="核心创新一：视觉编码器中的窗口注意力"></a>核心创新一：视觉编码器中的窗口注意力</h3><p>高分辨率图像包含大量 patch，如果全部视觉 token 都做全局两两交互，成本会快速增加。窗口注意力将部分计算限制在局部区域，配合必要的全局信息交互，让细节保留更可承受。</p>
+<p>这里优化的是视觉编码阶段，不能据此推断后续语言模型完全不再承担长视觉序列的开销。</p>
+<h3 id="核心创新二：动态帧率与绝对时间编码"><a href="#核心创新二：动态帧率与绝对时间编码" class="headerlink" title="核心创新二：动态帧率与绝对时间编码"></a>核心创新二：动态帧率与绝对时间编码</h3><p>相同数量的帧可能对应几秒，也可能对应几分钟。只有帧索引时，模型难以判断真实持续时间。Qwen2.5-VL 的时间设计让视频内容与真实时间联系更紧密，有利于事件定位与时序判断。</p>
+<p>动态采样可以平衡时长和成本，但采样遗漏的瞬间无法凭空恢复。例如快速闪烁的指示灯，可能需要更高帧率或局部重新采样才能确认。</p>
+<h3 id="核心创新三：结构化输出与视觉操作"><a href="#核心创新三：结构化输出与视觉操作" class="headerlink" title="核心创新三：结构化输出与视觉操作"></a>核心创新三：结构化输出与视觉操作</h3><p>文档抽取要求把字段和值准确对应；定位输出要求遵守坐标约定。Qwen2.5-VL 将这些能力扩展到计算机与移动设备操作，但“模型预测了按钮位置”距离“完成操作”仍差实际点击、观察反馈和检查状态的循环。</p>
+<h3 id="代表意义-2"><a href="#代表意义-2" class="headerlink" title="代表意义"></a>代表意义</h3><p>这一代使视觉模型更加接近工具：既可抽取可解析数据，也可提供可执行定位。应用需要明确图像缩放后的坐标系、输出 schema 和异常情况，避免把预测坐标直接用于不同尺寸画面。</p>
+<h2 id="五、Qwen3-VL：细粒度信息进入更深的推理过程"><a href="#五、Qwen3-VL：细粒度信息进入更深的推理过程" class="headerlink" title="五、Qwen3-VL：细粒度信息进入更深的推理过程"></a>五、Qwen3-VL：细粒度信息进入更深的推理过程</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2511.21631">Qwen3-VL Technical Report</a>，2025-11-26 首发。</li>
+<li><strong>作者 / 机构</strong>：Qwen 团队、阿里巴巴。</li>
+<li><strong>首批模型发布</strong>：2025-09-23，后续补齐稠密和 MoE 尺寸及 Instruct / Thinking 版本。</li>
+<li><strong>实现与示例</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-VL">Qwen3-VL 官方仓库</a>。</li>
+</ul>
+<h3 id="简介-3"><a href="#简介-3" class="headerlink" title="简介"></a>简介</h3><p>Qwen3-VL 支持原生 256K 的文本与多模态交错上下文。报告着重介绍 interleaved-MRoPE、DeepStack 和文本时间戳对齐三项结构变化。</p>
+<h3 id="核心创新一：Interleaved-MRoPE"><a href="#核心创新一：Interleaved-MRoPE" class="headerlink" title="核心创新一：Interleaved-MRoPE"></a>核心创新一：Interleaved-MRoPE</h3><p>改进时间、高度、宽度位置成分在频率维度上的安排，增强空间与长时间范围的表示。它延续 M-RoPE 的多轴思路，但具体布局不同，不能仅用“还是 RoPE”忽略实现变化。</p>
+<h3 id="核心创新二：DeepStack"><a href="#核心创新二：DeepStack" class="headerlink" title="核心创新二：DeepStack"></a>核心创新二：DeepStack</h3><p>利用 ViT 的多层特征加强视觉与语言对齐，而不仅依赖最终一层的视觉表示。不同层可能保留不同尺度的信息，融合这些特征有助于语言推理接触更细的视觉线索。</p>
+<p>例如，一张图表的整体趋势和角落里的单位标注属于不同尺度的信息，正确回答可能同时依赖两者。多层融合提供了更丰富的输入路径，但并不保证所有细节都被识别。</p>
+<h3 id="核心创新三：文本形式的时间戳对齐"><a href="#核心创新三：文本形式的时间戳对齐" class="headerlink" title="核心创新三：文本形式的时间戳对齐"></a>核心创新三：文本形式的时间戳对齐</h3><p>报告采用显式文本时间戳帮助模型定位视频事件。时间因此不仅进入位置编码，也以语言模型可直接关联的形式参与上下文，有助于回答“在第几秒发生什么”。</p>
+<h3 id="代表意义-3"><a href="#代表意义-3" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen3-VL 强化了多图、视频和文档的跨片段推理，并提供不同尺寸满足延迟与质量需求。Thinking 与 Instruct 的比较要匹配预算，不能把更长输出获得的收益都归因于视觉编码器。</p>
+<h2 id="六、Qwen3-5：视觉语言进入共同基座"><a href="#六、Qwen3-5：视觉语言进入共同基座" class="headerlink" title="六、Qwen3.5：视觉语言进入共同基座"></a>六、Qwen3.5：视觉语言进入共同基座</h2><p><a target="_blank" rel="noopener" href="https://huggingface.co/Qwen/Qwen3.5-397B-A17B">Qwen3.5-397B-A17B 模型卡</a>明确列出视觉编码器和语言模型，并强调早期融合的多模态训练。它使“通用基座”与“视觉语言分支”的界线发生变化。</p>
+<p>但这是具体系列的架构描述，不代表所有后续开放型号都支持相同模态。尤其是开放的 Qwen3.8-2.4T-A95B 与托管 Max 服务，在模型卡中有功能区别。选择时要检查具体 checkpoint 的 processor、模型类和输入 schema。</p>
+<h2 id="七、从论文走向文档解析产品"><a href="#七、从论文走向文档解析产品" class="headerlink" title="七、从论文走向文档解析产品"></a>七、从论文走向文档解析产品</h2><p>一个稳健的发票解析流程通常包括：保留原始图像 → 按预算缩放或切块 → 输出字段与证据位置 → 校验金额、税号等格式 → 对不确定字段补充局部识别。</p>
+<p>评测时应同时观察：</p>
+<ul>
+<li>字符是否识别正确，字段和值是否匹配。</li>
+<li>表格的合并单元格、页间续表是否保留关系。</li>
+<li>缩放后的小字是否丢失，局部裁剪能否改善结果。</li>
+<li>模型是否把看不清的内容猜成合理但错误的值。</li>
+</ul>
+<p>处理视频时，再增加真实时间戳误差和跨帧事件排序指标。下一篇继续讨论加入声音之后，系统怎样保持时间对齐并输出自然语音。</p>
+<hr>
+<p><strong>Qwen 专题系列导航</strong>：<a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-04-%E4%BB%A3%E7%A0%81%E6%A8%A1%E5%9E%8B%E4%B8%8E%E6%99%BA%E8%83%BD%E4%BD%93/">← 上一篇：04 代码模型与智能体</a> | <a href="/2026/09/19/qwen/Qwen-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">专题目录</a> | <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-06-%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81%E4%BA%A4%E4%BA%92/">下一篇：06 音频与全模态交互 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Qwen/" class="category-chain-item">Qwen</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Qwen/%E8%A7%86%E8%A7%89%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81/" class="category-chain-item">视觉与多模态</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/VLM/" class="print-no-link">#VLM</a>
+      
+        <a href="/tags/Qwen/" class="print-no-link">#Qwen</a>
+      
+        <a href="/tags/Qwen%E4%B8%93%E9%A2%98/" class="print-no-link">#Qwen专题</a>
+      
+        <a href="/tags/OCR/" class="print-no-link">#OCR</a>
+      
+        <a href="/tags/MRoPE/" class="print-no-link">#MRoPE</a>
+      
+        <a href="/tags/%E8%A7%86%E9%A2%91%E7%90%86%E8%A7%A3/" class="print-no-link">#视频理解</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座</div>
+      <div>https://w2ongq6.github.io/2026/09/19/qwen/Qwen专题-05-视觉理解与多模态推理/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-04-%E4%BB%A3%E7%A0%81%E6%A8%A1%E5%9E%8B%E4%B8%8E%E6%99%BA%E8%83%BD%E4%BD%93/" title="Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Qwen专题-04：代码模型与智能体 —— 从函数补全到仓库级执行</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-06-%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81%E4%BA%A4%E4%BA%92/" title="Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话">
+                        <span class="hidden-mobile">Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

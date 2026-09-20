@@ -1,0 +1,1081 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="核心问题：通用模型的能力如何积累Qwen 的基础模型路线同时推进三件事：扩大高质量训练数据、让不同规模的模型稳定训练，以及把序列预测能力转化成可用的助手行为。架构决定计算方式，数据决定模型接触什么，后训练决定它如何使用学到的能力。 本篇依次阅读 Qwen、Qwen2、Qwen2.5 和 Qwen3 技术报告，并把没有独立同名报告的 Qwen1.5 作为产品与工程演进节点。MoE、推理和多模态细节分">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen专题-01：基础模型与数据工程 —— 从初代 Qwen 到 Qwen3">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-01-%E5%9F%BA%E7%A1%80%E6%A8%A1%E5%9E%8B%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%B7%A5%E7%A8%8B/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="核心问题：通用模型的能力如何积累Qwen 的基础模型路线同时推进三件事：扩大高质量训练数据、让不同规模的模型稳定训练，以及把序列预测能力转化成可用的助手行为。架构决定计算方式，数据决定模型接触什么，后训练决定它如何使用学到的能力。 本篇依次阅读 Qwen、Qwen2、Qwen2.5 和 Qwen3 技术报告，并把没有独立同名报告的 Qwen1.5 作为产品与工程演进节点。MoE、推理和多模态细节分">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T02:02:00.000Z">
+<meta property="article:modified_time" content="2026-09-19T14:27:25.154Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="Qwen专题">
+<meta property="article:tag" content="后训练">
+<meta property="article:tag" content="多语言">
+<meta property="article:tag" content="数据工程">
+<meta property="article:tag" content="预训练">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Qwen专题-01：基础模型与数据工程 —— 从初代 Qwen 到 Qwen3 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Qwen专题-01：基础模型与数据工程 —— 从初代 Qwen 到 Qwen3"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 10:02" pubdate>
+          2026年9月19日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          31 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Qwen专题-01：基础模型与数据工程 —— 从初代 Qwen 到 Qwen3</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="核心问题：通用模型的能力如何积累"><a href="#核心问题：通用模型的能力如何积累" class="headerlink" title="核心问题：通用模型的能力如何积累"></a>核心问题：通用模型的能力如何积累</h2><p>Qwen 的基础模型路线同时推进三件事：扩大高质量训练数据、让不同规模的模型稳定训练，以及把序列预测能力转化成可用的助手行为。架构决定计算方式，数据决定模型接触什么，后训练决定它如何使用学到的能力。</p>
+<p>本篇依次阅读 Qwen、Qwen2、Qwen2.5 和 Qwen3 技术报告，并把没有独立同名报告的 Qwen1.5 作为产品与工程演进节点。MoE、推理和多模态细节分别放到后续专题。</p>
+<span id="more"></span>
+
+<h2 id="一、代际对照：规模只是其中一个维度"><a href="#一、代际对照：规模只是其中一个维度" class="headerlink" title="一、代际对照：规模只是其中一个维度"></a>一、代际对照：规模只是其中一个维度</h2><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>报告或发布节点</th>
+<th>公开资料中的训练规模</th>
+<th>值得关注的变化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Qwen</td>
+<td>报告首发 2023.09；模型自 2023.08 发布</td>
+<td>后续官方仓库记录部分型号达到 3T token</td>
+<td>中文与多语言基础、Chat 对齐、工具使用</td>
+</tr>
+<tr>
+<td>Qwen1.5</td>
+<td>2024.02 发布；MoE 于 2024.03 发布</td>
+<td>本文不填写跨型号统一数值</td>
+<td>多尺寸、框架兼容、稀疏专家探索</td>
+</tr>
+<tr>
+<td>Qwen2</td>
+<td>2024.06 发布，报告首发 2024.07</td>
+<td>7T token，见后续 Qwen2.5 报告回顾</td>
+<td>GQA、多语言、稠密与 MoE 并行</td>
+</tr>
+<tr>
+<td>Qwen2.5</td>
+<td>2024.09 发布，报告首发 2024.12</td>
+<td>18T token</td>
+<td>数据质量、长文、结构化输出、多阶段后训练</td>
+</tr>
+<tr>
+<td>Qwen3</td>
+<td>2025.04 发布，报告首发 2025.05</td>
+<td>36T token</td>
+<td>119 种语言与方言、模式融合、强到弱蒸馏</td>
+</tr>
+</tbody></table>
+<p>这些数字描述相应报告的训练数据规模，不是所有衍生型号、后续版本都使用完全相同语料的承诺。不同 tokenizer、重复训练策略和计算配置，也会影响 token 数之间的可比性。</p>
+<h2 id="二、Qwen-Technical-Report：构建基础与对齐两层能力"><a href="#二、Qwen-Technical-Report：构建基础与对齐两层能力" class="headerlink" title="二、Qwen Technical Report：构建基础与对齐两层能力"></a>二、Qwen Technical Report：构建基础与对齐两层能力</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2309.16609">Qwen Technical Report</a>，2023-09-28 首发。</li>
+<li><strong>作者 / 机构</strong>：Jinze Bai 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>配套实现与版本记录</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen">Qwen 官方仓库</a>。</li>
+</ul>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>报告将预训练语言模型 Qwen 与面向交互的 Qwen-Chat 分开描述。前者学习广泛文本中的规律，后者通过指令示范和人类对齐学习如何回答问题、遵循要求和使用工具。</p>
+<h3 id="核心创新与技术要点"><a href="#核心创新与技术要点" class="headerlink" title="核心创新与技术要点"></a>核心创新与技术要点</h3><p><strong>第一，语言覆盖需要落实到分词与语料。</strong> 对中文等语言而言，如果一个常用表达被切成过多 token，相同内容会占用更长序列。分词效率会影响训练数据的有效覆盖，也影响推理费用。词表更大同时增加嵌入与输出层参数，不能只追求最少 token。</p>
+<p><strong>第二，基础模型与聊天模型服务不同目标。</strong> 预训练的下一个 token 预测目标并不天然要求模型遵守角色边界、简洁回答或按指定格式输出。SFT 用示例约束行为，RLHF 利用偏好反馈进一步调整回答分布。</p>
+<p><strong>第三，工具使用需要数据中的交互结构。</strong> 模型必须理解何时发起调用、怎样组织参数，以及如何继续处理返回结果。让模型看到某个函数的名字，并不等于它已经学会稳定使用函数。</p>
+<h3 id="代表意义与边界"><a href="#代表意义与边界" class="headerlink" title="代表意义与边界"></a>代表意义与边界</h3><p>初代 Qwen 为后续系列建立了“基础模型 → 对话对齐 → 专项能力”的组织方式。实际复现要注意早期模型依赖自定义代码与不同许可证；不能把 Qwen3 的加载方式和授权说明直接回填给初代权重。</p>
+<h2 id="三、Qwen1-5-与-Qwen2：从单个模型到可选择的基座"><a href="#三、Qwen1-5-与-Qwen2：从单个模型到可选择的基座" class="headerlink" title="三、Qwen1.5 与 Qwen2：从单个模型到可选择的基座"></a>三、Qwen1.5 与 Qwen2：从单个模型到可选择的基座</h2><ul>
+<li><strong>Qwen1.5 发布</strong>：2024-02，见 <a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3#news">Qwen 系列官方发布记录</a>。</li>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.10671">Qwen2 Technical Report</a>，2024-07-15 首发。</li>
+<li><strong>作者 / 机构</strong>：An Yang 等，Qwen 团队、阿里巴巴。</li>
+</ul>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>Qwen1.5 强化模型尺寸与使用生态；Qwen2 则公开了稠密与 MoE 并行的模型矩阵。对开发者而言，共同接口下的多个尺寸意味着可以根据算力、延迟和质量要求选择起点。</p>
+<h3 id="核心创新与技术要点-1"><a href="#核心创新与技术要点-1" class="headerlink" title="核心创新与技术要点"></a>核心创新与技术要点</h3><p><strong>GQA 改变了注意力缓存的成本。</strong> 多个 Query 头共用更少的 Key / Value 头，因此可以减少 KV Cache。它保留不同 Query 的查询能力，同时压缩缓存与部分访存开销。GQA 并不使完整注意力的长序列预填充成本变成线性。</p>
+<p><strong>多语言能力需要跨语言的数据工程。</strong> 语种覆盖数字只表明训练范围，不能保证每种语言质量一致。清洗、去重、语言识别、领域平衡以及后训练指令覆盖，都会影响最终体验。</p>
+<p><strong>长上下文不是一个独立开关。</strong> 位置表示扩展、长序列训练和评测需要协同进行。能在长输入中找出一句话，和能综合整篇文档中的分散证据，是不同能力。</p>
+<h3 id="代表意义"><a href="#代表意义" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen2 的价值在于可作为多种专用训练的基础，而不只是一款聊天产品。评估时要分开 Base 与 Instruct，不能把基座的 few-shot 测试分数与聊天模型的直接回答结果混成同一条曲线。</p>
+<h2 id="四、Qwen2-5：数据与后训练共同推动可用性"><a href="#四、Qwen2-5：数据与后训练共同推动可用性" class="headerlink" title="四、Qwen2.5：数据与后训练共同推动可用性"></a>四、Qwen2.5：数据与后训练共同推动可用性</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2412.15115">Qwen2.5 Technical Report</a>，2024-12-19 首发。</li>
+<li><strong>作者 / 机构</strong>：An Yang 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>开放模型</strong>：0.5B、1.5B、3B、7B、14B、32B、72B 等稠密型号；报告中的托管 MoE 产品另行区分。</li>
+</ul>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>Qwen2.5 把预训练规模扩大到 18T token，并通过超过百万条 SFT 样本和多阶段强化学习提升综合助手能力。报告特别关注长文生成、结构化数据分析和指令遵循。</p>
+<h3 id="核心创新与技术要点-2"><a href="#核心创新与技术要点-2" class="headerlink" title="核心创新与技术要点"></a>核心创新与技术要点</h3><p><strong>数据规模扩展必须伴随质量控制。</strong> 去重减少记忆性重复，过滤降低低质量内容比例，数据混合决定语言与专业知识的学习分配。合成数据可以补足稀缺任务，但错误、单一风格和教师偏差也可能被放大。</p>
+<p><strong>后训练优化的是一组相互牵制的目标。</strong> 一个答案可以事实正确但格式错误，也可以很符合用户偏好却缺少依据。SFT 提供行为起点，强化学习继续调整候选回答的偏好，而不是把所有目标压成简单的“更长更好”。</p>
+<p><strong>开放稠密模型与托管 MoE 不是同一套配置。</strong> Qwen2.5 报告同时介绍了开放权重与 Turbo / Plus 等托管型号。把报告中的 MoE 描述套到 <code>Qwen2.5-7B-Instruct</code> 等开放稠密模型，会导致结构和显存估计错误。</p>
+<h3 id="代表意义-1"><a href="#代表意义-1" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen2.5 支撑了 Math、Coder、QwQ 和多模态分支，说明强基座可以降低专项训练的起点成本。但这种关联不意味着所有分支都只进行了简单 SFT：代码继续预训练、视觉对齐、音频编码等仍需要专门设计。</p>
+<h2 id="五、Qwen3：领域数据反哺基座，推理能力走向小模型"><a href="#五、Qwen3：领域数据反哺基座，推理能力走向小模型" class="headerlink" title="五、Qwen3：领域数据反哺基座，推理能力走向小模型"></a>五、Qwen3：领域数据反哺基座，推理能力走向小模型</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2505.09388">Qwen3 Technical Report</a>，2025 年 5 月首发。</li>
+<li><strong>作者 / 机构</strong>：An Yang 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>首发矩阵</strong>：稠密 0.6B / 1.7B / 4B / 8B / 14B / 32B；MoE 30B-A3B / 235B-A22B。</li>
+</ul>
+<h3 id="简介-3"><a href="#简介-3" class="headerlink" title="简介"></a>简介</h3><p>Qwen3 将预训练数据扩大到 36T token，覆盖 119 种语言与方言，并在首发系列中支持思考与非思考模式。相比只强调大模型峰值，它也关注如何把能力传递给可部署的小模型。</p>
+<h3 id="核心创新一：三个预训练阶段各有目的"><a href="#核心创新一：三个预训练阶段各有目的" class="headerlink" title="核心创新一：三个预训练阶段各有目的"></a>核心创新一：三个预训练阶段各有目的</h3><p>报告描述的预训练路线为：大规模通用知识学习 → 加强 STEM、代码等高知识密度内容 → 长上下文训练。其长序列阶段将训练序列从 4,096 扩展至 32,768 token；实际 checkpoint 的配置与进一步外推长度需另查模型卡。</p>
+<p>这种课程安排可以理解为：先建立广泛的表达与知识基础，再强化更复杂的分布，最后为长距离依赖提供训练机会。它不意味着早期阶段“没有数学”，而是训练配比与重点发生变化。</p>
+<h3 id="核心创新二：使用已有模型构建更好的训练数据"><a href="#核心创新二：使用已有模型构建更好的训练数据" class="headerlink" title="核心创新二：使用已有模型构建更好的训练数据"></a>核心创新二：使用已有模型构建更好的训练数据</h3><p>报告明确提到，Qwen2.5-VL 用于从 PDF 提取文本，Math 与 Coder 模型用于合成领域数据。这使模型家族形成迭代关系：专用模型帮助获得更难获取、更可验证的内容，通用基座再吸收这些数据。</p>
+<p>例如，PDF 中的公式和表格若被简单按字符顺序拼接，逻辑关系可能丢失。视觉模型可以改善抽取，但仍应通过版面检查、符号校验或抽样复核，判断数据是否适合进入训练。</p>
+<h3 id="核心创新三：强到弱蒸馏"><a href="#核心创新三：强到弱蒸馏" class="headerlink" title="核心创新三：强到弱蒸馏"></a>核心创新三：强到弱蒸馏</h3><p>Qwen3 对较小模型使用离策略和在策略蒸馏。前者学习教师生成的回答；后者让学生在自己的生成分布上获得教师信号，从而减少“训练时只见过教师路径，推理时却走入陌生状态”的差距。</p>
+<p>论文中的对比显示蒸馏在其设定下具有训练效率优势。这是特定教师、学生与任务上的结果，不能推广成“蒸馏永远比强化学习更好”。</p>
+<h3 id="代表意义与后续边界"><a href="#代表意义与后续边界" class="headerlink" title="代表意义与后续边界"></a>代表意义与后续边界</h3><p>Qwen3 将高质量领域数据、多尺寸架构和推理后训练结合起来。后续 Qwen3-2507 改成分别提供 Instruct / Thinking；Qwen3.5 又进入原生视觉语言路线。因此，“Qwen3”相关经验在迁移到新型号时，至少要重新核对输入模态、模板和运行依赖。</p>
+<h2 id="六、如何判断一次基座升级是否适合自己"><a href="#六、如何判断一次基座升级是否适合自己" class="headerlink" title="六、如何判断一次基座升级是否适合自己"></a>六、如何判断一次基座升级是否适合自己</h2><p>不要只拿一组公开数学题做决策。可以建立一个小而固定的业务评测集，覆盖知识问答、结构化抽取、长文证据综合、中文表达和拒绝无依据推断等任务，并记录以下结果：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>推荐观察量</th>
+<th>能发现的问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内容质量</td>
+<td>正确率、证据覆盖、人工偏好</td>
+<td>知识缺失或回答偏移</td>
+</tr>
+<tr>
+<td>指令遵循</td>
+<td>JSON 解析率、字段完整率</td>
+<td>有知识但输出不可用</td>
+</tr>
+<tr>
+<td>长上下文</td>
+<td>不同位置证据的召回与综合</td>
+<td>只会局部检索、遗漏中间信息</td>
+</tr>
+<tr>
+<td>运行成本</td>
+<td>首 token 延迟、总耗时、峰值显存</td>
+<td>更强模型超出资源预算</td>
+</tr>
+<tr>
+<td>稳定性</td>
+<td>重复采样失败率、异常输出类型</td>
+<td>偶尔成功掩盖不稳定行为</td>
+</tr>
+</tbody></table>
+<p>固定模型 revision、推理模板、采样参数和预算后，升级结果才可解释。下一篇进一步分析架构怎样影响这些运行成本。</p>
+<hr>
+<p><strong>Qwen 专题系列导航</strong>：<a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-00-%E6%8A%80%E6%9C%AF%E6%BC%94%E8%BF%9B%E8%84%89%E7%BB%9C/">← 上一篇：00 技术演进脉络</a> | <a href="/2026/09/19/qwen/Qwen-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">专题目录</a> | <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-02-MoE%E4%B8%8E%E9%AB%98%E6%95%88%E6%B3%A8%E6%84%8F%E5%8A%9B/">下一篇：02 MoE与高效注意力 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Qwen/" class="category-chain-item">Qwen</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Qwen/%E5%9F%BA%E7%A1%80%E6%A8%A1%E5%9E%8B/" class="category-chain-item">基础模型</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Qwen/" class="print-no-link">#Qwen</a>
+      
+        <a href="/tags/Qwen%E4%B8%93%E9%A2%98/" class="print-no-link">#Qwen专题</a>
+      
+        <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" class="print-no-link">#预训练</a>
+      
+        <a href="/tags/%E6%95%B0%E6%8D%AE%E5%B7%A5%E7%A8%8B/" class="print-no-link">#数据工程</a>
+      
+        <a href="/tags/%E5%90%8E%E8%AE%AD%E7%BB%83/" class="print-no-link">#后训练</a>
+      
+        <a href="/tags/%E5%A4%9A%E8%AF%AD%E8%A8%80/" class="print-no-link">#多语言</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Qwen专题-01：基础模型与数据工程 —— 从初代 Qwen 到 Qwen3</div>
+      <div>https://w2ongq6.github.io/2026/09/19/qwen/Qwen专题-01-基础模型与数据工程/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-00-%E6%8A%80%E6%9C%AF%E6%BC%94%E8%BF%9B%E8%84%89%E7%BB%9C/" title="Qwen专题-00：技术演进脉络 —— 从语言基座到多模态智能体">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Qwen专题-00：技术演进脉络 —— 从语言基座到多模态智能体</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-02-MoE%E4%B8%8E%E9%AB%98%E6%95%88%E6%B3%A8%E6%84%8F%E5%8A%9B/" title="Qwen专题-02：MoE与高效注意力 —— 从稀疏专家到 Qwen3-Next">
+                        <span class="hidden-mobile">Qwen专题-02：MoE与高效注意力 —— 从稀疏专家到 Qwen3-Next</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

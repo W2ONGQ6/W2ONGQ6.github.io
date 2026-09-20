@@ -1,0 +1,1083 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="核心问题：输入声音、理解声音和输出声音语音识别把声音变成文字，音频理解还要解释环境声、音乐与说话方式，语音生成则要把内容变成可播放的波形。将这些能力组合成实时对话，还需要解决时间对齐、首包延迟和交互状态。 Qwen 的路线从 Audio 的通用音频理解，发展到 Omni 的音视频输入与语音输出，同时保留 ASR 和 TTS 专用分支。全模态交互与专用语音处理可以互补，不能仅凭名称互相替代。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-06-%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81%E4%BA%A4%E4%BA%92/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="核心问题：输入声音、理解声音和输出声音语音识别把声音变成文字，音频理解还要解释环境声、音乐与说话方式，语音生成则要把内容变成可播放的波形。将这些能力组合成实时对话，还需要解决时间对齐、首包延迟和交互状态。 Qwen 的路线从 Audio 的通用音频理解，发展到 Omni 的音视频输入与语音输出，同时保留 ASR 和 TTS 专用分支。全模态交互与专用语音处理可以互补，不能仅凭名称互相替代。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-19T02:07:00.000Z">
+<meta property="article:modified_time" content="2026-09-19T14:27:25.161Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="ASR">
+<meta property="article:tag" content="Audio">
+<meta property="article:tag" content="Omni">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="Qwen专题">
+<meta property="article:tag" content="TTS">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Kaiyun&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-09-19 10:07" pubdate>
+          2026年9月19日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          29 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="核心问题：输入声音、理解声音和输出声音"><a href="#核心问题：输入声音、理解声音和输出声音" class="headerlink" title="核心问题：输入声音、理解声音和输出声音"></a>核心问题：输入声音、理解声音和输出声音</h2><p>语音识别把声音变成文字，音频理解还要解释环境声、音乐与说话方式，语音生成则要把内容变成可播放的波形。将这些能力组合成实时对话，还需要解决时间对齐、首包延迟和交互状态。</p>
+<p>Qwen 的路线从 Audio 的通用音频理解，发展到 Omni 的音视频输入与语音输出，同时保留 ASR 和 TTS 专用分支。<strong>全模态交互与专用语音处理可以互补，不能仅凭名称互相替代。</strong></p>
+<span id="more"></span>
+
+<h2 id="一、模型分工对照"><a href="#一、模型分工对照" class="headerlink" title="一、模型分工对照"></a>一、模型分工对照</h2><table>
+<thead>
+<tr>
+<th>分支</th>
+<th>典型输入</th>
+<th>典型输出</th>
+<th>主要用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Qwen-Audio / Qwen2-Audio</td>
+<td>音频，可配文字指令</td>
+<td>文本</td>
+<td>识别、音频问答、声音分析</td>
+</tr>
+<tr>
+<td>Qwen2.5-Omni / Qwen3-Omni</td>
+<td>文本、图像、音频、视频</td>
+<td>文本与语音，依具体版本</td>
+<td>多模态对话与交互</td>
+</tr>
+<tr>
+<td>Qwen3-ASR</td>
+<td>语音</td>
+<td>转写文本、语言信息</td>
+<td>批量转写与流式识别</td>
+</tr>
+<tr>
+<td>Qwen3-ForcedAligner</td>
+<td>已知文本与语音</td>
+<td>对齐时间戳</td>
+<td>字幕、字词级时间定位</td>
+</tr>
+<tr>
+<td>Qwen3-TTS</td>
+<td>文本与相应声音条件</td>
+<td>语音</td>
+<td>朗读、可控语音生成</td>
+</tr>
+</tbody></table>
+<p>Qwen2-Audio 接收语音指令并返回文字，不应写成它已经原生生成了语音。视频理解模型输出动作描述，也不等于它可以生成视频。</p>
+<h2 id="二、Qwen-Audio：统一多种声音与任务"><a href="#二、Qwen-Audio：统一多种声音与任务" class="headerlink" title="二、Qwen-Audio：统一多种声音与任务"></a>二、Qwen-Audio：统一多种声音与任务</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2311.07919">Qwen-Audio: Advancing Universal Audio Understanding via Unified Large-Scale Audio-Language Models</a>，2023-11-14 首发。</li>
+<li><strong>作者 / 机构</strong>：Yunfei Chu 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>实现</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen-Audio">Qwen-Audio 官方仓库</a>。</li>
+</ul>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Qwen-Audio 将语音、环境声、音乐和歌曲等音频类型纳入统一音频语言模型，覆盖三十多类任务。重点是让音频表示支持多种理解需求，而不只是转写人说了什么。</p>
+<h3 id="核心创新：用层级标签协调多任务"><a href="#核心创新：用层级标签协调多任务" class="headerlink" title="核心创新：用层级标签协调多任务"></a>核心创新：用层级标签协调多任务</h3><p>同一段声音可以对应不同答案：转写任务需要逐字文本，事件描述需要“有人敲门”，情绪任务需要语气分析。如果这些标签没有任务条件，训练目标可能互相冲突。</p>
+<p>报告使用层级标签，既表达任务间共享信息，又标明不同任务的具体要求。共享部分鼓励通用音频理解，专门标签减少“一段音频究竟应该输出哪种文本”的歧义。</p>
+<h3 id="代表意义"><a href="#代表意义" class="headerlink" title="代表意义"></a>代表意义</h3><p>音频成为语音、音乐、环境信息的共同入口。它也提醒我们，转写是一种有损中间表示：背景声、节奏、音色和语气不一定能从纯文字中恢复。</p>
+<h2 id="三、Qwen2-Audio：用自然语言组织音频交互"><a href="#三、Qwen2-Audio：用自然语言组织音频交互" class="headerlink" title="三、Qwen2-Audio：用自然语言组织音频交互"></a>三、Qwen2-Audio：用自然语言组织音频交互</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2407.10759">Qwen2-Audio Technical Report</a>，2024-07-15 首发。</li>
+<li><strong>作者 / 机构</strong>：Yunfei Chu 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>实现</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen2-Audio">Qwen2-Audio 官方仓库</a>。</li>
+</ul>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>Qwen2-Audio 用自然语言提示简化任务表达，并加强语音指令与音频分析两类交互。用户既可以直接在音频中提问，也可以附加文字要求分析一段音频。</p>
+<h3 id="核心创新"><a href="#核心创新" class="headerlink" title="核心创新"></a>核心创新</h3><p><strong>从复杂任务标签转向自然语言条件。</strong> 模型通过训练学习不同音频任务的要求，降低使用时对专门标签的依赖。</p>
+<p><strong>区分声音内容与用户意图。</strong> 在包含对话、环境音与语音指令的输入中，系统需要理解用户到底要求转写、解释还是回答问题。报告关注无需专门系统提示切换的交互方式。</p>
+<p><strong>偏好对齐。</strong> DPO 用于改善事实性和期望行为。它影响的是生成回答的分布，不会让模型自动获得未输入的音频信息。</p>
+<h3 id="代表意义-1"><a href="#代表意义-1" class="headerlink" title="代表意义"></a>代表意义</h3><p>Qwen2-Audio 从“统一任务模型”更进一步走向自然音频助手。评价它时，应同时看转写和音频问答，不能仅用字错率判断环境声音理解。</p>
+<h2 id="四、Qwen2-5-Omni：Thinker–Talker-与音视频时间对齐"><a href="#四、Qwen2-5-Omni：Thinker–Talker-与音视频时间对齐" class="headerlink" title="四、Qwen2.5-Omni：Thinker–Talker 与音视频时间对齐"></a>四、Qwen2.5-Omni：Thinker–Talker 与音视频时间对齐</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2503.20215">Qwen2.5-Omni Technical Report</a>，2025 年 3 月首发。</li>
+<li><strong>作者 / 机构</strong>：Jin Xu 等，Qwen 团队、阿里巴巴。</li>
+<li><strong>发布</strong>：2025-03-26 首批发布，后续补充 3B；见<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen2.5-Omni">官方仓库</a>。</li>
+</ul>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>Qwen2.5-Omni 接收文本、图像、音频和视频，并能生成文本与自然语音。Thinker–Talker 将多模态理解和语音生成组织成协作的部分。</p>
+<h3 id="核心创新一：理解与说话协同"><a href="#核心创新一：理解与说话协同" class="headerlink" title="核心创新一：理解与说话协同"></a>核心创新一：理解与说话协同</h3><p>Thinker 负责整合输入并产生语言相关表示，Talker 利用这些信息生成语音 token，后续模块再得到波形。相比简单把独立 ASR、LLM、TTS 串联，端到端设计能让更丰富的音频和视觉信息进入理解过程。</p>
+<p>这不意味着模块完全消失。音频编码、视觉编码、语音 token 预测与波形生成仍有各自的计算与时间开销。</p>
+<h3 id="核心创新二：Time-aligned-Multimodal-RoPE"><a href="#核心创新二：Time-aligned-Multimodal-RoPE" class="headerlink" title="核心创新二：Time-aligned Multimodal RoPE"></a>核心创新二：Time-aligned Multimodal RoPE</h3><p>音频片段与视频帧具有不同采样粒度。TMRoPE 用时间对齐的多模态位置表示把它们联系起来，帮助判断某段声音与哪个画面对应。</p>
+<p>例如，看到门关闭并听到响声，模型需要判断两者是否发生在同一时间。若输入的帧时间戳有偏差，或者音频预处理引入延迟，模型的时序分析就可能出错。</p>
+<h3 id="核心创新三：流式输出"><a href="#核心创新三：流式输出" class="headerlink" title="核心创新三：流式输出"></a>核心创新三：流式输出</h3><p>分块生成允许用户在完整回答结束前听到第一段内容，减少等待感。但流式输出也限制了后续修改：已经播放的话不能像内部文本一样随意撤回，系统需要在响应速度和输出稳定性之间取舍。</p>
+<h3 id="代表意义-2"><a href="#代表意义-2" class="headerlink" title="代表意义"></a>代表意义</h3><p>Omni 把“多种输入都能处理”推进到“多种输入共同参与实时交互”。衡量系统时，不仅要看答案质量，还要观察首包时间、连续播放是否平稳，以及语音与文本是否一致。</p>
+<h2 id="五、Qwen3-Omni：MoE-与更轻的语音流式生成"><a href="#五、Qwen3-Omni：MoE-与更轻的语音流式生成" class="headerlink" title="五、Qwen3-Omni：MoE 与更轻的语音流式生成"></a>五、Qwen3-Omni：MoE 与更轻的语音流式生成</h2><ul>
+<li><strong>论文</strong>：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2509.17765">Qwen3-Omni Technical Report</a>，2025-09-22 首发。</li>
+<li><strong>作者 / 机构</strong>：Qwen 团队、阿里巴巴。</li>
+<li><strong>实现</strong>：<a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-Omni">Qwen3-Omni 官方仓库</a>。</li>
+</ul>
+<h3 id="简介-3"><a href="#简介-3" class="headerlink" title="简介"></a>简介</h3><p>Qwen3-Omni 采用 Thinker–Talker MoE 架构，继续支持文本、图像、音频、视频输入与文本、语音输出。报告给出的语言范围分别为文本 119 种、语音理解 19 种、语音生成 10 种，三者不能混用。</p>
+<h3 id="核心创新-1"><a href="#核心创新-1" class="headerlink" title="核心创新"></a>核心创新</h3><p><strong>多码本语音表示。</strong> Talker 使用多个 codec 码本表达语音信息，让声学表示兼顾压缩与细节。语音 token 的时间组织会直接影响开始播放需要等待多久。</p>
+<p><strong>轻量因果卷积解码。</strong> 报告将原本较重的分块扩散路径替换为轻量因果 ConvNet，支持从首个 codec 帧开始流式合成。这项变化针对语音生成环节，不能直接推导整个产品的网络往返延迟。</p>
+<p><strong>任务变体。</strong> 系列提供 Thinking 与音频 Captioner 等版本。Captioner 面向详细描述音频内容，Thinking 强调多模态推理；具体输出接口仍要按模型卡核对。</p>
+<h3 id="代表意义与延迟口径"><a href="#代表意义与延迟口径" class="headerlink" title="代表意义与延迟口径"></a>代表意义与延迟口径</h3><p>报告给出特定冷启动设定下理论首包延迟 234 ms。实际用户感受到的延迟还包含录音分段、预处理、排队、网络与播放器缓冲，所以不应写成任意部署都能在 234 ms 内回应。</p>
+<h2 id="六、2026-专用语音分支：ASR、对齐与-TTS"><a href="#六、2026-专用语音分支：ASR、对齐与-TTS" class="headerlink" title="六、2026 专用语音分支：ASR、对齐与 TTS"></a>六、2026 专用语音分支：ASR、对齐与 TTS</h2><h3 id="Qwen3-ASR-与-ForcedAligner"><a href="#Qwen3-ASR-与-ForcedAligner" class="headerlink" title="Qwen3-ASR 与 ForcedAligner"></a>Qwen3-ASR 与 ForcedAligner</h3><p><a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-ASR">Qwen3-ASR 官方仓库</a>记录了 2026-01-29 发布的 0.6B / 1.7B 转写模型，以及 Qwen3-ForcedAligner-0.6B。ASR 提供语言识别与语音转写；对齐模型则在已有文本与音频之间预测时间对应关系。</p>
+<p>两者的使用顺序可以是“先转写，再对齐”，但对齐不是重新判断文本是否正确。如果输入文本已经错了，精确时间戳也不能让内容变正确。评估需要分别检查识别准确率与对齐误差。</p>
+<h3 id="Qwen3-TTS"><a href="#Qwen3-TTS" class="headerlink" title="Qwen3-TTS"></a>Qwen3-TTS</h3><p><a target="_blank" rel="noopener" href="https://github.com/QwenLM/Qwen3-TTS">Qwen3-TTS 官方仓库</a>记录了 2026-01-22 发布的 0.6B / 1.7B 系列，使用 Qwen3-TTS-Tokenizer-12Hz，提供 Base、CustomVoice、VoiceDesign 等不同类型，覆盖相应的音色条件与自然语言控制能力。</p>
+<p><code>12Hz</code> 描述声学 token 的时间频率，不是输出波形的采样率。选择型号时，应区分固定或可控音色、声音描述生成，以及参考音频条件，使用自己有权使用的声音素材。</p>
+<p>这些专用模型适合明确任务边界的系统：批量字幕优先转写与对齐，朗读优先 TTS，需要同时理解画面和声音的交互再考虑 Omni。</p>
+<h2 id="七、端到端音视频系统怎样评测"><a href="#七、端到端音视频系统怎样评测" class="headerlink" title="七、端到端音视频系统怎样评测"></a>七、端到端音视频系统怎样评测</h2><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>推荐指标</th>
+<th>必须固定的条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>转写</td>
+<td>WER / CER、专有名词错误</td>
+<td>语言、噪声、分段、标点规则</td>
+</tr>
+<tr>
+<td>音频理解</td>
+<td>问答正确率、声音事件召回</td>
+<td>音频长度、问题类型</td>
+</tr>
+<tr>
+<td>语音生成</td>
+<td>可懂度、自然度、发音准确性</td>
+<td>文本、声音条件、语言</td>
+</tr>
+<tr>
+<td>实时交互</td>
+<td>首包延迟、播放中断、总耗时</td>
+<td>网络、并发、输入结束判断</td>
+</tr>
+<tr>
+<td>音视频关联</td>
+<td>时间定位误差、事件匹配</td>
+<td>视频采样率与时间戳</td>
+</tr>
+</tbody></table>
+<p>首先用固定的录制样本建立离线基线，再接入流式管线，能够分辨问题来自模型还是数据传输。下一篇将输出模态转到图像，讨论文字绘制与可控编辑。</p>
+<hr>
+<p><strong>Qwen 专题系列导航</strong>：<a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-05-%E8%A7%86%E8%A7%89%E7%90%86%E8%A7%A3%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81%E6%8E%A8%E7%90%86/">← 上一篇：05 视觉理解与多模态推理</a> | <a href="/2026/09/19/qwen/Qwen-%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E4%B8%8E%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">专题目录</a> | <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-07-%E5%9B%BE%E5%83%8F%E7%94%9F%E6%88%90%E4%B8%8E%E7%BC%96%E8%BE%91/">下一篇：07 图像生成与编辑 →</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Qwen/" class="category-chain-item">Qwen</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/Qwen/%E9%9F%B3%E9%A2%91%E4%B8%8E%E5%85%A8%E6%A8%A1%E6%80%81/" class="category-chain-item">音频与全模态</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Qwen/" class="print-no-link">#Qwen</a>
+      
+        <a href="/tags/Qwen%E4%B8%93%E9%A2%98/" class="print-no-link">#Qwen专题</a>
+      
+        <a href="/tags/Audio/" class="print-no-link">#Audio</a>
+      
+        <a href="/tags/Omni/" class="print-no-link">#Omni</a>
+      
+        <a href="/tags/ASR/" class="print-no-link">#ASR</a>
+      
+        <a href="/tags/TTS/" class="print-no-link">#TTS</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Qwen专题-06：音频与全模态交互 —— 从听懂声音到实时对话</div>
+      <div>https://w2ongq6.github.io/2026/09/19/qwen/Qwen专题-06-音频与全模态交互/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年9月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-05-%E8%A7%86%E8%A7%89%E7%90%86%E8%A7%A3%E4%B8%8E%E5%A4%9A%E6%A8%A1%E6%80%81%E6%8E%A8%E7%90%86/" title="Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Qwen专题-05：视觉理解与多模态推理 —— 从 Qwen-VL 到原生视觉语言基座</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/09/19/qwen/Qwen%E4%B8%93%E9%A2%98-07-%E5%9B%BE%E5%83%8F%E7%94%9F%E6%88%90%E4%B8%8E%E7%BC%96%E8%BE%91/" title="Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑">
+                        <span class="hidden-mobile">Qwen专题-07：图像生成与编辑 —— 从准确写字到图层可编辑</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
