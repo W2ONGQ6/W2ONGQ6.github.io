@@ -24,7 +24,7 @@
 <meta property="og:description" content="引言：3D 生成最后要走向什么优化式 3D 生成很优雅，但它的问题也很明显：每个样本都要单独跑优化，速度很难真正进生产。 所以 2024 之后的主线开始变得很清楚：把 3D 生成变成一次前向传播问题。这意味着模型不再“为每个输入重新求解”，而是训练一个通用映射，把图像、文本或多视图直接变成 3D 表示。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-09-01T01:05:00.000Z">
-<meta property="article:modified_time" content="2026-09-01T15:08:38.372Z">
+<meta property="article:modified_time" content="2026-10-26T04:00:00.000Z">
 <meta property="article:author" content="Kaiyun.li">
 <meta property="article:tag" content="3DGS&#x2F;NeRF专题">
 <meta property="article:tag" content="CRM">
@@ -242,7 +242,7 @@ mjx-container[display="true"] + br {
       <div class="article-heading">
         <div class="breadcrumb"><a href="/topics/">专题</a><span>/</span><a href="/2026/09/01/3dgs/3DGS-NeRF%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">三维重建</a></div>
         <h1>3DGS/NeRF 专题-05：前馈式重建与实时生成 —— LGM、InstantMesh、TripoSR</h1>
-        <div class="article-meta"><span class="author-avatar">K</span><span>Kaiyun.li</span><span class="meta-divider">/</span><time datetime="2026-09-01">2026.09.01</time><span class="meta-divider">/</span><span>约 2 分钟阅读</span></div>
+        <div class="article-meta"><span class="author-avatar">K</span><span>Kaiyun.li</span><span class="meta-divider">/</span><time datetime="2026-09-01">2026.09.01</time><span class="meta-divider">/</span><span>约 3 分钟阅读</span></div>
       </div>
     
   </div>
@@ -256,10 +256,15 @@ mjx-container[display="true"] + br {
 <div class="article-layout site-container" id="board-ctn">
   <div id="board" class="article-paper">
     <article class="post-content">
-      <div class="mobile-contents"><details><summary>本篇目录 <span aria-hidden="true">＋</span></summary><nav aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A3D-%E7%94%9F%E6%88%90%E6%9C%80%E5%90%8E%E8%A6%81%E8%B5%B0%E5%90%91%E4%BB%80%E4%B9%88"><span class="toc-text">引言：3D 生成最后要走向什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81LGM%EF%BC%9A%E4%BB%8E%E5%A4%9A%E8%A7%86%E5%9B%BE%E7%9B%B4%E6%8E%A5%E5%88%B0-3DGS"><span class="toc-text">一、LGM：从多视图直接到 3DGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81InstantMesh-CRM-TripoSR%EF%BC%9A%E5%89%8D%E9%A6%88%E5%BC%8F%E9%87%8D%E5%BB%BA%E5%BC%80%E5%A7%8B%E5%B7%A5%E4%B8%9A%E5%8C%96"><span class="toc-text">二、InstantMesh &#x2F; CRM &#x2F; TripoSR：前馈式重建开始工业化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%80%E6%AD%A5%E9%87%8D%E8%A6%81"><span class="toc-text">三、为什么这一步重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav></details></div>
+      <div class="mobile-contents"><details><summary>本篇目录 <span aria-hidden="true">＋</span></summary><nav aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A3D-%E7%94%9F%E6%88%90%E6%9C%80%E5%90%8E%E8%A6%81%E8%B5%B0%E5%90%91%E4%BB%80%E4%B9%88"><span class="toc-text">引言：3D 生成最后要走向什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%91%E6%9C%9F%E8%BF%9B%E5%B1%95%EF%BC%88%E6%A0%B8%E5%AF%B9%E8%87%B3-2026-10-26%EF%BC%89"><span class="toc-text">近期进展（核对至 2026-10-26）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81LGM%EF%BC%9A%E4%BB%8E%E5%A4%9A%E8%A7%86%E5%9B%BE%E7%9B%B4%E6%8E%A5%E5%88%B0-3DGS"><span class="toc-text">一、LGM：从多视图直接到 3DGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81InstantMesh-CRM-TripoSR%EF%BC%9A%E5%89%8D%E9%A6%88%E5%BC%8F%E9%87%8D%E5%BB%BA%E5%BC%80%E5%A7%8B%E5%B7%A5%E4%B8%9A%E5%8C%96"><span class="toc-text">二、InstantMesh &#x2F; CRM &#x2F; TripoSR：前馈式重建开始工业化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%80%E6%AD%A5%E9%87%8D%E8%A6%81"><span class="toc-text">三、为什么这一步重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav></details></div>
       <div class="markdown-body"><h2 id="引言：3D-生成最后要走向什么"><a href="#引言：3D-生成最后要走向什么" class="headerlink" title="引言：3D 生成最后要走向什么"></a>引言：3D 生成最后要走向什么</h2><p>优化式 3D 生成很优雅，但它的问题也很明显：每个样本都要单独跑优化，速度很难真正进生产。</p>
 <p>所以 2024 之后的主线开始变得很清楚：<strong>把 3D 生成变成一次前向传播问题。</strong><br>这意味着模型不再“为每个输入重新求解”，而是训练一个通用映射，把图像、文本或多视图直接变成 3D 表示。</p>
 <span id="more"></span>
+
+<!-- latest-progress:start -->
+<h2 id="近期进展（核对至-2026-10-26）"><a href="#近期进展（核对至-2026-10-26）" class="headerlink" title="近期进展（核对至 2026-10-26）"></a>近期进展（核对至 2026-10-26）</h2><p><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2610.31293">RecallGS</a>（2026-10-22，预印本）把在线语义 3DGS 的重点从“再训练一个 3D 语义网络”转向“从观测历史检索几何—语义证据”：它以 CLIP 检索、alpha-compositing 支持的视角筛选和 Gaussian footprint 聚合来恢复上下文。它说明实时语义建图的一个可行方向是把历史观测作为非参数先验；论文报告的是 ScanNet/ScanNet++ 上的结果，尚不等同于所有动态场景的通用结论。</p>
+<!-- latest-progress:end -->
+
 
 <hr>
 <h2 id="一、LGM：从多视图直接到-3DGS"><a href="#一、LGM：从多视图直接到-3DGS" class="headerlink" title="一、LGM：从多视图直接到 3DGS"></a>一、LGM：从多视图直接到 3DGS</h2><ul>
@@ -353,7 +358,7 @@ mjx-container[display="true"] + br {
       
     </article>
   </div>
-  <aside class="article-aside"><div class="sticky-contents"><p class="eyebrow">ON THIS PAGE</p><h2>本篇目录</h2><nav id="reading-toc" aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A3D-%E7%94%9F%E6%88%90%E6%9C%80%E5%90%8E%E8%A6%81%E8%B5%B0%E5%90%91%E4%BB%80%E4%B9%88"><span class="toc-text">引言：3D 生成最后要走向什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81LGM%EF%BC%9A%E4%BB%8E%E5%A4%9A%E8%A7%86%E5%9B%BE%E7%9B%B4%E6%8E%A5%E5%88%B0-3DGS"><span class="toc-text">一、LGM：从多视图直接到 3DGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81InstantMesh-CRM-TripoSR%EF%BC%9A%E5%89%8D%E9%A6%88%E5%BC%8F%E9%87%8D%E5%BB%BA%E5%BC%80%E5%A7%8B%E5%B7%A5%E4%B8%9A%E5%8C%96"><span class="toc-text">二、InstantMesh &#x2F; CRM &#x2F; TripoSR：前馈式重建开始工业化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%80%E6%AD%A5%E9%87%8D%E8%A6%81"><span class="toc-text">三、为什么这一步重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav><a class="toc-directory" href="/2026/09/01/3dgs/3DGS-NeRF%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">← 返回专题目录</a></div></aside>
+  <aside class="article-aside"><div class="sticky-contents"><p class="eyebrow">ON THIS PAGE</p><h2>本篇目录</h2><nav id="reading-toc" aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A3D-%E7%94%9F%E6%88%90%E6%9C%80%E5%90%8E%E8%A6%81%E8%B5%B0%E5%90%91%E4%BB%80%E4%B9%88"><span class="toc-text">引言：3D 生成最后要走向什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%91%E6%9C%9F%E8%BF%9B%E5%B1%95%EF%BC%88%E6%A0%B8%E5%AF%B9%E8%87%B3-2026-10-26%EF%BC%89"><span class="toc-text">近期进展（核对至 2026-10-26）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81LGM%EF%BC%9A%E4%BB%8E%E5%A4%9A%E8%A7%86%E5%9B%BE%E7%9B%B4%E6%8E%A5%E5%88%B0-3DGS"><span class="toc-text">一、LGM：从多视图直接到 3DGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81InstantMesh-CRM-TripoSR%EF%BC%9A%E5%89%8D%E9%A6%88%E5%BC%8F%E9%87%8D%E5%BB%BA%E5%BC%80%E5%A7%8B%E5%B7%A5%E4%B8%9A%E5%8C%96"><span class="toc-text">二、InstantMesh &#x2F; CRM &#x2F; TripoSR：前馈式重建开始工业化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%80%E6%AD%A5%E9%87%8D%E8%A6%81"><span class="toc-text">三、为什么这一步重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav><a class="toc-directory" href="/2026/09/01/3dgs/3DGS-NeRF%E7%BB%8F%E5%85%B8%E8%AE%BA%E6%96%87%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">← 返回专题目录</a></div></aside>
 </div>
 
 
