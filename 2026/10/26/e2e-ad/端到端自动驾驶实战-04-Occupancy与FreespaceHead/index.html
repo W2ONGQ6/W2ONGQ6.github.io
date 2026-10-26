@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme="auto">
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/kaiyun.svg">
+  <link rel="icon" href="/img/kaiyun.svg">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#1a1f2e">
+  <meta name="author" content="Kaiyun.li">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引言：空闲不是未知的同义词occupancy 回答三维空间被什么占据；freespace 回答地面上自车是否可合法通行。相机看不到的区域是 unknown，不是 free。这个区分决定了碰撞损失、规划代价和安全策略是否可信。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="端到端自动驾驶实战-04：Occupancy 与 Freespace Head —— 区分看不见、被占据与可通行">
+<meta property="og:url" content="https://w2ongq6.github.io/2026/10/26/e2e-ad/%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E5%AE%9E%E6%88%98-04-Occupancy%E4%B8%8EFreespaceHead/index.html">
+<meta property="og:site_name" content="Kaiyun&#39;s Blog">
+<meta property="og:description" content="引言：空闲不是未知的同义词occupancy 回答三维空间被什么占据；freespace 回答地面上自车是否可合法通行。相机看不到的区域是 unknown，不是 free。这个区分决定了碰撞损失、规划代价和安全策略是否可信。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T02:04:00.000Z">
+<meta property="article:modified_time" content="2026-10-26T14:32:30.684Z">
+<meta property="article:author" content="Kaiyun.li">
+<meta property="article:tag" content="BEV">
+<meta property="article:tag" content="Freespace">
+<meta property="article:tag" content="Occupancy">
+<meta property="article:tag" content="自动驾驶">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>端到端自动驾驶实战-04：Occupancy 与 Freespace Head —— 区分看不见、被占据与可通行 - Kaiyun&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/code.css">
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"w2ongq6.github.io","root":"/","version":"1.9.9","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#216757","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":false,"default":"TEXT"},"copy_btn":false,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+<body class="site-post">
+  <noscript><style>.nav-actions{display:none}@media(max-width:700px){.nav-links{display:flex;position:static;flex-wrap:wrap;padding:4px 0;border:0;box-shadow:none;gap:4px 12px;background:transparent}.nav-links a{padding:4px}.nav-inner{flex-wrap:wrap;height:auto;padding-top:12px;padding-bottom:12px}.site-nav{position:static;height:auto}.editorial-hero{margin-top:0}.nav-links a[aria-current]::after{display:none}}</style></noscript>
+  <a class="skip-link" href="#main-content">跳到正文</a>
+  
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+  <div class="nav-inner">
+    <a class="site-brand" href="/" aria-label="Kaiyun's Blog 首页"><span class="brand-mark">K<span>.</span></span><span>KAIYUN<span class="brand-caption">技术 · 思考 · 实践</span></span></a>
+    <div class="nav-links" id="site-menu">
+      
+        <a href="/" >首页</a>
+      
+        <a href="/topics/" >专题</a>
+      
+        <a href="/docs/" >入门文档</a>
+      
+        <a href="/archives/" >归档</a>
+      
+        <a href="/about/" >关于</a>
+      
+    </div>
+    <div class="nav-actions">
+      <button class="search-trigger" type="button" data-open-search aria-label="搜索文章（Control 或 Command 加 K）"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>搜索</span><kbd>⌘ K</kbd></button>
+      <button class="icon-button" id="color-toggle-btn" type="button" aria-label="切换明暗模式" title="切换明暗模式"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 0 1 10.5 3.5a8.5 8.5 0 1 0 10 10Z"/></svg><i id="color-toggle-icon" hidden></i></button>
+      <button class="menu-toggle icon-button" type="button" aria-controls="site-menu" aria-expanded="false" aria-label="展开导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    </div>
+  </div>
+</nav>
+
+    
+<div class="editorial-hero post-hero">
+  <div class="site-container hero-inner">
+    
+      <div class="article-heading">
+        <div class="breadcrumb"><a href="/topics/">专题</a><span>/</span><span>技术笔记</span></div>
+        <h1>端到端自动驾驶实战-04：Occupancy 与 Freespace Head —— 区分看不见、被占据与可通行</h1>
+        <div class="article-meta"><span class="author-avatar">K</span><span>Kaiyun.li</span><span class="meta-divider">/</span><time datetime="2026-10-26">2026.10.26</time><span class="meta-divider">/</span><span>约 4 分钟阅读</span></div>
+      </div>
+    
+  </div>
+</div>
+
+  </header>
+  <main id="main-content" tabindex="-1">
+    
+      
+<div class="reading-progress" aria-hidden="true"><span></span></div>
+<div class="article-layout site-container" id="board-ctn">
+  <div id="board" class="article-paper">
+    <article class="post-content">
+      <div class="mobile-contents"><details><summary>本篇目录 <span aria-hidden="true">＋</span></summary><nav aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A%E7%A9%BA%E9%97%B2%E4%B8%8D%E6%98%AF%E6%9C%AA%E7%9F%A5%E7%9A%84%E5%90%8C%E4%B9%89%E8%AF%8D"><span class="toc-text">引言：空闲不是未知的同义词</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%BB%8E%E4%BA%8C%E7%BB%B4-BEV-%E5%8D%87%E5%88%B0%E4%BD%93%E7%B4%A0"><span class="toc-text">一、从二维 BEV 升到体素</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81freespace-head"><span class="toc-text">二、freespace head</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%8A%8A-dense-head-%E6%8E%A5%E7%BB%99%E8%A7%84%E5%88%92"><span class="toc-text">三、把 dense head 接给规划</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81Occ-%E4%B8%8E-Freespace-%E7%9A%84%E7%BB%8F%E5%85%B8%E8%B7%AF%E7%BA%BF"><span class="toc-text">四、Occ 与 Freespace 的经典路线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav></details></div>
+      <div class="markdown-body"><h2 id="引言：空闲不是未知的同义词"><a href="#引言：空闲不是未知的同义词" class="headerlink" title="引言：空闲不是未知的同义词"></a>引言：空闲不是未知的同义词</h2><p>occupancy 回答三维空间被什么占据；freespace 回答地面上自车是否可合法通行。相机看不到的区域是 unknown，不是 free。这个区分决定了碰撞损失、规划代价和安全策略是否可信。</p>
+<span id="more"></span>
+
+<h2 id="一、从二维-BEV-升到体素"><a href="#一、从二维-BEV-升到体素" class="headerlink" title="一、从二维 BEV 升到体素"></a>一、从二维 BEV 升到体素</h2><p>最小版本将 BEV 特征沿高度复制并用 3D 卷积解码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">OccHead</span>(nn.Module):<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, c, z_bins, n_semantic</span>):<br>        <span class="hljs-built_in">super</span>().__init__()<br>        <span class="hljs-variable language_">self</span>.z_bins = z_bins<br>        <span class="hljs-variable language_">self</span>.up = nn.Sequential(<br>            nn.Conv3d(c, c, <span class="hljs-number">3</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>), nn.ReLU(),<br>            nn.Conv3d(c, n_semantic, <span class="hljs-number">1</span>))<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, bev</span>):<br>        <span class="hljs-comment"># [B,C,H,W] -&gt; [B,C,Z,H,W]; production systems may use sparse 3D features</span><br>        volume = bev.unsqueeze(<span class="hljs-number">2</span>).expand(-<span class="hljs-number">1</span>, -<span class="hljs-number">1</span>, <span class="hljs-variable language_">self</span>.z_bins, -<span class="hljs-number">1</span>, -<span class="hljs-number">1</span>)<br>        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.up(volume)<br></code></pre></td></tr></table></figure>
+
+<p>这不是最高效的 3D 表示，但能先验证标签、可见性和损失是否正确。大范围高分辨率场景应使用稀疏体素、TPV 或分层解码。</p>
+<h2 id="二、freespace-head"><a href="#二、freespace-head" class="headerlink" title="二、freespace head"></a>二、freespace head</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">FreespaceHead</span>(nn.Module):<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, c</span>):<br>        <span class="hljs-built_in">super</span>().__init__()<br>        <span class="hljs-variable language_">self</span>.net = nn.Sequential(nn.Conv2d(c, c, <span class="hljs-number">3</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>), nn.ReLU(), nn.Conv2d(c, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>))<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, bev</span>):<br>        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.net(bev).squeeze(<span class="hljs-number">1</span>)  <span class="hljs-comment"># logits [B,H,W]</span><br></code></pre></td></tr></table></figure>
+
+<p>标签可由可见地面、地图、动态物体和遮挡逻辑合成。训练 mask 必须排除 unknown；否则数据集里最远处或遮挡区的大量伪负样本会诱导模型过度自信。</p>
+<p><strong>最小例子</strong>：前方一个栅格被已观测车辆覆盖，它应是 <code>occupied</code>；车辆旁被相机和 LiDAR 看清的地面是 <code>free</code>；车辆后的遮挡区是 <code>unknown</code>。若将第三类也标成 <code>free</code>，模型会学会“车后总能通行”，而轨迹代价会错误偏低。</p>
+<h2 id="三、把-dense-head-接给规划"><a href="#三、把-dense-head-接给规划" class="headerlink" title="三、把 dense head 接给规划"></a>三、把 dense head 接给规划</h2><p>对未来轨迹采样 BEV logits，构造软代价：</p>
+<p><mjx-container class="MathJax" jax="SVG" overflow="overflow" display="true"><svg style="vertical-align: -2.75ex;" xmlns="http://www.w3.org/2000/svg" width="40.09ex" height="4.899ex" role="img" focusable="false" viewBox="0 -950 17719.7 2165.5"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math" data-latex="
+J_{safe}=\sum_k \big[-\log p_{free}(p_k)+\lambda\,p_{occ}(p_k)\big].
+"><g data-mml-node="msub" data-latex="J_{s a f e}"><g data-mml-node="mi" data-latex="J"><path data-c="1D43D" d="M633 667C633 678 627 683 615 683C596 683 525 680 506 680L361 683C344 683 336 675 336 659C336 649 349 644 374 644C419 644 446 642 453 637C456 635 457 632 457 627C457 624 456 617 454 607L340 153C324 89 273 8 202 8C157 8 128 25 114 60L120 60C156 60 188 91 188 127C188 158 172 173 141 173C97 173 71 134 71 90C71 20 132-22 205-22C255-22 301-6 344 26C387 58 415 97 427 144L542 606C551 642 555 644 602 644C623 644 633 646 633 667Z"></path></g><g data-mml-node="TeXAtom" transform="translate(588,-150) scale(0.707)" data-latex="{s a f e}" data-mjx-texclass="ORD"><g data-mml-node="mi" data-latex="s"><path data-c="1D460" d="M420 354C420 411 362 442 300 442C237 442 192 423 165 385C142 352 130 322 130 295C130 242 165 208 234 193C263 188 285 181 302 173C323 164 333 147 333 123C333 105 325 85 308 62C287 33 250 18 197 18C143 18 108 33 92 62C124 61 151 87 151 119C151 144 138 157 111 157C75 157 52 124 52 88C52 22 124-11 196-11C271-11 325 11 357 56C384 93 397 126 397 156C397 199 376 231 335 252C304 263 280 270 265 273C230 282 194 285 194 328C194 381 244 413 300 413C342 413 369 400 382 375C360 371 337 352 337 327C337 306 348 295 371 295C402 295 420 323 420 354Z"></path></g><g data-mml-node="mi" data-latex="a" transform="translate(469,0)"><path data-c="1D44E" d="M498 144C498 153 493 158 482 158C474 158 468 151 465 137C445 58 421 18 394 18C377 18 368 32 368 60C368 73 372 97 381 132L438 357C443 376 445 387 445 392C445 412 434 422 412 422C391 422 377 410 370 387C349 424 319 442 281 442C216 442 159 409 109 343C63 281 40 217 40 150C40 63 91-11 175-11C218-11 260 12 300 58C311 20 345-11 392-11C461-11 482 70 498 144M341 374C350 353 355 339 355 330C355 326 354 321 353 314L304 122C301 111 294 99 285 87C248 41 212 18 177 18C138 18 118 48 118 107C118 131 124 167 136 215C157 300 187 357 224 388C244 405 263 413 282 413C309 413 329 400 341 374Z"></path></g><g data-mml-node="mi" data-latex="f" transform="translate(998,0)"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g><g data-mml-node="mi" data-latex="e" transform="translate(1550,0)"><path data-c="1D452" d="M124 129C124 153 129 186 139 227L188 227C253 227 303 235 339 250C372 264 394 284 405 309C412 326 415 342 415 355C415 410 363 442 307 442C268 442 229 432 190 412C113 372 46 281 46 171C46 69 105-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 124 72 124 129M375 355C375 289 311 256 182 256L147 256C166 322 194 366 232 387C262 404 287 413 307 413C343 413 375 391 375 355Z"></path></g></g></g><g data-mml-node="mo" data-latex="=" transform="translate(2341.3,0)"><path data-c="3D" d="M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z"></path></g><g data-mml-node="munder" data-latex="\sum_k" transform="translate(3397.1,0)"><g data-mml-node="mo" data-latex="\sum"><path data-c="2211" d="M1265-450L1389-124L1355-124C1336-174 1304-216 1258-250C1145-334 1000-356 791-356L200-356L700 232C707 239 710 246 710 251L244 894L781 894C970 894 1127 870 1230 804C1290 766 1332 719 1356 663L1389 663L1265 950L88 950C70 950 60 947 57 941C56 938 56 926 56 905L581 187L68-415C61-423 57-430 57-435C57-445 67-450 88-450Z"></path></g><g data-mml-node="mi" transform="translate(537.8,-1107.7) scale(0.707)" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g><g data-mml-node="TeXAtom" data-latex="\big[" data-mjx-texclass="ORD" transform="translate(5007.7,0)"><g data-mml-node="mo"><path data-c="5B" d="M357-350C374-350 383-341 383-323C383-305 374-296 357-296L269-296L269 796L357 796C374 796 383 805 383 823C383 841 374 850 357 850L217 850L217-350Z"></path></g></g><g data-mml-node="mo" data-latex="-" transform="translate(5647,0)"><path data-c="2212" d="M698 270L80 270C64 270 56 263 56 250C56 237 64 230 80 230L698 230C714 230 722 237 722 250C722 262 710 270 698 270Z"></path></g><g data-mml-node="mi" data-latex="\log" transform="translate(6647.2,0)"><path data-c="6C" d="M144 3L255 0L255 39C219 39 197 40 190 44C183 48 180 60 180 79L180 694L33 683L33 645C68 645 90 642 97 636C104 630 108 616 108 593L108 79C108 60 105 48 98 44C91 40 69 39 33 39L33 0Z"></path><path data-c="6F" d="M249-11C311-11 363 11 406 55C449 99 471 152 471 214C471 277 450 332 408 378C366 424 313 448 250 448C187 448 135 424 92 378C49 332 28 277 28 214C28 152 49 99 92 55C135 11 188-11 249-11M250 21C202 21 166 42 141 85C125 113 117 159 117 222C117 283 125 327 140 355C164 398 200 419 249 419C296 419 332 398 357 357C374 329 382 284 382 222C382 106 348 21 250 21Z" transform="translate(278,0)"></path><path data-c="67" d="M431 453C393 453 358 438 326 408C296 431 262 442 223 442C137 442 59 378 59 294C59 252 74 218 104 192C85 168 75 141 75 110C75 72 88 43 113 24C71 10 28-26 28-77C28-120 56-154 111-178C153-197 199-206 249-206C300-206 347-197 389-178C444-154 471-120 471-75C471-22 449 17 405 42C359 67 308 70 234 70C190 70 166 70 161 71C133 75 113 102 113 133C113 148 117 162 126 174C154 155 186 145 223 145C309 145 386 209 386 293C386 332 373 364 347 389C372 412 399 423 428 423C423 418 420 410 420 400C420 378 431 367 453 367C474 367 485 378 485 401C485 432 461 453 431 453M223 411C277 411 304 372 304 294C304 215 277 175 223 175C168 175 141 214 141 293C141 372 168 411 223 411M164 4L222 4C274 4 316 1 348-6C391-15 412-39 412-77C412-109 392-134 352-153C321-168 287-175 250-175C214-175 180-168 148-153C107-134 87-109 87-77C87-35 123 4 164 4Z" transform="translate(778,0)"></path></g><g data-mml-node="mo" transform="translate(7925.2,0)"><path data-c="2061" d=""></path></g><g data-mml-node="msub" data-latex="p_{f r e e}" transform="translate(8091.9,0)"><g data-mml-node="mi" data-latex="p"><path data-c="1D45D" d="M355 442C311 442 269 419 228 373C217 419 186 442 137 442C96 442 66 409 45 344C35 311 30 292 30 286C30 277 35 272 46 272C51 272 54 273 57 275C62 284 65 291 66 298C84 374 107 412 134 412C152 412 161 398 161 371C161 356 159 339 154 321L44-118C35-151 34-155-5-155C-23-155-32-163-32-178C-32-189-26-194-15-194C0-194 52-191 67-191C86-191 146-194 165-194C180-194 187-186 187-170C187-160 178-155 159-155C141-155 114-156 114-144C114-131 155 26 159 43C179 6 209-13 249-13C314-13 371 20 421 87C467 148 490 213 490 280C490 367 438 442 355 442M352 412C391 412 411 382 411 323C411 296 405 260 394 215C371 128 342 71 307 42C286 25 267 16 248 16C219 16 199 29 188 56C179 77 174 92 174 100L225 309C230 331 248 354 276 377C304 400 329 412 352 412Z"></path></g><g data-mml-node="TeXAtom" transform="translate(536,-150) scale(0.707)" data-latex="{f r e e}" data-mjx-texclass="ORD"><g data-mml-node="mi" data-latex="f"><path data-c="1D453" d="M552 633C552 677 509 705 462 705C400 705 357 665 334 586C329 568 318 517 302 433L237 433C215 433 204 432 204 411C204 400 214 395 235 395L295 395L222 8C211-49 201-91 192-119C180-156 163-175 141-175C126-175 114-171 103-164C135-159 151-140 151-108C151-82 138-69 111-69C77-69 53-99 53-133C53-177 94-205 141-205C166-205 189-195 208-174C240-141 265-94 283-31C294 8 304 46 311 84L369 395L451 395C474 395 484 396 484 419C484 428 474 433 454 433L377 433C383 474 411 625 420 644C430 665 444 675 462 675C477 675 490 671 501 664C470 657 454 639 454 608C454 582 467 569 494 569C528 569 552 599 552 633Z"></path></g><g data-mml-node="mi" data-latex="r" transform="translate(552,0)"><path data-c="1D45F" d="M436 374C436 416 395 442 351 442C302 442 261 419 227 372C217 411 183 442 136 442C95 442 65 410 44 345C34 312 29 293 29 287C29 278 34 273 45 273C50 273 53 274 56 276C61 285 64 292 65 299C83 375 106 413 133 413C150 413 159 399 159 371C159 358 154 331 144 290L87 63C84 50 78 24 78 19C78-1 89-11 110-11C130-11 143-1 150 19L169 91C180 134 187 162 190 175L221 303C223 311 231 324 244 343C271 381 302 413 351 413C363 413 373 411 382 406C352 397 337 378 337 351C337 325 351 312 378 312C411 312 436 341 436 374Z"></path></g><g data-mml-node="mi" data-latex="e" transform="translate(1003,0)"><path data-c="1D452" d="M124 129C124 153 129 186 139 227L188 227C253 227 303 235 339 250C372 264 394 284 405 309C412 326 415 342 415 355C415 410 363 442 307 442C268 442 229 432 190 412C113 372 46 281 46 171C46 69 105-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 124 72 124 129M375 355C375 289 311 256 182 256L147 256C166 322 194 366 232 387C262 404 287 413 307 413C343 413 375 391 375 355Z"></path></g><g data-mml-node="mi" data-latex="e" transform="translate(1469,0)"><path data-c="1D452" d="M124 129C124 153 129 186 139 227L188 227C253 227 303 235 339 250C372 264 394 284 405 309C412 326 415 342 415 355C415 410 363 442 307 442C268 442 229 432 190 412C113 372 46 281 46 171C46 69 105-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 124 72 124 129M375 355C375 289 311 256 182 256L147 256C166 322 194 366 232 387C262 404 287 413 307 413C343 413 375 391 375 355Z"></path></g></g></g><g data-mml-node="mo" data-latex="(" transform="translate(10046.1,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="msub" data-latex="p_k" transform="translate(10435.1,0)"><g data-mml-node="mi" data-latex="p"><path data-c="1D45D" d="M355 442C311 442 269 419 228 373C217 419 186 442 137 442C96 442 66 409 45 344C35 311 30 292 30 286C30 277 35 272 46 272C51 272 54 273 57 275C62 284 65 291 66 298C84 374 107 412 134 412C152 412 161 398 161 371C161 356 159 339 154 321L44-118C35-151 34-155-5-155C-23-155-32-163-32-178C-32-189-26-194-15-194C0-194 52-191 67-191C86-191 146-194 165-194C180-194 187-186 187-170C187-160 178-155 159-155C141-155 114-156 114-144C114-131 155 26 159 43C179 6 209-13 249-13C314-13 371 20 421 87C467 148 490 213 490 280C490 367 438 442 355 442M352 412C391 412 411 382 411 323C411 296 405 260 394 215C371 128 342 71 307 42C286 25 267 16 248 16C219 16 199 29 188 56C179 77 174 92 174 100L225 309C230 331 248 354 276 377C304 400 329 412 352 412Z"></path></g><g data-mml-node="mi" transform="translate(536,-150) scale(0.707)" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g><g data-mml-node="mo" data-latex=")" transform="translate(11389.5,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g><g data-mml-node="mo" data-latex="+" transform="translate(12000.7,0)"><path data-c="2B" d="M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z"></path></g><g data-mml-node="mi" data-latex="\lambda" transform="translate(13001,0)"><path data-c="1D706" d="M86-13C97-13 109-6 122 9L355 285C390 189 416 117 433 68C444 37 451 19 456 12C467-3 486-11 512-11L533-11C543-10 548-6 548 3C548 5 546 9 542 14C535 21 528 36 520 59L319 621C302 670 261 694 196 694C181 694 174 689 174 679C174 672 180 667 191 664C205 660 214 655 219 649C226 641 236 621 247 589L342 322L72 53C59 40 53 29 53 20C53 2 68-13 86-13Z"></path></g><g data-mml-node="mspace" data-latex="\," transform="translate(13584,0)"></g><g data-mml-node="msub" data-latex="p_{o c c}" transform="translate(13751,0)"><g data-mml-node="mi" data-latex="p"><path data-c="1D45D" d="M355 442C311 442 269 419 228 373C217 419 186 442 137 442C96 442 66 409 45 344C35 311 30 292 30 286C30 277 35 272 46 272C51 272 54 273 57 275C62 284 65 291 66 298C84 374 107 412 134 412C152 412 161 398 161 371C161 356 159 339 154 321L44-118C35-151 34-155-5-155C-23-155-32-163-32-178C-32-189-26-194-15-194C0-194 52-191 67-191C86-191 146-194 165-194C180-194 187-186 187-170C187-160 178-155 159-155C141-155 114-156 114-144C114-131 155 26 159 43C179 6 209-13 249-13C314-13 371 20 421 87C467 148 490 213 490 280C490 367 438 442 355 442M352 412C391 412 411 382 411 323C411 296 405 260 394 215C371 128 342 71 307 42C286 25 267 16 248 16C219 16 199 29 188 56C179 77 174 92 174 100L225 309C230 331 248 354 276 377C304 400 329 412 352 412Z"></path></g><g data-mml-node="TeXAtom" transform="translate(536,-150) scale(0.707)" data-latex="{o c c}" data-mjx-texclass="ORD"><g data-mml-node="mi" data-latex="o"><path data-c="1D45C" d="M308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 63 106-11 202-11C272-11 334 19 388 78C442 137 469 201 469 272C469 369 405 442 308 442M389 310C389 287 384 255 374 213C353 130 319 73 272 42C248 26 225 18 203 18C149 18 121 65 121 122C121 180 155 288 178 324C216 383 259 413 307 413C361 413 389 367 389 310Z"></path></g><g data-mml-node="mi" data-latex="c" transform="translate(485,0)"><path data-c="1D450" d="M328 325C328 300 341 287 368 287C404 287 427 318 427 354C427 410 368 442 308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 61 106-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 121 53 121 122C121 184 150 274 174 317C198 361 249 413 308 413C346 413 372 402 386 381C355 378 328 358 328 325Z"></path></g><g data-mml-node="mi" data-latex="c" transform="translate(918,0)"><path data-c="1D450" d="M328 325C328 300 341 287 368 287C404 287 427 318 427 354C427 410 368 442 308 442C239 442 176 412 122 353C68 294 41 229 41 159C41 61 106-11 204-11C257-11 304 2 345 27C379 48 404 69 420 90C427 99 430 106 430 109C430 120 425 126 414 126C409 126 404 122 398 114C365 70 324 42 277 30C246 22 223 18 206 18C149 18 121 53 121 122C121 184 150 274 174 317C198 361 249 413 308 413C346 413 372 402 386 381C355 378 328 358 328 325Z"></path></g></g></g><g data-mml-node="mo" data-latex="(" transform="translate(15292.3,0)"><path data-c="28" d="M318-248C327-248 332-243 332-234C332-231 330-227 327-223C275-183 233-117 202-26C175 53 161 131 161 208L161 292C161 369 175 447 202 526C233 617 275 683 327 723C330 726 332 730 332 734C332 743 327 748 318 748C317 748 314 747 311 745C251 699 201 631 160 540C121 453 101 371 101 292L101 208C101 129 121 47 160-40C201-131 251-199 311-245C314-247 317-248 318-248Z"></path></g><g data-mml-node="msub" data-latex="p_k" transform="translate(15681.3,0)"><g data-mml-node="mi" data-latex="p"><path data-c="1D45D" d="M355 442C311 442 269 419 228 373C217 419 186 442 137 442C96 442 66 409 45 344C35 311 30 292 30 286C30 277 35 272 46 272C51 272 54 273 57 275C62 284 65 291 66 298C84 374 107 412 134 412C152 412 161 398 161 371C161 356 159 339 154 321L44-118C35-151 34-155-5-155C-23-155-32-163-32-178C-32-189-26-194-15-194C0-194 52-191 67-191C86-191 146-194 165-194C180-194 187-186 187-170C187-160 178-155 159-155C141-155 114-156 114-144C114-131 155 26 159 43C179 6 209-13 249-13C314-13 371 20 421 87C467 148 490 213 490 280C490 367 438 442 355 442M352 412C391 412 411 382 411 323C411 296 405 260 394 215C371 128 342 71 307 42C286 25 267 16 248 16C219 16 199 29 188 56C179 77 174 92 174 100L225 309C230 331 248 354 276 377C304 400 329 412 352 412Z"></path></g><g data-mml-node="mi" transform="translate(536,-150) scale(0.707)" data-latex="k"><path data-c="1D458" d="M409 353C409 327 423 314 450 314C485 314 508 345 508 379C508 418 476 445 437 445C392 445 344 415 291 356C250 311 217 282 190 269L291 679C289 688 287 694 274 694C242 694 166 685 154 684C139 682 132 675 132 660C132 650 141 645 159 645C178 645 204 646 204 632L59 43C56 32 55 25 55 21C55 0 66-11 87-11C104-11 117-3 124 12C129 21 147 92 179 226C231 221 286 196 286 146C286 131 279 101 279 91C279 34 316-11 373-11C431-11 470 41 490 145C490 154 485 159 475 159C466 159 460 152 457 138C435 59 408 19 375 19C357 19 348 33 348 61C348 77 360 131 360 147C360 204 314 239 221 253C244 269 270 292 298 322C326 352 346 371 359 382C386 404 412 415 435 415C445 415 453 413 459 409C432 404 409 379 409 353Z"></path></g></g><g data-mml-node="mo" data-latex=")" transform="translate(16635.7,0)"><path data-c="29" d="M78-245C138-199 188-131 229-40C268 47 288 129 288 208L288 292C288 371 268 453 229 540C188 631 138 699 78 745C75 747 72 748 71 748C62 748 57 743 57 734C57 730 59 726 62 723C114 683 156 617 187 526C214 447 228 369 228 292L228 208C228 131 214 53 187-26C156-117 114-183 62-223C59-227 57-231 57-234C57-243 62-248 71-248C72-248 75-247 78-245Z"></path></g><g data-mml-node="TeXAtom" data-latex="\big]" data-mjx-texclass="ORD" transform="translate(17024.7,0)"><g data-mml-node="mo"><path data-c="5D" d="M60-350L200-350L200 850L60 850C43 850 34 841 34 823C34 805 43 796 60 796L148 796L148-296L60-296C43-296 34-305 34-323C34-341 43-350 60-350Z"></path></g></g><g data-mml-node="mo" data-latex="." transform="translate(17441.7,0)"><path data-c="2E" d="M192 53C192 82 168 106 139 106C110 106 86 82 86 53C86 24 110 0 139 0C168 0 192 24 192 53Z"></path></g></g></g></svg></mjx-container></p>
+<p>训练时应在 logits 上计算可微采样；部署时还需使用确定性阈值和冗余安全检查。软代价不能代替紧急制动边界。</p>
+<h2 id="四、Occ-与-Freespace-的经典路线"><a href="#四、Occ-与-Freespace-的经典路线" class="headerlink" title="四、Occ 与 Freespace 的经典路线"></a>四、Occ 与 Freespace 的经典路线</h2><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>代表做法</th>
+<th>关键变化</th>
+<th>对本实现的启示</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>场景补全</td>
+<td><a target="_blank" rel="noopener" href="https://arxiv.org/abs/1611.09326">SSCNet</a>（2017）</td>
+<td>从部分深度/体素恢复完整语义 3D 场景</td>
+<td>先区分几何占据与语义类别，再谈规划用途</td>
+</tr>
+<tr>
+<td>单目语义场景</td>
+<td><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2112.00726">MonoScene</a>（2021）</td>
+<td>用图像学习 3D semantic scene completion</td>
+<td>相机 occ 必须显式处理不可见区域的不确定性</td>
+</tr>
+<tr>
+<td>环视 occupancy</td>
+<td><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2303.09551">SurroundOcc</a>（2023）</td>
+<td>多相机特征经 3D 查询/体素解码预测周围占据</td>
+<td>多尺度和时序能提升远距、遮挡区，但算力增加明显</td>
+</tr>
+<tr>
+<td>标准化评测</td>
+<td><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2304.14327">Occ3D</a>（2023）</td>
+<td>统一自动驾驶语义 occupancy 的标签与可见性协议</td>
+<td>loss 与 mIoU 必须只在有效可见体素上计算</td>
+</tr>
+<tr>
+<td>紧凑表示</td>
+<td><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2302.07817">TPVFormer</a>（2023）</td>
+<td>用三个正交平面代替稠密 3D 特征</td>
+<td>大范围、高分辨率时可替换本章的稠密 3D decoder</td>
+</tr>
+</tbody></table>
+<p>freespace 的工程脉络则更早：传统栅格地图以 ray casting 标记 free/occupied/unknown；学习式驾驶把它变成可由 BEV 特征预测的通行概率。无论实现多先进，三态语义都不能丢失：把 unknown 当 free 是规划碰撞风险被系统性低估的常见根源。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>有了场景约束，规划才知道哪里“可能走”。下一篇让 flow matching 一次生成多条可行未来，再由这些约束筛选。</p>
+</div>
+      <div class="article-end"><span class="end-mark" aria-hidden="true">◇</span><p>读到这里，感谢你的时间。</p><a href="#main-content">回到正文开头 ↑</a></div>
+      <nav class="reading-navigation" aria-label="文章阅读导航">
+        
+        <div class="neighbor-grid"><div class="neighbor prev"><a href="/2026/10/26/e2e-ad/%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E5%AE%9E%E6%88%98-03-Obs%E4%B8%8EMapHead/"><span>← 上一篇</span><strong>端到端自动驾驶实战-03：Obs 与 Map Head —— 动态参与者和道路结构各自解码</strong></a></div><div class="neighbor next"><a href="/2026/10/26/e2e-ad/%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6%E5%AE%9E%E6%88%98-05-FlowMatchingPlanning/"><span>下一篇 →</span><strong>端到端自动驾驶实战-05：Flow-Matching Planning —— 从 BEV 条件生成多模态自车轨迹</strong></a></div></div>
+      </nav>
+      
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>端到端自动驾驶实战-04：Occupancy 与 Freespace Head —— 区分看不见、被占据与可通行</div>
+      <div>https://w2ongq6.github.io/2026/10/26/e2e-ad/端到端自动驾驶实战-04-Occupancy与FreespaceHead/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Kaiyun.li</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年10月26日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+      
+    </article>
+  </div>
+  <aside class="article-aside"><div class="sticky-contents"><p class="eyebrow">ON THIS PAGE</p><h2>本篇目录</h2><nav id="reading-toc" aria-label="本篇章节"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80%EF%BC%9A%E7%A9%BA%E9%97%B2%E4%B8%8D%E6%98%AF%E6%9C%AA%E7%9F%A5%E7%9A%84%E5%90%8C%E4%B9%89%E8%AF%8D"><span class="toc-text">引言：空闲不是未知的同义词</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%BB%8E%E4%BA%8C%E7%BB%B4-BEV-%E5%8D%87%E5%88%B0%E4%BD%93%E7%B4%A0"><span class="toc-text">一、从二维 BEV 升到体素</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81freespace-head"><span class="toc-text">二、freespace head</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%8A%8A-dense-head-%E6%8E%A5%E7%BB%99%E8%A7%84%E5%88%92"><span class="toc-text">三、把 dense head 接给规划</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81Occ-%E4%B8%8E-Freespace-%E7%9A%84%E7%BB%8F%E5%85%B8%E8%B7%AF%E7%BA%BF"><span class="toc-text">四、Occ 与 Freespace 的经典路线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-text">小结</span></a></li></ol></nav></div></aside>
+</div>
+
+
+
+
+  
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+    
+  </main>
+  <dialog class="search-dialog" id="site-search" aria-labelledby="search-title">
+  <div class="search-dialog-header"><div><p class="eyebrow">FIND A NOTE</p><h2 id="search-title">搜索知识库</h2></div><button class="icon-button" type="button" data-close-search aria-label="关闭搜索">×</button></div>
+  <label class="sr-only" for="site-search-input">文章标题或关键词</label><input type="search" id="site-search-input" placeholder="试试 Transformer、自动驾驶、存储…" autocomplete="off" aria-describedby="search-status">
+  <p id="search-status" role="status">输入关键词，搜索文章标题与正文。</p><div id="site-search-results"></div>
+  <div class="search-dialog-footer"><span>关键词之间用空格分隔</span><span><kbd>Esc</kbd> 关闭</span></div>
+</dialog>
+
+  <button class="back-to-top" type="button" aria-label="返回顶部" hidden>↑</button>
+  <footer class="site-footer"><div class="site-container footer-grid"><div><a class="footer-brand" href="/">KAIYUN<span>.</span></a><p>保持好奇，持续构建。</p></div><nav aria-label="页脚导航"><a href="/topics/">专题导航</a><a href="/categories/">分类</a><a href="/tags/">标签</a><a href="/about/">关于</a></nav><div class="footer-credit"><span>© 2026 Kaiyun.li</span><span>Built with <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://hexo.fluid-dev.com/" target="_blank" rel="noopener">Fluid</a></span></div></div>
+</footer>
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+
+
+
+  
+<script src="/js/site.js"></script>
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+  
+</body>
+</html>
